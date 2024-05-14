@@ -4,6 +4,7 @@ import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
 import { NotFound } from './pages/404'
 import { Dashboard } from './pages/app/dashboard/dashboard'
+import { Transactions } from './pages/app/transactions/transactions'
 import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
 import { SignIn } from './pages/auth/sign-in'
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <Dashboard /> },
       { path: '/treatments', element: <Treatments /> },
       { path: '/treatment/new', element: <Treatment /> },
+      { path: '/transactions', element: <Transactions /> },
     ],
   },
   {

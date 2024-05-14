@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { DiamondIcon, Plus } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -18,7 +18,7 @@ import {
 import { TreatmentTableRow } from './treatment-table-row'
 import { TreatmentTableFilters } from './TreatmentTableFilters'
 
-export function Treatments() {
+export function Transactions() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -56,15 +56,15 @@ export function Treatments() {
 
   return (
     <>
-      <Helmet title="Atendimentos" />
+      <Helmet title="Transações" />
       <div className="flex flex-col gap-4">
         <div className="flex-start  flex w-full flex-row place-content-between">
-          <h1 className="text-3xl font-bold tracking-tight">Atendimentos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
           <Button
             onClick={handleCreateTreatment}
-            className="ml-3 mt-auto w-auto bg-vida-loca-400 hover:bg-vida-loca-500 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 "
+            className="ml-3 mt-auto h-12 w-12 rounded-full bg-minsk-600 p-4 hover:bg-minsk-700 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 "
           >
-            <span className="text-lg font-semibold">Iniciar Atendimento</span>
+            <Plus className="h-8 w-8"></Plus>
           </Button>
         </div>
         <div className="space-y-2.5">
@@ -73,16 +73,14 @@ export function Treatments() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[64px]"></TableHead>
-                  <TableHead className="w-[280px]">Identificador</TableHead>
-                  <TableHead className="w-[120px]">Aberto á</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Requisição</TableHead>
+                  <TableHead className="w-[60px]">Situação</TableHead>
+                  <TableHead className="w-[120px]">Data</TableHead>
+                  <TableHead className="w-[280px]">Descrição</TableHead>
+                  <TableHead className="w-[240px]">Setor</TableHead>
+                  <TableHead className="w-[240px]">Conta</TableHead>
                   <TableHead className="w-[80px]">Valor</TableHead>
-                  <TableHead className="w-[124px]"></TableHead>
-                  <TableHead className="w-[124px]"></TableHead>
+                  <TableHead className="w-[16px]"></TableHead>
+                  <TableHead className="w-[16px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
