@@ -210,7 +210,7 @@ export function TreatmentInteraction({
                           date={field.value}
                         />
                         <PopoverClose asChild className="ml-4 mt-4">
-                          <Button className="bg-minsk-400 hover:bg-minsk-500 text-white">
+                          <Button className="bg-minsk-400 text-white hover:bg-minsk-500">
                             <ArrowBigRightDash></ArrowBigRightDash>
                           </Button>
                         </PopoverClose>
@@ -224,7 +224,7 @@ export function TreatmentInteraction({
           <div className="flex w-full justify-end">
             <Button
               type="submit"
-              className="bg-minsk-400 hover:bg-minsk-500 justify-self-end text-white"
+              className="justify-self-end bg-minsk-400 text-white hover:bg-minsk-500"
             >
               Enviar
             </Button>

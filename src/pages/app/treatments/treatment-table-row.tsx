@@ -106,7 +106,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="bg-minsk-400 hover:bg-minsk-500 text-white"
+              className="bg-minsk-400 text-white hover:bg-minsk-500"
               size="sm"
             >
               <NotebookPen className="mr-2 h-4 w-4" />

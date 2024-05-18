@@ -87,9 +87,8 @@ export function TreatmentTableFilters() {
   return (
     <form
       onSubmit={handleSubmit(handleFilter)}
-      className="flex items-center gap-2"
+      className="flex items-center justify-end gap-2"
     >
-      <Search />
       <Input
         placeholder="Filtar por Descrição"
         className="h-8 w-auto"

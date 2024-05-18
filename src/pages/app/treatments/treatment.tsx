@@ -74,8 +74,6 @@ export function Treatment() {
     queryFn: () => getClients(),
   })
 
-  console.log(result?.data.clients)
-
   async function onSubmit({
     openingDate,
     endingDate,
@@ -355,7 +353,7 @@ export function Treatment() {
               </div>
               <Button
                 type="submit"
-                className="bg-minsk-400 hover:bg-minsk-500 text-white"
+                className="bg-minsk-400 text-white hover:bg-minsk-500"
               >
                 Cadastrar
               </Button>

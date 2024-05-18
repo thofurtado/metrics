@@ -98,13 +98,11 @@ export interface TreatmentItemsProps {
 }
 
 export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
-  const navigate = useNavigate()
   const [finalSalesValue, setFinalSalesValue] = useState(0)
   const [salesValue, setSalesValue] = useState(0)
   const [itemQuantity, setItemQuantity] = useState(1)
   const [itemDiscount, setItemDiscount] = useState(0)
   const [openCombobox, setComboboxOpen] = useState(false)
-  const [valueCombobox, setValueCombobox] = useState('')
 
   const { data: items } = useQuery({
     queryKey: ['items'],
@@ -265,7 +263,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex w-full items-center space-x-4"
           >
-            <div className="flex w-5/6 flex-col items-center gap-2 rounded-md bg-jacarta-100 py-4">
+            <div className="bg-jacarta-100 flex w-5/6 flex-col items-center gap-2 rounded-md py-4">
               <FormField
                 control={form.control}
                 name="item"

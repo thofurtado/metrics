@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { TreatmentTableRow } from './treatment-table-row'
+import { TreatmentTableRow } from './transaction-table-row'
 import { TreatmentTableFilters } from './TreatmentTableFilters'
 
 export function Treatments() {
