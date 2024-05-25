@@ -14,7 +14,7 @@ export function MonthRevenueCard() {
       <CardContent className="space-y-1">
         <span className="text-2xl font-bold tracking-tight">R$ 3579,30</span>
         <p className="text-xs text-muted-foreground">
-          <span className="text-rose-500 dark:text-rose-400"> -8% </span>
+          <span className="text-rose-600 dark:text-rose-500"> -8% </span>
           em relação ao mês passado
         </p>
       </CardContent>

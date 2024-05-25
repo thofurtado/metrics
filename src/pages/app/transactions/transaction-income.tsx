@@ -247,11 +247,13 @@ export function TransactionIncome() {
                       </SelectTrigger>
                       <SelectContent className="m-0">
                         {sectors &&
-                          sectors.data.sectors.map((sector) => (
-                            <SelectItem value={sector.id} key={sector.id}>
-                              {sector.name}
-                            </SelectItem>
-                          ))}
+                          sectors.data.sectors
+                            .filter((sector) => sector.type === 'in')
+                            .map((sector) => (
+                              <SelectItem value={sector.id} key={sector.id}>
+                                {sector.name}
+                              </SelectItem>
+                            ))}
                       </SelectContent>
                     </Select>
                   </FormControl>

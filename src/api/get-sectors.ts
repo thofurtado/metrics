@@ -5,6 +5,7 @@ export interface GetSectorsResponse {
     id: string
     name: string
     budget: number | null
+    type: string
   }[]
 }
 

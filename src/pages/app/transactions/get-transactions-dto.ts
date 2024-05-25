@@ -15,7 +15,10 @@ export interface GetTransactionsDTO {
       balance: number
       goal: number
     }
-    sectors: null
+    sectors: {
+      id: string
+      name: string
+    }
   }
   totalCount: number
   perPage: number

@@ -41,13 +41,14 @@ import { TreatmentItems } from '../treatments/treatment-items'
 import { TransactionExpense } from './transaction-expense'
 import { TransactionIncome } from './transaction-income'
 import { TransactionTableRow, TreatmentTableRow } from './transaction-table-row'
-import { TreatmentTableFilters } from './TreatmentTableFilters'
+import { TransactionTableFilters } from './TransactionTableFilters'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
   const [isIncomeOpen, setIsIncomeOpen] = useState(false)
   const description = searchParams.get('description')
+  const value = searchParams.get('value')
   const sectorId = searchParams.get('sectorId')
   const accountId = searchParams.get('accountId')
 
@@ -56,23 +57,20 @@ export function Transactions() {
     .transform((page) => page - 1)
     .parse(searchParams.get('page') ?? '1')
 
-  // const { data: result } = useQuery({
-  //   queryKey: ['treatments', pageIndex, treatmentId, clientName, status],
-  //   queryFn: () =>
-  //     getTreatments({
-  //       page: pageIndex,
-  //       treatmentId,
-  //       clientName,
-  //       status: status === 'all' ? null : status,
-  //     }),
-  //   refetchOnWindowFocus: 'always',
-  // })
   const { data: result } = useQuery({
-    queryKey: ['transactions', pageIndex, description, sectorId, accountId],
+    queryKey: [
+      'transactions',
+      pageIndex,
+      description,
+      value,
+      sectorId,
+      accountId,
+    ],
     queryFn: () =>
       getTransactions({
         page: pageIndex,
         description,
+        value,
         sectorId: sectorId === 'all' ? null : sectorId,
         accountId,
       }),
@@ -85,7 +83,7 @@ export function Transactions() {
       return state
     })
   }
-  console.log(result)
+
   return (
     <>
       <Helmet title="Transações" />
@@ -127,6 +125,7 @@ export function Transactions() {
               <Button
                 variant="link"
                 className="flex w-full items-center justify-start p-0 text-black"
+                disabled
               >
                 <ArrowRightLeft className="mr-3 h-4 w-4 text-minsk-500" />
                 Transferência
@@ -136,7 +135,7 @@ export function Transactions() {
         </div>
         <div className="space-y-2.5">
           <div>
-            <TreatmentTableFilters />
+            <TransactionTableFilters />
           </div>
           <div className="rounded-md border bg-slate-100">
             <Table>
@@ -147,8 +146,8 @@ export function Transactions() {
                   <TableHead className="w-3/12">Descrição</TableHead>
                   <TableHead className="w-2/12 text-center">Setor</TableHead>
                   <TableHead className="w-2/12 text-center">Conta</TableHead>
-                  <TableHead className="w-1/12 text-left">Valor</TableHead>
-                  <TableHead className="w-1/12"></TableHead>
+                  <TableHead className="w-1/12 text-right">Valor</TableHead>
+
                   <TableHead className="w-1/12"></TableHead>
                 </TableRow>
               </TableHeader>

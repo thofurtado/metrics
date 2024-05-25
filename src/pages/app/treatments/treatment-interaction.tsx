@@ -70,15 +70,13 @@ export function TreatmentInteraction({
 
   async function onSubmit(data: FormSchemaType) {
     if (status !== data.status && data.status !== undefined) {
-      if (data.status === 'resolved') {
-        console.log(data.status)
+      if (data.status === 'resolved' || data.status === 'canceled') {
         await statusupdate({
           id: treatmentId,
           status: data.status,
           endingDate: data.dateTime,
         })
       } else {
-        console.log(data.status)
         await statusupdate({
           id: treatmentId,
           status: data.status,

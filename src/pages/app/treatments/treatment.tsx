@@ -2,7 +2,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { PopoverClose } from '@radix-ui/react-popover'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { ArrowBigRightDash, Calendar as CalendarIcon } from 'lucide-react'
+import {
+  ArrowBigRightDash,
+  Calendar as CalendarIcon,
+  Gem,
+  Handshake,
+  UserPlus,
+} from 'lucide-react'
+import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -13,6 +20,7 @@ import { createTreatment } from '@/api/create-treatment'
 import { getClients } from '@/api/get-clients'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -35,7 +43,15 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { TimePickerDemo } from '@/components/ui/time-picker-demo'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+
+import { TreatmentClient } from './treatment-client'
 
 const formSchema = z.object({
   openingDate: z.date().nullish(),
@@ -61,6 +77,7 @@ export interface TreatmentInteractionsProps {
 }
 
 export function Treatment() {
+  const [openClientDialog, setOpenClientDialog] = useState(false)
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
@@ -114,7 +131,7 @@ export function Treatment() {
         <div className="space-y-2.5">
           <Form {...form}>
             <form
-              className="flex w-full flex-col place-content-center content-around items-center justify-center justify-items-center gap-8 border p-8"
+              className="flex w-full flex-col place-content-center content-around items-center justify-center justify-items-center gap-8 rounded-md border p-8"
               onSubmit={form.handleSubmit(onSubmit)}
             >
               <div className="flex w-3/5 flex-row justify-between">
@@ -268,40 +285,72 @@ export function Treatment() {
                 />
               </div>
               <div className=" flex w-3/5 flex-row justify-between">
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field: { name, onChange, value, disabled } }) => (
-                    <FormItem className="flex w-2/6 flex-col content-end items-start">
-                      <FormLabel className="self-center text-left ">
-                        Cliente
-                      </FormLabel>
-                      <Popover>
-                        <FormControl>
-                          <Select
-                            defaultValue="Carregando..."
-                            value={value}
-                            onValueChange={onChange}
-                            disabled={disabled}
-                          >
-                            <SelectTrigger className="h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {result &&
-                                result.data.clients.map((client) => (
-                                  <SelectItem value={client.id} key={client.id}>
-                                    {client.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                      </Popover>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex w-full items-center">
+                  <FormField
+                    control={form.control}
+                    name="client"
+                    render={({
+                      field: { name, onChange, value, disabled },
+                    }) => (
+                      <FormItem className="flex w-2/6 flex-col content-end items-start">
+                        <FormLabel className="self-center text-left ">
+                          Cliente
+                        </FormLabel>
+                        <Popover>
+                          <FormControl>
+                            <Select
+                              defaultValue="Carregando..."
+                              value={value}
+                              onValueChange={onChange}
+                              disabled={disabled}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {result &&
+                                  result.data.clients.map((client) => (
+                                    <SelectItem
+                                      value={client.id}
+                                      key={client.id}
+                                    >
+                                      <span className="flex">
+                                        {client.name}
+                                        {client.contract ? (
+                                          <Gem className="ml-2 h-4 w-4 text-yellow-500" />
+                                        ) : null}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
 
+                  <Dialog
+                    open={openClientDialog}
+                    onOpenChange={setOpenClientDialog}
+                  >
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" className="hover:bg-white">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <UserPlus className="ml-2 mt-2 h-5 w-5 text-vida-loca-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Adicionar Cliente</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </Button>
+                    </DialogTrigger>
+                    <TreatmentClient open={openClientDialog} />
+                  </Dialog>
+                </div>
                 <FormField
                   control={form.control}
                   name="contact"
