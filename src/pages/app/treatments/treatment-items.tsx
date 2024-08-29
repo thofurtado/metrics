@@ -12,7 +12,7 @@ import {
   SendHorizonal,
   Trash2,
 } from 'lucide-react'
-import { MouseEventHandler, useState } from 'react'
+import { MouseEventHandler, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -104,6 +104,17 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   const [itemDiscount, setItemDiscount] = useState(0)
   const [openCombobox, setComboboxOpen] = useState(false)
 
+  useEffect(() => {
+    if (form.formState.isSubmitSuccessful) {
+      form.reset({
+        item: '',
+        quantity: '1',
+        salesValue: '',
+        discount: '0',
+        finalSalesValue: '',
+      })
+    }
+  })
   const { data: items } = useQuery({
     queryKey: ['items'],
     queryFn: () => getItems(),
@@ -139,7 +150,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       treatmentId,
       itemId: data.item,
       quantity: data.quantity ? Number(data.quantity) : 1,
-      salesValue: finalSalesValue / data.quantity,
+      salesValue: finalSalesValue / (data.quantity ? Number(data.quantity) : 1),
     })
 
     if (response !== undefined) {
@@ -210,7 +221,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     {item.salesValue}
                   </TableCell>
                   <TableCell className="text-right">
-                    {item.salesValue * item.quantity}
+                    {(item.salesValue * item.quantity).toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <AlertDialog>

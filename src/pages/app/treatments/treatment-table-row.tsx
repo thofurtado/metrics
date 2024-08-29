@@ -55,7 +55,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
   const [isItemsOpen, setIsItemsOpen] = useState(false)
 
   return (
-    <TableRow>
+    <TableRow className="font-gaba">
       <TableCell>
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogTrigger asChild>
@@ -67,19 +67,23 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <TreatmentDetails open={isDetailsOpen} treatmentId={treatments.id} />
         </Dialog>
       </TableCell>
-      <TableCell className="font-mono text-xs font-medium">
+      <TableCell className="hidden text-sm xl:table-cell">
         {treatments.id}
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className="text-base text-muted-foreground">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
       </TableCell>
-      <TableCell>
+      <TableCell className="text-base">
         <TreatmentStatus status={treatments.status} />
       </TableCell>
-      <TableCell className="font-medium">{treatments.contact}</TableCell>
-      <TableCell className="font-medium">{treatments.clients.name}</TableCell>
-      <TableCell className="">{treatments.request}</TableCell>
-      <TableCell className="font-medium">
+      <TableCell className="text-center text-base font-medium">
+        {treatments.contact}
+      </TableCell>
+      <TableCell className="text-center text-base font-medium">
+        {treatments.clients.name}
+      </TableCell>
+      <TableCell className="text-base">{treatments.request}</TableCell>
+      <TableCell className="text-base font-medium">
         {treatments.amount.toLocaleString('pt-BR', {
           style: 'currency',
           currency: 'BRL',
@@ -90,7 +94,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="border-minsk-400 hover:bg-minsk-400 hover:text-white"
+              className="border-minsk-400 text-base font-thin hover:bg-minsk-400 hover:text-white"
               variant="outline"
               size="sm"
             >
@@ -106,7 +110,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="bg-minsk-400 text-white hover:bg-minsk-500"
+              className="bg-minsk-400 text-base font-thin text-white hover:bg-minsk-500"
               size="sm"
             >
               <NotebookPen className="mr-2 h-4 w-4" />

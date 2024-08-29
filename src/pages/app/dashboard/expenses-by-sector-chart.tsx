@@ -1,18 +1,10 @@
-import { BarChart } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { BarChart, Info } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import colors from 'tailwindcss/colors'
 
+import { getMonthExpenseBySector } from '@/api/get-month-expenses-by-sector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-const data = [
-  { sector: 'Mercado', amount: 850 },
-  { sector: 'Outros', amount: 120 },
-  { sector: 'Veículo', amount: 327.9 },
-  { sector: 'Dependentes', amount: 850 },
-  { sector: 'Lazer', amount: 180 },
-  { sector: 'Moradia', amount: 1200 },
-  { sector: 'Alimentação', amount: 175.5 },
-]
 
 const COLORS = [
   colors.violet[500],
@@ -25,6 +17,10 @@ const COLORS = [
 ]
 
 export function ExpensesBySectorChart() {
+  const { data: monthExpenseBySector } = useQuery({
+    queryFn: getMonthExpenseBySector,
+    queryKey: ['metrics', 'month-expense-by-sector'],
+  })
   return (
     <Card className="col-span-3">
       <CardHeader className="pb-8">
@@ -36,59 +32,73 @@ export function ExpensesBySectorChart() {
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart style={{ fontSize: 12 }}>
-            <Pie
-              data={data}
-              dataKey="amount"
-              nameKey="product"
-              cx="50%"
-              cy="50%"
-              outerRadius={86}
-              innerRadius={64}
-              strokeWidth={8}
-              labelLine={false}
-              label={({
-                cx,
-                cy,
-                midAngle,
-                innerRadius,
-                outerRadius,
-                value,
-                index,
-              }) => {
-                const RADIAN = Math.PI / 180
-                const radius = 12 + innerRadius + (outerRadius - innerRadius)
-                const x = cx + radius * Math.cos(-midAngle * RADIAN)
-                const y = cy + radius * Math.sin(-midAngle * RADIAN)
-                return (
-                  <text
-                    x={x}
-                    y={y}
-                    className="fill-muted-foreground text-xs"
-                    textAnchor={x > cx ? 'start' : 'end'}
-                    dominantBaseline="central"
-                  >
-                    {data[index].sector.length > 12
-                      ? data[index].sector.substring(8, 12).concat('...')
-                      : data[index].sector}{' '}
-                    ({value})
-                  </text>
-                )
-              }}
-            >
-              {data.map((_, index) => {
-                return (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index]}
-                    className="stroke-background hover:opacity-70"
-                  />
-                )
-              })}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        {(monthExpenseBySector && monthExpenseBySector.length !== 0 && (
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart style={{ fontSize: 12 }}>
+                <Pie
+                  data={monthExpenseBySector}
+                  dataKey="amount"
+                  nameKey="product"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={86}
+                  innerRadius={64}
+                  strokeWidth={8}
+                  labelLine={false}
+                  label={({
+                    cx,
+                    cy,
+                    midAngle,
+                    innerRadius,
+                    outerRadius,
+                    value,
+                    index,
+                  }) => {
+                    const RADIAN = Math.PI / 180
+                    const radius =
+                      12 + innerRadius + (outerRadius - innerRadius)
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        className="fill-muted-foreground text-xs"
+                        textAnchor={x > cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                      >
+                        {monthExpenseBySector[index].sector_name.length > 16
+                          ? monthExpenseBySector[index].sector_name
+                              .substring(0, 20)
+                              .concat('...')
+                          : monthExpenseBySector[index].sector_name}{' '}
+                        ({value})
+                      </text>
+                    )
+                  }}
+                >
+                  {monthExpenseBySector.map((_, index) => {
+                    return (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index]}
+                        className="stroke-background hover:opacity-70"
+                      />
+                    )
+                  })}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </>
+        )) || (
+          <>
+            <div className="flex w-full justify-center space-x-2 text-blue-800">
+              <Info />
+              <span>Insira informações para carregar o gráfico</span>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )

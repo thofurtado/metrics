@@ -87,19 +87,25 @@ export function Transactions() {
   return (
     <>
       <Helmet title="Transações" />
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 font-gaba">
         <div className="flex-start  flex w-full flex-row place-content-between">
-          <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
+          <h1 className="font-merienda text-4xl font-bold tracking-tight text-minsk-900">
+            Transações
+          </h1>
           <Popover>
             <PopoverTrigger asChild>
-              <Button className="ml-3 mt-auto h-12 w-12 rounded-full bg-minsk-600 p-4 hover:bg-minsk-700 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 ">
-                <Plus className="h-8 w-8"></Plus>
+              <Button
+                aria-label="Adicionar"
+                className="ml-3 mt-auto h-12 w-12 rounded-full bg-white p-2 shadow-lg hover:bg-minsk-200 dark:bg-minsk-400 dark:hover:bg-minsk-50"
+              >
+                <Plus className="h-5 w-5 font-semibold text-minsk-800"></Plus>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 bg-minsk-50" side="left">
               <Dialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
                 <DialogTrigger asChild>
                   <Button
+                    aria-label="Adicionar Despesa"
                     variant="link"
                     className="flex w-full items-center justify-start p-0 text-black"
                   >
@@ -112,6 +118,7 @@ export function Transactions() {
               <Dialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
                 <DialogTrigger asChild>
                   <Button
+                    aria-label="Adicionar Receita"
                     variant="link"
                     className="flex w-full items-center justify-start p-0 text-black"
                   >
@@ -126,6 +133,7 @@ export function Transactions() {
                 variant="link"
                 className="flex w-full items-center justify-start p-0 text-black"
                 disabled
+                aria-label="Adicionar Transação"
               >
                 <ArrowRightLeft className="mr-3 h-4 w-4 text-minsk-500" />
                 Transferência
@@ -137,18 +145,30 @@ export function Transactions() {
           <div>
             <TransactionTableFilters />
           </div>
-          <div className="rounded-md border bg-slate-100">
-            <Table>
+          <div className="rounded-md border ">
+            <Table className="overflow-hidden">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-1/12 text-center">Pago</TableHead>
-                  <TableHead className="w-1/12 text-center">Data</TableHead>
-                  <TableHead className="w-3/12">Descrição</TableHead>
-                  <TableHead className="w-2/12 text-center">Setor</TableHead>
-                  <TableHead className="w-2/12 text-center">Conta</TableHead>
-                  <TableHead className="w-1/12 text-right">Valor</TableHead>
+                  <TableHead className="w-1/12 rounded-tl-md bg-minsk-200 text-center text-stone-700 dark:bg-minsk-700 dark:text-white">
+                    Pago
+                  </TableHead>
+                  <TableHead className="w-1/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                    Data
+                  </TableHead>
+                  <TableHead className="w-4/12 bg-minsk-200 text-stone-900 dark:bg-stone-700 dark:text-white">
+                    Descrição
+                  </TableHead>
+                  <TableHead className="w-2/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                    Setor
+                  </TableHead>
+                  <TableHead className="w-2/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                    Conta
+                  </TableHead>
+                  <TableHead className="w-1/12 bg-minsk-200 text-right text-stone-800 dark:bg-stone-700 dark:text-white">
+                    Valor
+                  </TableHead>
 
-                  <TableHead className="w-1/12"></TableHead>
+                  <TableHead className=" w-1/12 rounded-tr-md bg-minsk-200 dark:bg-stone-800"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

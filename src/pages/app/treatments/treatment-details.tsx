@@ -47,7 +47,6 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   if (treatment)
     dias = dayjs(new Date()).diff(dayjs(treatment.opening_date), 'day')
 
-  console.log(treatment.ending_date)
   return (
     <Dialog.Overlay>
       <DialogContent>
@@ -62,8 +61,8 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
         </DialogDescription>
 
         {treatment && (
-          <div className="min-h-[680px]">
-            <ScrollArea className="h-[680px] w-full rounded-md border ">
+          <div className="!max-h-[600px]">
+            <ScrollArea className="h-full w-full rounded-md border">
               <Table>
                 <TableBody>
                   <TableRow>
@@ -188,7 +187,7 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>R$ {item.salesValue}</TableCell>
                             <TableCell>
-                              R$ {item.salesValue * item.quantity}
+                              R$ {(item.salesValue * item.quantity).toFixed(2)}
                             </TableCell>
                           </TableRow>
                         )
@@ -197,7 +196,7 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
                     <TableFooter>
                       <TableRow>
                         <TableCell colSpan={3}>Total do atendimento</TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right text-xl font-bold">
                           {subtotal}
                         </TableCell>
                       </TableRow>

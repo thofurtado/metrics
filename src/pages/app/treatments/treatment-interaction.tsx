@@ -3,6 +3,7 @@ import { PopoverClose } from '@radix-ui/react-popover'
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowBigRightDash, Calendar as CalendarIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -57,6 +58,7 @@ export function TreatmentInteraction({
   treatmentId,
   status,
 }: TreatmentInteractionsProps) {
+  const { continueOnSubmit, setContinueOnSubmit } = useState(false)
   const navigate = useNavigate()
   const { mutateAsync: interaction } = useMutation({
     mutationFn: createInteraction,
@@ -67,6 +69,20 @@ export function TreatmentInteraction({
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
+
+  useEffect(() => {
+    if (form.formState.isSubmitSuccessful) {
+      form.reset({
+        dateTime: null,
+        description: '',
+        status: '',
+      })
+    }
+  })
+
+  function changeSubmitContinue(keep: boolean) {
+    setContinueOnSubmit(keep)
+  }
 
   async function onSubmit(data: FormSchemaType) {
     if (status !== data.status && data.status !== undefined) {
@@ -92,9 +108,9 @@ export function TreatmentInteraction({
       toast.success('Interação cadastrada', {
         position: 'top-center',
       })
-      setTimeout(() => {
-        navigate(window.location.pathname)
-      }, 1000)
+      if (!continueOnSubmit) {
+        navigate('/treatments')
+      }
     }
   }
 
@@ -219,12 +235,20 @@ export function TreatmentInteraction({
               </FormItem>
             )}
           />
-          <div className="flex w-full justify-end">
+          <div className="flex w-full justify-end space-x-2">
             <Button
               type="submit"
-              className="justify-self-end bg-minsk-400 text-white hover:bg-minsk-500"
+              className="justify-self-end bg-minsk-500 text-white hover:bg-minsk-600"
+              onClick={() => changeSubmitContinue(true)}
             >
-              Enviar
+              Gravar e Continuar
+            </Button>
+            <Button
+              type="submit"
+              className="justify-self-end border-2 border-minsk-400 bg-white font-bold text-minsk-500 hover:bg-minsk-100"
+              onClick={() => changeSubmitContinue(false)}
+            >
+              Gravar
             </Button>
           </div>
         </form>

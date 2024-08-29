@@ -10,6 +10,7 @@ const treatmentForm = z.object({
   client: z.string(),
   status: z.string().nullish(),
   contact: z.string().nullish(),
+  equipment_id: z.string().nullish(),
 })
 
 type TreatmentForm = z.infer<typeof treatmentForm>
@@ -22,16 +23,8 @@ export async function createTreatment({
   status,
   contact,
   client,
+  equipment_id,
 }: TreatmentForm) {
-  console.log(
-    openingDate,
-    endingDate,
-    request,
-    observation,
-    status,
-    contact,
-    client,
-  )
   const response = await api.post(`/treatment`, {
     opening_date: openingDate,
     ending_date: endingDate,
@@ -40,6 +33,7 @@ export async function createTreatment({
     status,
     contact,
     client_id: client,
+    equipment_id,
   })
   return response
 }

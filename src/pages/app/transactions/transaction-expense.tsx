@@ -12,8 +12,8 @@ import {
   NotebookText,
   Tag,
 } from 'lucide-react'
-import { MouseEventHandler, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { MouseEventHandler, useEffect, useState } from 'react'
+import { useForm, useResetForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -80,6 +80,18 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
   const { mutateAsync: transaction } = useMutation({
     mutationFn: createTransaction,
   })
+  useEffect(() => {
+    if (form.formState.isSubmitSuccessful) {
+      form.reset({
+        date: null,
+        description: '',
+        account: null,
+        sector: null,
+        amount: '',
+        confirmed: false,
+      })
+    }
+  })
   async function onSubmit(data: FormSchemaType) {
     const response = await transaction({
       operation: 'expense',
@@ -109,7 +121,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
   return (
     <DialogContent className="w-720p">
       <DialogHeader>
-        <DialogTitle className="font-semibold text-stiletto-600">
+        <DialogTitle className="font-semibold text-stiletto-400">
           Nova Despesa
         </DialogTitle>
       </DialogHeader>
@@ -132,6 +144,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                       value={field.value}
                       {...field}
                       type="number"
+                      step=".01"
                       className="border-none text-center text-lg font-semibold text-stiletto-600  focus:!ring-transparent"
                     ></Input>
                   </FormControl>
@@ -156,6 +169,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                   <Popover>
                     <FormControl>
                       <Switch
+                        aria-label="Conta paga"
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="data-[state=checked]:bg-minsk-500 data-[state=unchecked]:bg-gray-300"
@@ -178,6 +192,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                   <FormControl>
                     <PopoverTrigger asChild>
                       <Button
+                        aria-label="Data da Transação"
                         variant="outline"
                         className={cn(
                           'w-30 !m-0 mb-4 h-8 justify-start rounded-lg text-left font-normal',
@@ -242,7 +257,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                       onValueChange={onChange}
                       disabled={disabled}
                     >
-                      <SelectTrigger className="h-8 w-11/12 border-none">
+                      <SelectTrigger
+                        className="h-8 w-11/12 border-none"
+                        aria-label="Setor"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="m-0">
@@ -277,7 +295,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                       onValueChange={onChange}
                       disabled={disabled}
                     >
-                      <SelectTrigger className="h-8 w-11/12 border-none">
+                      <SelectTrigger
+                        className="h-8 w-11/12 border-none"
+                        aria-label="Conta de destino"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -296,8 +317,9 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
           />
           <div className="flex w-full justify-end">
             <Button
+              aria-label="Cadastrar transação"
               type="submit"
-              className="justify-self-end bg-minsk-500 text-white hover:bg-minsk-600"
+              className="justify-self-end bg-minsk-500 text-white hover:bg-minsk-600 dark:bg-minsk-400 dark:hover:bg-minsk-500"
             >
               Salvar
             </Button>

@@ -1,15 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PopoverClose } from '@radix-ui/react-popover'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { FilePen } from 'lucide-react'
+import { FilePen, FlagTriangleRight } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { createClient } from '@/api/create-client'
+import { createClientEquipment } from '@/api/create-client-equipment'
 import { createInteraction } from '@/api/create-interaction'
+import { getClients } from '@/api/get-clients'
 import { updateStatusTreatment } from '@/api/update-status-treatment'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -41,22 +43,22 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { TimePickerDemo } from '@/components/ui/time-picker-demo'
-import { cn } from '@/lib/utils'
 const formSchema = z.object({
-  name: z.string().nullish(),
+  type: z.string().nullish(),
+  brand: z.string().nullish(),
   identification: z.string().nullish(),
-  phone: z.string().nullish(),
-  contract: z.boolean().nullish(),
-  email: z.string().nullish(),
+  details: z.string().nullish(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-export function TreatmentClient() {
-  const navigate = useNavigate()
-  const { mutateAsync: client } = useMutation({
-    mutationFn: createClient,
+export function TreatmentClientEquipment(clientId: string) {
+  const { mutateAsync: equipment } = useMutation({
+    mutationFn: createClientEquipment,
+  })
+  const { refetch: clientRefetch } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => getClients(),
   })
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -64,27 +66,25 @@ export function TreatmentClient() {
 
   async function onSubmit(data: FormSchemaType) {
     console.log(data)
-    const response = await client({
-      name: data.name,
+    console.log(clientId.clientId)
+    const response = await equipment({
+      client_id: clientId.clientId,
       identification: data.identification,
-      email: data.email,
-      phone: data.phone,
-      contract: data.contract ? data.contract : false,
+      brand: data.brand,
+      type: data.type,
+      details: data.details,
     })
     if (response !== undefined) {
-      toast.success('Cliente cadastrada', {
+      toast.success('Equipamento cadastrado', {
         position: 'top-center',
       })
-      setTimeout(() => {
-        navigate(window.location.pathname)
-      }, 1000)
     }
   }
 
   return (
     <DialogContent className="w-720p">
       <DialogHeader>
-        <DialogTitle>Cadastro de Cliente</DialogTitle>
+        <DialogTitle>Cadastro de Equipamento</DialogTitle>
       </DialogHeader>
       <Form {...form}>
         <form
@@ -93,40 +93,30 @@ export function TreatmentClient() {
         >
           <FormField
             control={form.control}
-            name="contract"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-row content-around items-center space-x-2 ">
-                <div className="flex w-1/2 flex-row items-center space-x-2">
-                  <FormLabel className="text-left">
-                    <FilePen className="h-5 w-5" />
-                  </FormLabel>
-                  <FormLabel className="font-base text-left text-gray-600">
-                    Contrato
-                  </FormLabel>
-                </div>
-                <div className="flex w-1/2 flex-row items-center justify-end space-x-2">
-                  <Popover>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-minsk-500 data-[state=unchecked]:bg-gray-300"
-                      ></Switch>
-                    </FormControl>
-                  </Popover>
-                </div>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">Nome</FormLabel>
+            name="type"
+            render={({ field: { name, onChange, value, disabled } }) => (
+              <FormItem className="flex w-full flex-col content-end items-start">
+                <FormLabel className="text-left align-baseline">Tipo</FormLabel>
                 <Popover>
                   <FormControl>
-                    <Input value={field.value} {...field} />
+                    <Select
+                      defaultValue="computer"
+                      value={value}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                    >
+                      <SelectTrigger className="h-10 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="computer">Computador</SelectItem>
+                        <SelectItem value="notebook">Notebook</SelectItem>
+                        <SelectItem value="printer">Impressora</SelectItem>
+                        <SelectItem value="nobreak">Nobreak</SelectItem>
+                        <SelectItem value="peripherals">Periféricos</SelectItem>
+                        <SelectItem value="others">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                 </Popover>
               </FormItem>
@@ -137,7 +127,21 @@ export function TreatmentClient() {
             name="identification"
             render={({ field }) => (
               <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">CPF/CNPJ</FormLabel>
+                <FormLabel className="text-left">Identificação</FormLabel>
+                <Popover>
+                  <FormControl>
+                    <Input value={field.value} {...field} />
+                  </FormControl>
+                </Popover>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="brand"
+            render={({ field }) => (
+              <FormItem className="flex w-full flex-col">
+                <FormLabel className="text-left">Marca</FormLabel>
                 <Popover>
                   <FormControl>
                     <Input value={field.value} {...field}></Input>
@@ -148,33 +152,18 @@ export function TreatmentClient() {
           />
           <FormField
             control={form.control}
-            name="email"
+            name="details"
             render={({ field }) => (
               <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">E-mail</FormLabel>
+                <FormLabel className="text-left">Detalhes</FormLabel>
                 <Popover>
                   <FormControl>
-                    <Input value={field.value} {...field}></Input>
+                    <Textarea value={field.value} {...field}></Textarea>
                   </FormControl>
                 </Popover>
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">Telefone</FormLabel>
-                <Popover>
-                  <FormControl>
-                    <Input value={field.value} {...field}></Input>
-                  </FormControl>
-                </Popover>
-              </FormItem>
-            )}
-          />
-
           <div className="flex w-full justify-end">
             <Button
               type="submit"

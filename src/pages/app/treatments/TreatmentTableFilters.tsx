@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Search, X } from 'lucide-react'
+import { Filter, FilterX, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
@@ -87,17 +87,17 @@ export function TreatmentTableFilters() {
   return (
     <form
       onSubmit={handleSubmit(handleFilter)}
-      className="flex items-center gap-2"
+      className="font-gaba flex items-center gap-2"
     >
       <Search />
       <Input
-        placeholder="Filtar por Id"
-        className="h-8 w-auto"
+        placeholder="Filtar por ID"
+        className="h-8 w-[180px] placeholder:text-slate-500"
         {...register('treatmentId')}
       />
       <Input
         placeholder="Filtrar por Cliente"
-        className="h-8 w-[320px]"
+        className="h-8 w-[180px] placeholder:text-slate-500"
         {...register('clientName')}
       />
       <Controller
@@ -131,7 +131,7 @@ export function TreatmentTableFilters() {
       />
 
       <Button type="submit" size="sm" variant="secondary">
-        <Search className="mr-2 h-4 w-4" />
+        <Filter className="mr-2 h-4 w-4" />
         Filtrar resultados
       </Button>
       <Button
@@ -140,7 +140,7 @@ export function TreatmentTableFilters() {
         variant="outline"
         size="sm"
       >
-        <X className="mr-2 h-4 w-4" />
+        <FilterX className="mr-2 h-4 w-4" />
         Remover filtros
       </Button>
     </form>

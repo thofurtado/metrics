@@ -57,14 +57,18 @@ export function Treatments() {
   return (
     <>
       <Helmet title="Atendimentos" />
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 font-gaba">
         <div className="flex-start  flex w-full flex-row place-content-between">
-          <h1 className="text-3xl font-bold tracking-tight">Atendimentos</h1>
+          <h1 className="font-merienda text-4xl font-bold tracking-tight text-minsk-900">
+            Atendimentos
+          </h1>
           <Button
             onClick={handleCreateTreatment}
-            className="ml-3 mt-auto w-auto bg-vida-loca-400 hover:bg-vida-loca-500 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 "
+            className="ml-3 mt-auto w-auto bg-vida-loca-500 hover:bg-vida-loca-600 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 "
           >
-            <span className="text-lg font-semibold">Iniciar Atendimento</span>
+            <span className="font-white text-xl font-thin">
+              Iniciar Atendimento
+            </span>
           </Button>
         </div>
         <div className="space-y-2.5">
@@ -72,17 +76,31 @@ export function Treatments() {
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[64px]"></TableHead>
-                  <TableHead className="w-[280px]">Identificador</TableHead>
-                  <TableHead className="w-[120px]">Aberto á</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Requisição</TableHead>
-                  <TableHead className="w-[80px]">Valor</TableHead>
-                  <TableHead className="w-[124px]"></TableHead>
-                  <TableHead className="w-[124px]"></TableHead>
+                <TableRow className="text-base ">
+                  <TableHead className="w-[64px] rounded-tl-md bg-minsk-200 text-minsk-950"></TableHead>
+                  <TableHead className="hidden w-[280px] bg-minsk-200 text-minsk-950 xl:table-cell">
+                    Identificador
+                  </TableHead>
+                  <TableHead className="w-[120px] bg-minsk-200 text-minsk-950">
+                    Aberto á
+                  </TableHead>
+                  <TableHead className="w-[120px] bg-minsk-200 text-minsk-950">
+                    Status
+                  </TableHead>
+                  <TableHead className="bg-minsk-200 text-minsk-950">
+                    Contato
+                  </TableHead>
+                  <TableHead className="bg-minsk-200 text-center text-minsk-950">
+                    Cliente
+                  </TableHead>
+                  <TableHead className="bg-minsk-200 text-minsk-950">
+                    Requisição
+                  </TableHead>
+                  <TableHead className="w-[80px] bg-minsk-200 text-minsk-950">
+                    Valor
+                  </TableHead>
+                  <TableHead className="w-[124px] bg-minsk-200 text-minsk-950"></TableHead>
+                  <TableHead className="w-[124px] rounded-tr-md bg-minsk-200"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

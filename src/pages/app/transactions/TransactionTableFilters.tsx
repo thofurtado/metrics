@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X } from 'lucide-react'
+import { Filter, FilterX, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
@@ -110,8 +110,9 @@ export function TransactionTableFilters() {
   return (
     <form
       onSubmit={handleSubmit(handleFilter)}
-      className="flex items-center justify-end gap-2"
+      className="flex items-center justify-start gap-2 font-gaba"
     >
+      <Search />
       <Input
         placeholder="Descrição aproximada"
         className="h-8 w-auto"
@@ -134,7 +135,10 @@ export function TransactionTableFilters() {
               value={value}
               disabled={disabled}
             >
-              <SelectTrigger className="h-8 w-[180px]">
+              <SelectTrigger
+                className="h-8 w-[180px]"
+                aria-label="Filtrar por Setor"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -166,7 +170,10 @@ export function TransactionTableFilters() {
               value={value}
               disabled={disabled}
             >
-              <SelectTrigger className="h-8 w-[180px]">
+              <SelectTrigger
+                className="h-8 w-[180px]"
+                aria-label="Filtro por Conta"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -183,8 +190,13 @@ export function TransactionTableFilters() {
         }}
       />
 
-      <Button type="submit" size="sm" variant="secondary">
-        <Search className="mr-2 h-4 w-4" />
+      <Button
+        type="submit"
+        size="sm"
+        variant="secondary"
+        aria-label="Filtrar Resultados"
+      >
+        <Filter className="mr-2 h-4 w-4" />
         Filtrar resultados
       </Button>
       <Button
@@ -192,8 +204,9 @@ export function TransactionTableFilters() {
         type="button"
         variant="outline"
         size="sm"
+        aria-label="Limpar Filtros"
       >
-        <X className="mr-2 h-4 w-4" />
+        <FilterX className="mr-2 h-4 w-4" />
         Remover filtros
       </Button>
     </form>

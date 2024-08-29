@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 
+const { Heading1 } = require('lucide-react')
+const { custom } = require('zod')
+
 module.exports = {
   darkMode: ['class'],
   content: [
@@ -95,6 +98,15 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+      },
+      fontFamily: {
+        gaba: ['Gabarito', 'sans-serif'],
+        titi: ['Titillium Web', 'sans-serif'],
+        martian: ['Martian Mono', 'monospace'],
+        eletro: ['Electrolize', 'sans-serif'],
+        lemonada: ['Lemonada', 'cursive'],
+        merienda: ['Merienda', 'cursive'],
+        itim: ['Itim', 'cursive'],
       },
       borderRadius: {
         lg: 'var(--radius)',

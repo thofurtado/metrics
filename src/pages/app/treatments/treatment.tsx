@@ -4,9 +4,22 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
   ArrowBigRightDash,
+  ArrowDownToLine,
+  ArrowUpToLine,
+  BetweenHorizonalStart,
+  BookOpenCheck,
+  BookOpenText,
+  Building2,
   Calendar as CalendarIcon,
+  ChevronDown,
+  CircleUserRound,
+  Computer,
+  Crosshair,
+  FlagTriangleRight,
   Gem,
   Handshake,
+  LandPlot,
+  NotebookText,
   UserPlus,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -14,7 +27,7 @@ import { Helmet } from 'react-helmet-async'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { z } from 'zod'
+import { object, z } from 'zod'
 
 import { createTreatment } from '@/api/create-treatment'
 import { getClients } from '@/api/get-clients'
@@ -52,6 +65,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { TreatmentClient } from './treatment-client'
+import { TreatmentClientEquipment } from './treatment-client-equipment'
 
 const formSchema = z.object({
   openingDate: z.date().nullish(),
@@ -63,6 +77,7 @@ const formSchema = z.object({
   }),
   status: z.string().nullish(),
   contact: z.string().nullish(),
+  equipment_id: z.string().nullish(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -74,10 +89,16 @@ export interface TreatmentInteractionsProps {
   client: string
   status: string
   contact: string
+  equipment_id: string
 }
 
 export function Treatment() {
   const [openClientDialog, setOpenClientDialog] = useState(false)
+  const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
+  const [isClosedDateDisabled, setIsClosedDateDisabled] = useState(true)
+  const [isEquipmentDisabled, setIsEquipmentDisabled] = useState(true)
+
+  const [clientId, setClienId] = useState(String(null))
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
@@ -86,7 +107,7 @@ export function Treatment() {
     mutationFn: createTreatment,
   })
 
-  const { data: result } = useQuery({
+  const { data: clients } = useQuery({
     queryKey: ['clients'],
     queryFn: () => getClients(),
   })
@@ -99,10 +120,12 @@ export function Treatment() {
     status,
     contact,
     client,
+    equipment_id,
   }: FormSchemaType) {
     const correctStatus = status || 'pending'
     // eslint-disable-next-line camelcase
     const ending_date = endingDate || new Date()
+    console.log(equipment_id)
     const response = await treatment({
       openingDate,
       // eslint-disable-next-line camelcase
@@ -112,6 +135,7 @@ export function Treatment() {
       status: correctStatus,
       contact,
       client,
+      equipment_id,
     })
     if (response !== undefined) {
       toast.success('Atendimento cadastrado com sucesso')
@@ -120,27 +144,31 @@ export function Treatment() {
       }, 1000)
     }
   }
+
   return (
     <>
       <Helmet title="Cadastro de Atendimentos" />
       <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="font-eletro text-4xl font-bold tracking-tight text-minsk-900">
           Cadastro de Atendimento
         </h1>
 
-        <div className="space-y-2.5">
+        <div className="flex justify-center space-y-2">
           <Form {...form}>
             <form
-              className="flex w-full flex-col place-content-center content-around items-center justify-center justify-items-center gap-8 rounded-md border p-8"
+              className="flex w-full flex-col place-content-center content-around items-center justify-center justify-items-center gap-6 rounded-md border bg-minsk-200 p-6 lg:w-2/3"
               onSubmit={form.handleSubmit(onSubmit)}
             >
-              <div className="flex w-3/5 flex-row justify-between">
+              <div className="flex w-5/6 flex-row justify-between">
                 <FormField
                   control={form.control}
                   name="openingDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col items-center">
-                      <FormLabel className="text-left">Abertura</FormLabel>
+                    <FormItem className="flex w-[240px] flex-col items-center">
+                      <div className="flex flex-row">
+                        <FormLabel className="text-left">Abertura</FormLabel>
+                        <BookOpenText className="ml-2 h-4 w-4" />
+                      </div>
                       <div className="flex flex-row">
                         <Popover>
                           <FormControl>
@@ -192,19 +220,30 @@ export function Treatment() {
                   render={({
                     field: { name, onChange, value = 'pending', disabled },
                   }) => (
-                    <FormItem className="flex flex-col content-end items-center">
-                      <FormLabel className="text-left align-baseline">
-                        Estado
-                      </FormLabel>
+                    <FormItem className="flex w-full flex-col content-end items-center">
+                      <div className="flex w-[240px] flex-row justify-center">
+                        <FormLabel className="text-left align-baseline">
+                          Estado
+                        </FormLabel>
+                        <FlagTriangleRight className="ml-2 h-4 w-4" />
+                      </div>
                       <Popover>
                         <FormControl>
                           <Select
                             defaultValue="pending"
                             value={value}
-                            onValueChange={onChange}
+                            onValueChange={(newValue) => {
+                              onChange(newValue)
+                              if (
+                                newValue === 'resolved' ||
+                                newValue === 'canceled'
+                              )
+                                setIsClosedDateDisabled(false)
+                              else setIsClosedDateDisabled(true)
+                            }}
                             disabled={disabled}
                           >
-                            <SelectTrigger className="h-10 w-[180px]">
+                            <SelectTrigger className="h-10 w-[200px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -237,12 +276,18 @@ export function Treatment() {
                   name="endingDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col items-center">
-                      <FormLabel className="text-left">Encerramento</FormLabel>
+                      <div className="flex flex-row">
+                        <FormLabel className="text-left">
+                          Encerramento
+                        </FormLabel>
+                        <BookOpenCheck className="ml-2 h-4 w-4" />
+                      </div>
                       <div className="flex flex-row">
                         <Popover>
                           <FormControl>
                             <PopoverTrigger asChild>
                               <Button
+                                disabled={isClosedDateDisabled}
                                 variant="outline"
                                 className={cn(
                                   'justify-start text-left font-normal',
@@ -284,32 +329,39 @@ export function Treatment() {
                   )}
                 />
               </div>
-              <div className=" flex w-3/5 flex-row justify-between">
-                <div className="flex w-full items-center">
+              <div className="flex w-5/6 flex-row justify-between">
+                <div className="flex w-1/3 items-center">
                   <FormField
                     control={form.control}
                     name="client"
                     render={({
                       field: { name, onChange, value, disabled },
                     }) => (
-                      <FormItem className="flex w-2/6 flex-col content-end items-start">
-                        <FormLabel className="self-center text-left ">
-                          Cliente
-                        </FormLabel>
+                      <FormItem className="flex w-[250px] flex-col content-end items-start">
+                        <div className="flex w-full flex-row justify-center">
+                          <FormLabel className="self-center text-left ">
+                            Cliente
+                          </FormLabel>
+                          <Building2 className="ml-2 h-4 w-4" />
+                        </div>
                         <Popover>
                           <FormControl>
                             <Select
                               defaultValue="Carregando..."
                               value={value}
-                              onValueChange={onChange}
+                              onValueChange={(newValue) => {
+                                onChange(newValue)
+                                setClienId(newValue)
+                                setIsEquipmentDisabled(false)
+                              }}
                               disabled={disabled}
                             >
                               <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {result &&
-                                  result.data.clients.map((client) => (
+                                {clients &&
+                                  clients.data.clients.map((client) => (
                                     <SelectItem
                                       value={client.id}
                                       key={client.id}
@@ -335,11 +387,14 @@ export function Treatment() {
                     onOpenChange={setOpenClientDialog}
                   >
                     <DialogTrigger asChild>
-                      <Button variant="ghost" className="hover:bg-white">
+                      <Button
+                        variant="ghost"
+                        className="!p-0 hover:bg-minsk-200 "
+                      >
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <UserPlus className="ml-2 mt-2 h-5 w-5 text-vida-loca-600" />
+                              <UserPlus className="ml-2 mt-5 h-6 w-6 text-vida-loca-600 hover:text-vida-loca-500" />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Adicionar Cliente</p>
@@ -351,14 +406,100 @@ export function Treatment() {
                     <TreatmentClient open={openClientDialog} />
                   </Dialog>
                 </div>
+                <div className="flex w-1/3 items-center">
+                  <FormField
+                    control={form.control}
+                    name="equipment_id"
+                    render={({
+                      field: {
+                        name,
+                        onChange,
+                        value = 'Selecione o cliente',
+                        disabled,
+                      },
+                    }) => (
+                      <FormItem className="flex w-[240px] flex-col content-end items-center">
+                        <div className="flex flex-row">
+                          <FormLabel className="text-left align-baseline">
+                            Equipamento
+                          </FormLabel>
+                          <Computer className="ml-2 h-4 w-4" />
+                        </div>
+                        <Popover>
+                          <FormControl>
+                            <Select
+                              value={value}
+                              onValueChange={onChange}
+                              disabled={disabled}
+                            >
+                              <SelectTrigger
+                                className="h-10 w-[200px]"
+                                disabled={isEquipmentDisabled}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {clients?.data.clients.find(
+                                  (client) => client.id === clientId,
+                                )?.equipments.length > 0 &&
+                                  clients?.data.clients
+                                    .find((client) => client.id === clientId)
+                                    ?.equipments.map((equipment) => (
+                                      <SelectItem
+                                        value={equipment.id}
+                                        key={equipment.id}
+                                      >
+                                        <span className="flex">
+                                          {`${equipment.type} - ${equipment.brand} - ${equipment.identification}`}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+                  <Dialog
+                    open={isClientDialogOpen}
+                    onOpenChange={setIsClientDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="!p-0 hover:bg-white"
+                        disabled={isEquipmentDisabled}
+                      >
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <BetweenHorizonalStart className="ml-1 mt-5 h-5 w-5 text-vida-loca-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Adicionar Equipamento</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </Button>
+                    </DialogTrigger>
+                    <TreatmentClientEquipment
+                      open={isClientDialogOpen}
+                      clientId={clientId}
+                    />
+                  </Dialog>
+                </div>
                 <FormField
                   control={form.control}
                   name="contact"
                   render={({ field }) => (
-                    <FormItem className="flex w-2/6 flex-col">
-                      <FormLabel className="self-center text-left">
-                        Contato
-                      </FormLabel>
+                    <FormItem className="flex w-[200px] flex-col">
+                      <div className="flex flex-row justify-center ">
+                        <FormLabel className="self-center text-left">
+                          Contato
+                        </FormLabel>
+                        <CircleUserRound className="ml-2 h-4 w-4" />
+                      </div>
                       <FormControl>
                         <Input value={field.value} {...field}></Input>
                       </FormControl>
@@ -366,13 +507,16 @@ export function Treatment() {
                   )}
                 />
               </div>
-              <div className="flex w-full flex-col items-center">
+              <div className="flex w-5/6 flex-col items-center">
                 <FormField
                   control={form.control}
                   name="request"
                   render={({ field }) => (
-                    <FormItem className="flex w-3/5 flex-col">
-                      <FormLabel className="text-left">Requisição</FormLabel>
+                    <FormItem className="flex w-full flex-col">
+                      <div className="flex flex-row">
+                        <FormLabel className="text-left">Requisição</FormLabel>
+                        <Crosshair className="ml-2 h-4 w-4" />
+                      </div>
                       <Popover>
                         <FormControl>
                           <Input value={field.value} {...field}></Input>
@@ -385,8 +529,13 @@ export function Treatment() {
                   control={form.control}
                   name="observation"
                   render={({ field }) => (
-                    <FormItem className="mt-6 flex w-3/5 flex-col">
-                      <FormLabel className="text-left">Observação</FormLabel>
+                    <FormItem className="mt-6 flex w-full flex-col">
+                      <div className="flex flex-row">
+                        <FormLabel className="text-left">
+                          Descrição Detalhada
+                        </FormLabel>
+                        <NotebookText className="ml-2 h-4 w-4" />
+                      </div>
                       <Popover>
                         <FormControl>
                           <Textarea
@@ -401,8 +550,9 @@ export function Treatment() {
                 />
               </div>
               <Button
+                aria-label="Cadastrar Atendimento"
                 type="submit"
-                className="bg-minsk-400 text-white hover:bg-minsk-500"
+                className="bg-vida-loca-900 text-white hover:bg-vida-loca-700"
               >
                 Cadastrar
               </Button>

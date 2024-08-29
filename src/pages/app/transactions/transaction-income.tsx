@@ -12,7 +12,7 @@ import {
   NotebookText,
   Tag,
 } from 'lucide-react'
-import { MouseEventHandler, useState } from 'react'
+import { MouseEventHandler, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -79,6 +79,18 @@ export interface TransactionExpenseProps {
 export function TransactionIncome() {
   const { mutateAsync: transaction } = useMutation({
     mutationFn: createTransaction,
+  })
+  useEffect(() => {
+    if (form.formState.isSubmitSuccessful) {
+      form.reset({
+        date: null,
+        description: '',
+        account: null,
+        sector: null,
+        amount: '',
+        confirmed: false,
+      })
+    }
   })
   async function onSubmit(data: FormSchemaType) {
     const response = await transaction({
