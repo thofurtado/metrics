@@ -45,7 +45,7 @@ export function SignIn() {
 
       toast.success('Parabéns, você será redirecionado')
       await new Promise((resolve) => setTimeout(resolve, 1500))
-      window.location.href = '/' // Replace with desired route
+      window.location.href = '/dashboard' // Replace with desired route
     } catch (err) {
       toast.error('Credenciais inválidas', {
         closeButton: true,

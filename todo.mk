@@ -1,0 +1,4 @@
+- [ ] Tela de interação deveria ser fechada após gravar
+- [ ] Após a gravação de uma interação é preciso recarregar os dados da tabela de atendimento
+- [ ] Após cadastro de cliente na tela de atendimento atualizar dropbox/demora 20s aprox
+- [ ]

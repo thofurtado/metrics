@@ -58,11 +58,11 @@ export function TransactionTableRow({ transactions }: GetTransactionsDTO) {
 
   return (
     <TableRow className="h-16 bg-white dark:bg-stone-900">
-      <AlertDialog open={openSwitchAlert}>
+      <AlertDialog open={openSwitchAlert} >
         <AlertDialogTrigger asChild>
-          <Button
+          <Button 
+       
             aria-label="Alterar estado do pagamento"
-            className="w-full"
             variant="ghost"
             onClick={() => {
               setOpenSwitchAlert(true)
@@ -124,6 +124,7 @@ export function TransactionTableRow({ transactions }: GetTransactionsDTO) {
       <AlertDialog open={openDeleteAlert}>
         <AlertDialogTrigger asChild>
           <Button
+          className='h-auto'
             aria-label={`Deletar Transação: ${transactions.description}`}
             variant="ghost"
             onClick={() => {
@@ -131,7 +132,7 @@ export function TransactionTableRow({ transactions }: GetTransactionsDTO) {
             }}
           >
             <TableCell>
-              <Trash className="h-5 w-5 text-stone-500" />
+              <Trash className="h-5 w-9 text-stone-500" />
             </TableCell>
           </Button>
         </AlertDialogTrigger>

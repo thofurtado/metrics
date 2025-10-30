@@ -14,7 +14,7 @@ export function GeneralBalance() {
     queryKey: ['metrics', 'general-balance'],
   })
 
-  console.log(generalBalance)
+  console.log("general balance:"+generalBalance)
 
   return (
     <Card>
