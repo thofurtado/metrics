@@ -71,7 +71,12 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
+// ... imports (mantidos iguais)
+
+// ... imports (mantidos iguais)
+
 export function Treatment() {
+  // ... estados e hooks (mantidos iguais)
   const [openClientDialog, setOpenClientDialog] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
   const [isClosedDateDisabled, setIsClosedDateDisabled] = useState(true)
@@ -81,7 +86,7 @@ export function Treatment() {
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
-  
+
   const navigate = useNavigate()
   const { mutateAsync: treatment } = useMutation({
     mutationFn: createTreatment,
@@ -113,9 +118,11 @@ export function Treatment() {
   return (
     <>
       <Helmet title="Cadastro de Atendimentos" />
-      <div className="flex flex-col gap-3 p-3 sm:p-4 max-w-full overflow-x-hidden">
-        {/* Header mais compacto */}
-        <div className="flex flex-col gap-2 rounded-lg bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow sm:rounded-xl">
+      {/* CORREÇÃO 1: Removido todo o padding horizontal do container externo no mobile (p-0 px-0). w-full garante largura máxima. */}
+      <div className="flex flex-col gap-3 p-0 sm:p-4 w-full overflow-x-hidden">
+        
+        {/* Header - Mantido. O padding interno p-4 já garante o espaçamento do texto. */}
+        <div className="flex flex-col gap-2 rounded-none sm:rounded-xl bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow">
           <h1 className="text-lg font-bold sm:text-xl">
             Cadastro de Atendimento
           </h1>
@@ -125,13 +132,18 @@ export function Treatment() {
         </div>
 
         <Form {...form}>
+          {/* CORREÇÃO 2: Form com w-full (removido max-w-full) e aplicação de padding interno (px-4 py-3) para dar o respiro. 
+              Removido border/shadow no mobile para visual de app.
+          */}
           <form
-            className="flex w-full max-w-full flex-col gap-3 rounded-lg border border-minsk-200 bg-white p-3 shadow-sm dark:border-minsk-700 dark:bg-minsk-900 sm:gap-4 sm:rounded-xl sm:p-4"
+            className="flex w-full flex-col gap-3 px-4 py-3 border-none shadow-none rounded-none 
+                       sm:gap-4 sm:p-4 sm:border sm:border-minsk-200 sm:rounded-xl sm:bg-white sm:shadow-sm
+                       dark:border-minsk-700 dark:bg-minsk-900"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            {/* DATAS E STATUS - Layout mais compacto */}
+            {/* DATAS E STATUS - Layout OK, pois usa grid-cols-1 no mobile */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              {/* Data de Abertura */}
+              {/* Data de Abertura (mantido) */}
               <FormField
                 control={form.control}
                 name="openingDate"
@@ -181,8 +193,7 @@ export function Treatment() {
                   </FormItem>
                 )}
               />
-
-              {/* Status */}
+              {/* Status (mantido) */}
               <FormField
                 control={form.control}
                 name="status"
@@ -222,8 +233,7 @@ export function Treatment() {
                   </FormItem>
                 )}
               />
-
-              {/* Data de Encerramento */}
+              {/* Data de Encerramento (mantido) */}
               <FormField
                 control={form.control}
                 name="endingDate"
@@ -279,9 +289,9 @@ export function Treatment() {
               />
             </div>
 
-            {/* CLIENTE E EQUIPAMENTO */}
+            {/* CLIENTE E EQUIPAMENTO - Layout OK, pois usa grid-cols-1 no mobile */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              {/* Cliente */}
+              {/* Cliente (mantido) */}
               <div className="flex items-end gap-2">
                 <FormField
                   control={form.control}
@@ -336,7 +346,7 @@ export function Treatment() {
                 </Dialog>
               </div>
 
-              {/* Equipamento */}
+              {/* Equipamento (mantido) */}
               <div className="flex items-end gap-2">
                 <FormField
                   control={form.control}
@@ -396,7 +406,7 @@ export function Treatment() {
               </div>
             </div>
 
-            {/* CAMPOS INDIVIDUAIS */}
+            {/* CAMPOS INDIVIDUAIS (mantido) */}
             <div className="space-y-3 sm:space-y-4">
               <FormField
                 control={form.control}
@@ -459,7 +469,7 @@ export function Treatment() {
               />
             </div>
 
-            {/* BOTÃO CADASTRAR */}
+            {/* BOTÃO CADASTRAR (mantido) */}
             <Button
               type="submit"
               className="h-10 w-full bg-gradient-to-r from-vida-loca-500 to-vida-loca-600 text-sm font-semibold text-white shadow dark:from-vida-loca-600 dark:to-vida-loca-700 sm:h-11"
