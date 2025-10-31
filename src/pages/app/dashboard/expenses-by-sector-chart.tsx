@@ -16,13 +16,13 @@ const COLORS = [
   colors.rose[500],
 ]
 
-export function ExpensesBySectorChart() {
+export function ExpensesBySectorChart({ className }: { className?: string }) {
   const { data: monthExpenseBySector } = useQuery({
     queryFn: getMonthExpenseBySector,
     queryKey: ['metrics', 'month-expense-by-sector'],
   })
   return (
-    <Card className="col-span-3">
+    <Card className={className}>
       <CardHeader className="pb-8">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium">

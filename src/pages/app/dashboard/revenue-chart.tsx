@@ -19,14 +19,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-export function RevenueChart() {
+export function RevenueChart({ className }: { className?: string }) {
   const { data: monthIncomeByDays } = useQuery({
     queryFn: getMonthIncomesByDay,
     queryKey: ['metrics', 'month-income-by-day'],
   })
   console.log(monthIncomeByDays)
   return (
-    <Card className="col-span-6">
+    <Card className={className}>
       <CardHeader className="flex-row items-center justify-between pb-8">
         <div className="space-y-1">
           <CardTitle className="text-base font-medium">

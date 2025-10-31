@@ -56,41 +56,46 @@ export function SignIn() {
   return (
     <>
       <Helmet title="Login" />
-      <div className="p-8">
-        <Button
-          variant="outline"
-          asChild
-          className="border-minsk-400 hover:bg-minsk-400 absolute right-8 top-8 hover:text-white"
-        >
-          <Link to="/sign-up">Novo Usuário</Link>
-        </Button>
-        <div className="w[358px] flex flex-col justify-center gap-6">
-          <div className="flex flex-col gap-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Acessar Metrics
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Entre para fazer parte da Gestão descomplicada
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit(handleSignIn)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Seu e-mail:</Label>
-              <Input id="email" type="email" {...register('email')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha:</Label>
-              <Input id="password" type="password" {...register('password')} />
-            </div>
-            <Button
-              disabled={isSubmitting}
-              className="bg-minsk-400 hover:bg-minsk-500 w-full text-white"
+      <div className="flex flex-col justify-center gap-6"> {/* Removido w[358px] */}
+        {/*
+            Botão Novo Usuário movido para baixo.
+            Este link simples agora fica no topo do formulário
+        */}
+        <div className="text-right">
+            <Link 
+                to="/sign-up"
+                className="text-minsk-500 hover:text-minsk-700 text-sm font-medium transition-colors"
             >
-              Entrar
-            </Button>
-          </form>
+                Criar uma conta
+            </Link>
         </div>
+
+        <div className="flex flex-col gap-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-minsk-800">
+            Acessar Metrics
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Entre para fazer parte da Gestão descomplicada
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit(handleSignIn)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Seu e-mail:</Label>
+            <Input id="email" type="email" {...register('email')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha:</Label>
+            <Input id="password" type="password" {...register('password')} />
+          </div>
+          <Button
+            disabled={isSubmitting}
+            // Botão com cores da marca
+            className="bg-minsk-600 hover:bg-minsk-700 w-full text-white transition-colors"
+          >
+            Entrar
+          </Button>
+        </form>
       </div>
     </>
   )

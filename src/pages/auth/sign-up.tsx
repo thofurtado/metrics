@@ -80,45 +80,56 @@ export function SignUp() {
   return (
     <>
       <Helmet title="Cadastro" />
-      <div className="p-8">
-        <Button variant="ghost" asChild className="absolute right-8 top-8">
-          <Link to="/sign-in">Fazer Login </Link>
-        </Button>
-        <div className="w[358px] flex flex-col justify-center gap-6">
-          <div className="flex flex-col gap-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Cadastro de Usuário
-            </h1>
-          </div>
-
-          <form onSubmit={handleSubmit(handleSignUp)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome:</Label>
-              <Input id="name" type="text" {...register('name')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail:</Label>
-              <Input id="email" type="email" {...register('email')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha:</Label>
-              <Input id="password" type="password" {...register('password')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="passwordConfirmation">
-                Confirmação de Senha:
-              </Label>
-              <Input
-                id="passwordConfirmation"
-                type="password"
-                {...register('passwordConfirmation')}
-              />
-            </div>
-            <Button disabled={isSubmitting} className="w-full">
-              Cadastrar
-            </Button>
-          </form>
+      <div className="flex flex-col justify-center gap-6"> {/* Removido w[358px] */}
+        {/*
+            Botão Fazer Login movido para o topo do formulário
+        */}
+        <div className="text-right">
+            <Link 
+                to="/sign-in"
+                className="text-minsk-500 hover:text-minsk-700 text-sm font-medium transition-colors"
+            >
+                Fazer Login
+            </Link>
         </div>
+
+        <div className="flex flex-col gap-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-minsk-800">
+            Cadastro de Usuário
+          </h1>
+        </div>
+
+        <form onSubmit={handleSubmit(handleSignUp)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome:</Label>
+            <Input id="name" type="text" {...register('name')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">E-mail:</Label>
+            <Input id="email" type="email" {...register('email')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha:</Label>
+            <Input id="password" type="password" {...register('password')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="passwordConfirmation">
+              Confirmação de Senha:
+            </Label>
+            <Input
+              id="passwordConfirmation"
+              type="password"
+              {...register('passwordConfirmation')}
+            />
+          </div>
+          <Button 
+            disabled={isSubmitting} 
+            // Botão com cores da marca
+            className="bg-minsk-600 hover:bg-minsk-700 w-full text-white transition-colors"
+          >
+            Cadastrar
+          </Button>
+        </form>
       </div>
     </>
   )
