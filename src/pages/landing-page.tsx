@@ -10,10 +10,10 @@ export function LandingPage() {
   return (
     <>
       <Helmet>
-        <title>Eureca Tech - Consultoria em TI e Automação Comercial</title>
+        <title>Eureca Tech - Consultoria em Informática Essencial</title>
         <meta name="description" content="Soluções completas em TI: suporte técnico, consultoria, automação comercial e treinamentos. Plano Cuidado Total para sua empresa." />
       </Helmet>
-      
+
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-teal-800 to-purple-900">
         {/* Header */}
         <header className="border-b border-white/10">
@@ -27,13 +27,13 @@ export function LandingPage() {
                 </div>
                 <span className="text-2xl font-bold text-white">Eureca Tech</span>
               </div>
-              
+
               <nav className="hidden md:flex items-center gap-8">
                 <a href="#services" className="text-white/80 hover:text-white transition-colors">Serviços</a>
                 <a href="#about" className="text-white/80 hover:text-white transition-colors">Sobre</a>
                 <a href="#contact" className="text-white/80 hover:text-white transition-colors">Contato</a>
               </nav>
-              
+
               <div className="flex items-center gap-4">
                 <Link to="/sign-in">
                   <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-900">
@@ -53,10 +53,10 @@ export function LandingPage() {
         {/* Hero Section */}
         <section className="container mx-auto px-6 py-20 text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-            Consultoria em <span className="text-purple-300">TI</span> que sua empresa precisa
+            Consultoria em <br /><span className="text-purple-300">Informática Essencial</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/80 mb-8 max-w-3xl mx-auto">
-            Soluções completas em tecnologia: suporte técnico, automação comercial, 
+            Soluções completas em tecnologia: suporte técnico, automação comercial,
             treinamentos e muito mais. Deixe a TI conosco e foque no seu negócio.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -66,7 +66,7 @@ export function LandingPage() {
               </Button>
             </a>
             <a href="#services">
-              <Button size="lg" variant="outline" className="border-white text-blue-900 hover:bg-white hover:text-blue-900 px-8 py-3 text-lg bg-white">
+              <Button size="lg" variant="outline" className="border-white text-blue-900 hover:bg-gray-100 hover:text-blue-900 px-8 py-3 text-lg bg-white">
                 Conhecer Nossos Serviços
               </Button>
             </a>
@@ -84,7 +84,7 @@ export function LandingPage() {
                 Identificamos e solucionamos os principais desafios de TI que afetam sua empresa
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-200">
                 <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mb-6">
@@ -94,7 +94,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Problemas de Hardware</h3>
                 <p className="text-gray-600">
-                  Computadores lentos, impressoras com defeito, redes instáveis? 
+                  Computadores lentos, impressoras com defeito, redes instáveis?
                   Resolvemos problemas técnicos rapidamente.
                 </p>
               </div>
@@ -107,7 +107,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Sistemas Windows</h3>
                 <p className="text-gray-600">
-                  Atualizações, configurações, migrações e otimização de sistemas 
+                  Atualizações, configurações, migrações e otimização de sistemas
                   Windows, máquinas virtuais e suporte básico a outros sistemas.
                 </p>
               </div>
@@ -120,7 +120,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Automação Comercial</h3>
                 <p className="text-gray-600">
-                  Implementação e suporte para sistemas de automação comercial, 
+                  Implementação e suporte para sistemas de automação comercial,
                   PDV, emissão de NFC-e, SAT e muito mais.
                 </p>
               </div>
@@ -136,11 +136,11 @@ export function LandingPage() {
                 Plano <span className="text-purple-600">Cuidado Total</span>
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Nos tornamos responsáveis pela TI da sua empresa, garantindo tranquilidade 
+                Nos tornamos responsáveis pela TI da sua empresa, garantindo tranquilidade
                 e eficiência para você focar no que realmente importa
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {/* Backup e Segurança */}
               <div className="bg-gray-50 rounded-xl p-8 hover:shadow-lg transition-shadow border border-gray-200">
@@ -151,7 +151,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Backup e Segurança</h3>
                 <p className="text-gray-600">
-                  Seus dados protegidos na nuvem contra vírus, falhas de equipamentos 
+                  Seus dados protegidos na nuvem contra vírus, falhas de equipamentos
                   e erros operacionais. Acesse de qualquer lugar com total segurança.
                 </p>
               </div>
@@ -165,7 +165,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Suporte Técnico</h3>
                 <p className="text-gray-600">
-                  Suporte remoto e presencial para hardware, software, redes e 
+                  Suporte remoto e presencial para hardware, software, redes e
                   sistemas. Resposta rápida para minimizar downtime.
                 </p>
               </div>
@@ -179,7 +179,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Manutenção Preventiva</h3>
                 <p className="text-gray-600">
-                  Limpezas agendadas, atualizações regulares, monitoramento 
+                  Limpezas agendadas, atualizações regulares, monitoramento
                   proativo e correção preventiva de problemas.
                 </p>
               </div>
@@ -193,7 +193,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Treinamentos</h3>
                 <p className="text-gray-600">
-                  Capacitação da sua equipe em sistemas, segurança digital e 
+                  Capacitação da sua equipe em sistemas, segurança digital e
                   melhores práticas de tecnologia para aumentar a produtividade.
                 </p>
               </div>
@@ -208,7 +208,7 @@ export function LandingPage() {
               Pronto para transformar a TI da sua empresa?
             </h2>
             <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Conheça o Plano Cuidado Total e tenha toda a infraestrutura de TI 
+              Conheça o Plano Cuidado Total e tenha toda a infraestrutura de TI
               da sua empresa gerenciada por especialistas.
             </p>
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
@@ -228,8 +228,8 @@ export function LandingPage() {
                   Por que escolher a <span className="text-purple-600">Eureca Tech</span>?
                 </h2>
                 <p className="text-lg text-gray-600 mb-6">
-                  Há 6 anos no mercado de tecnologia, desenvolvemos expertise para entender 
-                  que cada empresa tem necessidades únicas. Oferecemos soluções personalizadas 
+                  Há 6 anos no mercado de tecnologia, desenvolvemos expertise para entender
+                  que cada empresa tem necessidades únicas. Oferecemos soluções personalizadas
                   que resolvem os problemas reais de TI do seu negócio com agilidade e eficiência.
                 </p>
                 <div className="space-y-4">
@@ -315,11 +315,11 @@ export function LandingPage() {
               <div>
                 <h3 className="text-xl font-bold mb-4">Eureca Tech</h3>
                 <p className="text-gray-400">
-                  Especialistas em soluções tecnológicas para empresas que buscam 
+                  Especialistas em soluções tecnológicas para empresas que buscam
                   eficiência e crescimento através da tecnologia.
                 </p>
               </div>
-              
+
               <div>
                 <h3 className="text-xl font-bold mb-4">Contato</h3>
                 <div className="text-gray-400 space-y-2">
@@ -328,7 +328,7 @@ export function LandingPage() {
                   <p>Rua Tatsuo Matsumoto 180, Capricórnio II<br />Caraguátatuba - SP</p>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-xl font-bold mb-4">Acesso Rápido</h3>
                 <div className="text-gray-400 space-y-2">
@@ -339,7 +339,7 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
               <p>&copy; 2020 Eureca Tech. Todos os direitos reservados.</p>
             </div>
