@@ -37,12 +37,12 @@ export function LandingPage() {
               <div className="flex items-center gap-4">
                 <Link to="/sign-in">
                   <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-900">
-                    Entrar no Metrics
+                    Metrics
                   </Button>
                 </Link>
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                   <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    Falar no WhatsApp
+                    WhatsApp
                   </Button>
                 </a>
               </div>
@@ -334,7 +334,7 @@ export function LandingPage() {
                 <div className="text-gray-400 space-y-2">
                   <a href="#services" className="block hover:text-white transition-colors">Nossos Serviços</a>
                   <a href="#about" className="block hover:text-white transition-colors">Sobre Nós</a>
-                  <Link to="/sign-in" className="block hover:text-white transition-colors">Entrar no Metrics</Link>
+                  <Link to="/sign-in" className="block hover:text-white transition-colors">Login Metrics</Link>
                   <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block hover:text-white transition-colors">Suporte Rápido</a>
                 </div>
               </div>
