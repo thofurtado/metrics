@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PopoverClose } from '@radix-ui/react-popover'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
   ArrowBigRightDash,
@@ -16,8 +16,9 @@ import {
   NotebookText,
   UserPlus,
   BetweenHorizonalStart,
+  Search,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -71,12 +72,95 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-// ... imports (mantidos iguais)
+// Componente personalizado para o select de clientes
+function ClientSelect({ 
+  value, 
+  onValueChange, 
+  clients = [] 
+}: { 
+  value: string
+  onValueChange: (value: string) => void
+  clients: Array<{
+    id: string
+    name: string
+    contract: boolean
+  }>
+}) {
+  const [searchTerm, setSearchTerm] = useState('')
 
-// ... imports (mantidos iguais)
+  // Ordenar clientes: primeiro os com contrato, depois os sem contrato, tudo em ordem alfabética
+  const sortedAndFilteredClients = useMemo(() => {
+    if (!clients) return []
+    
+    // Filtrar por termo de pesquisa
+    const filtered = clients.filter(client =>
+      client.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    // Ordenar: primeiro clientes com contrato, depois sem contrato, tudo em ordem alfabética
+    return filtered.sort((a, b) => {
+      // Primeiro ordena por contrato (clientes com contrato primeiro)
+      if (a.contract && !b.contract) return -1
+      if (!a.contract && b.contract) return 1
+      
+      // Depois ordena alfabeticamente por nome
+      return a.name.localeCompare(b.name)
+    })
+  }, [clients, searchTerm])
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <FormControl>
+        <SelectTrigger className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm">
+          <SelectValue placeholder="Selecione um cliente" />
+        </SelectTrigger>
+      </FormControl>
+      <SelectContent className="border-minsk-200 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800">
+        {/* Campo de pesquisa */}
+        <div className="sticky top-0 z-10 bg-white dark:bg-minsk-800 p-2 border-b border-minsk-200 dark:border-minsk-600">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-minsk-400" />
+            <Input
+              placeholder="Pesquisar cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 h-8 text-xs border-minsk-200 dark:border-minsk-600 dark:bg-minsk-700"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+
+        {/* Lista de clientes ordenada */}
+        <div className="max-h-60 overflow-y-auto">
+          {sortedAndFilteredClients.length === 0 ? (
+            <div className="px-2 py-4 text-center text-xs text-minsk-500 dark:text-minsk-400">
+              {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+            </div>
+          ) : (
+            sortedAndFilteredClients.map((client) => (
+              <SelectItem 
+                value={client.id} 
+                key={client.id} 
+                className="text-xs sm:text-sm"
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <span className="truncate flex-1">{client.name}</span>
+                  {client.contract && (
+                    <span className="shrink-0 text-[10px] bg-vida-loca-100 text-vida-loca-700 dark:bg-vida-loca-900/30 dark:text-vida-loca-300 px-1.5 py-0.5 rounded">
+                      Contrato
+                    </span>
+                  )}
+                </span>
+              </SelectItem>
+            ))
+          )}
+        </div>
+      </SelectContent>
+    </Select>
+  )
+}
 
 export function Treatment() {
-  // ... estados e hooks (mantidos iguais)
   const [openClientDialog, setOpenClientDialog] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
   const [isClosedDateDisabled, setIsClosedDateDisabled] = useState(true)
@@ -88,14 +172,30 @@ export function Treatment() {
   })
 
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  
   const { mutateAsync: treatment } = useMutation({
     mutationFn: createTreatment,
   })
 
-  const { data: clients } = useQuery({
+  const { data: clients, refetch: refetchClients } = useQuery({
     queryKey: ['clients'],
     queryFn: () => getClients(),
   })
+
+  // Refetch quando o dialog de cliente fechar
+  useEffect(() => {
+    if (!openClientDialog) {
+      refetchClients()
+    }
+  }, [openClientDialog, refetchClients])
+
+  // Refetch quando o dialog de equipamento fechar
+  useEffect(() => {
+    if (!isClientDialogOpen) {
+      refetchClients()
+    }
+  }, [isClientDialogOpen, refetchClients])
 
   async function onSubmit(data: FormSchemaType) {
     const correctStatus = data.status || 'pending'
@@ -118,10 +218,8 @@ export function Treatment() {
   return (
     <>
       <Helmet title="Cadastro de Atendimentos" />
-      {/* CORREÇÃO 1: Removido todo o padding horizontal do container externo no mobile (p-0 px-0). w-full garante largura máxima. */}
       <div className="flex flex-col gap-3 p-0 sm:p-4 w-full overflow-x-hidden">
         
-        {/* Header - Mantido. O padding interno p-4 já garante o espaçamento do texto. */}
         <div className="flex flex-col gap-2 rounded-none sm:rounded-xl bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow">
           <h1 className="text-lg font-bold sm:text-xl">
             Cadastro de Atendimento
@@ -132,18 +230,15 @@ export function Treatment() {
         </div>
 
         <Form {...form}>
-          {/* CORREÇÃO 2: Form com w-full (removido max-w-full) e aplicação de padding interno (px-4 py-3) para dar o respiro. 
-              Removido border/shadow no mobile para visual de app.
-          */}
           <form
             className="flex w-full flex-col gap-3 px-4 py-3 border-none shadow-none rounded-none 
                        sm:gap-4 sm:p-4 sm:border sm:border-minsk-200 sm:rounded-xl sm:bg-white sm:shadow-sm
                        dark:border-minsk-700 dark:bg-minsk-900"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            {/* DATAS E STATUS - Layout OK, pois usa grid-cols-1 no mobile */}
+            {/* DATAS E STATUS */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              {/* Data de Abertura (mantido) */}
+              {/* Data de Abertura */}
               <FormField
                 control={form.control}
                 name="openingDate"
@@ -193,7 +288,7 @@ export function Treatment() {
                   </FormItem>
                 )}
               />
-              {/* Status (mantido) */}
+              {/* Status */}
               <FormField
                 control={form.control}
                 name="status"
@@ -233,7 +328,7 @@ export function Treatment() {
                   </FormItem>
                 )}
               />
-              {/* Data de Encerramento (mantido) */}
+              {/* Data de Encerramento */}
               <FormField
                 control={form.control}
                 name="endingDate"
@@ -289,9 +384,9 @@ export function Treatment() {
               />
             </div>
 
-            {/* CLIENTE E EQUIPAMENTO - Layout OK, pois usa grid-cols-1 no mobile */}
+            {/* CLIENTE E EQUIPAMENTO */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              {/* Cliente (mantido) */}
+              {/* Cliente - AGORA COM PESQUISA E ORDENAÇÃO */}
               <div className="flex items-end gap-2">
                 <FormField
                   control={form.control}
@@ -302,32 +397,15 @@ export function Treatment() {
                         <Building2 className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
                         Cliente
                       </FormLabel>
-                      <Select
-                        value={value}
+                      <ClientSelect
+                        value={value || ''}
                         onValueChange={(newValue) => {
                           onChange(newValue)
                           setClientId(newValue)
                           setIsEquipmentDisabled(false)
                         }}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm">
-                            <SelectValue placeholder="Selecione um cliente" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="border-minsk-200 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800">
-                          {clients?.data.clients.map((client) => (
-                            <SelectItem value={client.id} key={client.id} className="text-xs sm:text-sm">
-                              <span className="flex items-center gap-1 truncate">
-                                <span className="truncate">{client.name}</span>
-                                {client.contract && (
-                                  <Gem className="h-3 w-3 shrink-0 text-yellow-500" />
-                                )}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        clients={clients?.data.clients || []}
+                      />
                     </FormItem>
                   )}
                 />
@@ -346,7 +424,7 @@ export function Treatment() {
                 </Dialog>
               </div>
 
-              {/* Equipamento (mantido) */}
+              {/* Equipamento */}
               <div className="flex items-end gap-2">
                 <FormField
                   control={form.control}
@@ -406,7 +484,7 @@ export function Treatment() {
               </div>
             </div>
 
-            {/* CAMPOS INDIVIDUAIS (mantido) */}
+            {/* CAMPOS INDIVIDUAIS */}
             <div className="space-y-3 sm:space-y-4">
               <FormField
                 control={form.control}
@@ -469,7 +547,7 @@ export function Treatment() {
               />
             </div>
 
-            {/* BOTÃO CADASTRAR (mantido) */}
+            {/* BOTÃO CADASTRAR */}
             <Button
               type="submit"
               className="h-10 w-full bg-gradient-to-r from-vida-loca-500 to-vida-loca-600 text-sm font-semibold text-white shadow dark:from-vida-loca-600 dark:to-vida-loca-700 sm:h-11"

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PopoverClose } from '@radix-ui/react-popover'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query' // ADICIONADO useQueryClient
 import { format } from 'date-fns'
 import { FilePen } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -43,6 +43,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { TimePickerDemo } from '@/components/ui/time-picker-demo'
 import { cn } from '@/lib/utils'
+
 const formSchema = z.object({
   name: z.string().nullish(),
   identification: z.string().nullish(),
@@ -53,32 +54,46 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-export function TreatmentClient() {
+interface TreatmentClientProps {
+  open: boolean;
+}
+
+export function TreatmentClient({ open }: TreatmentClientProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient() // ADICIONADO
+  
   const { mutateAsync: client } = useMutation({
     mutationFn: createClient,
+    onSuccess: () => {
+      // INVALIDAR A QUERY DE CLIENTES PARA FORÇAR ATUALIZAÇÃO
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      toast.success('Cliente cadastrado com sucesso', {
+        position: 'top-center',
+      })
+      setTimeout(() => {
+        navigate(window.location.pathname)
+      }, 1000)
+    },
+    onError: (error) => {
+      toast.error('Erro ao cadastrar cliente', {
+        position: 'top-center',
+      })
+    }
   })
+
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
 
   async function onSubmit(data: FormSchemaType) {
     console.log(data)
-    const response = await client({
+    await client({
       name: data.name,
       identification: data.identification,
       email: data.email,
       phone: data.phone,
       contract: data.contract ? data.contract : false,
     })
-    if (response !== undefined) {
-      toast.success('Cliente cadastrada', {
-        position: 'top-center',
-      })
-      setTimeout(() => {
-        navigate(window.location.pathname)
-      }, 1000)
-    }
   }
 
   return (
