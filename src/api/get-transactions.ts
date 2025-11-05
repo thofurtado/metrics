@@ -28,7 +28,7 @@ export async function getTransactions({
   sectorId,
   accountId,
 }: GetTransactionsQuery) {
-  console.log(description, value, sectorId, accountId)
+  
   const response = await api.get('/transactions', {
     params: {
       page,

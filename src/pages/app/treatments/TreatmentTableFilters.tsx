@@ -1,10 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Filter, FilterX, Search, X } from 'lucide-react'
-import { useState } from 'react'
+import { Search } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
 
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -21,85 +20,87 @@ import {
 
 export function TreatmentTableFilters() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [isFiltered, setIsFiltered] = useState(false)
+  const previousFilters = useRef({
+    treatmentId: searchParams.get('treatmentId') ?? '',
+    clientName: searchParams.get('clientName') ?? '',
+    status: searchParams.get('status') ?? 'all',
+  })
 
   const treatmentId = searchParams.get('treatmentId')
   const clientName = searchParams.get('clientName')
   const status = searchParams.get('status')
 
-  const { register, handleSubmit, control, reset } =
-    useForm<TreatmentFiltersSchema>({
-      resolver: zodResolver(treatmentFiltersSchema),
-      defaultValues: {
-        treatmentId: treatmentId ?? '',
-        clientName: clientName ?? '',
-        status: status ?? 'all',
-      },
-    })
+  const { register, control, watch } = useForm<TreatmentFiltersSchema>({
+    resolver: zodResolver(treatmentFiltersSchema),
+    defaultValues: {
+      treatmentId: treatmentId ?? '',
+      clientName: clientName ?? '',
+      status: status ?? 'all',
+    },
+  })
 
-  function handleFilter({
-    treatmentId,
-    clientName,
-    status,
-  }: TreatmentFiltersSchema) {
-    setIsFiltered(true)
-    setSearchParams((state) => {
-      if (treatmentId) {
-        state.set('treatmentId', treatmentId)
-      } else {
-        state.delete('treatmentId')
+  const watchedFields = watch()
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const { treatmentId, clientName, status } = watchedFields
+
+      // Verifica se realmente houve mudança nos filtros
+      const hasFiltersChanged = 
+        treatmentId !== previousFilters.current.treatmentId ||
+        clientName !== previousFilters.current.clientName ||
+        status !== previousFilters.current.status
+
+      if (hasFiltersChanged) {
+        setSearchParams((state) => {
+          if (treatmentId) {
+            state.set('treatmentId', treatmentId)
+          } else {
+            state.delete('treatmentId')
+          }
+
+          if (clientName) {
+            state.set('clientName', clientName)
+          } else {
+            state.delete('clientName')
+          }
+
+          if (status && status !== 'all') {
+            state.set('status', status)
+          } else {
+            state.delete('status')
+          }
+
+          // Só reseta a página se os filtros mudaram
+          state.set('page', '1')
+
+          return state
+        })
+
+        // Atualiza a referência
+        previousFilters.current = { treatmentId, clientName, status }
       }
+    }, 500)
 
-      if (clientName) {
-        state.set('clientName', clientName)
-      } else {
-        state.delete('clientName')
-      }
+    return () => clearTimeout(timeoutId)
+  }, [watchedFields, setSearchParams])
 
-      if (status) {
-        state.set('status', status)
-      } else {
-        state.delete('status')
-      }
-
-      state.set('page', '1')
-
-      return state
-    })
-  }
-  function handleClearFilter() {
-    setIsFiltered(false)
-    setSearchParams((state) => {
-      state.delete('treatmentId')
-      state.delete('clientName')
-      state.set('status', 'all')
-      state.set('page', '1')
-
-      return state
-    })
-
-    reset({
-      treatmentId: '',
-      clientName: '',
-      status: 'all',
-    })
-  }
   return (
-    <form
-      onSubmit={handleSubmit(handleFilter)}
-      className="font-gaba flex items-center gap-2"
-    >
-      <Search />
+    <div className="font-gaba flex items-center gap-2">
+      <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      
       <Input
-        placeholder="Filtar por ID"
-        className="h-8 w-[180px] placeholder:text-slate-500"
+        placeholder="Filtrar por ID"
+        className="hidden h-8 w-[0px] placeholder:text-slate-500 sm:block sm:w-[180px]"
         {...register('treatmentId')}
       />
+
       <Input
         placeholder="Filtrar por Cliente"
-        className="h-8 w-[180px] placeholder:text-slate-500"
+        className="h-8 w-full placeholder:text-slate-500 sm:w-[180px]"
         {...register('clientName')}
       />
+
       <Controller
         name="status"
         control={control}
@@ -112,11 +113,11 @@ export function TreatmentTableFilters() {
               value={value}
               disabled={disabled}
             >
-              <SelectTrigger className="h-8 w-[180px]">
+              <SelectTrigger className="h-8 w-full sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Em Aberto</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="pending">Pendentes</SelectItem>
                 <SelectItem value="in_progress">Em Andamento</SelectItem>
                 <SelectItem value="follow_up">Acompanhamento</SelectItem>
@@ -129,20 +130,6 @@ export function TreatmentTableFilters() {
           )
         }}
       />
-
-      <Button type="submit" size="sm" variant="secondary">
-        <Filter className="mr-2 h-4 w-4" />
-        Filtrar resultados
-      </Button>
-      <Button
-        onClick={handleClearFilter}
-        type="button"
-        variant="outline"
-        size="sm"
-      >
-        <FilterX className="mr-2 h-4 w-4" />
-        Remover filtros
-      </Button>
-    </form>
+    </div>
   )
 }

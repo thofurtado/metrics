@@ -1,4 +1,3 @@
-import { SearchCodeIcon } from 'lucide-react'
 import { z } from 'zod'
 
 export const treatmentFiltersSchema = z.object({

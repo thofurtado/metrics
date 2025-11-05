@@ -21,8 +21,7 @@ export function Pagination({
   onPageChange,
 }: PaginationProps) {
   const pages = Math.ceil(totalCount / perPage) || 1
-  console.log('Pages:' + pages)
-  console.log('PageIndex' + pageIndex)
+  
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-muted-foreground">

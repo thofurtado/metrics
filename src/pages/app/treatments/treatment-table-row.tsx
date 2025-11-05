@@ -59,7 +59,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
       <TableCell>
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
               <Search className="h-3 w-3" />
               <span className="sr-only">Detalhes do Atendimento</span>
             </Button>
@@ -73,17 +73,20 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
       <TableCell className="text-base text-muted-foreground">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
       </TableCell>
-      <TableCell className="text-base">
+      {/* Status - Oculto apenas no mobile */}
+      <TableCell className="hidden text-base sm:table-cell">
         <TreatmentStatus status={treatments.status} />
       </TableCell>
-      <TableCell className="text-center text-base font-medium">
+      {/* Contato - Oculto apenas no mobile */}
+      <TableCell className="hidden text-center text-base font-medium sm:table-cell">
         {treatments.contact}
       </TableCell>
       <TableCell className="text-center text-base font-medium">
         {treatments.clients.name}
       </TableCell>
       <TableCell className="text-base">{treatments.request}</TableCell>
-      <TableCell className="text-base font-medium">
+      {/* Valor - Oculto apenas no mobile */}
+      <TableCell className="hidden text-base font-medium sm:table-cell">
         {treatments.amount.toLocaleString('pt-BR', {
           style: 'currency',
           currency: 'BRL',
@@ -94,12 +97,13 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="border-minsk-400 text-base font-thin hover:bg-minsk-400 hover:text-white"
+              className="h-8 w-8 border-minsk-400 p-0 text-base font-thin hover:bg-minsk-400 hover:text-white sm:h-9 sm:w-auto sm:px-3"
               variant="outline"
               size="sm"
             >
-              <Shapes className="mr-2 h-4 w-4" />
-              Itens
+              <Shapes className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Itens</span>
+              <span className="sr-only">Itens</span>
             </Button>
           </DialogTrigger>
           <TreatmentItems open={isItemsOpen} treatmentId={treatments.id} />
@@ -110,11 +114,12 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="bg-minsk-400 text-base font-thin text-white hover:bg-minsk-500"
+              className="h-8 w-8 bg-minsk-400 p-0 text-base font-thin text-white hover:bg-minsk-500 sm:h-9 sm:w-auto sm:px-3"
               size="sm"
             >
-              <NotebookPen className="mr-2 h-4 w-4" />
-              <span>Atender</span>
+              <NotebookPen className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Atender</span>
+              <span className="sr-only">Atender</span>
             </Button>
           </DialogTrigger>
           <TreatmentInteraction

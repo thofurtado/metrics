@@ -44,7 +44,8 @@ export function TreatmentStatus({ status }: TreatmentStatusProps) {
       {status === 'in_workbench' && (
         <span className="h-2 w-2 rounded-full bg-orange-300" />
       )}
-      <span className="font-medium text-muted-foreground">
+      {/* MODIFICAÇÃO APLICADA AQUI: hidden no mobile e sm:inline para aparecer em telas maiores */}
+      <span className="hidden font-medium text-muted-foreground sm:inline">
         {treatmentStatusMap[status]}
       </span>
     </div>

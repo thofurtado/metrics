@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Headset } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -38,7 +38,7 @@ export function Treatments() {
         page: pageIndex,
         treatmentId,
         clientName,
-        status: status === 'all' ? null : status,
+        status: status === 'all' ? 'all' : status,
       }),
     refetchOnWindowFocus: 'always',
   })
@@ -58,66 +58,79 @@ export function Treatments() {
     <>
       <Helmet title="Atendimentos" />
       <div className="flex flex-col gap-4 font-gaba">
-        <div className="flex-start  flex w-full flex-row place-content-between">
-          <h1 className="font-merienda text-4xl font-bold tracking-tight text-minsk-900">
+        {/* Header com título e botão lado a lado */}
+        <div className="flex items-center justify-between">
+          <h1 className="font-merienda text-2xl font-bold tracking-tight text-minsk-900 sm:text-3xl lg:text-4xl">
             Atendimentos
           </h1>
+
           <Button
             onClick={handleCreateTreatment}
-            className="ml-3 mt-auto w-auto bg-vida-loca-500 hover:bg-vida-loca-600 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400 "
+            className="bg-vida-loca-500 hover:bg-vida-loca-600 dark:bg-vida-loca-500 dark:hover:bg-vida-loca-400"
+            size="sm"
           >
-            <span className="font-white text-xl font-thin">
-              Iniciar Atendimento
-            </span>
+            <span className="hidden sm:inline">Novo</span>
+            <Headset className="h-4 w-4 sm:ml-1" />
           </Button>
         </div>
+
         <div className="space-y-2.5">
           <TreatmentTableFilters />
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow className="text-base ">
-                  <TableHead className="w-[64px] rounded-tl-md bg-minsk-200 text-minsk-950"></TableHead>
-                  <TableHead className="hidden w-[280px] bg-minsk-200 text-minsk-950 xl:table-cell">
-                    Identificador
-                  </TableHead>
-                  <TableHead className="w-[120px] bg-minsk-200 text-minsk-950">
-                    Aberto á
-                  </TableHead>
-                  <TableHead className="w-[120px] bg-minsk-200 text-minsk-950">
-                    Status
-                  </TableHead>
-                  <TableHead className="bg-minsk-200 text-minsk-950">
-                    Contato
-                  </TableHead>
-                  <TableHead className="bg-minsk-200 text-center text-minsk-950">
-                    Cliente
-                  </TableHead>
-                  <TableHead className="bg-minsk-200 text-minsk-950">
-                    Requisição
-                  </TableHead>
-                  <TableHead className="w-[80px] bg-minsk-200 text-minsk-950">
-                    Valor
-                  </TableHead>
-                  <TableHead className="w-[124px] bg-minsk-200 text-minsk-950"></TableHead>
-                  <TableHead className="w-[124px] rounded-tr-md bg-minsk-200"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {result &&
-                  result.data.treatments.treatments.treatments.map(
-                    (treatment) => {
-                      return (
-                        <TreatmentTableRow
-                          key={treatment.id}
-                          treatments={treatment}
-                        />
-                      )
-                    },
-                  )}
-              </TableBody>
-            </Table>
+
+          {/* Container da tabela com scroll horizontal em mobile */}
+          <div className="overflow-x-auto rounded-md border">
+            <div className="min-w-[600px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-base">
+                    <TableHead className="w-[48px] rounded-tl-md bg-minsk-200 text-minsk-950"></TableHead>
+                    <TableHead className="hidden w-[200px] bg-minsk-200 text-minsk-950 xl:table-cell">
+                      Identificador
+                    </TableHead>
+                    <TableHead className="w-[80px] bg-minsk-200 text-minsk-950">
+                      Aberto há
+                    </TableHead>
+                    {/* Status - Oculto apenas no mobile */}
+                    <TableHead className="hidden w-[100px] bg-minsk-200 text-minsk-950 sm:table-cell">
+                      Status
+                    </TableHead>
+                    {/* Contato - Oculto apenas no mobile */}
+                    <TableHead className="hidden bg-minsk-200 text-minsk-950 sm:table-cell">
+                      Contato
+                    </TableHead>
+                    <TableHead className="bg-minsk-200 text-center text-minsk-950">
+                      Cliente
+                    </TableHead>
+                    <TableHead className="bg-minsk-200 text-minsk-950">
+                      Requisição
+                    </TableHead>
+                    {/* Valor - Oculto apenas no mobile */}
+                    <TableHead className="hidden w-[100px] bg-minsk-200 text-minsk-950 sm:table-cell">
+                      Valor
+                    </TableHead>
+                    {/* Itens - Largura responsiva */}
+                    <TableHead className="w-[60px] bg-minsk-200 text-minsk-950 sm:w-[100px]"></TableHead>
+                    {/* Atender - Largura responsiva */}
+                    <TableHead className="w-[60px] rounded-tr-md bg-minsk-200 sm:w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {result &&
+                    result.data.treatments.treatments.treatments.map(
+                      (treatment) => {
+                        return (
+                          <TreatmentTableRow
+                            key={treatment.id}
+                            treatments={treatment}
+                          />
+                        )
+                      },
+                    )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
+
           <Pagination
             onPageChange={handlePaginate}
             pageIndex={result && result.data.treatments.treatments.pageIndex}

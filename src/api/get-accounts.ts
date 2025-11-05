@@ -11,6 +11,6 @@ export interface GetAccountsResponse {
 
 export async function getAccounts() {
   const response = await api.get<GetAccountsResponse>('/accounts')
-  console.log(response)
+  
   return response
 }

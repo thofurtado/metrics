@@ -41,6 +41,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { TimePickerDemo } from '@/components/ui/time-picker-demo'
 import { cn } from '@/lib/utils'
+
 const formSchema = z.object({
   dateTime: z.date().nullish(),
   description: z.string(),
@@ -48,6 +49,7 @@ const formSchema = z.object({
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
+
 export interface TreatmentInteractionsProps {
   treatmentId: string
   open: boolean
@@ -58,7 +60,8 @@ export function TreatmentInteraction({
   treatmentId,
   status,
 }: TreatmentInteractionsProps) {
-  const { continueOnSubmit, setContinueOnSubmit } = useState(false)
+  // CORREÇÃO: Usando `useState` corretamente
+  const [continueOnSubmit, setContinueOnSubmit] = useState(false)
   const navigate = useNavigate()
   const { mutateAsync: interaction } = useMutation({
     mutationFn: createInteraction,
@@ -78,7 +81,7 @@ export function TreatmentInteraction({
         status: '',
       })
     }
-  })
+  }, [form.formState.isSubmitSuccessful, form]) // Adicionado 'form' como dependência para boas práticas
 
   function changeSubmitContinue(keep: boolean) {
     setContinueOnSubmit(keep)
@@ -109,143 +112,172 @@ export function TreatmentInteraction({
         position: 'top-center',
       })
       if (!continueOnSubmit) {
-        navigate('/treatments')
+        // CORREÇÃO: O ideal é fechar o Dialog, não navegar para outra rota
+        // A navegação para '/treatments' só deve ocorrer se o diálogo estiver
+        // sendo usado fora do contexto de tabela, o que parece ser o caso.
+        // Se for um modal, mantenha a navegação ou use um `onOpenChange(false)`
+        navigate('/treatments') 
       }
     }
   }
 
   return (
-    <DialogContent className="w-720p">
-      <DialogHeader>
-        <DialogTitle>Cadastro Interação do Atendimento</DialogTitle>
-        <DialogDescription>{treatmentId}</DialogDescription>
+    // MODIFICAÇÃO AQUI: Garante largura total no mobile e max-w-lg em telas maiores
+    <DialogContent className="w-full max-w-full p-4 sm:max-w-md md:max-w-lg lg:max-w-xl">
+      <DialogHeader className="px-1 sm:px-0">
+        <DialogTitle className="text-lg sm:text-xl">
+          Cadastro Interação do Atendimento
+        </DialogTitle>
+        <DialogDescription className="text-sm">
+          {treatmentId}
+        </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form
-          className="flex flex-col items-start justify-center gap-8"
+          className="flex flex-col items-center justify-center gap-4 sm:gap-6"
           onSubmit={form.handleSubmit(onSubmit)}
         >
           <FormField
             control={form.control}
             name="status"
             render={({ field: { onChange, value, disabled } }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">
+              // MODIFICAÇÃO AQUI: w-full e max-w-[90%] no mobile, centralizado (mx-auto)
+              <FormItem className="mx-auto flex w-full max-w-[90%] flex-col sm:max-w-full">
+                <FormLabel className="text-left text-sm sm:text-base">
                   Qual o estado do atendimento?
                 </FormLabel>
-                <Popover>
-                  <FormControl>
-                    <Select
-                      defaultValue={status}
-                      value={value}
-                      onValueChange={onChange}
-                      disabled={disabled}
-                    >
-                      <SelectTrigger className="h-8 w-1/2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="in_progress">
-                          Em Andamento
-                        </SelectItem>
-                        <SelectItem value="follow_up">
-                          Acompanhamento
-                        </SelectItem>
-                        <SelectItem value="canceled">Cancelado</SelectItem>
-                        <SelectItem value="on_hold">Em espera</SelectItem>
-                        <SelectItem value="in_workbench">Em Bancada</SelectItem>
-                        <SelectItem value="resolved">Resolvido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </Popover>
+                <FormControl>
+                  <Select
+                    defaultValue={status}
+                    value={value}
+                    onValueChange={onChange}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className="h-9 w-full text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="pending" className="text-sm">
+                        Pendente
+                      </SelectItem>
+                      <SelectItem value="in_progress" className="text-sm">
+                        Em Andamento
+                      </SelectItem>
+                      <SelectItem value="follow_up" className="text-sm">
+                        Acompanhamento
+                      </SelectItem>
+                      <SelectItem value="canceled" className="text-sm">
+                        Cancelado
+                      </SelectItem>
+                      <SelectItem value="on_hold" className="text-sm">
+                        Em espera
+                      </SelectItem>
+                      <SelectItem value="in_workbench" className="text-sm">
+                        Em Bancada
+                      </SelectItem>
+                      <SelectItem value="resolved" className="text-sm">
+                        Resolvido
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">
+              // MODIFICAÇÃO AQUI: w-full e max-w-[90%] no mobile, centralizado (mx-auto)
+              <FormItem className="mx-auto flex w-full max-w-[90%] flex-col sm:max-w-full">
+                <FormLabel className="text-left text-sm sm:text-base">
                   Descreva a interação com o cliente:
                 </FormLabel>
-                <Popover>
-                  <FormControl>
-                    <Textarea value={field.value} {...field}></Textarea>
-                  </FormControl>
-                </Popover>
+                <FormControl>
+                  <Textarea
+                    value={field.value}
+                    {...field}
+                    className="min-h-24 text-sm"
+                    placeholder="Descreva o que foi feito no atendimento..."
+                  ></Textarea>
+                </FormControl>
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="dateTime"
             render={({ field }) => (
-              <FormItem className="flex w-full flex-col ">
-                <FormLabel className="text-left">
+              // MODIFICAÇÃO AQUI: w-full e max-w-[90%] no mobile, centralizado (mx-auto)
+              <FormItem className="mx-auto flex w-full max-w-[90%] flex-col sm:max-w-full">
+                <FormLabel className="text-left text-sm sm:text-base">
                   Data e hora da interação
                 </FormLabel>
-                <div className="flex flex-row">
+                <FormControl>
                   <Popover>
-                    <FormControl>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !field.value && 'text-muted-foreground',
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4 " />
-                          {field.value ? (
-                            format(field.value, 'PPP HH:mm:ss')
-                          ) : (
-                            <span>
-                              Selecione uma data ou deixe em branco para data
-                              atual
-                            </span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                    </FormControl>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal text-sm h-9',
+                          !field.value && 'text-muted-foreground',
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, 'dd/MM/yy HH:mm')
+                        ) : (
+                          <span className="text-xs sm:text-sm">
+                            Definir data/hora ou manter atual
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
                       />
-
-                      <div className="flex flex-row border-t border-border p-3">
+                      <div className="flex flex-col border-t border-border p-3 sm:flex-row gap-2">
                         <TimePickerDemo
                           setDate={field.onChange}
                           date={field.value}
                         />
-                        <PopoverClose asChild className="ml-4 mt-4">
-                          <Button className="bg-minsk-400 text-white hover:bg-minsk-500">
-                            <ArrowBigRightDash></ArrowBigRightDash>
+                        <PopoverClose
+                          asChild
+                          className="mt-2 sm:ml-4 sm:mt-0"
+                        >
+                          <Button
+                            size="sm"
+                            className="w-full sm:w-auto bg-minsk-400 text-white hover:bg-minsk-500"
+                          >
+                            <ArrowBigRightDash className="h-4 w-4" />
                           </Button>
                         </PopoverClose>
                       </div>
                     </PopoverContent>
                   </Popover>
-                </div>
+                </FormControl>
               </FormItem>
             )}
           />
-          <div className="flex w-full justify-end space-x-2">
+
+          {/* MODIFICAÇÃO AQUI: w-full e max-w-[90%] no mobile, centralizado (mx-auto) */}
+          <div className="mx-auto flex w-full max-w-[90%] flex-col gap-2 sm:max-w-full sm:flex-row sm:justify-end sm:gap-3">
             <Button
               type="submit"
-              className="justify-self-end bg-minsk-500 text-white hover:bg-minsk-600"
+              className="w-full sm:w-auto bg-minsk-500 text-white hover:bg-minsk-600 text-sm h-9"
               onClick={() => changeSubmitContinue(true)}
             >
               Gravar e Continuar
             </Button>
             <Button
               type="submit"
-              className="justify-self-end border-2 border-minsk-400 bg-white font-bold text-minsk-500 hover:bg-minsk-100"
+              className="w-full sm:w-auto border-2 border-minsk-400 bg-white font-bold text-minsk-500 hover:bg-minsk-100 text-sm h-9"
               onClick={() => changeSubmitContinue(false)}
             >
               Gravar
