@@ -106,7 +106,6 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
 );
 MaskedInput.displayName = 'MaskedInput';
 
-
 // ====================================================================
 // PARTE 2: ZOD SCHEMA
 // ====================================================================
@@ -150,13 +149,14 @@ type FormSchemaType = z.infer<typeof formSchema>
 
 interface TreatmentClientProps {
   open: boolean;
+  onClose: () => void; // ← ADICIONE ESTA PROP
 }
 
 // ====================================================================
 // PARTE 3: COMPONENTE PRINCIPAL TreatmentClient
 // ====================================================================
 
-export function TreatmentClient({ open }: TreatmentClientProps) {
+export function TreatmentClient({ open, onClose }: TreatmentClientProps) { // ← RECEBA A PROP
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -167,6 +167,9 @@ export function TreatmentClient({ open }: TreatmentClientProps) {
       toast.success('Cliente cadastrado com sucesso', {
         position: 'top-center',
       })
+      
+      onClose(); // ← FECHA O DIALOG AO TER SUCESSO
+      
       setTimeout(() => {
         navigate(window.location.pathname)
       }, 1000)
@@ -265,7 +268,6 @@ export function TreatmentClient({ open }: TreatmentClientProps) {
               </FormItem>
             )}
           />
-
 
           {/* CAMPO NOME (OBRIGATÓRIO) */}
           <FormField

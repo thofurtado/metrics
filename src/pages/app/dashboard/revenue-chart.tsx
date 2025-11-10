@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
-  Tooltip, // 1. Importação do Tooltip
+  Tooltip,
 } from 'recharts'
 import colors from 'tailwindcss/colors'
 
@@ -21,35 +21,30 @@ import {
 } from '@/components/ui/card'
 
 // --------------------------------------------------------
-// 1. FUNÇÃO DE PROCESSAMENTO DE DADOS (Agregação e Formatação)
+// FUNÇÃO DE PROCESSAMENTO DE DADOS (Agregação e Formatação)
 // --------------------------------------------------------
 function processChartData(data: { day: string; revenue: number }[] | undefined) {
   if (!data) {
     return []
   }
 
-  // Objeto para agregar as receitas por dia
   const aggregatedData: { [key: string]: number } = {}
 
   data.forEach((item) => {
-    // Agrega (soma) a receita se o dia já existe, ou inicia se for o primeiro
     aggregatedData[item.day] = (aggregatedData[item.day] || 0) + item.revenue
   })
 
-  // Transforma o objeto agregado de volta em um array de objetos
   const finalData = Object.entries(aggregatedData).map(([day, revenue]) => {
-    // Formata a data de 'MM-DD' para 'DD-MM'
-    // A data original está em 'MM-DD' (e.g., 11-01), pegamos o mês (index 0) e dia (index 1)
     const [month, dayOfMonth] = day.split('-')
     const formattedDay = `${dayOfMonth}-${month}`
 
     return {
-      day: day, // Mantemos o 'day' original para ordenar, mas usamos a formatada para exibição
-      formattedDay: formattedDay, // A nova chave para exibição no eixo X
+      day: day,
+      formattedDay: formattedDay,
       revenue: revenue,
     }
   })
-  
+
   // Opcional: Garante que os dados estão ordenados por data original
   finalData.sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
 
@@ -63,7 +58,6 @@ export function RevenueChart({ className }: { className?: string }) {
     queryKey: ['metrics', 'month-income-by-day'],
   })
 
-  // Chama a função de processamento
   const chartData = processChartData(monthIncomeByDays)
 
   return (
@@ -77,15 +71,19 @@ export function RevenueChart({ className }: { className?: string }) {
         </div>
       </CardHeader>
       <CardContent>
-        {chartData.length !== 0 ? ( // Usa chartData que já está processado
+        {chartData.length !== 0 ? (
           <>
+            {/* ResponsiveContainer garante que o gráfico ocupe 100% da largura do pai */}
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={chartData} style={{ fontSize: 12 }}>
                 <XAxis
-                  dataKey="formattedDay" // 2. Usa a chave de data formatada (DD-MM)
+                  dataKey="formattedDay"
                   axisLine={false}
                   tickLine={false}
                   dy={16}
+                  // 🚨 CORREÇÃO: Define o intervalo para 4. Isso reduz a densidade dos rótulos
+                  // no eixo X, impedindo que eles se sobreponham e estourem a largura em telas pequenas.
+                  interval={4}
                 />
                 <YAxis
                   stroke="#888"
@@ -99,8 +97,7 @@ export function RevenueChart({ className }: { className?: string }) {
                     })
                   }
                 />
-                
-                {/* 3. Adiciona o Tooltip */}
+
                 <Tooltip
                   cursor={{ stroke: colors.green['400'], strokeDasharray: 4 }}
                   formatter={(value: number) =>
@@ -117,7 +114,7 @@ export function RevenueChart({ className }: { className?: string }) {
                   strokeWidth={2}
                   dataKey="revenue"
                   stroke={colors.green['400']}
-                  dot={true} // Garante que os pontos são visíveis
+                  dot={true}
                 />
                 <CartesianGrid vertical={false} className="stroke-muted" />
               </LineChart>

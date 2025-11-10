@@ -73,11 +73,11 @@ const formSchema = z.object({
 type FormSchemaType = z.infer<typeof formSchema>
 
 // Componente personalizado para o select de clientes
-function ClientSelect({ 
-  value, 
-  onValueChange, 
-  clients = [] 
-}: { 
+function ClientSelect({
+  value,
+  onValueChange,
+  clients = []
+}: {
   value: string
   onValueChange: (value: string) => void
   clients: Array<{
@@ -91,7 +91,7 @@ function ClientSelect({
   // Ordenar clientes: primeiro os com contrato, depois os sem contrato, tudo em ordem alfabética
   const sortedAndFilteredClients = useMemo(() => {
     if (!clients) return []
-    
+
     // Filtrar por termo de pesquisa
     const filtered = clients.filter(client =>
       client.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -102,7 +102,7 @@ function ClientSelect({
       // Primeiro ordena por contrato (clientes com contrato primeiro)
       if (a.contract && !b.contract) return -1
       if (!a.contract && b.contract) return 1
-      
+
       // Depois ordena alfabeticamente por nome
       return a.name.localeCompare(b.name)
     })
@@ -138,9 +138,9 @@ function ClientSelect({
             </div>
           ) : (
             sortedAndFilteredClients.map((client) => (
-              <SelectItem 
-                value={client.id} 
-                key={client.id} 
+              <SelectItem
+                value={client.id}
+                key={client.id}
                 className="text-xs sm:text-sm"
               >
                 <span className="flex items-center gap-2 truncate">
@@ -173,7 +173,7 @@ export function Treatment() {
 
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  
+
   const { mutateAsync: treatment } = useMutation({
     mutationFn: createTreatment,
   })
@@ -219,7 +219,7 @@ export function Treatment() {
     <>
       <Helmet title="Cadastro de Atendimentos" />
       <div className="flex flex-col gap-3 p-0 sm:p-4 w-full overflow-x-hidden">
-        
+
         <div className="flex flex-col gap-2 rounded-none sm:rounded-xl bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow">
           <h1 className="text-lg font-bold sm:text-xl">
             Cadastro de Atendimento
@@ -347,8 +347,8 @@ export function Treatment() {
                             className={cn(
                               'h-9 w-full justify-start text-left text-xs font-normal dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm',
                               !field.value && 'text-muted-foreground',
-                              isClosedDateDisabled 
-                                ? 'bg-minsk-100 text-minsk-400 dark:bg-minsk-800 dark:text-minsk-500' 
+                              isClosedDateDisabled
+                                ? 'bg-minsk-100 text-minsk-400 dark:bg-minsk-800 dark:text-minsk-500'
                                 : 'hover:border-minsk-300 dark:hover:border-minsk-500'
                             )}
                           >
@@ -409,12 +409,12 @@ export function Treatment() {
                     </FormItem>
                   )}
                 />
-                
+
                 <Dialog open={openClientDialog} onOpenChange={setOpenClientDialog}>
                   <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
+                    <Button
+                      variant="outline"
+                      size="icon"
                       className="h-9 w-9 shrink-0 border-vida-loca-200 bg-vida-loca-50 text-vida-loca-600 dark:border-vida-loca-600 dark:bg-vida-loca-900/30 dark:text-vida-loca-400 sm:h-10 sm:w-10"
                     >
                       <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -461,12 +461,12 @@ export function Treatment() {
                     </FormItem>
                   )}
                 />
-                
+
                 <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
+                    <Button
+                      variant="outline"
+                      size="icon"
                       className={cn(
                         "h-9 w-9 shrink-0 border-vida-loca-200 bg-vida-loca-50 text-vida-loca-600 dark:border-vida-loca-600 dark:bg-vida-loca-900/30 dark:text-vida-loca-400 sm:h-10 sm:w-10",
                         isEquipmentDisabled && "opacity-50"
@@ -496,9 +496,9 @@ export function Treatment() {
                       Contato
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        {...field} 
-                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm" 
+                      <Input
+                        {...field}
+                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm"
                         placeholder="Nome do contato"
                       />
                     </FormControl>
@@ -516,9 +516,9 @@ export function Treatment() {
                       Requisição
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        {...field} 
-                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm" 
+                      <Input
+                        {...field}
+                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm"
                         placeholder="Descreva a requisição"
                       />
                     </FormControl>

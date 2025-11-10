@@ -28,21 +28,25 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { TreatmentPaymentModal } from './treatment-payment-modal'
 
-// 1. Definição do Tipo de Dados para Itens (baseado no uso)
-interface TreatmentItemData {
+interface TreatmentDetails {
   id: string
-  quantity: number
-  salesValue: number
   items: {
-    name: string
     id: string
-  }
-}
-
-// 2. Definição do Tipo de Dados para Treatment (baseado no uso)
-interface TreatmentData {
-  items: TreatmentItemData[]
-  // Adicione outras propriedades do tratamento que você usa, se necessário
+    quantity: number
+    salesValue: number
+    items: {
+      name: string
+      id: string
+    }
+  }[]
+  // Adicione outras propriedades que você usa
+  opening_date?: Date
+  ending_date?: Date | null
+  contact?: string | null
+  request?: string
+  status?: string
+  amount?: number
+  observations?: string | null
 }
 
 // O restante do seu código (FormSchema, Types, Props)
@@ -89,7 +93,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   })
 
   // 3. Tipagem no useQuery de Treatment
-  const { data: treatment, refetch: itemRefetch } = useQuery<TreatmentData>({
+  const { data: treatment, refetch: itemRefetch } = useQuery<TreatmentDetails>({
     queryKey: ['treatment', treatmentId],
     queryFn: () => getTreatmentDetails({ treatmentId }),
     enabled: open,
@@ -571,7 +575,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     R$ {subtotal.toFixed(2)}
                   </p>
                 </div>
-                
+
                 {/* Botão Finalizar Venda - Visível em todas as telas */}
                 <Button
                   onClick={() => setShowPayment(true)}

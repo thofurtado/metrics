@@ -1,5 +1,3 @@
-- [ ] Após a gravação de uma interação é preciso recarregar os dados da tabela de atendimento
-- [ ] Após cadastro de cliente na tela de atendimento atualizar dropbox/demora 20s aprox
 
 Importante
 
@@ -20,6 +18,7 @@ Mecanica
 - [ ] Adicionar Mascara no telefone do cadastro de cliente
 - [ ] Deixar o campo de identificação todo maiusculo
 - [ ] Tela de interação deveria ser fechada após gravar
+- [ ] Após a gravação de uma interação é preciso recarregar os dados da tabela de atendimento
 
 Pouco Importante
 - [ ]  Ajustar texto da data finalizada caso não seja selecionado o finalizado
@@ -27,3 +26,7 @@ Pouco Importante
 - [ ] No cadastro de interação o estado, carregar o estado atual
 - [ ] Na tela de detalhes do atendimento esta aparecendo cliente duas vezes uma deles deveria ser contato
 - [ ] Colocar mascara no cpf cnpj co cliente
+
+
+- Futuro do sistema
+Construir dentro do processo de interações um controle de hashtag para busca do sistema ou algo similar

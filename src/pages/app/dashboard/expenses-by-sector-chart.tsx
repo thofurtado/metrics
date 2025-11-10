@@ -27,7 +27,7 @@ const CustomizedContent: React.FC<any> = (props) => {
   if (typeof amount !== 'number' || isNaN(amount)) {
     return null
   }
-  
+
   const color = COLORS[index % COLORS.length]
 
   const formattedValue = amount.toLocaleString('pt-BR', {
@@ -36,27 +36,26 @@ const CustomizedContent: React.FC<any> = (props) => {
   })
 
   const baseFontSize = 12;
-  const currentFontSize = Math.max(9, Math.min(baseFontSize, width / 7, height / 4)); 
-  
+  // Cálculo responsivo do tamanho da fonte
+  const currentFontSize = Math.max(9, Math.min(baseFontSize, width / 7, height / 4));
+
   const currentFontWeight = 'normal';
   const valueFontWeight = '500';
 
   const textColor = '#fff';
 
-  const canShowLabel = width > 50 && height > 25; 
-  const canShowValue = width > 65 && height > 40; 
+  const canShowLabel = width > 50 && height > 25;
+  const canShowValue = width > 65 && height > 40;
 
   const maxCharsPerLine = Math.floor(width / (currentFontSize * 0.6));
-  const displayedSectorName = 
+  const displayedSectorName =
     sector_name && sector_name.length > maxCharsPerLine && width < 150
       ? `${sector_name.substring(0, maxCharsPerLine - 3)}...`
       : sector_name;
 
-  // Estilos de texto SVG
   const textStyle = {
-      // 🚨 NOVO: Garante que não haja contorno preto (stroke) no texto.
-      stroke: 'none', 
-      strokeWidth: 0,
+    stroke: 'none',
+    strokeWidth: 0,
   };
 
 
@@ -69,30 +68,30 @@ const CustomizedContent: React.FC<any> = (props) => {
         height={height}
         style={{
           fill: color,
-          stroke: colors.gray[900], 
+          stroke: colors.gray[900],
           strokeWidth: 2 / (depth + 1e-4),
         }}
       />
-      {canShowLabel && ( 
+      {canShowLabel && (
         <>
           <text
             x={x + width / 2}
-            y={y + height / 2 - (canShowValue ? 8 : 0)} 
+            y={y + height / 2 - (canShowValue ? 8 : 0)}
             textAnchor="middle"
             fill={textColor}
-            fontSize={currentFontSize} 
+            fontSize={currentFontSize}
             fontWeight={currentFontWeight}
             style={textStyle}
           >
             {displayedSectorName}
           </text>
-          {canShowValue && ( 
+          {canShowValue && (
             <text
               x={x + width / 2}
               y={y + height / 2 + 10}
               textAnchor="middle"
               fill={textColor}
-              fontSize={currentFontSize - 1} 
+              fontSize={currentFontSize - 1}
               fontWeight={valueFontWeight}
               style={textStyle}
             >
@@ -131,21 +130,21 @@ export function ExpensesBySectorChart({ className }: { className?: string }) {
               data={monthExpenseBySector}
               dataKey="amount"
               aspectRatio={4 / 3}
-              stroke={colors.gray[900]} 
+              stroke={colors.gray[900]}
               fill="#8884d8"
-              content={(props) => <CustomizedContent {...props} COLORS={COLORS} />} as any
-            >
+              content={<CustomizedContent COLORS={COLORS} />}      >
               <Tooltip
-                contentStyle={{ 
-                    backgroundColor: colors.gray[800], 
-                    borderColor: colors.gray[700], 
-                    color: '#fff' 
+                contentStyle={{
+                  backgroundColor: colors.gray[800],
+                  borderColor: colors.gray[700],
+                  color: '#fff'
                 }}
                 itemStyle={{ color: '#fff' }}
                 formatter={(value: number) =>
                   value.toLocaleString('pt-BR', {
                     style: 'currency',
                     currency: 'BRL',
+                    minimumFractionDigits: 2,
                   })
                 }
                 labelFormatter={(label, payload) =>
