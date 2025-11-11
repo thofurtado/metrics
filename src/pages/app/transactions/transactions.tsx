@@ -36,11 +36,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-
-import { TreatmentItems } from '../treatments/treatment-items'
 import { TransactionExpense } from './transaction-expense'
 import { TransactionIncome } from './transaction-income'
-import { TransactionTableRow, TreatmentTableRow } from './transaction-table-row'
+import { TransactionTableRow } from './transaction-table-row'
 import { TransactionTableFilters } from './TransactionTableFilters'
 
 export function Transactions() {
