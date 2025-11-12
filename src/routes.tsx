@@ -10,6 +10,7 @@ import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
 import { SignIn } from './pages/auth/sign-in'
 import { SignUp } from './pages/auth/sign-up'
+import { Items } from './pages/app/items'
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = () => {
@@ -30,6 +31,9 @@ export const router = createBrowserRouter([
       { path: '/treatments', element: <Treatments /> },
       { path: '/treatment/new', element: <Treatment /> },
       { path: '/transactions', element: <Transactions /> },
+      { path: '/items', element: <Items /> },{
+        
+      }
     ],
   },
   {
