@@ -8,6 +8,7 @@ import { MonthTreatmentAmountCard } from './TreatmentCard' // Card de Serviços
 // Os outros imports permanecem:
 import { ExpensesBySectorChart } from './expenses-by-sector-chart'
 import { RevenueChart } from './revenue-chart'
+import { BalanceProjectionChart } from './BalanceProjectionChart'
 
 
 export function Dashboard() {
@@ -38,7 +39,7 @@ export function Dashboard() {
 
         {/* GRID DE GRÁFICOS */}
         <div className="grid grid-cols-1 gap-4 font-gaba lg:grid-cols-9">
-          <RevenueChart className="lg:col-span-6" />
+          <BalanceProjectionChart className="lg:col-span-6" />
           <ExpensesBySectorChart className="lg:col-span-3" />
         </div>
       </div>

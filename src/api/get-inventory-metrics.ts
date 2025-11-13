@@ -1,24 +1,23 @@
-// ARQUIVO: api/get-inventory-metrics.ts
+// ARQUIVO: src/api/get-inventory-metrics.ts
+import { api } from '@/lib/axios'
 
 export interface GetInventoryMetricsResponse {
     patrimonioEstoque: number
-    itensCriticos: number
     receitaProdutos: number
     receitaServicos: number
-    // Métricas removidas do card (Valor Parado e Giro Médio) não estão incluídas aqui.
+    itensCriticos: number // Vamos manter como 0 por enquanto, já que a API não retorna
 }
 
-/**
- * Simula a busca de todas as métricas Operacionais/Inventário.
- */
 export async function getInventoryMetrics(): Promise<GetInventoryMetricsResponse> {
-    // Simulação de delay de rede
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await api.get('/inventory-summary')
+    console.log('📦 Dados recebidos da API de Inventário:', response.data)
+
+    const apiData = response.data.inventorySummary
 
     return {
-        patrimonioEstoque: 1256320.00,
-        itensCriticos: 8,
-        receitaProdutos: 485600.00,
-        receitaServicos: 195420.00,
+        patrimonioEstoque: apiData.patrimony || 0,
+        receitaProdutos: apiData.productsSold || 0,
+        receitaServicos: apiData.servicesSold || 0,
+        itensCriticos: 0 // Não está na API atual - podemos calcular depois
     }
 }
