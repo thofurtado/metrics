@@ -6,7 +6,9 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { deleteTransaction } from '@/api/delete-transaction'
+// ASSUMIDO: Você irá atualizar a interface desta API para aceitar amount, date e confirmed
 import { updateStatusTransaction } from '@/api/update-transaction-status'
+import { createTransaction } from '@/api/create-transaction'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +20,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { PaymentModal } from './payment-modal'
 
+// Interface de Transação Original do seu backend/query
 interface Transaction {
   id: string
   date: Date
@@ -26,9 +30,24 @@ interface Transaction {
   confirmed: boolean
   operation: 'income' | 'expense'
   amount: number
-  sectors: { name: string } | null
-  accounts: { name: string }
+  sectors: { name: string; id?: string } | null
+  accounts: { name: string; id: string }
 }
+
+// Interface que o PaymentModal realmente espera (com IDs em nível raiz)
+interface PaymentTransaction {
+  id: string
+  date: Date
+  description: string
+  confirmed: boolean
+  operation: 'income' | 'expense'
+  amount: number
+  sectorId: string | null // Campo MAPEADO
+  accountId: string // Campo MAPEADO
+  sectors: { name: string; id?: string } | null
+  accounts: { name: string; id: string }
+}
+
 
 interface TransactionTableRowProps {
   transactions: Transaction
@@ -36,25 +55,29 @@ interface TransactionTableRowProps {
 
 export function TransactionTableRow({ transactions }: TransactionTableRowProps) {
   const queryClient = useQueryClient()
-  const [openSwitchAlert, setOpenSwitchAlert] = useState(false)
+  const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
-
-  // Estado local para feedback visual imediato
   const [localLoading, setLocalLoading] = useState(false)
 
-  // Mutação para alterar o status - VERSÃO SIMPLIFICADA
+  // --- MAPEAMENTO DE DADOS PARA O MODAL (SOLUÇÃO PARA O ERRO DE TIPAGEM) ---
+  const paymentTransaction: PaymentTransaction = {
+    ...transactions,
+    // Mapeia o ID do setor (que pode ser nulo)
+    sectorId: transactions.sectors?.id || null,
+    // Mapeia o ID da conta
+    accountId: transactions.accounts.id,
+  }
+  // --------------------------------------------------------------------------
+
+  // Mutação para alterar o status - MANTIDA ORIGINAL
+  // ATENÇÃO: Se o erro persistir, a interface UpdateStatusTransactionParams (na API) precisa ser corrigida!
   const { mutateAsync: switchTransactionStatus } = useMutation({
     mutationFn: updateStatusTransaction,
     onMutate: async ({ id }) => {
-      setLocalLoading(true) // 1. Inicia o Loading
-
-      // Atualização otimista - corrigida
+      setLocalLoading(true)
       queryClient.setQueryData(['transaction'], (old: any) => {
         if (!old) return old
-
-        // Verifica a estrutura real dos seus dados
         const transactionsArray = old.transactions || old || []
-
         return {
           ...old,
           transactions: transactionsArray.map((transaction: Transaction) =>
@@ -70,29 +93,33 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     },
     onError: (error, variables) => {
       toast.error('Ocorreu um erro ao alterar o status do pagamento.')
-
-      // Força o refetch para corrigir qualquer inconsistência
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
     },
     onSettled: () => {
-      setLocalLoading(false) // 3. Para o Loading
-      setOpenSwitchAlert(false)
-      // Garante que os dados estão atualizados
+      setLocalLoading(false)
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
     },
   })
 
-  // Mutação para deletar - VERSÃO SIMPLIFICADA
+  // Mutação para criar transação de resto
+  const { mutateAsync: createRemainingTransaction } = useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => {
+      toast.info('Transação de resto criada com sucesso!')
+    },
+    onError: () => {
+      toast.error('Erro ao criar transação de resto')
+    },
+  })
+
+  // Mutação para deletar - MANTIDA ORIGINAL
   const { mutateAsync: DeleteTransaction } = useMutation({
     mutationFn: deleteTransaction,
     onMutate: async ({ id }) => {
       setLocalLoading(true)
-
       queryClient.setQueryData(['transaction'], (old: any) => {
         if (!old) return old
-
         const transactionsArray = old.transactions || old || []
-
         return {
           ...old,
           transactions: transactionsArray.filter(
@@ -115,16 +142,44 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     },
   })
 
-  // Manipulador para o switch de status
-  async function handleSwitch(id: string) {
+  // ✅ MANIPULADOR: Lógica do Modal com o payload de UPDATE e CREATE
+  async function handlePayment(payload: any) {
+    setLocalLoading(true)
     try {
-      await switchTransactionStatus({ id })
+      const { updateOriginal, newRemainingTransaction } = payload;
+
+      // 1. Atualiza a transação original com os novos dados (valor pago, data e status)
+      await switchTransactionStatus({
+        id: transactions.id,
+        amount: updateOriginal.amount,
+        date: updateOriginal.date,
+        confirmed: updateOriginal.confirmed,
+      })
+
+      // 2. Se for pagamento parcial, cria transação de resto
+      if (newRemainingTransaction) {
+        await createRemainingTransaction({
+          operation: newRemainingTransaction.operation,
+          amount: newRemainingTransaction.amount,
+          description: newRemainingTransaction.description,
+          date: newRemainingTransaction.date,
+          account: newRemainingTransaction.accountId, // Usa accountId
+          sector: newRemainingTransaction.sectorId, // Usa sectorId
+          confirmed: false
+        })
+      }
+
+      toast.success('Pagamento processado com sucesso!')
+      setOpenPaymentModal(false)
     } catch (error) {
-      // Error já é tratado no onError
+      toast.error('Erro ao processar pagamento')
+    } finally {
+      setLocalLoading(false)
+      queryClient.invalidateQueries({ queryKey: ['transaction'] })
     }
   }
 
-  // Manipulador para deletar
+  // Manipulador para deletar - MANTIDO ORIGINAL
   async function handleDelete(id: string) {
     try {
       await DeleteTransaction({ id })
@@ -135,51 +190,31 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
 
   return (
     <TableRow className="h-16 bg-white dark:bg-stone-900">
-      <TableCell className="w-16 text-center"> {/* Adicionei text-center aqui */}
-        <AlertDialog open={openSwitchAlert} onOpenChange={setOpenSwitchAlert}>
-          <AlertDialogTrigger asChild>
-            <Button
-              aria-label="Alterar estado do pagamento"
-              variant="ghost"
-              className="p-0 h-6 w-6 flex items-center justify-center mx-auto" 
-              disabled={localLoading}
-            >
-              {/** 2. Renderização Condicional do Loading **/}
-              {localLoading ? (
-                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-              ) : transactions.confirmed ? (
-                <CircleCheck className="h-6 w-6 text-vida-loca-500" />
-              ) : (
-                <CircleMinus className="h-6 w-6 text-stiletto-500" />
-              )}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="w-1/5">
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {!transactions.confirmed
-                  ? 'Confirmar pagamento?'
-                  : 'Extornar pagamento?'}
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={localLoading}>Não</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => handleSwitch(transactions.id)}
-                disabled={localLoading}
-              >
-                {localLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Alterando...
-                  </div>
-                ) : (
-                  'Sim'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      <TableCell className="w-16 text-center">
+        {/* Botão que abre o modal */}
+        <Button
+          aria-label="Registrar pagamento"
+          variant="ghost"
+          className="p-0 h-6 w-6 flex items-center justify-center mx-auto"
+          onClick={() => setOpenPaymentModal(true)}
+          disabled={localLoading || transactions.confirmed}
+        >
+          {localLoading ? (
+            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+          ) : transactions.confirmed ? (
+            <CircleCheck className="h-6 w-6 text-vida-loca-500" />
+          ) : (
+            <CircleMinus className="h-6 w-6 text-stiletto-500" />
+          )}
+        </Button>
+
+        {/* MODAL DE PAGAMENTO: Recebe a transação mapeada */}
+        <PaymentModal
+          open={openPaymentModal}
+          onOpenChange={setOpenPaymentModal}
+          transaction={paymentTransaction} // <-- Usa a transação mapeada!
+          onConfirm={handlePayment}
+        />
       </TableCell>
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
@@ -208,8 +243,8 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
         </TableCell>
       )}
 
-      
-      <TableCell className="w-16 text-center"> 
+
+      <TableCell className="w-16 text-center">
         <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
           <AlertDialogTrigger asChild>
             <Button
