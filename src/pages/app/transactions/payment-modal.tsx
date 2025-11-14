@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Calculator, FileText, CreditCard, Calendar, DollarSign, Clock, ListChecks, AlertTriangle } from 'lucide-react'
 import { z } from 'zod'
 
-// Importa o calendário (assume que o path e o componente estão corretos)
+// Importa o calendário
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 
 import { Button } from '@/components/ui/button'
@@ -71,7 +71,7 @@ export function PaymentModal({
     onConfirm
 }: PaymentModalProps) {
     const [isLoading, setIsLoading] = useState(false)
-    const [apiError, setApiError] = useState<string | null>(null) // NOVO: Estado para erro de API
+    const [apiError, setApiError] = useState<string | null>(null)
 
     const form = useForm<PaymentFormData>({
         resolver: zodResolver(paymentSchema),
@@ -104,7 +104,6 @@ export function PaymentModal({
             form.clearErrors('paidAmount')
         }
     }, [paidAmountNum, transactionAmount, form])
-    // -----------------------------------------------------------
 
     const onSubmit = async (data: PaymentFormData) => {
         // Validações de pré-submissão
@@ -122,8 +121,9 @@ export function PaymentModal({
             return
         }
 
-        setApiError(null) // Resetar erro ao tentar submeter
+        setApiError(null)
         setIsLoading(true)
+
         try {
             const confirmationPayload = {
                 id: transaction.id,
@@ -132,9 +132,8 @@ export function PaymentModal({
                 remainingDate: isPartialActive ? data.remainingDueDate : undefined,
             }
 
-            console.log("PAYLOAD ENVIADO:", confirmationPayload);
+            console.log({ "Payload: " : confirmationPayload })
 
-            // A chamada 'onConfirm' deve fazer a conversão da data para ISO string antes de chamar a API
             await onConfirm(confirmationPayload)
 
             // Sucesso
@@ -144,15 +143,24 @@ export function PaymentModal({
                 remainingDueDate: undefined,
             })
             onOpenChange(false)
-        } catch (error) {
-            console.error('ERRO DETALHADO AO PROCESSAR PAGAMENTO:', error);
+        } catch (error: any) {
+            console.error('🔴 ERRO DETALHADO AO PROCESSAR PAGAMENTO:', error)
 
-            // Tenta extrair a mensagem de erro do objeto Axios/fetch
-            const errorMessage = (error as any).response?.data?.message
-                || (error as Error).message
-                || 'Erro desconhecido ao comunicar com o servidor. Verifique o console.';
+            // Log mais detalhado do erro
+            if (error.response) {
+                console.error('📊 RESPOSTA DO ERRO:', {
+                    status: error.response.status,
+                    data: error.response.data,
+                    headers: error.response.headers
+                })
+            }
 
-            setApiError(errorMessage); // Define o erro para exibição na UI
+            const errorMessage = error.response?.data?.message
+                || error.response?.data?.error
+                || error.message
+                || 'Erro desconhecido ao comunicar com o servidor.'
+
+            setApiError(errorMessage)
         } finally {
             setIsLoading(false)
         }
@@ -165,14 +173,26 @@ export function PaymentModal({
         return date.getTime() > today.getTime();
     };
 
+    // Reset form quando modal abrir/fechar
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                paidAmount: transaction.amount.toFixed(2),
+                paymentDate: new Date(),
+                remainingDueDate: undefined,
+            })
+            setApiError(null)
+        }
+    }, [open, transaction, form])
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="sm:max-w-xl w-full max-w-lg mx-auto p-0 gap-0 flex flex-col h-auto max-h-[90vh]"
+                aria-describedby="payment-modal-description"
             >
                 {/* 1. Header Fixo */}
                 <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-50 to-gray-50 flex-shrink-0">
-                    {/* ... (Header Omitido por brevidade) ... */}
                     <div className="flex items-center gap-3">
                         <div className={cn(
                             "p-2 rounded-lg",
@@ -198,15 +218,19 @@ export function PaymentModal({
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
+                        <div id="payment-modal-description" className="sr-only">
+                            Modal para confirmar {transaction.operation === 'income' ? 'recebimento' : 'pagamento'} da transação {transaction.description} no valor de R$ {transaction.amount.toFixed(2)}
+                        </div>
 
                         {/* 2. Conteúdo Rolável */}
                         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
 
-                            {/* NOVO: Alerta de Erro da API */}
+                            {/* Alerta de Erro da API */}
                             {apiError && (
                                 <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-xl font-medium">
                                     <strong className='flex items-center gap-2 mb-1 text-red-800'>
-                                        <AlertTriangle className='h-5 w-5 flex-shrink-0' /> Erro no Processamento:
+                                        <AlertTriangle className='h-5 w-5 flex-shrink-0' />
+                                        Erro no Processamento:
                                     </strong>
                                     <p className="text-sm">{apiError}</p>
                                     <p className="text-xs mt-1 text-red-600 italic">
@@ -215,7 +239,7 @@ export function PaymentModal({
                                 </div>
                             )}
 
-                            {/* PAINEL DE RESUMO INTELIGENTE (Omitido por brevidade) */}
+                            {/* PAINEL DE RESUMO INTELIGENTE */}
                             <div className={cn(
                                 "rounded-xl p-4 border shadow-md transition-all duration-300",
                                 isPartialActive ? 'bg-amber-50 border-amber-200' : 'bg-slate-50'
@@ -280,12 +304,10 @@ export function PaymentModal({
                                     )}
                                 </div>
                             </div>
-                            {/* FIM: PAINEL DE RESUMO INTELIGENTE */}
-
 
                             <hr className="my-6 border-slate-200" />
 
-                            {/* AGRUPAMENTO DE CAMPOS PRINCIPAIS DE 2 COLUNAS (Omitido por brevidade) */}
+                            {/* AGRUPAMENTO DE CAMPOS PRINCIPAIS DE 2 COLUNAS */}
                             <div className="space-y-4">
                                 <h3 className="text-lg font-semibold flex items-center gap-2">
                                     <ListChecks className="h-5 w-5 text-gray-600" />
@@ -358,8 +380,6 @@ export function PaymentModal({
                                 </div>
                             </div>
                         </div>
-                        {/* FIM: Conteúdo Rolável */}
-
 
                         {/* 3. Footer Fixo */}
                         <div className="border-t bg-white p-4 flex-shrink-0">
@@ -394,8 +414,6 @@ export function PaymentModal({
                                 </Button>
                             </div>
                         </div>
-                        {/* FIM: Footer Fixo */}
-
                     </form>
                 </Form>
             </DialogContent>

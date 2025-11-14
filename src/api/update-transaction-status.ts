@@ -1,15 +1,12 @@
 import { api } from '@/lib/axios'
 
-// 1. INTERFACE CORRIGIDA: Usa Date, pois é o que o useForm retorna,
-// mas a função fará a conversão para string.
 export interface UpdateStatusTransactionParams {
   id: string
-  amount: number // Valor liquidado (parcial ou total)
-  date: Date // Data de liquidação efetiva
-  remainingDate?: Date // Data de vencimento para a parcela restante (opcional)
+  amount: number
+  date: Date
+  remainingDate?: Date
 }
 
-// 2. FUNÇÃO CORRIGIDA: Recebe Date e converte para string ISO antes de enviar o PATCH.
 export async function updateStatusTransaction({
   id,
   amount,
@@ -17,13 +14,27 @@ export async function updateStatusTransaction({
   remainingDate,
 }: UpdateStatusTransactionParams) {
 
-  // Garantir que as datas são convertidas para o formato ISO string (padrão de API)
+  // CORREÇÃO: Converter as datas para ISO string
   const payload = {
     amount,
     date: date.toISOString(),
     remainingDate: remainingDate ? remainingDate.toISOString() : undefined,
   }
 
-  // Chama o endpoint com o ID da transação original e o corpo da requisição.
-  await api.patch(`/switch-transaction/${id}`, payload)
+  
+
+  try {
+   
+    const response = await api.patch(`/switch-transaction/${id}`, payload)
+    console.log("✅ RESPOSTA DA API:", response.data)
+    return response.data
+  } catch (error: any) {
+    console.error("🔴 ERRO NA REQUISIÇÃO:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url
+    })
+    throw error
+  }
 }

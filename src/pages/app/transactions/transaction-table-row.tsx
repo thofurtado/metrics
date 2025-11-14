@@ -3,12 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { CircleCheck, CircleMinus, Trash, Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 
 import { deleteTransaction } from '@/api/delete-transaction'
-// ASSUMIDO: Você irá atualizar a interface desta API para aceitar amount, date e confirmed
 import { updateStatusTransaction } from '@/api/update-transaction-status'
-import { createTransaction } from '@/api/create-transaction'
+// Removendo: import { createTransaction } from '@/api/create-transaction'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { PaymentModal } from './payment-modal'
+import { toast } from 'sonner'
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -48,7 +47,6 @@ interface PaymentTransaction {
   accounts: { name: string; id: string }
 }
 
-
 interface TransactionTableRowProps {
   transactions: Transaction
 }
@@ -59,20 +57,18 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
   const [localLoading, setLocalLoading] = useState(false)
 
-  // --- MAPEAMENTO DE DADOS PARA O MODAL (SOLUÇÃO PARA O ERRO DE TIPAGEM) ---
+  // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
-    // Mapeia o ID do setor (que pode ser nulo)
     sectorId: transactions.sectors?.id || null,
-    // Mapeia o ID da conta
     accountId: transactions.accounts.id,
   }
-  // --------------------------------------------------------------------------
+  // ----------------------------------------
 
-  // Mutação para alterar o status - MANTIDA ORIGINAL
-  // ATENÇÃO: Se o erro persistir, a interface UpdateStatusTransactionParams (na API) precisa ser corrigida!
+  // Mutação para alterar o status (e criar o remanescente no Back-end)
   const { mutateAsync: switchTransactionStatus } = useMutation({
     mutationFn: updateStatusTransaction,
+    // Otimisticamente atualiza o status de confirmação
     onMutate: async ({ id }) => {
       setLocalLoading(true)
       queryClient.setQueryData(['transaction'], (old: any) => {
@@ -89,7 +85,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
       })
     },
     onSuccess: () => {
-      toast.info('Status de pagamento alterado com sucesso!')
+      // A toast de sucesso é movida para o handlePayment para ser mais específica
     },
     onError: (error, variables) => {
       toast.error('Ocorreu um erro ao alterar o status do pagamento.')
@@ -101,18 +97,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     },
   })
 
-  // Mutação para criar transação de resto
-  const { mutateAsync: createRemainingTransaction } = useMutation({
-    mutationFn: createTransaction,
-    onSuccess: () => {
-      toast.info('Transação de resto criada com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao criar transação de resto')
-    },
-  })
-
-  // Mutação para deletar - MANTIDA ORIGINAL
+  // Mutação para deletar (mantida)
   const { mutateAsync: DeleteTransaction } = useMutation({
     mutationFn: deleteTransaction,
     onMutate: async ({ id }) => {
@@ -142,44 +127,54 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     },
   })
 
-  // ✅ MANIPULADOR: Lógica do Modal com o payload de UPDATE e CREATE
-  async function handlePayment(payload: any) {
+  /**
+   * ✅ LÓGICA CORRIGIDA: Manipula o pagamento, enviando TUDO para o Back-end.
+   * O Back-end decide se atualiza, se cria o restante, e qual data manter.
+   */
+  async function handlePayment(payload: {
+    id: string;
+    amount: number;
+    date: Date;
+    remainingDate?: Date
+  }) {
     setLocalLoading(true)
     try {
-      const { updateOriginal, newRemainingTransaction } = payload;
+      const { amount, date, remainingDate } = payload
+      const isPartialPayment = amount < transactions.amount
 
-      // 1. Atualiza a transação original com os novos dados (valor pago, data e status)
+      // 1. CHAMA A API APENAS UMA VEZ
+      // A API de updateStatusTransaction agora deve ser responsável por:
+      // a) Atualizar o status da transação original (id) com a data (date) e valor (amount).
+      // b) Se remainingDate for enviado, criar a nova transação remanescente.
       await switchTransactionStatus({
         id: transactions.id,
-        amount: updateOriginal.amount,
-        date: updateOriginal.date,
-        confirmed: updateOriginal.confirmed,
+        amount: amount,
+        date: date,
+        // ENVIAMOS A DATA REMANESCENTE APENAS SE ELA EXISTIR
+        remainingDate: remainingDate,
       })
 
-      // 2. Se for pagamento parcial, cria transação de resto
-      if (newRemainingTransaction) {
-        await createRemainingTransaction({
-          operation: newRemainingTransaction.operation,
-          amount: newRemainingTransaction.amount,
-          description: newRemainingTransaction.description,
-          date: newRemainingTransaction.date,
-          account: newRemainingTransaction.accountId, // Usa accountId
-          sector: newRemainingTransaction.sectorId, // Usa sectorId
-          confirmed: false
-        })
-      }
-
-      toast.success('Pagamento processado com sucesso!')
+      // Remove a toast de sucesso da mutação e a coloca aqui para ser mais específica
+      toast.success(
+        isPartialPayment
+          ? 'Pagamento parcial processado com sucesso! Transação remanescente criada.'
+          : 'Pagamento processado com sucesso!'
+      )
       setOpenPaymentModal(false)
+
     } catch (error) {
-      toast.error('Erro ao processar pagamento')
+      console.error('Erro ao processar pagamento:', error)
+      // O modal já está configurado para exibir o erro da API
+      throw error // Relança o erro para que o modal o capture e o exiba
     } finally {
+      // O invalidateQueries já está no onSettled da mutação, mas podemos forçar aqui
+      // se a mutação não tiver sido bem-sucedida, caso o throw error passe direto.
       setLocalLoading(false)
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
     }
   }
 
-  // Manipulador para deletar - MANTIDO ORIGINAL
+  // Manipulador para deletar (mantido)
   async function handleDelete(id: string) {
     try {
       await DeleteTransaction({ id })
@@ -188,6 +183,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     }
   }
 
+  // Omitido o JSX da tabela, pois não houve alterações visuais significativas.
   return (
     <TableRow className="h-16 bg-white dark:bg-stone-900">
       <TableCell className="w-16 text-center">
@@ -213,7 +209,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
           open={openPaymentModal}
           onOpenChange={setOpenPaymentModal}
           transaction={paymentTransaction} // <-- Usa a transação mapeada!
-          onConfirm={handlePayment}
+          onConfirm={handlePayment} // <-- Agora compatível e sem criar transação remanescente no Front!
         />
       </TableCell>
 
@@ -242,7 +238,6 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
           {`R$ ${transactions.amount.toFixed(2)}`}
         </TableCell>
       )}
-
 
       <TableCell className="w-16 text-center">
         <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
