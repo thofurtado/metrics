@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Angry, ChevronDown, LogOut } from 'lucide-react'
+import { Angry, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { getProfile } from '@/api/get-profile'
@@ -74,6 +74,10 @@ export function AccountMenu() {
               <Angry className="ml-5 h-4" /> <span> Perfil do usuário</span>
             </DropdownMenuItem>
           </DialogTrigger>
+
+          <DropdownMenuItem onClick={() => navigate('/settings/accounts')}>
+            <Settings className="ml-5 h-4" /> <span>Configurações</span>
+          </DropdownMenuItem>
 
           <DropdownMenuItem
             asChild

@@ -8,6 +8,9 @@ import {
   ShoppingCart,
   CreditCard,
   ArrowLeft,
+  Box,
+  Wrench,
+  Zap,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -28,6 +31,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { TreatmentPaymentModal } from './treatment-payment-modal'
 
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+
 interface TreatmentDetails {
   id: string
   items: {
@@ -37,9 +43,13 @@ interface TreatmentDetails {
     items: {
       name: string
       id: string
+      isItem: boolean
     }
   }[]
-  // Adicione outras propriedades que você usa
+  clients: {
+    name: string
+    contract: boolean
+  }
   opening_date?: Date
   ending_date?: Date | null
   contact?: string | null
@@ -70,25 +80,23 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   const [itemDiscount, setItemDiscount] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [showPayment, setShowPayment] = useState(false)
-  // O estado `mobileView` é usado para controlar qual seção é visível no mobile
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products')
-
-  // NOVO ESTADO: Controla se o campo de desconto deve mostrar '' em vez de '0'
-  const [discountInputDisplay, setDiscountInputDisplay] = useState('0') // Inicialmente '0'
+  const [discountInputDisplay, setDiscountInputDisplay] = useState('0')
+  const [isContractMode, setIsContractMode] = useState(false)
 
   useEffect(() => {
     if (form.formState.isSubmitSuccessful) {
       form.reset({
         item: '',
         quantity: '1',
-        discount: '0', // O estado interno do form-hook deve ser '0' para cálculos
+        discount: '0',
       })
       setSalesValue(0)
       setItemQuantity(1)
       setItemDiscount(0)
       setFinalSalesValue(0)
       setSearchTerm('')
-      setDiscountInputDisplay('0') // Resetar o display também
+      setDiscountInputDisplay('0')
     }
   })
 
@@ -99,9 +107,16 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     enabled: open,
   })
 
+  // If client has no contract, ensure mode is off
+  useEffect(() => {
+    if (treatment && !treatment.clients?.contract) {
+      setIsContractMode(false)
+    }
+  }, [treatment])
+
   const { data: items } = useQuery<any>({ // Mantido o 'any' aqui por não ter o tipo de retorno de getItems
     queryKey: ['items'],
-    queryFn: () => getItems(),
+    queryFn: () => getItems({ limit: 1000 }),
   })
 
   const { mutateAsync: treatmentItem } = useMutation({
@@ -144,40 +159,87 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   }
 
   async function onSubmit(data: FormSchemaType) {
-    // A lógica de conversão para Number está mantida, pois é a essência do seu código.
-    const unitSalesValue = finalSalesValue / (data.quantity ? Number(data.quantity) : 1)
+    console.log('Tentando adicionar item (submit):', data)
+    try {
+      const quantity = data.quantity ? Number(data.quantity) : 1
+      let unitSalesValue = 0
+      let discountValue = 0
 
-    const response = await treatmentItem({
-      treatmentId,
-      itemId: data.item,
-      quantity: data.quantity ? Number(data.quantity) : 1,
-      salesValue: unitSalesValue,
-    })
+      if (isContractMode) {
+        // Contract Mode: value is original price, discount is full amount (so net is 0)
+        unitSalesValue = salesValue
+        discountValue = salesValue * quantity
+      } else {
+        // Normal Mode:
+        // We preserve the original unit price (salesValue)
+        unitSalesValue = salesValue
 
-    if (response !== undefined) {
-      await itemRefetch()
-      toast.success('Item adicionado com sucesso')
-      form.reset({
-        item: '',
-        quantity: '1',
-        discount: '0',
+        // And calculate the discount as the difference between Total Gross and Final Net
+        // This ensures 'salesValue' in DB is always the List Price, allowing savings reports.
+        const totalGross = salesValue * quantity
+        discountValue = totalGross - finalSalesValue
+
+        // Safety check for floating point quirks
+        if (discountValue < 0) discountValue = 0
+      }
+
+      const response = await treatmentItem({
+        treatmentId,
+        itemId: data.item,
+        quantity,
+        salesValue: unitSalesValue,
+        discount: discountValue,
       })
-      setSalesValue(0)
-      setItemQuantity(1)
-      setItemDiscount(0)
-      setFinalSalesValue(0)
-      setSearchTerm('')
-      setDiscountInputDisplay('0') // Resetar o display
-      setMobileView('cart') // Vai para o carrinho após adicionar item (como antes)
+
+      if (response !== undefined) {
+        await itemRefetch()
+        toast.success('Item adicionado com sucesso')
+        form.reset({
+          item: '',
+          quantity: '1',
+          discount: '0',
+        })
+        setSalesValue(0)
+        setItemQuantity(1)
+        setItemDiscount(0)
+        setFinalSalesValue(0)
+        setSearchTerm('')
+        setDiscountInputDisplay('0')
+        setMobileView('cart')
+        // We do NOT reset isContractMode here to allow multiple additions
+      }
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message)
+      } else {
+        toast.error('Erro ao adicionar item')
+      }
     }
   }
 
   function onItemSelect(item: any) {
+    console.log('Selecionado:', item)
     form.setValue('item', item.id)
     const newSalesValue = item.price
     setSalesValue(newSalesValue)
+
+    // Reset quantity to 1 for new item selection to ensure clean state (especially for services)
+    setItemQuantity(1)
+    form.setValue('quantity', '1')
+
+    // Check contract status for default switch behavior
+    if (treatment && treatment.clients?.contract) {
+      // If it is a SERVICE (isItem = false/null), default to contract mode ON
+      if (!item.isItem) {
+        setIsContractMode(true)
+      } else {
+        // If it is a PART (isItem = true), default to contract mode OFF (let user choose to enable)
+        setIsContractMode(false)
+      }
+    }
+
     // Usar itemDiscount, que é 0 por padrão, para calcular
-    const finalPrice = calculateFinalValue(newSalesValue, itemQuantity, itemDiscount)
+    const finalPrice = calculateFinalValue(newSalesValue, 1, itemDiscount) // Use 1 directly since we just reset it
     setFinalSalesValue(finalPrice)
     setSearchTerm('')
   }
@@ -457,6 +519,19 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     />
                   </div>
 
+                  {treatment && treatment.clients?.contract && (
+                    <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-md border border-blue-200">
+                      <Switch
+                        id="contract-mode"
+                        checked={isContractMode}
+                        onCheckedChange={setIsContractMode}
+                      />
+                      <Label htmlFor="contract-mode" className="text-sm font-medium cursor-pointer">
+                        Lançar via Contrato (Gratuito)
+                      </Label>
+                    </div>
+                  )}
+
                   {/* Valores */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -523,7 +598,14 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                 {treatment.items.map((item) => (
                   <div key={item.id} className="flex items-center justify-between rounded-lg border p-3 bg-white shadow-sm">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.items.name}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        {item.items.isItem ? (
+                          <Box className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <Wrench className="h-4 w-4 text-amber-500" />
+                        )}
+                        <p className="text-sm font-medium truncate">{item.items.name}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} x R$ {item.salesValue.toFixed(2)}
                       </p>

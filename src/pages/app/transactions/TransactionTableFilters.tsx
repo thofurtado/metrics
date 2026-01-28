@@ -54,7 +54,7 @@ export function TransactionTableFilters() {
       const { description, value, sectorId, accountId } = watchedFields
 
       // Verifica se realmente houve mudança nos filtros
-      const hasFiltersChanged = 
+      const hasFiltersChanged =
         description !== previousFilters.current.description ||
         value !== previousFilters.current.value ||
         sectorId !== previousFilters.current.sectorId ||
@@ -104,7 +104,7 @@ export function TransactionTableFilters() {
     queryKey: ['sectors'],
     queryFn: () => getSectors(),
   })
-  const { data: accounts } = useQuery({
+  const { data: accounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => getAccounts(),
   })
@@ -140,13 +140,13 @@ export function TransactionTableFilters() {
   return (
     <div className="flex items-center gap-2 font-gaba">
       <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      
+
       <Input
         placeholder="Descrição"
         className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm sm:placeholder:text-muted-foreground"
         {...register('description')}
       />
-      
+
       <Input
         placeholder="Valor"
         className="h-8 w-16 text-xs text-center sm:w-[160px] sm:text-sm sm:placeholder:text-muted-foreground"
@@ -173,22 +173,21 @@ export function TransactionTableFilters() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all" className="text-xs sm:text-sm">Todos os Setores</SelectItem>
-                {sectors &&
-                  sectors.data.sectors.map((sector) => (
-                    <SelectItem
-                      value={sector.id}
-                      key={sector.id}
-                      className={`text-xs sm:text-sm ${sector.type === 'in' ? 'text-vida-loca-500' : 'text-stiletto-400'}`}
-                    >
-                      {sector.name}
-                    </SelectItem>
-                  ))}
+                {sectors?.data?.sectors?.map((sector) => (
+                  <SelectItem
+                    value={sector.id}
+                    key={sector.id}
+                    className={`text-xs sm:text-sm ${sector.type === 'in' ? 'text-vida-loca-500' : 'text-stiletto-400'}`}
+                  >
+                    {sector.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )
         }}
       />
-      
+
       <Controller
         name="accountId"
         control={control}
@@ -199,22 +198,21 @@ export function TransactionTableFilters() {
               name={name}
               onValueChange={onChange}
               value={value}
-              disabled={disabled}
+              disabled={disabled || isLoadingAccounts}
             >
               <SelectTrigger
                 className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm"
                 aria-label="Contas"
               >
-                <SelectValue placeholder="Contas" />
+                <SelectValue placeholder={isLoadingAccounts ? "Carregando..." : "Contas"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all" className="text-xs sm:text-sm">Todas as Contas</SelectItem>
-                {accounts &&
-                  accounts.data.accounts.map((account) => (
-                    <SelectItem value={account.id} key={account.id} className="text-xs sm:text-sm">
-                      {account.name}
-                    </SelectItem>
-                  ))}
+                {accounts?.accounts?.map((account) => (
+                  <SelectItem value={account.id} key={account.id} className="text-xs sm:text-sm">
+                    {account.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )

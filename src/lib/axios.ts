@@ -18,3 +18,23 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Interceptor de erro na resposta
+api.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status
+      const code = error.code
+
+      if (status === 401) {
+        localStorage.clear()
+        window.location.href = '/sign-in'
+        return Promise.reject(error)
+      }
+    }
+    return Promise.reject(error)
+  },
+)

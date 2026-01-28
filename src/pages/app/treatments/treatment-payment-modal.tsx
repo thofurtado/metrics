@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { createPaymentEntry } from '@/api/create-payment-entry'
 import { getAccounts } from '@/api/get-accounts'
 import { getPayments } from '@/api/get-payments'
+import { finishTreatment } from '@/api/finish-treatment'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -161,7 +162,15 @@ export function TreatmentPaymentModal({
         })
       }
 
-      toast.success('Pagamento registrado com sucesso!')
+      // Finalizar tratamento (Botão Mágico)
+      try {
+        await finishTreatment({ treatmentId })
+        toast.success('Atendimento encerrado e financeiro gerado com sucesso!')
+      } catch (finishError) {
+        console.error(finishError)
+        toast.error('Pagamento registrado, mas houve erro ao finalizar atendimento. Verifique o status.')
+      }
+
       onSuccess()
       onClose()
 

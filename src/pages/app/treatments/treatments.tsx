@@ -7,9 +7,12 @@ import { z } from 'zod'
 import { getTreatments } from '@/api/get-treatments'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
+import { TableSkeleton } from '@/components/table-skeleton'
+
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -31,7 +34,7 @@ export function Treatments() {
     .transform((page) => page - 1)
     .parse(searchParams.get('page') ?? '1')
 
-  const { data: result } = useQuery({
+  const { data: result, isLoading } = useQuery({
     queryKey: ['treatments', pageIndex, treatmentId, clientName, status],
     queryFn: () =>
       getTreatments({
@@ -60,7 +63,7 @@ export function Treatments() {
       <div className="flex flex-col gap-4 font-gaba">
         {/* Header com título e botão lado a lado */}
         <div className="flex items-center justify-between">
-          <h1 className="font-merienda text-2xl font-bold tracking-tight text-minsk-900 sm:text-3xl lg:text-4xl">
+          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900">
             Atendimentos
           </h1>
 
@@ -115,13 +118,32 @@ export function Treatments() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result &&
-                    result.data.treatments.treatments.treatments.map(
+                  {isLoading && <TableSkeleton />}
+
+                  {!isLoading && result && result.data.treatments.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={9} // Span across all columns
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        Nenhum atendimento encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {!isLoading &&
+                    result &&
+                    result.data.treatments.map(
                       (treatment) => {
                         return (
                           <TreatmentTableRow
                             key={treatment.id}
-                            treatments={treatment}
+                            treatments={{
+                              ...treatment,
+                              clients: treatment.clients ?? { name: 'Desconhecido' },
+                              items: treatment.items as any,
+                              interactions: treatment.interactions as any,
+                            }}
                           />
                         )
                       },
@@ -133,9 +155,9 @@ export function Treatments() {
 
           <Pagination
             onPageChange={handlePaginate}
-            pageIndex={result && result.data.treatments.treatments.pageIndex}
-            totalCount={result && result.data.treatments.treatments.totalCount}
-            perPage={result && result.data.treatments.treatments.perPage}
+            pageIndex={result?.data.pageIndex ?? 0}
+            totalCount={result?.data.totalCount ?? 0}
+            perPage={result?.data.perPage ?? 10}
           />
         </div>
       </div>

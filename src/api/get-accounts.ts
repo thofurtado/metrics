@@ -6,11 +6,12 @@ export interface GetAccountsResponse {
     name: string
     description: string | null
     goal: number | null
+    balance: number
   }[]
 }
 
 export async function getAccounts() {
   const response = await api.get<GetAccountsResponse>('/accounts')
-  
-  return response
+
+  return response.data
 }

@@ -1,4 +1,4 @@
-import {} from '@radix-ui/react-dialog'
+import { } from '@radix-ui/react-dialog'
 import dayjs from 'dayjs'
 import { NotebookPen, Search, Shapes } from 'lucide-react'
 import { useState } from 'react'
@@ -23,27 +23,27 @@ export interface TreatmentTableRowProps {
     equipment_id: string | null
     request: string
     status:
-      | 'pending'
-      | 'in_progress'
-      | 'on_hold'
-      | 'resolved'
-      | 'canceled'
-      | 'follow_up'
-      | 'in_workbench'
+    | 'pending'
+    | 'in_progress'
+    | 'on_hold'
+    | 'resolved'
+    | 'canceled'
+    | 'follow_up'
+    | 'in_workbench'
     amount: number
     observations: string | null
     clients: {
       name: string
     }
-    items: [
-      item_id: string,
-      name: string,
-      salesValue: number,
-      quantity: number,
+    items: {
+      item_id: string
+      salesValue: number
+      quantity: number
       items: {
         name: string
-      },
-    ]
+        isItem: boolean
+      }
+    }[]
     interactions: [id: string, date: Date, description: string]
   }
 }
@@ -126,6 +126,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
             open={isInteractionsOpen}
             treatmentId={treatments.id}
             status={treatments.status}
+            amount={treatments.amount}
           />
         </Dialog>
       </TableCell>

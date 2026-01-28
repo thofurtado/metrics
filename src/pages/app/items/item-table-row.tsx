@@ -1,21 +1,24 @@
-// components/items/item-table-row.tsx
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Package2, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
-
-import { updateItemStatus } from '@/api/update-item-status'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { ProductItemDialog } from './product-item-dialog'
+import { DeleteItemDialog } from './delete-item-dialog'
+import { StockAdjustmentDialog } from './stock-adjustment-dialog'
 
 export interface Item {
   id: string
+  display_id: number
   name: string
   description: string | null
   cost: number
   price: number
   stock: number | null
+  min_stock: number | null
+  barcode: string | null
+  category: string | null
   active: boolean
   isItem: boolean
 }
@@ -25,100 +28,87 @@ interface ItemTableRowProps {
 }
 
 export function ItemTableRow({ item }: ItemTableRowProps) {
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const queryClient = useQueryClient()
-
-  const { mutateAsync: updateItemStatusFn } = useMutation({
-    mutationFn: updateItemStatus,
-    onSuccess: () => {
-      toast.success(`Item ${item.active ? 'desativado' : 'ativado'} com sucesso!`)
-      queryClient.invalidateQueries({ queryKey: ['items-paginated'] })
-    },
-  })
-
-  async function handleToggleStatus() {
-    await updateItemStatusFn({ id: item.id })
-  }
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isAdjustStockOpen, setIsAdjustStockOpen] = useState(false)
 
   return (
     <TableRow>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsDetailsOpen(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleToggleStatus} className={item.active ? 'text-red-600' : 'text-green-600'}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              {item.active ? 'Desativar' : 'Ativar'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <TableCell className="font-mono text-xs font-bold text-minsk-950">
+        #{item.display_id}
       </TableCell>
-      
+      <TableCell>
+        {item.isItem ? (
+          <span className="rounded bg-minsk-100 px-2 py-1 text-xs font-semibold text-minsk-700">
+            Produto
+          </span>
+        ) : (
+          <span className="rounded bg-vida-loca-100 px-2 py-1 text-xs font-semibold text-vida-loca-700">
+            Serviço
+          </span>
+        )}
+      </TableCell>
       <TableCell className="font-medium">
-        <div>
-          <span className="font-semibold">{item.name}</span>
-          {item.description && (
-            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-              {item.description}
-            </p>
+        <div className="flex flex-col">
+          <span>{item.name}</span>
+          {!item.isItem && item.category && (
+            <span className="text-[10px] text-muted-foreground uppercase">{item.category}</span>
           )}
         </div>
       </TableCell>
-      
-      <TableCell className="hidden sm:table-cell">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          item.isItem 
-            ? 'bg-blue-100 text-blue-800' 
-            : 'bg-green-100 text-green-800'
-        }`}>
-          {item.isItem ? 'Produto' : 'Serviço'}
-        </span>
-      </TableCell>
-      
-      <TableCell className="text-center font-semibold text-green-600">
-        R$ {item.price.toFixed(2)}
-      </TableCell>
-      
-      <TableCell className="hidden sm:table-cell text-muted-foreground">
-        R$ {item.cost.toFixed(2)}
-      </TableCell>
-      
-      <TableCell className="hidden sm:table-cell">
+      <TableCell className="text-center">
         {item.isItem ? (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            (item.stock || 0) > 10 
-              ? 'bg-green-100 text-green-800'
-              : (item.stock || 0) > 0
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {item.stock || 0} un
+          <span className={Number(item.stock) <= (item.min_stock ?? 0) ? "text-red-500 font-bold" : ""}>
+            {item.stock ?? 0}
           </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">-</span>
-        )}
+        ) : '-'}
       </TableCell>
-      
-      <TableCell className="hidden sm:table-cell">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          item.active 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {item.active ? 'Ativo' : 'Inativo'}
-        </span>
-      </TableCell>
-      
       <TableCell>
-        {/* Espaço para ações adicionais se necessário */}
+        {item.price.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })}
+      </TableCell>
+      <TableCell className="text-right space-x-2">
+        {item.isItem && (
+          <Dialog open={isAdjustStockOpen} onOpenChange={setIsAdjustStockOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-minsk-500 hover:text-minsk-600 hover:bg-minsk-50" title="Ajuste de Estoque">
+                <Package2 className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <StockAdjustmentDialog
+              itemId={item.id}
+              itemName={item.name}
+              onSuccess={() => setIsAdjustStockOpen(false)}
+            />
+          </Dialog>
+        )}
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0" title="Editar">
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </DialogTrigger>
+          <ProductItemDialog
+            initialData={item}
+            onSuccess={() => setIsEditDialogOpen(false)}
+          />
+        </Dialog>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Excluir">
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </AlertDialogTrigger>
+          <DeleteItemDialog
+            id={item.id}
+            name={item.name}
+            onSuccess={() => setIsDeleteDialogOpen(false)}
+          />
+        </AlertDialog>
       </TableCell>
     </TableRow>
   )

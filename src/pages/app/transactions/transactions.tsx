@@ -86,15 +86,15 @@ export function Transactions() {
     <>
       <Helmet title="Transações" />
       <div className="flex flex-col gap-4 font-gaba">
-        <div className="flex-start  flex w-full flex-row place-content-between">
-          <h1 className="font-merienda text-4xl font-bold tracking-tight text-minsk-900">
+        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900">
             Transações
           </h1>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 aria-label="Adicionar"
-                className="ml-3 mt-auto h-12 w-12 rounded-full bg-white p-2 shadow-lg hover:bg-minsk-200 dark:bg-minsk-400 dark:hover:bg-minsk-50"
+                className="ml-auto h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white p-2 shadow-lg hover:bg-minsk-200 dark:bg-minsk-400 dark:hover:bg-minsk-50"
               >
                 <Plus className="h-5 w-5 font-semibold text-minsk-800"></Plus>
               </Button>
@@ -143,8 +143,8 @@ export function Transactions() {
           <div>
             <TransactionTableFilters />
           </div>
-          <div className="rounded-md border ">
-            <Table className="overflow-hidden">
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-1/12 rounded-tl-md bg-minsk-200 text-center text-stone-700 dark:bg-minsk-700 dark:text-white">
