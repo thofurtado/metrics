@@ -40,6 +40,7 @@ interface TreatmentDetails {
     id: string
     quantity: number
     salesValue: number
+    discount: number
     items: {
       name: string
       id: string
@@ -146,7 +147,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   let subtotal = 0
   if (treatment) {
     subtotal = treatment.items.reduce((accumulator, item) => {
-      const currentSubtotal = item.quantity * item.salesValue
+      const currentSubtotal = (item.quantity * item.salesValue) - (item.discount || 0)
       return accumulator + currentSubtotal
     }, 0)
   }
@@ -161,7 +162,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   async function onSubmit(data: FormSchemaType) {
     console.log('Tentando adicionar item (submit):', data)
     try {
-      const quantity = data.quantity ? Number(data.quantity) : 1
+      const quantity = data.quantity ? parseFloat(data.quantity) : 1
       let unitSalesValue = 0
       let discountValue = 0
 
@@ -245,7 +246,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   }
 
   function onQuantityChange(newQuantityString: string | undefined) {
-    const newQuantity = Number(newQuantityString) || 1
+    const newQuantity = parseFloat(newQuantityString || '') || 0
     if (newQuantity > 0) {
       setItemQuantity(newQuantity)
       const finalPrice = calculateFinalValue(salesValue, newQuantity, itemDiscount)
@@ -259,7 +260,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     setDiscountInputDisplay(newDiscountString ?? '')
 
     // 2. Calcula o novo desconto (usando 0 se a string for vazia/undefined)
-    const newDiscount = Number(newDiscountString) || 0
+    const newDiscount = parseFloat(newDiscountString || '') || 0
     const clampedDiscount = Math.max(0, Math.min(100, newDiscount))
 
     // 3. Atualiza o estado para cálculo
@@ -468,7 +469,8 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                             <FormControl>
                               <Input
                                 type="number"
-                                min="1"
+                                step="0.01"
+                                min="0.01"
                                 {...field}
                                 onChange={(e) => {
                                   field.onChange(e)
@@ -501,6 +503,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                           <FormControl>
                             <Input
                               type="number"
+                              step="0.01"
                               min="0"
                               max="100"
                               {...field}
@@ -609,10 +612,20 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} x R$ {item.salesValue.toFixed(2)}
                       </p>
+                      {item.discount > 0 && (
+                        <p className="text-[10px] text-red-500">
+                          Desconto: -R$ {item.discount.toFixed(2)}
+                        </p>
+                      )}
+                      {item.salesValue === 0 && (
+                        <p className="text-[10px] text-green-600 font-medium">
+                          Gratuito (Contrato)
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <p className="text-sm font-semibold whitespace-nowrap text-primary">
-                        R$ {(item.quantity * item.salesValue).toFixed(2)}
+                        R$ {((item.quantity * item.salesValue) - (item.discount || 0)).toFixed(2)}
                       </p>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
