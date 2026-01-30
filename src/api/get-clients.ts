@@ -8,7 +8,12 @@ export interface GetClientsResponse {
     phone: string | null
     email: string | null
     contract: boolean
-    equipments: []
+    equipments: {
+      id: string
+      type: string
+      brand: string | null
+      identification: string | null
+    }[]
   }[]
 }
 

@@ -3,65 +3,98 @@
 @import url('https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Itim&display=swap');
 
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 20 14.3% 4.1%;
+    /* Base Neutral: Slate (Modern Blue-Grey) */
+    --background: 0 0% 100%; /* White */
+    --foreground: 222.2 84% 4.9%; /* Slate 950 */
+    
     --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
+    --card-foreground: 222.2 84% 4.9%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
-    --primary: 24.6 95% 53.1%;
-    --primary-foreground: 60 9.1% 97.8%;
-    --secondary: 60 4.8% 95.9%;
-    --secondary-foreground: 24 9.8% 10%;
-    --muted: 60 4.8% 95.9%;
-    --muted-foreground: 25 5.3% 44.7%;
-    --accent: 60 4.8% 95.9%;
-    --accent-foreground: 24 9.8% 10%;
+    --popover-foreground: 222.2 84% 4.9%;
+    
+    /* Primary: Minsk (Vibrant Indigo/Purple) */
+    --primary: 249 72% 60%; /* #7c3aed-ish */
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary: Light Gray/Slate */
+    --secondary: 210 40% 96.1%; /* Slate 100 */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* Slate 900 */
+    
+    /* Muted: Subtle Gray */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* Slate 500 */
+    
+    /* Accent: Interactive Gray */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    /* Destructive: Stiletto (Rose/Red) */
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 9.1% 97.8%;
-    --border: 20 5.9% 90%;
-    --input: 20 5.9% 90%;
-    --ring: 24.6 95% 53.1%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%; /* Slate 200 */
+    --input: 214.3 31.8% 91.4%;
+    --ring: 249 72% 60%; /* Match Primary */
+    
     --radius: 0.75rem;
+
+    /* Semantic Colors Custom Variables if needed */
+    --success: 151 55% 41.5%; /* Emerald */
+    --warning: 38 92% 50%;    /* Amber */
   }
 
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 60 9.1% 97.8%;
-    --card: 20 14.3% 4.1%;
-    --card-foreground: 60 9.1% 97.8%;
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 60 9.1% 97.8%;
-    --primary: 20.5 90.2% 48.2%;
-    --primary-foreground: 60 9.1% 97.8%;
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 9.1% 97.8%;
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 60 9.1% 97.8%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 60 9.1% 97.8%;
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 20.5 90.2% 48.2%;
+    /* Base Neutral: Deep Slate (Not Pure Black) */
+    --background: 222.2 47.4% 11.2%; /* Slate 950 */
+    --foreground: 210 40% 98%; /* Slate 50 */
+    
+    --card: 222.2 47.4% 13%; /* Slightly lighter than bg */
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222.2 47.4% 11.2%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary: Minsk in Dark Mode (Lighter/Brighter) */
+    --primary: 249 72% 65%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    
+    /* Secondary */
+    --secondary: 217.2 32.6% 17.5%; /* Slate 800 */
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Muted */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%; /* Slate 400 */
+    
+    /* Accent */
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%; /* Darker Red bg */
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217.2 32.6% 17.5%; /* Slate 800 */
+    --input: 217.2 32.6% 17.5%;
+    --ring: 249 72% 65%;
+
+    --success: 151 55% 41.5%;
+    --warning: 48 96% 53%; /* Lighter Amber for dark mode */
   }
 }
 
- 
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }

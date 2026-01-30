@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { FilePen } from 'lucide-react'
+import { FilePen, Building2 } from 'lucide-react'
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import MaskInput from 'react-input-mask'
@@ -33,7 +33,7 @@ import { Switch } from '@/components/ui/switch'
  * Função para remover caracteres não numéricos.
  */
 const cleanNumber = (value: string | undefined | null): string => {
-    return (value || '').replace(/\D/g, '');
+  return (value || '').replace(/\D/g, '');
 };
 
 // ----------------------------------------
@@ -42,51 +42,52 @@ const cleanNumber = (value: string | undefined | null): string => {
 // ----------------------------------------
 
 const isValidCpf = (cpf: string): boolean => {
-    const cleaned = cleanNumber(cpf);
-    if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) return false;
-    let sum, rest;
-    sum = 0;
-    for (let i = 1; i <= 9; i++) sum = sum + parseInt(cleaned.substring(i - 1, i)) * (11 - i);
-    rest = (sum * 10) % 11;
-    if ((rest == 10) || (rest == 11)) rest = 0;
-    if (rest != parseInt(cleaned.substring(9, 10))) return false;
-    sum = 0;
-    for (let i = 1; i <= 10; i++) sum = sum + parseInt(cleaned.substring(i - 1, i)) * (12 - i);
-    rest = (sum * 10) % 11;
-    if ((rest == 10) || (rest == 11)) rest = 0;
-    return rest == parseInt(cleaned.substring(10, 11));
+  const cleaned = cleanNumber(cpf);
+  if (cleaned.length !== 11 || /^(\d)\1{10}$/.test(cleaned)) return false;
+  let sum, rest;
+  sum = 0;
+  for (let i = 1; i <= 9; i++) sum = sum + parseInt(cleaned.substring(i - 1, i)) * (11 - i);
+  rest = (sum * 10) % 11;
+  if ((rest == 10) || (rest == 11)) rest = 0;
+  if (rest != parseInt(cleaned.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum = sum + parseInt(cleaned.substring(i - 1, i)) * (12 - i);
+  rest = (sum * 10) % 11;
+  if ((rest == 10) || (rest == 11)) rest = 0;
+  return rest == parseInt(cleaned.substring(10, 11));
 };
 
 const isValidCnpj = (cnpj: string): boolean => {
-    const cleaned = cleanNumber(cnpj);
-    if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) return false;
-    let length = cleaned.length - 2;
-    let numbers = cleaned.substring(0, length);
-    let digits = cleaned.substring(length);
-    let sum = 0;
-    let pos = length - 7;
-    for (let i = length; i >= 1; i--) {
-        sum += parseInt(numbers.charAt(length - i)) * pos--;
-        if (pos < 2) pos = 9;
-    }
-    let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
-    if (result != parseInt(digits.charAt(0))) return false;
+  const cleaned = cleanNumber(cnpj);
+  if (cleaned.length !== 14 || /^(\d)\1{13}$/.test(cleaned)) return false;
+  let length = cleaned.length - 2;
+  let numbers = cleaned.substring(0, length);
+  let digits = cleaned.substring(length);
+  let sum = 0;
+  let pos = length - 7;
+  for (let i = length; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(length - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+  if (result != parseInt(digits.charAt(0))) return false;
 
-    length = length + 1;
-    numbers = cleaned.substring(0, length);
-    sum = 0;
-    pos = length - 7;
-    for (let i = length; i >= 1; i--) {
-        sum += parseInt(numbers.charAt(length - i)) * pos--;
-        if (pos < 2) pos = 9;
-    }
-    result = sum % 11 < 2 ? 0 : 11 - sum % 11;
-    return result == parseInt(digits.charAt(1));
+  length = length + 1;
+  numbers = cleaned.substring(0, length);
+  sum = 0;
+  pos = length - 7;
+  for (let i = length; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(length - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+  return result == parseInt(digits.charAt(1));
 };
 
 // Componente MaskedInput
 interface MaskedInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   mask: string | Array<string | RegExp>;
+  maskChar?: string | null;
 }
 
 const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
@@ -112,7 +113,7 @@ MaskedInput.displayName = 'MaskedInput';
 
 const formSchema = z.object({
   name: z.string().min(1, 'O nome do cliente é obrigatório.'),
-  
+
   identification: z.string().nullish().or(z.literal(''))
     .refine((val) => {
       if (!val) return true;
@@ -129,7 +130,7 @@ const formSchema = z.object({
       if (!val) return true;
       const cleaned = cleanNumber(val);
       // DD + 8 dígitos (10 total) ou DD + 9 dígitos (11 total)
-      return cleaned.length === 10 || cleaned.length === 11; 
+      return cleaned.length === 10 || cleaned.length === 11;
     }, {
       message: 'Telefone inválido (necessita DDD e 8 ou 9 dígitos).',
     }),
@@ -141,9 +142,20 @@ const formSchema = z.object({
     }, {
       message: 'E-mail em formato inválido.',
     }),
-      
+
   contract: z.boolean().nullish(),
+  isEnterprise: z.boolean().default(false),
+  contact: z.string().optional(),
 })
+  .superRefine((data, ctx) => {
+    if (data.isEnterprise && !data.contact) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "O nome do contato é obrigatório para Pessoa Jurídica.",
+        path: ["contact"],
+      });
+    }
+  });
 
 type FormSchemaType = z.infer<typeof formSchema>
 
@@ -156,7 +168,7 @@ interface TreatmentClientProps {
 // PARTE 3: COMPONENTE PRINCIPAL TreatmentClient
 // ====================================================================
 
-export function TreatmentClient({ open, onClose }: TreatmentClientProps) { // ← RECEBA A PROP
+export function TreatmentClient({ onClose }: TreatmentClientProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -167,14 +179,14 @@ export function TreatmentClient({ open, onClose }: TreatmentClientProps) { // �
       toast.success('Cliente cadastrado com sucesso', {
         position: 'top-center',
       })
-      
-      onClose(); // ← FECHA O DIALOG AO TER SUCESSO
-      
+
+      onClose(); // Fecha o dialog
+
       setTimeout(() => {
         navigate(window.location.pathname)
       }, 1000)
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('Erro ao cadastrar cliente', {
         position: 'top-center',
       })
@@ -184,43 +196,43 @@ export function TreatmentClient({ open, onClose }: TreatmentClientProps) { // �
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        name: '',
-        identification: '',
-        phone: '',
-        email: '',
-        contract: false,
+      name: '',
+      identification: '',
+      phone: '',
+      email: '',
+      contract: false,
+      isEnterprise: false,
+      contact: '',
     },
-    mode: 'onBlur', // FORÇA A VALIDAÇÃO AO SAIR DO CAMPO para feedback rápido
+    mode: 'onBlur',
   })
 
-  const identificationValue = form.watch('identification');
+  const isEnterpriseValue = form.watch('isEnterprise');
   const phoneValue = form.watch('phone');
-  const errors = form.formState.errors; // Simplifica o acesso aos erros
+  const errors = form.formState.errors;
 
-  // Determina a máscara do CPF/CNPJ dinamicamente
-  const getIdentificationMask = (value: string | undefined | null) => {
-    const cleaned = cleanNumber(value);
-    if (cleaned.length <= 11) {
-      return '999.999.999-99'; 
-    }
-    return '99.999.999/9999-99';
+  // MÁSCARA INTELIGENTE BASEADA NO TIPO DE PESSOA
+  const getIdentificationMask = (isEnterprise: boolean) => {
+    return isEnterprise ? '99.999.999/9999-99' : '999.999.999-99';
   };
 
-  // 1. CORREÇÃO: Máscara de Telefone Prioriza o Celular (11 dígitos)
+  const currentIdentificationMask = getIdentificationMask(isEnterpriseValue);
+
+  // MÁSCARA DE TELEFONE
   const getPhoneMask = (value: string | undefined | null) => {
     const cleaned = cleanNumber(value);
-    // Se digitou mais de 10 dígitos, ou se o nono dígito foi ativado
-    if (cleaned.length > 10 || cleaned[2] === '9') { 
-      return '(99) 99999-9999'; 
+    if (cleaned.length > 10 || cleaned[2] === '9') {
+      return '(99) 99999-9999';
     }
-    // Padrão Fixo/Celular Antigo
     return '(99) 9999-9999';
   };
 
   async function onSubmit(data: FormSchemaType) {
-    // Limpa os dados antes de enviar para o backend
     const identificationClean = cleanNumber(data.identification);
     const phoneClean = cleanNumber(data.phone);
+
+    const isEnterprise = data.isEnterprise || false;
+    const finalContact = isEnterprise ? data.contact : data.name;
 
     await client({
       name: data.name,
@@ -228,148 +240,217 @@ export function TreatmentClient({ open, onClose }: TreatmentClientProps) { // �
       phone: phoneClean || null,
       email: data.email || null,
       contract: data.contract ? data.contract : false,
+      isEnterprise: isEnterprise,
+      contact: finalContact || undefined,
     })
   }
 
-  // 2. FUNÇÃO AUXILIAR PARA CLASSES DE ERRO
   const getErrorClass = (fieldName: keyof FormSchemaType) => {
-      return errors[fieldName] ? 'border-red-500 focus-visible:ring-red-500' : '';
+    return errors[fieldName] ? 'border-red-500 focus-visible:ring-red-500' : '';
   }
 
   return (
-    <DialogContent className="w-720p">
+    <DialogContent className="w-full max-w-lg sm:max-w-2xl overflow-y-auto max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Cadastro de Cliente</DialogTitle>
       </DialogHeader>
+
       <Form {...form}>
         <form
-          className="flex flex-col items-start justify-center gap-8"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-6 pt-4"
           onSubmit={form.handleSubmit(onSubmit)}
         >
-          {/* ... (Seção Contrato - Mantida) ... */}
-          <FormField
-            control={form.control}
-            name="contract"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-row items-center justify-between space-x-4 border-b border-gray-200 pb-4">
-                <div className="flex flex-row items-center space-x-2">
-                  <FilePen className="h-5 w-5 text-gray-600" />
-                  <FormLabel className="font-semibold text-gray-700">
-                    Contrato Assinado
-                  </FormLabel>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="data-[state=checked]:bg-minsk-500 data-[state=unchecked]:bg-gray-300"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {/* TIPO DE PESSOA (SWITCH) - TOPO */}
+          <div className="sm:col-span-12 flex justify-end">
+            <FormField
+              control={form.control}
+              name="isEnterprise"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-gray-100 p-3 shadow-sm bg-gray-50/50">
+                  <div className="flex flex-row items-center space-x-2">
+                    <Building2 className={`h-5 w-5 ${field.value ? 'text-minsk-600' : 'text-gray-400'}`} />
+                    <FormLabel className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Pessoa Jurídica?
+                    </FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-minsk-500"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
 
-          {/* CAMPO NOME (OBRIGATÓRIO) */}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">Nome *</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Nome completo ou Razão Social"
-                    className={getErrorClass('name')} // Aplica classe de erro
-                    value={field.value ?? ''} 
-                    {...field} 
-                  />
-                </FormControl>
-                {errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
+          {/* NOME (FULL WIDTH) */}
+          <div className="sm:col-span-12">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Nome Completo / Razão Social *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={isEnterpriseValue ? "Razão Social da Empresa" : "Nome do Cliente"}
+                      className={getErrorClass('name')}
+                      {...field}
+                    />
+                  </FormControl>
+                  {errors.name && (
+                    <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
+                  )}
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* CPF / CNPJ (MEIA LARGURA) */}
+          <div className="sm:col-span-6">
+            <FormField
+              control={form.control}
+              name="identification"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>{isEnterpriseValue ? 'CNPJ' : 'CPF'}</FormLabel>
+                  <FormControl>
+                    <MaskedInput
+                      mask={currentIdentificationMask}
+                      maskChar={null}
+                      placeholder={isEnterpriseValue ? "00.000.000/0000-00" : "000.000.000-00"}
+                      className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${getErrorClass('identification')}`}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  </FormControl>
+                  {errors.identification && (
+                    <p className="text-xs text-red-500 mt-1">{errors.identification.message}</p>
+                  )}
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* TELEFONE (MEIA LARGURA) */}
+          <div className="sm:col-span-6">
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Telefone / Celular</FormLabel>
+                  <FormControl>
+                    <MaskedInput
+                      mask={getPhoneMask(phoneValue)}
+                      maskChar={null}
+                      placeholder="(99) 99999-9999"
+                      className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${getErrorClass('phone')}`}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  </FormControl>
+                  {errors.phone && (
+                    <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
+                  )}
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* E-MAIL (FULL WIDTH OU COL-6 SE TIVER CONTATO) */}
+          <div className={isEnterpriseValue ? "sm:col-span-6" : "sm:col-span-12"}>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>E-mail</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="contato@empresa.com"
+                      className={getErrorClass('email')}
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  {errors.email && (
+                    <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+                  )}
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* CONTATO NA EMPRESA (VISÍVEL APENAS SE PJ) */}
+          {isEnterpriseValue && (
+            <div className="sm:col-span-6">
+              <FormField
+                control={form.control}
+                name="contact"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Pessoa de Contato *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nome do responsável"
+                        className={getErrorClass('contact')}
+                        value={field.value ?? ''}
+                        {...field}
+                      />
+                    </FormControl>
+                    {errors.contact && (
+                      <p className="text-xs text-red-500 mt-1">{errors.contact.message}</p>
+                    )}
+                  </FormItem>
                 )}
-              </FormItem>
-            )}
-          />
+              />
+            </div>
+          )}
 
-          {/* CAMPO CPF/CNPJ COM MÁSCARA INTELIGENTE E VALIDAÇÃO */}
-          <FormField
-            control={form.control}
-            name="identification"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">CPF/CNPJ</FormLabel>
-                <FormControl>
-                  <MaskedInput
-                    mask={getIdentificationMask(identificationValue)}
-                    maskChar={null}
-                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                    className={getErrorClass('identification')} // Aplica classe de erro
-                    value={field.value ?? ''}
-                    {...field}
-                  />
-                </FormControl>
-                {errors.identification && (
-                  <p className="text-sm text-red-500 mt-1">{errors.identification.message}</p>
-                )}
-              </FormItem>
-            )}
-          />
+          {/* CONTRATO (BASE) */}
+          <div className="sm:col-span-12 border-t pt-4">
+            <FormField
+              control={form.control}
+              name="contract"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-gray-50 dark:bg-gray-800/50">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base font-semibold">
+                      Contrato de Fidelidade
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Este cliente possui contrato ativo?
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-vida-loca-500"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
 
-          {/* CAMPO E-MAIL COM VALIDAÇÃO DE FORMATO E FEEDBACK VISUAL */}
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">E-mail</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="email" 
-                    placeholder="exemplo@dominio.com"
-                    className={getErrorClass('email')} // Aplica classe de erro
-                    value={field.value ?? ''} 
-                    {...field} 
-                  />
-                </FormControl>
-                {errors.email && (
-                  <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
-                )}
-              </FormItem>
-            )}
-          />
-
-          {/* CAMPO TELEFONE COM MÁSCARA INTELIGENTE E VALIDAÇÃO */}
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem className="flex w-full flex-col">
-                <FormLabel className="text-left">Telefone</FormLabel>
-                <FormControl>
-                  <MaskedInput
-                    mask={getPhoneMask(phoneValue)} // Máscara dinâmica CORRIGIDA
-                    maskChar={null}
-                    placeholder="(00) 90000-0000"
-                    className={getErrorClass('phone')} // Aplica classe de erro
-                    value={field.value ?? ''}
-                    {...field}
-                  />
-                </FormControl>
-                {errors.phone && (
-                  <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
-                )}
-              </FormItem>
-            )}
-          />
-
-          <div className="flex w-full justify-end">
+          {/* BOTÃO SUBMIT */}
+          <div className="sm:col-span-12 flex justify-end pt-2">
             <Button
               type="submit"
-              className="justify-self-end bg-minsk-400 text-white hover:bg-minsk-500"
+              className="w-full sm:w-auto bg-gradient-to-r from-minsk-500 to-minsk-600 hover:from-minsk-600 hover:to-minsk-700 text-white font-semibold transition-all shadow-md active:scale-95"
             >
-              Cadastrar
+              <FilePen className="w-4 h-4 mr-2" />
+              {isEnterpriseValue ? 'Cadastrar Empresa' : 'Cadastrar Cliente'}
             </Button>
           </div>
+
         </form>
       </Form>
     </DialogContent>

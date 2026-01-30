@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Headset } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
@@ -63,7 +64,7 @@ export function Treatments() {
       <div className="flex flex-col gap-4 font-gaba">
         {/* Header com título e botão lado a lado */}
         <div className="flex items-center justify-between">
-          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900">
+          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
             Atendimentos
           </h1>
 
@@ -81,40 +82,40 @@ export function Treatments() {
           <TreatmentTableFilters />
 
           {/* Container da tabela com scroll horizontal em mobile */}
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-md border bg-card">
             <div className="min-w-[600px]">
               <Table>
                 <TableHeader>
-                  <TableRow className="text-base">
-                    <TableHead className="w-[48px] rounded-tl-md bg-minsk-200 text-minsk-950"></TableHead>
-                    <TableHead className="hidden w-[200px] bg-minsk-200 text-minsk-950 xl:table-cell">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 text-base">
+                    <TableHead className="w-[48px]"></TableHead>
+                    <TableHead className="hidden w-[200px] text-muted-foreground xl:table-cell">
                       Identificador
                     </TableHead>
-                    <TableHead className="w-[80px] bg-minsk-200 text-minsk-950">
+                    <TableHead className="w-[80px] text-muted-foreground">
                       Aberto há
                     </TableHead>
                     {/* Status - Oculto apenas no mobile */}
-                    <TableHead className="hidden w-[100px] bg-minsk-200 text-minsk-950 sm:table-cell">
+                    <TableHead className="hidden w-[100px] text-muted-foreground sm:table-cell">
                       Status
                     </TableHead>
                     {/* Contato - Oculto apenas no mobile */}
-                    <TableHead className="hidden bg-minsk-200 text-minsk-950 sm:table-cell">
+                    <TableHead className="hidden text-muted-foreground sm:table-cell">
                       Contato
                     </TableHead>
-                    <TableHead className="bg-minsk-200 text-center text-minsk-950">
+                    <TableHead className="text-center text-muted-foreground">
                       Cliente
                     </TableHead>
-                    <TableHead className="bg-minsk-200 text-minsk-950">
+                    <TableHead className="text-muted-foreground">
                       Requisição
                     </TableHead>
                     {/* Valor - Oculto apenas no mobile */}
-                    <TableHead className="hidden w-[100px] bg-minsk-200 text-minsk-950 sm:table-cell">
+                    <TableHead className="hidden w-[100px] text-muted-foreground sm:table-cell">
                       Valor
                     </TableHead>
                     {/* Itens - Largura responsiva */}
-                    <TableHead className="w-[60px] bg-minsk-200 text-minsk-950 sm:w-[100px]"></TableHead>
+                    <TableHead className="w-[60px] text-muted-foreground sm:w-[100px]"></TableHead>
                     {/* Atender - Largura responsiva */}
-                    <TableHead className="w-[60px] rounded-tr-md bg-minsk-200 sm:w-[100px]"></TableHead>
+                    <TableHead className="w-[60px] text-muted-foreground sm:w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

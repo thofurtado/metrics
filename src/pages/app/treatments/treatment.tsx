@@ -1,18 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { PopoverClose } from '@radix-ui/react-popover'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
-  ArrowBigRightDash,
-  BookOpenCheck,
-  BookOpenText,
   Building2,
   Calendar as CalendarIcon,
-  CircleUserRound,
-  Computer,
-  Crosshair,
   FlagTriangleRight,
-  Gem,
   NotebookText,
   UserPlus,
   BetweenHorizonalStart,
@@ -59,7 +51,6 @@ import { TreatmentClientEquipment } from './treatment-client-equipment'
 
 const formSchema = z.object({
   openingDate: z.date().nullish(),
-  endingDate: z.date().nullish(),
   request: z.string(),
   observation: z.string(),
   client: z.string({
@@ -163,16 +154,15 @@ function ClientSelect({
 export function Treatment() {
   const [openClientDialog, setOpenClientDialog] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
-  const [isClosedDateDisabled, setIsClosedDateDisabled] = useState(true)
   const [isEquipmentDisabled, setIsEquipmentDisabled] = useState(true)
   const [clientId, setClientId] = useState<string | null>(null)
+  const [showContact, setShowContact] = useState(false)
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
   })
 
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   const { mutateAsync: treatment } = useMutation({
     mutationFn: createTreatment,
@@ -199,11 +189,9 @@ export function Treatment() {
 
   async function onSubmit(data: FormSchemaType) {
     const correctStatus = data.status || 'pending'
-    const ending_date = data.endingDate || new Date()
 
     const response = await treatment({
       ...data,
-      endingDate: ending_date,
       status: correctStatus,
     })
 
@@ -231,295 +219,251 @@ export function Treatment() {
 
         <Form {...form}>
           <form
-            className="flex w-full flex-col gap-3 px-4 py-3 border-none shadow-none rounded-none 
-                       sm:gap-4 sm:p-4 sm:border sm:border-minsk-200 sm:rounded-xl sm:bg-white sm:shadow-sm
-                       dark:border-minsk-700 dark:bg-minsk-900"
+            className="flex flex-col gap-6"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            {/* DATAS E STATUS */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              {/* Data de Abertura */}
-              <FormField
-                control={form.control}
-                name="openingDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <BookOpenText className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Abertura
-                    </FormLabel>
-                    <Popover>
-                      <FormControl>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'h-9 w-full justify-start text-left text-xs font-normal dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm',
-                              !field.value && 'text-muted-foreground',
-                            )}
-                          >
-                            <CalendarIcon className="mr-1 h-3 w-3 text-minsk-500 sm:mr-2 sm:h-4 sm:w-4" />
-                            {field.value ? (
-                              <span className="text-minsk-800 dark:text-minsk-200">
-                                {format(field.value, 'dd/MM/yy HH:mm')}
-                              </span>
-                            ) : (
-                              <span className="text-minsk-500">Data atual</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                      </FormControl>
-                      <PopoverContent className="w-auto p-0 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="rounded-lg dark:bg-minsk-800"
-                        />
-                        <div className="border-t border-minsk-200 p-2 dark:border-minsk-600 sm:p-3">
-                          <TimePickerDemo
-                            setDate={field.onChange}
-                            date={field.value}
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </FormItem>
-                )}
-              />
-              {/* Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field: { onChange, value = 'pending' } }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <FlagTriangleRight className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Estado
-                    </FormLabel>
-                    <Select
-                      defaultValue="pending"
-                      value={value}
-                      onValueChange={(newValue) => {
-                        onChange(newValue)
-                        if (newValue === 'resolved' || newValue === 'canceled') {
-                          setIsClosedDateDisabled(false)
-                        } else {
-                          setIsClosedDateDisabled(true)
-                        }
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="border-minsk-200 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800">
-                        <SelectItem value="pending" className="text-xs sm:text-sm">Pendente</SelectItem>
-                        <SelectItem value="in_progress" className="text-xs sm:text-sm">Em Andamento</SelectItem>
-                        <SelectItem value="follow_up" className="text-xs sm:text-sm">Acompanhamento</SelectItem>
-                        <SelectItem value="canceled" className="text-xs sm:text-sm">Cancelado</SelectItem>
-                        <SelectItem value="on_hold" className="text-xs sm:text-sm">Em espera</SelectItem>
-                        <SelectItem value="in_workbench" className="text-xs sm:text-sm">Em Bancada</SelectItem>
-                        <SelectItem value="resolved" className="text-xs sm:text-sm">Resolvido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              {/* Data de Encerramento */}
-              <FormField
-                control={form.control}
-                name="endingDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <BookOpenCheck className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Encerramento
-                    </FormLabel>
-                    <Popover>
-                      <FormControl>
-                        <PopoverTrigger asChild>
-                          <Button
-                            disabled={isClosedDateDisabled}
-                            variant="outline"
-                            className={cn(
-                              'h-9 w-full justify-start text-left text-xs font-normal dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm',
-                              !field.value && 'text-muted-foreground',
-                              isClosedDateDisabled
-                                ? 'bg-minsk-100 text-minsk-400 dark:bg-minsk-800 dark:text-minsk-500'
-                                : 'hover:border-minsk-300 dark:hover:border-minsk-500'
-                            )}
-                          >
-                            <CalendarIcon className="mr-1 h-3 w-3 text-minsk-500 sm:mr-2 sm:h-4 sm:w-4" />
-                            {field.value ? (
-                              <span className="text-minsk-800 dark:text-minsk-200">
-                                {format(field.value, 'dd/MM/yy HH:mm')}
-                              </span>
-                            ) : (
-                              <span className="text-minsk-500">Caso finalizado</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                      </FormControl>
-                      <PopoverContent className="w-auto p-0 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="rounded-lg dark:bg-minsk-800"
-                        />
-                        <div className="border-t border-minsk-200 p-2 dark:border-minsk-600 sm:p-3">
-                          <TimePickerDemo
-                            setDate={field.onChange}
-                            date={field.value}
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* CLIENTE E EQUIPAMENTO */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              {/* Cliente - AGORA COM PESQUISA E ORDENAÇÃO */}
-              <div className="flex items-end gap-2">
-                <FormField
-                  control={form.control}
-                  name="client"
-                  render={({ field: { onChange, value } }) => (
-                    <FormItem className="flex-1 min-w-0">
-                      <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                        <Building2 className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                        Cliente
-                      </FormLabel>
-                      <ClientSelect
-                        value={value || ''}
-                        onValueChange={(newValue) => {
-                          onChange(newValue)
-                          setClientId(newValue)
-                          setIsEquipmentDisabled(false)
-                        }}
-                        clients={clients?.data.clients || []}
-                      />
-                    </FormItem>
-                  )}
-                />
-
-                <Dialog open={openClientDialog} onOpenChange={setOpenClientDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 border-vida-loca-200 bg-vida-loca-50 text-vida-loca-600 dark:border-vida-loca-600 dark:bg-vida-loca-900/30 dark:text-vida-loca-400 sm:h-10 sm:w-10"
-                    >
-                      <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <TreatmentClient open={openClientDialog} />
-                </Dialog>
+            {/* SEÇÃO 1: STATUS E TEMPO */}
+            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+              <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
+                <FlagTriangleRight className="h-4 w-4 text-vida-loca-500" />
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Situação e Agendamento</h2>
               </div>
 
-              {/* Equipamento */}
-              <div className="flex items-end gap-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Status */}
                 <FormField
                   control={form.control}
-                  name="equipment_id"
-                  render={({ field: { onChange, value } }) => (
-                    <FormItem className="flex-1 min-w-0">
-                      <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                        <Computer className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                        Equipamento
-                      </FormLabel>
+                  name="status"
+                  render={({ field: { onChange, value = 'pending' } }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Estado Atual</FormLabel>
                       <Select
-                        value={value}
+                        defaultValue="pending"
+                        value={value || undefined}
                         onValueChange={onChange}
-                        disabled={isEquipmentDisabled}
                       >
                         <FormControl>
-                          <SelectTrigger className={cn(
-                            "h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm",
-                            isEquipmentDisabled && "bg-minsk-100 text-minsk-400 dark:bg-minsk-800/50 dark:text-minsk-500"
-                          )}>
-                            <SelectValue placeholder="Selecione o equipamento" />
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="border-minsk-200 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800">
-                          {clients?.data.clients
-                            .find((client) => client.id === clientId)
-                            ?.equipments.map((equipment) => (
-                              <SelectItem value={equipment.id} key={equipment.id} className="text-xs sm:text-sm">
-                                {`${equipment.type} - ${equipment.brand} - ${equipment.identification}`}
-                              </SelectItem>
-                            ))}
+                        <SelectContent>
+                          <SelectItem value="pending">Pendente (Aguardando)</SelectItem>
+                          <SelectItem value="in_progress">Em Andamento</SelectItem>
+                          <SelectItem value="follow_up">Acompanhamento</SelectItem>
+                          <SelectItem value="in_workbench">Em Bancada</SelectItem>
+                          <SelectItem value="resolved">Resolvido (Concluído)</SelectItem>
+                          <SelectItem value="canceled">Cancelado</SelectItem>
+                          <SelectItem value="on_hold">Em espera</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )}
                 />
 
-                <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={cn(
-                        "h-9 w-9 shrink-0 border-vida-loca-200 bg-vida-loca-50 text-vida-loca-600 dark:border-vida-loca-600 dark:bg-vida-loca-900/30 dark:text-vida-loca-400 sm:h-10 sm:w-10",
-                        isEquipmentDisabled && "opacity-50"
-                      )}
-                      disabled={isEquipmentDisabled}
-                    >
-                      <BetweenHorizonalStart className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <TreatmentClientEquipment
-                    open={isClientDialogOpen}
-                    clientId={clientId}
-                  />
-                </Dialog>
+                {/* Data de Abertura */}
+                <FormField
+                  control={form.control}
+                  name="openingDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Data de Abertura</FormLabel>
+                      <Popover>
+                        <FormControl>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'h-10 w-full justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground',
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4 text-minsk-500" />
+                              {field.value ? (
+                                format(field.value, 'dd/MM/yy HH:mm')
+                              ) : (
+                                <span>Hoje (Automático)</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                        </FormControl>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                          <div className="border-t p-3">
+                            <TimePickerDemo
+                              setDate={field.onChange}
+                              date={field.value || undefined}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
-            {/* CAMPOS INDIVIDUAIS */}
-            <div className="space-y-3 sm:space-y-4">
-              <FormField
-                control={form.control}
-                name="contact"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <CircleUserRound className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Contato
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm"
-                        placeholder="Nome do contato"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+            {/* SEÇÃO 2: CLIENTE E EQUIPAMENTO */}
+            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+              <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
+                <Building2 className="h-4 w-4 text-vida-loca-500" />
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Cliente e Ativo</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Cliente */}
+                <div className="flex items-end gap-2">
+                  <FormField
+                    control={form.control}
+                    name="client"
+                    render={({ field: { onChange, value } }) => (
+                      <FormItem className="flex-1 w-full">
+                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Cliente Solicitante</FormLabel>
+                        <ClientSelect
+                          value={value || ''}
+                          onValueChange={(newValue) => {
+                            onChange(newValue)
+                            setClientId(newValue)
+                            setIsEquipmentDisabled(false)
+                          }}
+                          clients={clients?.data.clients || []}
+                        />
+                      </FormItem>
+                    )}
+                  />
+                  <Dialog open={openClientDialog} onOpenChange={setOpenClientDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 bg-vida-loca-50 text-vida-loca-600 border-vida-loca-200">
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <TreatmentClient open={openClientDialog} onClose={() => setOpenClientDialog(false)} />
+                  </Dialog>
+                </div>
+
+                {/* Equipamento */}
+                <div className="flex items-end gap-2">
+                  <FormField
+                    control={form.control}
+                    name="equipment_id"
+                    render={({ field: { onChange, value } }) => (
+                      <FormItem className="flex-1 w-full">
+                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Equipamento / Ativo</FormLabel>
+                        <Select
+                          value={value || undefined}
+                          onValueChange={onChange}
+                          disabled={isEquipmentDisabled}
+                        >
+                          <FormControl>
+                            <SelectTrigger className={cn("h-10 w-full", isEquipmentDisabled && "bg-gray-50 opacity-70")}>
+                              <SelectValue placeholder={isEquipmentDisabled ? "Selecione um cliente..." : "Selecione o equipamento"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients?.data.clients
+                              .find((client) => client.id === clientId)
+                              ?.equipments.map((equipment) => (
+                                <SelectItem value={equipment.id} key={equipment.id}>
+                                  {`${equipment.type} - ${equipment.brand} - ${equipment.identification}`}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        disabled={isEquipmentDisabled}
+                      >
+                        <BetweenHorizonalStart className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <TreatmentClientEquipment
+                      open={isClientDialogOpen}
+                      clientId={clientId}
+                    />
+                  </Dialog>
+                </div>
+              </div>
+
+
+              {/* Contato Específico para este Atendimento (Toggle Opcional) */}
+              {!showContact ? (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setShowContact(true)}
+                    className="text-xs text-minsk-500 underline h-auto p-0"
+                  >
+                    + Adicionar responsável pelo acompanhamento (se diferente do cliente)
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
+                  <div className="flex justify-between items-center">
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Responsável pelo Acompanhamento</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowContact(false)
+                        form.setValue('contact', '')
+                      }}
+                      className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="contact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value || ''}
+                            className="h-10"
+                            placeholder="Nome de quem está acompanhando este chamado"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* SEÇÃO 3: DETALHES */}
+            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+              <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
+                <NotebookText className="h-4 w-4 text-vida-loca-500" />
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Detalhes da Solicitação</h2>
+              </div>
 
               <FormField
                 control={form.control}
                 name="request"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <Crosshair className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Requisição
-                    </FormLabel>
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Assunto Principal *</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:h-10 sm:text-sm"
-                        placeholder="Descreva a requisição"
+                        className="h-10"
+                        placeholder="Ex: Manutenção Preventiva, Formatação, Troca de Peça..."
                       />
                     </FormControl>
                   </FormItem>
@@ -531,15 +475,12 @@ export function Treatment() {
                 name="observation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1 text-xs font-semibold text-minsk-700 dark:text-minsk-300 sm:text-sm">
-                      <NotebookText className="h-3 w-3 text-vida-loca-500 sm:h-4 sm:w-4" />
-                      Descrição Detalhada
-                    </FormLabel>
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Descrição Técnica / Observações</FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
-                        className="min-h-24 w-full resize-vertical border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 dark:placeholder:text-minsk-500 sm:min-h-28 sm:text-sm"
-                        placeholder="Descreva detalhadamente o atendimento..."
+                        className="min-h-32 resize-y"
+                        placeholder="Descreva o problema relatado, testes iniciais ou detalhes importantes..."
                       />
                     </FormControl>
                   </FormItem>
@@ -548,13 +489,15 @@ export function Treatment() {
             </div>
 
             {/* BOTÃO CADASTRAR */}
-            <Button
-              type="submit"
-              className="h-10 w-full bg-gradient-to-r from-vida-loca-500 to-vida-loca-600 text-sm font-semibold text-white shadow dark:from-vida-loca-600 dark:to-vida-loca-700 sm:h-11"
-              size="lg"
-            >
-              Cadastrar Atendimento
-            </Button>
+            <div className="pt-2 sticky bottom-4 z-10">
+              <Button
+                type="submit"
+                className="h-12 w-full bg-gradient-to-r from-vida-loca-600 to-vida-loca-500 hover:to-vida-loca-600 text-white font-bold shadow-lg text-base rounded-xl transition-all active:scale-95"
+              >
+                Salvar Atendimento
+              </Button>
+            </div>
+
           </form>
         </Form>
       </div>

@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, Plus } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
@@ -66,7 +67,7 @@ export function Items() {
                         {isFetching && (
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         )}
-                        <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900">
+                        <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
                             {pageTitle}
                         </h1>
                     </div>
@@ -85,16 +86,16 @@ export function Items() {
                 <ItemsTableFilters />
 
                 <div className={`flex flex-col gap-4 transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
-                    <div className="rounded-md border bg-white shadow-sm overflow-x-auto">
+                    <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
                         <Table className="min-w-[600px]">
                             <TableHeader>
-                                <TableRow className="bg-minsk-100 hover:bg-minsk-100">
-                                    <TableHead className="w-[100px] text-minsk-950 font-bold">ID</TableHead>
-                                    <TableHead className="text-minsk-950 font-bold">Tipo</TableHead>
-                                    <TableHead className="text-minsk-950 font-bold">Nome</TableHead>
-                                    <TableHead className="text-minsk-950 font-bold text-center">Estoque</TableHead>
-                                    <TableHead className="text-minsk-950 font-bold">Preço</TableHead>
-                                    <TableHead className="text-minsk-950 font-bold text-right">Ações</TableHead>
+                                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableHead className="w-[100px] text-muted-foreground font-semibold">ID</TableHead>
+                                    <TableHead className="text-muted-foreground font-semibold">Tipo</TableHead>
+                                    <TableHead className="text-muted-foreground font-semibold">Nome</TableHead>
+                                    <TableHead className="text-muted-foreground font-semibold text-center">Estoque</TableHead>
+                                    <TableHead className="text-muted-foreground font-semibold">Preço</TableHead>
+                                    <TableHead className="text-muted-foreground font-semibold text-right">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>

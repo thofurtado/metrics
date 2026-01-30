@@ -1,3 +1,4 @@
+
 import { DialogContent } from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRightLeft, Plus, TrendingDown, TrendingUp } from 'lucide-react'
@@ -38,6 +39,7 @@ import {
 } from '@/components/ui/table'
 import { TransactionExpense } from './transaction-expense'
 import { TransactionIncome } from './transaction-income'
+import { TransactionTransfer } from './transaction-transfer'
 import { TransactionTableRow } from './transaction-table-row'
 import { TransactionTableFilters } from './TransactionTableFilters'
 
@@ -45,6 +47,7 @@ export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
   const [isIncomeOpen, setIsIncomeOpen] = useState(false)
+  const [isTransferOpen, setIsTransferOpen] = useState(false)
   const description = searchParams.get('description')
   const value = searchParams.get('value')
   const sectorId = searchParams.get('sectorId')
@@ -87,7 +90,7 @@ export function Transactions() {
       <Helmet title="Transações" />
       <div className="flex flex-col gap-4 font-gaba">
         <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900">
+          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
             Transações
           </h1>
           <Popover>
@@ -105,20 +108,20 @@ export function Transactions() {
                   <Button
                     aria-label="Adicionar Despesa"
                     variant="link"
-                    className="flex w-full items-center justify-start p-0 text-black"
+                    className="flex w-full items-center justify-start p-0 text-black hover:bg-minsk-100/50 rounded-md transition-colors"
                   >
                     <TrendingDown className="mr-3 h-4 w-4 text-stiletto-500" />
                     Despesa
                   </Button>
                 </DialogTrigger>
-                <TransactionExpense open={isExpenseOpen} />
+                <TransactionExpense />
               </Dialog>
               <Dialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
                 <DialogTrigger asChild>
                   <Button
                     aria-label="Adicionar Receita"
                     variant="link"
-                    className="flex w-full items-center justify-start p-0 text-black"
+                    className="flex w-full items-center justify-start p-0 text-black hover:bg-minsk-100/50 rounded-md transition-colors"
                   >
                     <TrendingUp className="mr-3 h-4 w-4 text-vida-loca-500" />
                     Receita
@@ -127,15 +130,19 @@ export function Transactions() {
                 <TransactionIncome />
               </Dialog>
 
-              <Button
-                variant="link"
-                className="flex w-full items-center justify-start p-0 text-black"
-                disabled
-                aria-label="Adicionar Transação"
-              >
-                <ArrowRightLeft className="mr-3 h-4 w-4 text-minsk-500" />
-                Transferência
-              </Button>
+              <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="link"
+                    className="flex w-full items-center justify-start p-0 text-black hover:bg-minsk-100/50 rounded-md transition-colors"
+                    aria-label="Adicionar Transação"
+                  >
+                    <ArrowRightLeft className="mr-3 h-4 w-4 text-minsk-500" />
+                    Transferência
+                  </Button>
+                </DialogTrigger>
+                <TransactionTransfer />
+              </Dialog>
             </PopoverContent>
           </Popover>
         </div>
@@ -143,30 +150,30 @@ export function Transactions() {
           <div>
             <TransactionTableFilters />
           </div>
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-md border bg-card overflow-x-auto">
             <Table className="min-w-[800px]">
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/12 rounded-tl-md bg-minsk-200 text-center text-stone-700 dark:bg-minsk-700 dark:text-white">
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-1/12 text-center text-muted-foreground">
                     Pago
                   </TableHead>
-                  <TableHead className="w-1/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                  <TableHead className="w-1/12 text-center text-muted-foreground">
                     Data
                   </TableHead>
-                  <TableHead className="w-4/12 bg-minsk-200 text-stone-900 dark:bg-stone-700 dark:text-white">
+                  <TableHead className="w-4/12 text-muted-foreground">
                     Descrição
                   </TableHead>
-                  <TableHead className="w-2/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                  <TableHead className="w-2/12 text-center text-muted-foreground">
                     Setor
                   </TableHead>
-                  <TableHead className="w-2/12 bg-minsk-200 text-center text-stone-800 dark:bg-stone-700 dark:text-white">
+                  <TableHead className="w-2/12 text-center text-muted-foreground">
                     Conta
                   </TableHead>
-                  <TableHead className="w-1/12 bg-minsk-200 text-right text-stone-800 dark:bg-stone-700 dark:text-white">
+                  <TableHead className="w-1/12 text-right text-muted-foreground">
                     Valor
                   </TableHead>
 
-                  <TableHead className=" w-1/12 rounded-tr-md bg-minsk-200 dark:bg-stone-800"></TableHead>
+                  <TableHead className=" w-1/12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

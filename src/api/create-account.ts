@@ -8,5 +8,6 @@ export interface CreateAccountBody {
 }
 
 export async function createAccount(data: CreateAccountBody) {
-    await api.post('/account', data)
+    const response = await api.post('/account', data)
+    return response.data
 }

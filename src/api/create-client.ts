@@ -8,6 +8,8 @@ const clientForm = z.object({
   phone: z.string().nullish(),
   email: z.string().nullish(),
   contract: z.boolean().nullish(),
+  contact: z.string().nullish(),
+  isEnterprise: z.boolean().nullish(),
 })
 
 type ClientForm = z.infer<typeof clientForm>
@@ -18,6 +20,8 @@ export async function createClient({
   phone,
   email,
   contract,
+  contact,
+  isEnterprise,
 }: ClientForm) {
   const response = await api.post(`/client`, {
     name,
@@ -25,6 +29,8 @@ export async function createClient({
     phone,
     email,
     contract,
+    contact,
+    isEnterprise,
   })
   return response
 }

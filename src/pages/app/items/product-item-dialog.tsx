@@ -38,7 +38,11 @@ const itemSchema = z.object({
     barcode: z.string().optional(),
     category: z.string().optional(),
     isItem: z.boolean().default(true),
-    display_id: z.preprocess((val) => val === '' ? undefined : Number(val), z.number().optional())
+    display_id: z.preprocess((val) => {
+        if (!val || val === '' || val === 'Auto') return undefined
+        const parsed = Number(val)
+        return isNaN(parsed) ? undefined : parsed
+    }, z.number().optional()),
 }).superRefine((data, ctx) => {
     if (data.isItem) {
         if (data.min_stock === undefined || data.min_stock === null || isNaN(data.min_stock)) {
@@ -201,7 +205,7 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
                                         <FormItem className="col-span-12 md:col-span-4">
                                             <FormLabel>ID Numérico</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="Auto" {...field} />
+                                                <Input type="number" placeholder="Auto" {...field} value={field.value ?? ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
