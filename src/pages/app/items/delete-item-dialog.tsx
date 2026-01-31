@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { deleteItem } from '@/api/delete-item'
+import { Button } from '@/components/ui/button'
 import {
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -22,14 +22,23 @@ export function DeleteItemDialog({ id, name, onSuccess }: DeleteItemDialogProps)
     const queryClient = useQueryClient()
 
     const { mutateAsync: deleteItemFn, isPending } = useMutation({
-        mutationFn: () => deleteItem(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['items'] })
-            toast.success('Item excluído com sucesso!')
+        mutationFn: async () => {
+            await deleteItem(id)
+        },
+        onSuccess: async () => {
+            // Invalidate all related queries to ensure cache consistency
+            await queryClient.invalidateQueries({ queryKey: ['items'] })
+            await queryClient.invalidateQueries({ queryKey: ['products'] })
+            await queryClient.invalidateQueries({ queryKey: ['services'] })
+            await queryClient.invalidateQueries({ queryKey: ['supplies'] })
+
+            toast.success('Item removido permanentemente do sistema.')
             onSuccess?.()
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.message || 'Erro ao excluir item.')
+            console.error('[Delete Item Mutation Error]:', err)
+            const errorMessage = err.response?.data?.message || 'Falha ao processar a exclusão. Tente novamente.'
+            toast.error(errorMessage)
         },
     })
 
@@ -43,14 +52,25 @@ export function DeleteItemDialog({ id, name, onSuccess }: DeleteItemDialogProps)
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-600"
-                    onClick={() => deleteItemFn()}
+                <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+                <Button
+                    variant="destructive"
+                    onClick={(e: React.MouseEvent) => {
+                        e.preventDefault()
+                        deleteItemFn()
+                    }}
                     disabled={isPending}
+                    className="gap-2"
                 >
-                    {isPending ? 'Excluindo...' : 'Excluir'}
-                </AlertDialogAction>
+                    {isPending ? (
+                        <>
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Excluindo...
+                        </>
+                    ) : (
+                        'Excluir'
+                    )}
+                </Button>
             </AlertDialogFooter>
         </AlertDialogContent>
     )

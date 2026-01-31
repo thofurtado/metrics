@@ -6,6 +6,8 @@ export interface GetTransactionsQuery {
   value?: number | null
   sectorId?: string | null
   accountId?: string | null
+  status?: string | null
+  toDate?: string | null
 }
 
 export interface GetTransactionsResponse {
@@ -27,8 +29,10 @@ export async function getTransactions({
   value,
   sectorId,
   accountId,
+  status,
+  toDate
 }: GetTransactionsQuery) {
-  
+
   const response = await api.get('/transactions', {
     params: {
       page,
@@ -36,6 +40,8 @@ export async function getTransactions({
       value,
       sector_id: sectorId,
       account_id: accountId,
+      status,
+      toDate
     },
   })
   return response

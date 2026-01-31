@@ -73,8 +73,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
       <TableCell className="text-base text-muted-foreground">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
       </TableCell>
-      {/* Status - Oculto apenas no mobile */}
-      <TableCell className="hidden text-base sm:table-cell">
+      <TableCell className="text-sm sm:text-base">
         <TreatmentStatus status={treatments.status} />
       </TableCell>
       {/* Contato - Oculto apenas no mobile */}
@@ -84,9 +83,13 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
       <TableCell className="text-center text-base font-medium">
         {treatments.clients.name}
       </TableCell>
-      <TableCell className="text-base">{treatments.request}</TableCell>
+      <TableCell className="text-base">
+        <div className="line-clamp-1 max-w-[120px] sm:max-w-none" title={treatments.request}>
+          {treatments.request}
+        </div>
+      </TableCell>
       {/* Valor - Oculto apenas no mobile */}
-      <TableCell className="hidden text-base font-medium sm:table-cell">
+      <TableCell className="text-sm font-medium sm:text-base">
         {treatments.amount.toLocaleString('pt-BR', {
           style: 'currency',
           currency: 'BRL',

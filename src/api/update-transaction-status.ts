@@ -5,6 +5,7 @@ export interface UpdateStatusTransactionParams {
   amount: number
   date: Date
   remainingDate?: Date
+  accountId?: string
 }
 
 export async function updateStatusTransaction({
@@ -12,6 +13,7 @@ export async function updateStatusTransaction({
   amount,
   date,
   remainingDate,
+  accountId,
 }: UpdateStatusTransactionParams) {
 
   // CORREÇÃO: Converter as datas para ISO string
@@ -19,12 +21,13 @@ export async function updateStatusTransaction({
     amount,
     date: date.toISOString(),
     remainingDate: remainingDate ? remainingDate.toISOString() : undefined,
+    account_id: accountId, // Map accountId to account_id for backend
   }
 
-  
+
 
   try {
-   
+
     const response = await api.patch(`/switch-transaction/${id}`, payload)
     console.log("✅ RESPOSTA DA API:", response.data)
     return response.data

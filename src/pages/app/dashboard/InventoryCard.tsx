@@ -84,6 +84,9 @@ export function InventoryCard({ className, ...props }: InventoryCardProps) {
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                             Receita do Mês
                         </p>
+                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium mt-0.5" title="Valores em atendimentos abertos">
+                            Orçamento: {formatCurrency(metrics?.orcamentoProdutos ?? 0)}
+                        </p>
                     </div>
 
                     {/* Vendas - Serviços */}
@@ -101,6 +104,9 @@ export function InventoryCard({ className, ...props }: InventoryCardProps) {
                         )}
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                             Receita do Mês
+                        </p>
+                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium mt-0.5" title="Valores em atendimentos abertos">
+                            Orçamento: {formatCurrency(metrics?.orcamentoServicos ?? 0)}
                         </p>
                     </div>
                 </div>

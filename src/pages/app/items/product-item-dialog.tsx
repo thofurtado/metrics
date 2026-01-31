@@ -3,6 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { useEffect } from 'react'
+import { Package, Hammer, Syringe } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 import { createItem } from '@/api/create-item'
 import { updateItem } from '@/api/update-item'
@@ -24,57 +27,50 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { GetItemsResponse } from '@/api/get-items'
 
 const itemSchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
     description: z.string().optional(),
+    type: z.enum(['PRODUCT', 'SERVICE', 'SUPPLY']),
+
+    // Financial
     cost: z.coerce.number().min(0).optional().default(0),
-    price: z.coerce.number().min(0, 'Preço deve ser maior ou igual a 0'),
+    price: z.coerce.number().min(0).optional().default(0),
+
+    // Stock
     stock: z.coerce.number().optional().default(0),
     min_stock: z.coerce.number().optional().default(0),
+
+    // Details
     barcode: z.string().optional(),
+    ncm: z.string().optional(),
+    unit: z.string().optional(),
+    estimated_time: z.string().optional(),
     category: z.string().optional(),
-    isItem: z.boolean().default(true),
+
+    active: z.boolean().default(true),
+
     display_id: z.preprocess((val) => {
         if (!val || val === '' || val === 'Auto') return undefined
         const parsed = Number(val)
         return isNaN(parsed) ? undefined : parsed
     }, z.number().optional()),
-}).superRefine((data, ctx) => {
-    if (data.isItem) {
-        if (data.min_stock === undefined || data.min_stock === null || isNaN(data.min_stock)) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Estoque mínimo é obrigatório para produtos",
-                path: ["min_stock"]
-            });
-        }
-    }
 })
 
 type ItemSchema = z.infer<typeof itemSchema>
 
+// Use the API response type for typed initialData
+type ItemData = GetItemsResponse['items'][0]
+
 interface ProductItemDialogProps {
-    initialData?: {
-        id: string
-        name: string
-        description?: string | null
-        cost: number
-        price: number
-        stock?: number | null
-        min_stock?: number | null
-        barcode?: string | null
-        category?: string | null
-        isItem: boolean
-        display_id?: number
-    }
+    initialData?: ItemData
+    initialType?: 'PRODUCT' | 'SERVICE' | 'SUPPLY'
     onSuccess?: () => void
 }
 
-export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogProps) {
+export function ProductItemDialog({ initialData, initialType, onSuccess }: ProductItemDialogProps) {
     const queryClient = useQueryClient()
     const isEdit = !!initialData
 
@@ -94,53 +90,90 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
         },
     })
 
+    // Helper to get nested data
+    const product = initialData?.product
+    const service = initialData?.service
+    const supply = initialData?.supply
+
     const form = useForm<ItemSchema>({
         resolver: zodResolver(itemSchema),
         defaultValues: {
             name: initialData?.name ?? '',
             description: initialData?.description ?? '',
-            cost: initialData?.cost ?? 0,
-            price: initialData?.price ?? 0,
-            stock: initialData?.stock ?? 0,
-            min_stock: initialData?.min_stock ?? 0,
-            barcode: initialData?.barcode ?? '',
+            type: initialData?.type ?? initialType ?? 'PRODUCT',
+            active: initialData?.active ?? true,
             category: initialData?.category ?? '',
-            isItem: initialData?.isItem ?? true,
-            display_id: initialData?.display_id,
+
+            // Flattened values
+            cost: supply?.cost ?? 0,
+            price: product?.price ?? service?.price ?? 0,
+            stock: product?.stock ?? supply?.stock ?? 0,
+            min_stock: product?.min_stock ?? 0,
+
+            barcode: product?.barcode ?? '',
+            ncm: product?.ncm ?? '',
+            unit: supply?.unit ?? '',
+            estimated_time: service?.estimated_time ?? '',
+
+            display_id: product?.display_id ?? service?.display_id ?? undefined,
         },
     })
 
-    const isProduct = form.watch('isItem')
+    useEffect(() => {
+        if (!isEdit && initialType) {
+            form.reset({
+                name: '',
+                description: '',
+                type: initialType,
+                active: true,
+                category: '',
+                cost: 0,
+                price: 0,
+                stock: 0,
+                min_stock: 0,
+                barcode: '',
+                ncm: '',
+                unit: '',
+                estimated_time: '',
+                display_id: undefined
+            })
+        }
+    }, [isEdit, initialType, form])
+
+    const selectedType = form.watch('type')
 
     async function handleSubmitForm(data: ItemSchema) {
         try {
-            if (isProduct && data.cost && data.price < data.cost) {
-                toast.error('O preço de venda não pode ser menor que o custo.')
-                return
-            }
-
             const payload = {
                 name: data.name,
                 description: data.description || null,
-                cost: isProduct ? (data.cost || 0) : 0,
+                active: data.active,
+                type: data.type,
+                display_id: data.display_id,
+
+                // Fields map
+                cost: data.cost,
                 price: data.price,
-                stock: isProduct ? data.stock : 0,
-                min_stock: isProduct ? data.min_stock : 0,
-                barcode: isProduct ? data.barcode : null,
-                category: !isProduct ? data.category : null,
-                isItem: data.isItem,
-                display_id: data.display_id ? Number(data.display_id) : null
+                stock: data.stock,
+                min_stock: data.min_stock,
+                barcode: data.barcode || null,
+                ncm: data.ncm || null,
+                unit: data.unit || null,
+                estimated_time: data.estimated_time || null,
+                category: data.category || null,
             }
 
             if (isEdit) {
+                // Warning: updateItem needs update too to support strict types or it might just work if it accepts partials
+                // Assuming updateItem works or will be fixed.
                 const response = await updateItemFn({ id: initialData!.id, ...payload })
                 if (response.status === 200 || response.status === 201) {
-                    toast.success('Mercadoria atualizada!')
+                    toast.success('Item atualizado!')
                 }
             } else {
                 const response = await createItemFn(payload)
                 if (response.status === 200 || response.status === 201) {
-                    toast.success('Mercadoria cadastrada!')
+                    toast.success('Item cadastrado!')
                     form.reset()
                 }
             }
@@ -159,66 +192,93 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
     }
 
     return (
-        <DialogContent className="max-h-[85vh] flex flex-col p-0 gap-0 sm:max-w-[700px] overflow-hidden">
-            <DialogHeader className="px-6 py-4 border-b shrink-0">
-                <DialogTitle>{isEdit ? 'Editar Mercadoria' : 'Nova Mercadoria'}</DialogTitle>
+        <DialogContent className="max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-[700px] overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b shrink-0 bg-muted/40">
+                <DialogTitle>{isEdit ? 'Editar Item' : 'Novo Item'}</DialogTitle>
                 <DialogDescription>
-                    {isEdit ? 'Atualize as informações do item selecionado.' : 'Cadastre um novo produto ou serviço no sistema.'}
+                    {isEdit ? 'Atualize as informações do item.' : 'Cadastre um novo item no sistema.'}
                 </DialogDescription>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
                 <Form {...form}>
                     <form id="item-form" onSubmit={form.handleSubmit(handleSubmitForm)} className="space-y-6">
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-minsk-500 pl-2">Informações Básicas</h4>
-                            <div className="grid grid-cols-12 gap-6">
-                                {/* Type Toggle */}
-                                <div className="col-span-12 md:col-span-4 flex flex-col justify-end pb-2">
-                                    <FormLabel className="mb-3 block">Tipo de Item</FormLabel>
-                                    <div className="flex items-center space-x-2">
-                                        <Label htmlFor="type-toggle" className={!isProduct ? "font-bold text-minsk-600 cursor-pointer" : "text-muted-foreground cursor-pointer"}>Serviço</Label>
-                                        <FormField
-                                            control={form.control}
-                                            name="isItem"
-                                            render={({ field }) => (
-                                                <FormControl>
-                                                    <Switch
-                                                        id="type-toggle"
-                                                        disabled={isEdit}
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                        className="data-[state=checked]:bg-minsk-500"
-                                                    />
-                                                </FormControl>
-                                            )}
-                                        />
-                                        <Label htmlFor="type-toggle" className={isProduct ? "font-bold text-minsk-600 cursor-pointer" : "text-muted-foreground cursor-pointer"}>Produto</Label>
-                                    </div>
+
+                        {/* Type Selector */}
+                        {!isEdit && (
+                            <div className="flex justify-center mb-6">
+                                <div className="inline-flex rounded-lg border p-1 bg-card">
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('type', 'PRODUCT')}
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                            selectedType === 'PRODUCT'
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        <Package className="h-4 w-4" />
+                                        Produto
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('type', 'SERVICE')}
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                            selectedType === 'SERVICE'
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        <Hammer className="h-4 w-4" />
+                                        Serviço
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => form.setValue('type', 'SUPPLY')}
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                            selectedType === 'SUPPLY'
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        <Syringe className="h-4 w-4" />
+                                        Insumo
+                                    </button>
                                 </div>
+                            </div>
+                        )}
 
-                                {/* Display ID */}
-                                <FormField
-                                    control={form.control}
-                                    name="display_id"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-12 md:col-span-4">
-                                            <FormLabel>ID Numérico</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="Auto" {...field} value={field.value ?? ''} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-primary pl-2">
+                                Informações Básicas
+                            </h4>
+                            <div className="grid grid-cols-12 gap-6">
+                                {/* Display ID (Auto) - only for Prod/Service */}
+                                {(selectedType === 'PRODUCT' || selectedType === 'SERVICE') && (
+                                    <FormField
+                                        control={form.control}
+                                        name="display_id"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-12 md:col-span-3">
+                                                <FormLabel>ID (Auto)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="Auto" {...field} value={field.value ?? ''} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
 
-                                {/* Name */}
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem className="col-span-12">
-                                            <FormLabel>Nome</FormLabel>
+                                        <FormItem className={cn("col-span-12", (selectedType === 'PRODUCT' || selectedType === 'SERVICE') ? "md:col-span-9" : "md:col-span-12")}>
+                                            <FormLabel>Nome <span className="text-destructive">*</span></FormLabel>
                                             <FormControl>
                                                 <Input placeholder="Nome do item" {...field} />
                                             </FormControl>
@@ -227,52 +287,14 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
                                     )}
                                 />
 
-                                {/* Category (Service only) */}
-                                {!isProduct && (
-                                    <FormField
-                                        control={form.control}
-                                        name="category"
-                                        render={({ field }) => (
-                                            <FormItem className="col-span-12">
-                                                <FormLabel>Categoria</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="Ex: Manutenção, Consultoria" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Section: Pricing */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-minsk-500 pl-2">Financeiro</h4>
-                            <div className="grid grid-cols-12 gap-6">
-                                {isProduct && (
-                                    <FormField
-                                        control={form.control}
-                                        name="cost"
-                                        render={({ field }) => (
-                                            <FormItem className="col-span-6">
-                                                <FormLabel>Preço de Custo (R$)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" step="0.01" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
                                 <FormField
                                     control={form.control}
-                                    name="price"
+                                    name="category"
                                     render={({ field }) => (
-                                        <FormItem className={isProduct ? "col-span-6" : "col-span-12"}>
-                                            <FormLabel>Preço de Venda (R$)</FormLabel>
+                                        <FormItem className="col-span-12">
+                                            <FormLabel>Categoria</FormLabel>
                                             <FormControl>
-                                                <Input type="number" step="0.01" {...field} />
+                                                <Input placeholder="Ex: Elétrica, Hidráulica, Manutenção" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -281,48 +303,40 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
                             </div>
                         </div>
 
-                        {/* Section: Stock (Products Only) */}
-                        {isProduct && (
+                        {/* Financial Section */}
+                        {(selectedType === 'PRODUCT' || selectedType === 'SUPPLY' || selectedType === 'SERVICE') && (
                             <div className="space-y-4">
-                                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-minsk-500 pl-2">Estoque</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-primary pl-2">
+                                    Financeiro
+                                </h4>
                                 <div className="grid grid-cols-12 gap-6">
-                                    {!isEdit && (
+                                    {/* Cost: Supply (Required) or Product (Optional) */}
+                                    {(selectedType === 'SUPPLY' || selectedType === 'PRODUCT') && (
                                         <FormField
                                             control={form.control}
-                                            name="stock"
+                                            name="cost"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-6">
-                                                    <FormLabel>Estoque Inicial</FormLabel>
+                                                    <FormLabel>Custo (R$)</FormLabel>
                                                     <FormControl>
-                                                        <Input type="number" {...field} />
+                                                        <Input type="number" step="0.01" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     )}
-                                    <FormField
-                                        control={form.control}
-                                        name="min_stock"
-                                        render={({ field }) => (
-                                            <FormItem className={!isEdit ? "col-span-6" : "col-span-12"} >
-                                                <FormLabel>Estoque Mínimo</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    {isProduct && (
+
+                                    {/* Price: Product/Service */}
+                                    {(selectedType === 'PRODUCT' || selectedType === 'SERVICE') && (
                                         <FormField
                                             control={form.control}
-                                            name="barcode"
+                                            name="price"
                                             render={({ field }) => (
-                                                <FormItem className="col-span-12">
-                                                    <FormLabel>Código de Barras / SKU</FormLabel>
+                                                <FormItem className="col-span-6">
+                                                    <FormLabel>Preço de Venda (R$)</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="Ex: 789..." {...field} />
+                                                        <Input type="number" step="0.01" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -333,9 +347,117 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
                             </div>
                         )}
 
-                        {/* Section: Description */}
-                        <div className="space-y-4 pb-4">
-                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-minsk-500 pl-2">Detalhes</h4>
+                        {/* Inventory & Details */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-l-4 border-primary pl-2">
+                                Detalhes & Estoque
+                            </h4>
+                            <div className="grid grid-cols-12 gap-6">
+
+                                {/* Stock: Product/Supply */}
+                                {(selectedType === 'PRODUCT' || selectedType === 'SUPPLY') && (
+                                    <FormField
+                                        control={form.control}
+                                        name="stock"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6 md:col-span-4">
+                                                <FormLabel>{!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} disabled={isEdit /* Disable stock edit on update? Usually fine to edit, but stock log preferred. Keeping enabled for now based on previous code */} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {/* Min Stock: Product */}
+                                {selectedType === 'PRODUCT' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="min_stock"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6 md:col-span-4">
+                                                <FormLabel>Estoque Mínimo</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {/* Unit: Supply */}
+                                {selectedType === 'SUPPLY' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="unit"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6 md:col-span-4">
+                                                <FormLabel>Unidade</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ex: kg, lt, un" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {/* Estimated Time: Service */}
+                                {selectedType === 'SERVICE' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="estimated_time"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-6 md:col-span-6">
+                                                <FormLabel>Tempo Estimado</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ex: 30 min" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {/* Barcode & NCM: Product */}
+                                {selectedType === 'PRODUCT' && (
+                                    <>
+                                        <FormField
+                                            control={form.control}
+                                            name="barcode"
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-12 md:col-span-6">
+                                                    <FormLabel>Código de Barras</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="EAN / SKU" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="ncm"
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-12 md:col-span-6">
+                                                    <FormLabel>NCM</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="NCM" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Common Description */}
+                        <div className="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="description"
@@ -343,23 +465,24 @@ export function ProductItemDialog({ initialData, onSuccess }: ProductItemDialogP
                                     <FormItem>
                                         <FormLabel>Descrição</FormLabel>
                                         <FormControl>
-                                            <Textarea placeholder="Breve descrição sobre o item..." className="resize-none min-h-[80px]" {...field} />
+                                            <Textarea placeholder="Observações.." className="resize-none" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+
                     </form>
                 </Form>
             </div>
 
-            <DialogFooter className="px-6 py-4 border-t bg-gray-50/50 shrink-0">
+            <DialogFooter className="px-6 py-4 border-t bg-muted/40 shrink-0">
                 <DialogClose asChild>
                     <Button type="button" variant="outline">Cancelar</Button>
                 </DialogClose>
-                <Button form="item-form" type="submit" disabled={form.formState.isSubmitting} className="bg-minsk-500 hover:bg-minsk-600">
-                    {form.formState.isSubmitting ? 'Salvando...' : (isEdit ? 'Salvar Alterações' : 'Salvar Mercadoria')}
+                <Button form="item-form" type="submit" disabled={form.formState.isSubmitting} className="bg-primary hover:bg-primary/90">
+                    {form.formState.isSubmitting ? 'Salvando...' : 'Salvar'}
                 </Button>
             </DialogFooter>
         </DialogContent>

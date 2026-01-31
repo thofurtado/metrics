@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Calculator, FileText, CreditCard, Calendar, DollarSign, Clock, ListChecks, AlertTriangle } from 'lucide-react'
+import { Calendar, DollarSign, Clock, AlertTriangle, ArrowRight, Plus } from 'lucide-react'
 import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
+
+import { getAccounts } from '@/api/get-accounts'
 
 // Importa o calendário
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
+import { CreateAccountDialog } from '@/components/create-account-dialog'
 
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
 import {
@@ -22,6 +25,13 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -29,6 +39,9 @@ import { cn } from '@/lib/utils'
 // --- SCHEMA E INTERFACES ---
 
 const paymentSchema = z.object({
+    accountId: z.string().min(1, "Conta é obrigatória"),
+    additions: z.string().optional(), // Juros/Multa
+    discounts: z.string().optional(), // Descontos
     paidAmount: z.string().min(1, "Valor é obrigatório").refine(
         (val) => {
             const num = parseFloat(val.replace(',', '.'))
@@ -61,7 +74,7 @@ interface PaymentModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     transaction: Transaction
-    onConfirm: (data: { id: string, amount: number, date: Date, remainingDate?: Date }) => Promise<void>
+    onConfirm: (data: { id: string, amount: number, date: Date, remainingDate?: Date, accountId?: string }) => Promise<void>
 }
 
 export function PaymentModal({
@@ -72,23 +85,45 @@ export function PaymentModal({
 }: PaymentModalProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [apiError, setApiError] = useState<string | null>(null)
+    const [openNewAccountModal, setOpenNewAccountModal] = useState(false)
+
+    // Fetch Accounts
+    const { data: accountsData } = useQuery({
+        queryKey: ['accounts'],
+        queryFn: getAccounts,
+        enabled: open, // Fetch only when modal is open
+    })
 
     const form = useForm<PaymentFormData>({
         resolver: zodResolver(paymentSchema),
         defaultValues: {
+            accountId: transaction.accountId,
+            additions: '',
+            discounts: '',
             paidAmount: transaction.amount.toFixed(2),
             paymentDate: new Date(),
             remainingDueDate: undefined,
         }
     })
 
+    const watchAdditions = form.watch('additions')
+    const watchDiscounts = form.watch('discounts')
     const watchPaidAmount = form.watch('paidAmount')
 
     const transactionAmount = transaction.amount
-    const paidAmountNum = parseFloat(watchPaidAmount.replace(',', '.')) || 0
-    const remainingAmount = Math.max(0, transactionAmount - paidAmountNum)
 
-    const isPartialActive = paidAmountNum > 0.01 && paidAmountNum < transactionAmount
+    // Parse values
+    const additionsNum = parseFloat(watchAdditions?.replace(',', '.') || '0')
+    const discountsNum = parseFloat(watchDiscounts?.replace(',', '.') || '0')
+    const paidAmountNum = parseFloat(watchPaidAmount?.replace(',', '.') || '0')
+
+    // Calculated Final Total (Base + Additions - Discounts)
+    const calculatedTotal = Math.max(0, transactionAmount + additionsNum - discountsNum)
+
+    // Remaining calculation: Calculated Total - Paid Amount
+    const remainingAmount = Math.max(0, calculatedTotal - paidAmountNum)
+
+    const isPartialActive = remainingAmount > 0.01
 
     // --- LÓGICA DE VALIDAÇÃO E EFEITOS ---
     useEffect(() => {
@@ -97,27 +132,47 @@ export function PaymentModal({
         }
     }, [isPartialActive, form])
 
+    // Auto-update Paid Amount when default Adjustments change (optional behavior, but helpful)
+    // Actually, usually adjustments directly affect what NEEDS to be paid.
+    // So if I add interest, the "Paid Amount" should probably default to the NEW total?
+    // Let's NOT auto-change input user might be typing, but we could initialize or suggest.
+    // Better: If paidAmount == calculatedTotal (previous), update it? Complex.
+    // Let's stick to: User enters additions/discounts -> Calculated Total shows up.
+    // User sees "Total a Pagar: R$ X". User inputs "Valor Pago: R$ Y".
+    // If user wants to pay FULL, they match X and Y.
+    // We can add a button "Pay Full" or just let them type. 
+    // OR: bind paidAmount to calculatedTotal unless manually changed?
+    // Let's keep it manual to avoid interrupting user.
+
+    // Wait, simpler UX: "Valor Pago" vs "Valor Original".
+    // If I add Interest, the "Valor Pago" effectively increases.
+    // Let's update `paidAmount` automatically ONLY IF it was matching the previous total.
+    // Implementation: simple Effect.
+    /*
     useEffect(() => {
-        if (paidAmountNum > transactionAmount) {
-            form.setError('paidAmount', { message: `Máx: R$ ${transactionAmount.toFixed(2)}` })
-        } else {
-            form.clearErrors('paidAmount')
-        }
-    }, [paidAmountNum, transactionAmount, form])
+         const currentTotal = transactionAmount + additionsNum - discountsNum
+         if (Math.abs(paidAmountNum - (currentTotal - additionsNum + discountsNum)) < 0.01) {
+             // If previously matching, keep matching
+             // form.setValue('paidAmount', currentTotal.toFixed(2))
+         }
+    }, [additionsNum, discountsNum]) 
+    */
+    // Too risky for UX glitches. User can type.
 
     const onSubmit = async (data: PaymentFormData) => {
-        // Validações de pré-submissão
+        // Validações
         if (paidAmountNum <= 0.01) {
-            form.setError('paidAmount', { message: 'O valor de liquidação deve ser maior que zero.' })
+            form.setError('paidAmount', { message: 'O valor deve ser maior que zero.' })
             return
         }
 
-        if (isPartialActive && remainingAmount > 0.01 && !data.remainingDueDate) {
-            form.setError('remainingDueDate', { message: 'Defina a data de vencimento para o valor restante.' })
+        if (isPartialActive && !data.remainingDueDate) {
+            form.setError('remainingDueDate', { message: 'Defina a data para o restante.' })
             return
         }
 
-        if (paidAmountNum > transactionAmount) {
+        if (paidAmountNum > calculatedTotal + 0.01) {
+            form.setError('paidAmount', { message: `Valor não pode exceder o total calculado (R$ ${calculatedTotal.toFixed(2)})` })
             return
         }
 
@@ -127,56 +182,42 @@ export function PaymentModal({
         try {
             const confirmationPayload = {
                 id: transaction.id,
-                amount: paidAmountNum,
+                amount: paidAmountNum, // We send the FINAL paid amount (which includes interest/discount implicit)
                 date: data.paymentDate,
                 remainingDate: isPartialActive ? data.remainingDueDate : undefined,
+                accountId: data.accountId // Send selected account
             }
 
-            console.log({ "Payload: " : confirmationPayload })
+            console.log({ "Payload: ": confirmationPayload })
 
             await onConfirm(confirmationPayload)
 
             // Sucesso
-            form.reset({
-                paidAmount: transaction.amount.toFixed(2),
-                paymentDate: new Date(),
-                remainingDueDate: undefined,
-            })
+            form.reset()
             onOpenChange(false)
         } catch (error: any) {
-            console.error('🔴 ERRO DETALHADO AO PROCESSAR PAGAMENTO:', error)
-
-            // Log mais detalhado do erro
-            if (error.response) {
-                console.error('📊 RESPOSTA DO ERRO:', {
-                    status: error.response.status,
-                    data: error.response.data,
-                    headers: error.response.headers
-                })
-            }
-
-            const errorMessage = error.response?.data?.message
-                || error.response?.data?.error
-                || error.message
-                || 'Erro desconhecido ao comunicar com o servidor.'
-
+            console.error('🔴 ERRO AO PROCESSAR:', error)
+            const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido.'
             setApiError(errorMessage)
         } finally {
             setIsLoading(false)
         }
     }
 
-    // Desabilita dias futuros para a data de pagamento
+    // Desabilita dias futuros
     const disableFutureDays = (date: Date) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return date.getTime() > today.getTime();
     };
 
-    // Reset form quando modal abrir/fechar
+    // Reset loop
     useEffect(() => {
         if (open) {
             form.reset({
+                accountId: transaction.accountId, // Fixed: Use accountId directly
+                additions: '',
+                discounts: '',
                 paidAmount: transaction.amount.toFixed(2),
                 paymentDate: new Date(),
                 remainingDueDate: undefined,
@@ -188,234 +229,314 @@ export function PaymentModal({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="sm:max-w-xl w-full max-w-lg mx-auto p-0 gap-0 flex flex-col h-auto max-h-[90vh]"
-                aria-describedby="payment-modal-description"
+                className="sm:max-w-4xl w-full p-0 gap-0 overflow-hidden h-auto max-h-[90vh] flex flex-col"
             >
-                {/* 1. Header Fixo */}
-                <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-50 to-gray-50 flex-shrink-0">
-                    <div className="flex items-center gap-3">
+                {/* HEADLINE / HEADER */}
+                <div className={cn(
+                    "px-6 py-5 border-b flex items-center justify-between",
+                    transaction.operation === 'income' ? 'bg-green-50/50' : 'bg-red-50/50'
+                )}>
+                    <div className="flex items-center gap-4">
                         <div className={cn(
-                            "p-2 rounded-lg",
-                            transaction.operation === 'income'
-                                ? 'bg-vida-loca-100 text-vida-loca-600'
-                                : 'bg-stiletto-100 text-stiletto-600'
+                            "p-3 rounded-full shadow-sm",
+                            transaction.operation === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
                         )}>
-                            <CreditCard className="h-5 w-5" />
+                            <DollarSign className="h-6 w-6" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <DialogTitle className="text-lg font-semibold truncate">
+                        <div>
+                            <DialogTitle className="text-xl font-bold text-slate-800">
                                 {transaction.operation === 'income' ? 'Confirmar Recebimento' : 'Confirmar Pagamento'}
                             </DialogTitle>
-                            <p className="text-sm text-muted-foreground truncate">
-                                {transaction.description}
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                Finalize a transação financeira abaixo
                             </p>
                         </div>
-                        <Badge variant={transaction.operation === 'income' ? 'default' : 'destructive'}>
-                            {transaction.operation === 'income' ? 'Entrada' : 'Saída'}
-                        </Badge>
                     </div>
-                </DialogHeader>
+                    <Badge
+                        variant="outline"
+                        className={cn(
+                            "px-3 py-1 text-sm font-semibold border-0",
+                            transaction.operation === 'income' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                        )}
+                    >
+                        {transaction.operation === 'income' ? 'Receita' : 'Despesa'}
+                    </Badge>
+                </div>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow">
-                        <div id="payment-modal-description" className="sr-only">
-                            Modal para confirmar {transaction.operation === 'income' ? 'recebimento' : 'pagamento'} da transação {transaction.description} no valor de R$ {transaction.amount.toFixed(2)}
-                        </div>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-hidden">
 
-                        {/* 2. Conteúdo Rolável */}
-                        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
 
-                            {/* Alerta de Erro da API */}
-                            {apiError && (
-                                <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-xl font-medium">
-                                    <strong className='flex items-center gap-2 mb-1 text-red-800'>
-                                        <AlertTriangle className='h-5 w-5 flex-shrink-0' />
-                                        Erro no Processamento:
-                                    </strong>
-                                    <p className="text-sm">{apiError}</p>
-                                    <p className="text-xs mt-1 text-red-600 italic">
-                                        Verifique o console para detalhes da requisição de rede.
-                                    </p>
-                                </div>
-                            )}
+                                {/* COLUNA ESQUERDA: RESUMO VISUAL */}
+                                <div className="lg:col-span-4 space-y-6">
+                                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-inner">
+                                        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Resumo da Conta</h3>
 
-                            {/* PAINEL DE RESUMO INTELIGENTE */}
-                            <div className={cn(
-                                "rounded-xl p-4 border shadow-md transition-all duration-300",
-                                isPartialActive ? 'bg-amber-50 border-amber-200' : 'bg-slate-50'
-                            )}>
-                                <div className={cn(
-                                    "grid gap-4",
-                                    isPartialActive ? 'sm:grid-cols-3' : 'grid-cols-1'
-                                )}>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-xs text-slate-400 font-medium">Descrição</label>
+                                                <p className="text-lg font-semibold text-slate-800 leading-tight">
+                                                    {transaction.description || "Sem descrição"}
+                                                </p>
+                                            </div>
 
-                                    {/* COLUNA 1: Valor Total da Transação */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-medium text-slate-600">Valor Total da Transação</span>
-                                            <DollarSign className="h-4 w-4 text-slate-400" />
-                                        </div>
-                                        <div className={cn(
-                                            "text-2xl font-bold",
-                                            transaction.operation === 'income' ? 'text-vida-loca-600' : 'text-stiletto-600'
-                                        )}>
-                                            R$ {transaction.amount.toFixed(2)}
-                                        </div>
-                                    </div>
-
-                                    {/* COLUNAS 2 E 3 (CONDICIONAIS): Detalhes do Restante */}
-                                    {isPartialActive && (
-                                        <>
-                                            {/* COLUNA 2: Valor Restante Pendente (Display) */}
-                                            <div className="pt-2 border-t sm:border-t-0 sm:pt-0 sm:border-l sm:pl-4 border-amber-300">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm font-medium text-amber-800">Valor Restante Pendente</span>
-                                                    <FileText className="h-4 w-4 text-amber-500" />
-                                                </div>
-                                                <div className="text-2xl font-bold text-amber-600">
-                                                    R$ {remainingAmount.toFixed(2)}
-                                                </div>
-                                                <div className="text-xs text-amber-700 mt-2">
-                                                    ⚠️ Nova transação pendente será criada.
+                                            <div>
+                                                <label className="text-xs text-slate-400 font-medium">Vencimento Original</label>
+                                                <div className="flex items-center gap-2 text-slate-700 font-medium">
+                                                    <Calendar className="h-4 w-4 text-slate-400" />
+                                                    {new Date(transaction.date).toLocaleDateString("pt-BR")}
                                                 </div>
                                             </div>
 
-                                            {/* COLUNA 3: Vencimento para o Restante (Campo de Data) */}
-                                            <FormField
-                                                control={form.control}
-                                                name="remainingDueDate"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col pt-2 border-t sm:border-t-0 sm:pt-0 sm:border-l sm:pl-4 border-amber-300">
-                                                        <FormLabel className="text-sm font-semibold flex items-center gap-2 text-amber-800">
-                                                            <Clock className="h-4 w-4" />
-                                                            Vencimento Restante <span className="text-red-500">*</span>
-                                                        </FormLabel>
-                                                        <FormControl>
-                                                            <SimpleCalendar
-                                                                selected={field.value}
-                                                                onSelect={field.onChange}
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </>
+                                            <div className="pt-4 border-t border-slate-200/60">
+                                                <label className="text-xs text-slate-400 font-medium">Valor Original</label>
+                                                <p className={cn(
+                                                    "text-3xl font-bold tracking-tight",
+                                                    transaction.operation === 'income' ? 'text-green-600' : 'text-red-600'
+                                                )}>
+                                                    R$ {transactionAmount.toFixed(2)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Calculated Final Display */}
+                                    <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm text-slate-500">Juros / Multa</span>
+                                            <span className="text-sm font-medium text-red-500">+ R$ {additionsNum.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-sm text-slate-500">Descontos</span>
+                                            <span className="text-sm font-medium text-green-500">- R$ {discountsNum.toFixed(2)}</span>
+                                        </div>
+                                        <div className="pt-3 border-t flex justify-between items-center">
+                                            <span className="font-semibold text-slate-700">Total Calculado</span>
+                                            <span className="font-bold text-xl text-slate-900">R$ {calculatedTotal.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                    {apiError && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                                            <AlertTriangle className="h-4 w-4 inline mr-2" />
+                                            {apiError}
+                                        </div>
                                     )}
                                 </div>
-                            </div>
 
-                            <hr className="my-6 border-slate-200" />
+                                {/* COLUNA DIREITA: AÇÕES DE PAGAMENTO */}
+                                <div className="lg:col-span-8 flex flex-col gap-6">
 
-                            {/* AGRUPAMENTO DE CAMPOS PRINCIPAIS DE 2 COLUNAS */}
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold flex items-center gap-2">
-                                    <ListChecks className="h-5 w-5 text-gray-600" />
-                                    Detalhes da Liquidação
-                                </h3>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Coluna 1: Valor de Liquidação */}
-                                    <FormField
-                                        control={form.control}
-                                        name="paidAmount"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-base font-semibold flex items-center gap-2">
-                                                    <Calculator className="h-4 w-4" />
-                                                    Valor de Liquidação
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 font-semibold">
-                                                            R$
-                                                        </span>
-                                                        <Input
-                                                            {...field}
-                                                            type="text"
-                                                            inputMode="decimal"
-                                                            onChange={(e) => field.onChange(e.target.value.replace(',', '.'))}
-                                                            onBlur={() => {
-                                                                const num = parseFloat(field.value.replace(',', '.'));
-                                                                if (!isNaN(num)) {
-                                                                    field.onChange(num.toFixed(2));
-                                                                }
+                                    {/* ROW 1: Conta e Data */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <FormField
+                                            control={form.control}
+                                            name="accountId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <div className="flex items-center justify-between">
+                                                        <FormLabel>Conta / Caixa</FormLabel>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 px-2 text-xs text-primary hover:text-primary/80"
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); // Prevent submit
+                                                                setOpenNewAccountModal(true);
                                                             }}
-                                                            className={cn(
-                                                                "pl-12 pr-4 py-6 text-lg font-semibold border-2",
-                                                                form.formState.errors.paidAmount ? 'border-red-500' : 'focus:border-primary'
+                                                        >
+                                                            <Plus className="h-3 w-3 mr-1" />
+                                                            Nova
+                                                        </Button>
+                                                    </div>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-11">
+                                                                <SelectValue placeholder="Selecione a conta" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {accountsData?.accounts.map((acc) => (
+                                                                <SelectItem key={acc.id} value={acc.id} className="flex items-center justify-between">
+                                                                    <span>{acc.name}</span>
+                                                                    {/* <span className="text-xs text-muted-foreground ml-2">R$ {acc.balance.toFixed(2)}</span> */}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="paymentDate"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Data do Pagamento</FormLabel>
+                                                    <FormControl>
+                                                        <SimpleCalendar
+                                                            selected={field.value}
+                                                            onSelect={field.onChange}
+                                                            disabledDays={disableFutureDays}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    {/* ROW 2: Ajustes */}
+                                    <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50/50 rounded-lg border border-slate-100">
+                                        <FormField
+                                            control={form.control}
+                                            name="additions"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-slate-600 flex items-center gap-1">
+                                                        Juros / Multa
+                                                        <span className="text-xs text-muted-foreground font-normal">(R$)</span>
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <ArrowRight className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-400 rotate-[-45deg]" />
+                                                            <Input
+                                                                {...field}
+                                                                className="pl-9 bg-white border-slate-200 focus:border-red-300 focus:ring-red-100"
+                                                                placeholder="0,00"
+                                                            />
+                                                        </div>
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="discounts"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-slate-600 flex items-center gap-1">
+                                                        Descontos
+                                                        <span className="text-xs text-muted-foreground font-normal">(R$)</span>
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <ArrowRight className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-400 rotate-[45deg]" />
+                                                            <Input
+                                                                {...field}
+                                                                className="pl-9 bg-white border-slate-200 focus:border-green-300 focus:ring-green-100"
+                                                                placeholder="0,00"
+                                                            />
+                                                        </div>
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <hr className="border-slate-100" />
+
+                                    {/* ROW 3: Pagamento e Restante */}
+                                    <div className="space-y-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="paidAmount"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-lg font-bold text-slate-800">
+                                                        Valor Pago (Efetivo)
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                                                            <Input
+                                                                {...field}
+                                                                className="pl-12 h-14 text-2xl font-bold border-slate-300 focus:border-slate-500 shadow-sm"
+                                                            />
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        {/* Partial Warning */}
+                                        {isPartialActive && (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-start gap-3">
+                                                    <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+                                                    <div className="flex-1 space-y-3">
+                                                        <div>
+                                                            <h4 className="font-medium text-amber-900">Pagamento Parcial Detectado</h4>
+                                                            <p className="text-sm text-amber-700">
+                                                                Restará <strong>R$ {remainingAmount.toFixed(2)}</strong> pendente.
+                                                            </p>
+                                                        </div>
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name="remainingDueDate"
+                                                            render={({ field }) => (
+                                                                <FormItem className="max-w-[240px]">
+                                                                    <FormLabel className="text-xs text-amber-800 uppercase font-bold">Vencimento do Restante</FormLabel>
+                                                                    <FormControl>
+                                                                        <SimpleCalendar selected={field.value} onSelect={field.onChange} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
                                                             )}
                                                         />
                                                     </div>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    {/* Coluna 2: Data de Confirmação */}
-                                    <FormField
-                                        control={form.control}
-                                        name="paymentDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-col">
-                                                <FormLabel className="text-base font-semibold flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4" />
-                                                    Data de Confirmação
-                                                </FormLabel>
-                                                <div className="text-xs text-muted-foreground -mt-1 mb-1">
-                                                    Hoje (Padrão)
                                                 </div>
-                                                <FormControl>
-                                                    <SimpleCalendar
-                                                        selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabledDays={disableFutureDays}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                                            </div>
                                         )}
-                                    />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 3. Footer Fixo */}
-                        <div className="border-t bg-white p-4 flex-shrink-0">
-                            <div className="flex gap-3">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => onOpenChange(false)}
-                                    className="flex-1 py-3 text-base font-semibold border-2"
-                                    disabled={isLoading}
-                                >
-                                    Cancelar
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className={cn(
-                                        "flex-1 py-3 text-base font-semibold",
-                                        transaction.operation === 'income'
-                                            ? 'bg-vida-loca-500 hover:bg-vida-loca-600'
-                                            : 'bg-stiletto-500 hover:bg-stiletto-600'
-                                    )}
-                                >
-                                    {isLoading ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Processando...
-                                        </div>
-                                    ) : (
-                                        `Confirmar ${transaction.operation === 'income' ? 'Recebimento' : 'Pagamento'}`
-                                    )}
-                                </Button>
-                            </div>
+                        {/* FOOTER */}
+                        <div className="p-6 border-t bg-slate-50 flex justify-end gap-3 pointer-events-auto z-50 relative">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="h-12 px-6"
+                                disabled={isLoading}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isLoading}
+                                className={cn(
+                                    "h-12 px-8 text-base font-bold shadow-md transition-all hover:scale-[1.02]",
+                                    transaction.operation === 'income'
+                                        ? 'bg-gradient-to-r from-green-600 to-green-500 hover:to-green-400 text-white'
+                                        : 'bg-gradient-to-r from-red-600 to-red-500 hover:to-red-400 text-white'
+                                )}
+                            >
+                                {isLoading ? 'Processando...' : `Confirmar ${transaction.operation === 'income' ? 'Recebimento' : 'Pagamento'}`}
+                            </Button>
                         </div>
                     </form>
                 </Form>
+
+                <CreateAccountDialog
+                    open={openNewAccountModal}
+                    onOpenChange={setOpenNewAccountModal}
+                    onSuccess={(newAccount: any) => {
+                        // Seleciona a nova conta automaticamente
+                        if (newAccount?.id) {
+                            form.setValue('accountId', newAccount.id)
+                        }
+                    }}
+                />
             </DialogContent>
         </Dialog>
     )

@@ -5,7 +5,9 @@ export interface GetInventoryMetricsResponse {
     patrimonioEstoque: number
     receitaProdutos: number
     receitaServicos: number
-    itensCriticos: number // Vamos manter como 0 por enquanto, já que a API não retorna
+    orcamentoProdutos: number
+    orcamentoServicos: number
+    itensCriticos: number
 }
 
 export async function getInventoryMetrics(): Promise<GetInventoryMetricsResponse> {
@@ -18,6 +20,8 @@ export async function getInventoryMetrics(): Promise<GetInventoryMetricsResponse
         patrimonioEstoque: apiData.patrimony || 0,
         receitaProdutos: apiData.productsSold || 0,
         receitaServicos: apiData.servicesSold || 0,
-        itensCriticos: 0 // Não está na API atual - podemos calcular depois
+        orcamentoProdutos: apiData.productsBudget || 0,
+        orcamentoServicos: apiData.servicesBudget || 0,
+        itensCriticos: 0
     }
 }

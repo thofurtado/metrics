@@ -405,25 +405,28 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             {/* Grid de Produtos */}
             <ScrollArea className="flex-1 p-8">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 m-1">
-                {filteredItems.map((item: any) => (
-                  <Card
-                    key={item.id}
-                    className={cn(
-                      "cursor-pointer transition-all hover:shadow-lg hover:border-primary/50",
-                      form.watch('item') === item.id && "ring-4 ring-primary shadow-lg"
-                    )}
-                    onClick={() => onItemSelect(item)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          R$ {item.price.toFixed(2)}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredItems.map((item: any) => {
+                  if (item.price === undefined || item.price === null) console.log("Item Corrompido:", item);
+                  return (
+                    <Card
+                      key={item.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:shadow-lg hover:border-primary/50",
+                        form.watch('item') === item.id && "ring-4 ring-primary shadow-lg"
+                      )}
+                      onClick={() => onItemSelect(item)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium line-clamp-2">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            R$ {(item.price || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             </ScrollArea>
 

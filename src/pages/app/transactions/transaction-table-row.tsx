@@ -1,17 +1,19 @@
 import { AlertDialogTrigger } from '@radix-ui/react-alert-dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { CircleCheck, CircleMinus, Trash, Loader2 } from 'lucide-react'
+import { CircleCheck, CircleMinus, Trash, Loader2, Undo2 } from 'lucide-react' // Added Undo2
 import { useState } from 'react'
 
 import { deleteTransaction } from '@/api/delete-transaction'
 import { updateStatusTransaction } from '@/api/update-transaction-status'
+import { revertTransactionStatus } from '@/api/revert-transaction-status' // Added import
 // Removendo: import { createTransaction } from '@/api/create-transaction'
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription, // Added import
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -55,6 +57,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
   const queryClient = useQueryClient()
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
+  const [openRevertAlert, setOpenRevertAlert] = useState(false)
   const [localLoading, setLocalLoading] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
@@ -63,7 +66,6 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     sectorId: transactions.sectors?.id || null,
     accountId: transactions.accounts.id,
   }
-  // ----------------------------------------
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
   const { mutateAsync: switchTransactionStatus } = useMutation({
@@ -127,34 +129,27 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     },
   })
 
-  /**
-   * ✅ LÓGICA CORRIGIDA: Manipula o pagamento, enviando TUDO para o Back-end.
-   * O Back-end decide se atualiza, se cria o restante, e qual data manter.
-   */
   async function handlePayment(payload: {
     id: string;
     amount: number;
     date: Date;
-    remainingDate?: Date
+    remainingDate?: Date;
+    accountId?: string;
   }) {
     setLocalLoading(true)
     try {
-      const { amount, date, remainingDate } = payload
+      const { amount, date, remainingDate, accountId } = payload
       const isPartialPayment = amount < transactions.amount
 
       // 1. CHAMA A API APENAS UMA VEZ
-      // A API de updateStatusTransaction agora deve ser responsável por:
-      // a) Atualizar o status da transação original (id) com a data (date) e valor (amount).
-      // b) Se remainingDate for enviado, criar a nova transação remanescente.
       await switchTransactionStatus({
         id: transactions.id,
         amount: amount,
         date: date,
-        // ENVIAMOS A DATA REMANESCENTE APENAS SE ELA EXISTIR
         remainingDate: remainingDate,
+        accountId: accountId
       })
 
-      // Remove a toast de sucesso da mutação e a coloca aqui para ser mais específica
       toast.success(
         isPartialPayment
           ? 'Pagamento parcial processado com sucesso! Transação remanescente criada.'
@@ -164,17 +159,15 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
 
     } catch (error) {
       console.error('Erro ao processar pagamento:', error)
-      // O modal já está configurado para exibir o erro da API
-      throw error // Relança o erro para que o modal o capture e o exiba
+      throw error
     } finally {
-      // O invalidateQueries já está no onSettled da mutação, mas podemos forçar aqui
-      // se a mutação não tiver sido bem-sucedida, caso o throw error passe direto.
       setLocalLoading(false)
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['treatments'] })
     }
   }
 
-  // Manipulador para deletar (mantido)
   async function handleDelete(id: string) {
     try {
       await DeleteTransaction({ id })
@@ -183,39 +176,88 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
     }
   }
 
-  // Omitido o JSX da tabela, pois não houve alterações visuais significativas.
+  // Revert Mutation
+  const { mutateAsync: revertTransaction } = useMutation({
+    mutationFn: revertTransactionStatus,
+    onMutate: () => setLocalLoading(true),
+    onSuccess: () => {
+      toast.success('Pagamento revertido com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      setOpenRevertAlert(false)
+    },
+    onError: () => {
+      toast.error('Erro ao reverter pagamento.')
+    },
+    onSettled: () => setLocalLoading(false)
+  })
+
+  async function handleRevert() {
+    await revertTransaction({ id: transactions.id })
+  }
+
   return (
     <TableRow className="h-16 bg-white dark:bg-stone-900">
       <TableCell className="w-16 text-center">
-        {/* Botão que abre o modal */}
+        {/* Botão que abre o modal ou alerta */}
         <Button
-          aria-label="Registrar pagamento"
+          aria-label={transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
           variant="ghost"
           className="p-0 h-6 w-6 flex items-center justify-center mx-auto"
-          onClick={() => setOpenPaymentModal(true)}
-          disabled={localLoading || transactions.confirmed}
+          onClick={() => {
+            if (transactions.confirmed) {
+              setOpenRevertAlert(true)
+            } else {
+              setOpenPaymentModal(true)
+            }
+          }}
+          disabled={localLoading} // Removed confirmed check
         >
           {localLoading ? (
             <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
           ) : transactions.confirmed ? (
-            <CircleCheck className="h-6 w-6 text-vida-loca-500" />
+            <Undo2 className="h-6 w-6 text-yellow-500 hover:text-yellow-600" />
           ) : (
             <CircleMinus className="h-6 w-6 text-stiletto-500" />
           )}
         </Button>
 
-        {/* MODAL DE PAGAMENTO: Recebe a transação mapeada */}
+        {/* MODAL DE PAGAMENTO */}
         <PaymentModal
           open={openPaymentModal}
           onOpenChange={setOpenPaymentModal}
-          transaction={paymentTransaction} // <-- Usa a transação mapeada!
-          onConfirm={handlePayment} // <-- Agora compatível e sem criar transação remanescente no Front!
+          transaction={paymentTransaction}
+          onConfirm={handlePayment}
         />
+
+        {/* ALERT DE REVERSÃO */}
+        <AlertDialog open={openRevertAlert} onOpenChange={setOpenRevertAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reverter Pagamento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja marcar esta transação como não paga? Isso afetará o saldo atual.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={localLoading}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRevert} disabled={localLoading}>
+                Sim, Reverter
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </TableCell>
+
+      {/* (Rest of table) */}
+
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
       <TableCell className="text-center">
-        {dayjs(`${transactions.date}`).format('DD/MM/YYYY')}
+        <span className={!transactions.confirmed && new Date(transactions.date) < new Date(new Date().setHours(0, 0, 0, 0)) ? "text-red-500 font-bold" : ""}>
+          {dayjs(`${transactions.date}`).format('DD/MM/YYYY')}
+        </span>
       </TableCell>
 
       <TableCell>{transactions.description}</TableCell>

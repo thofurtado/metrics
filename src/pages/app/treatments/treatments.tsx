@@ -156,9 +156,9 @@ export function Treatments() {
 
           <Pagination
             onPageChange={handlePaginate}
-            pageIndex={result?.data.pageIndex ?? 0}
-            totalCount={result?.data.totalCount ?? 0}
-            perPage={result?.data.perPage ?? 10}
+            pageIndex={result?.data?.pageIndex ?? 0}
+            totalCount={result?.data?.totalCount ?? 0}
+            perPage={result?.data?.perPage ?? 10}
           />
         </div>
       </div>

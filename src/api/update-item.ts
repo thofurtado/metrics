@@ -4,13 +4,16 @@ export interface UpdateItemBody {
     id: string
     name?: string
     description?: string | null
-    cost?: number
-    price?: number
+    cost?: number | null
+    price?: number | null
     min_stock?: number | null
     barcode?: string | null
     category?: string | null
     active?: boolean | null
-    isItem?: boolean | null
+    display_id?: number | null
+    ncm?: string | null
+    estimated_time?: string | null
+    unit?: string | null
 }
 
 export async function updateItem({ id, ...body }: UpdateItemBody) {
