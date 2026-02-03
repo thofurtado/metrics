@@ -4,34 +4,18 @@ import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import { useState, useRef } from 'react'
 import html2canvas from 'html2canvas'
-import { Share2, Download } from 'lucide-react'
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { Share2, Download, User, Calendar, Clock, FileText, Activity, Layers, Package } from 'lucide-react'
 
 import { getTreatmentDetails } from '@/api/get-treatment-details'
 import {
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { TreatmentStatus } from '@/components/ui/treatment-status'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 dayjs.extend(duration)
 
@@ -75,64 +59,13 @@ export interface TreatmentDetailsProps {
 export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const dialogContentRef = useRef<HTMLDivElement>(null)
-
   const buttonsContainerRef = useRef<HTMLDivElement>(null)
-  const contentContainerRef = useRef<HTMLDivElement>(null)
-
-  const interactionsTitleRef = useRef<HTMLDivElement>(null)
-  const merchandiseTitleRef = useRef<HTMLDivElement>(null)
-
-  const interactionsLabelRef = useRef<HTMLLabelElement>(null)
-  const merchandiseLabelRef = useRef<HTMLLabelElement>(null)
-
-  const interactionListRef = useRef<HTMLUListElement>(null)
 
   const { data: treatment } = useQuery<TreatmentDetailsData>({
     queryKey: ['treatment', treatmentId],
     queryFn: () => getTreatmentDetails({ treatmentId }),
     enabled: open,
   })
-
-  // ====================================================================
-  // FUNÇÃO DE PREPARAÇÃO DE DADOS PARA O GRÁFICO - SIMPLIFICADA
-  // O ponto final foi removido, mostrando apenas interações reais
-  // ====================================================================
-  const prepareInteractionData = (
-    interactions: Interaction[] | undefined,
-    treatmentStatus: TreatmentDetailsData['status'],
-    openingDate: string
-  ) => {
-    let processedInteractions: any[] = []
-
-    if (interactions && interactions.length > 0) {
-      processedInteractions = interactions
-        .map((interaction) => ({
-          date: new Date(interaction.date).getTime(),
-          y: 1,
-          description: interaction.description,
-          originalDate: dayjs(interaction.date).format('DD/MM/YYYY HH:mm'),
-          formattedDateOnly: dayjs(interaction.date).format('DD/MM'),
-          type: 'interaction',
-        }))
-        .sort((a, b) => a.date - b.date)
-    }
-
-    // Se não houver interações, o ponto inicial é a data de abertura.
-    if (processedInteractions.length === 0) {
-      const initialDate = new Date(openingDate).getTime()
-      processedInteractions.push({
-        date: initialDate,
-        y: 1,
-        description: 'Início do Atendimento',
-        originalDate: dayjs(initialDate).format('DD/MM/YYYY HH:mm'),
-        formattedDateOnly: dayjs(initialDate).format('DD/MM'),
-        type: 'initial',
-      })
-    }
-
-    return processedInteractions
-  }
-  // ====================================================================
 
   // ====================================================================
   // CÁLCULO DO TEMPO DE ATENDIMENTO
@@ -152,41 +85,29 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
 
     let output = ''
     if (days > 0) {
-      output += `${days} dia${days > 1 ? 's' : ''}`
-      if (hours > 0) output += `, `
+      output += `${days}d `
     }
     if (hours > 0) {
-      output += `${hours} hora${hours > 1 ? 's' : ''}`
+      output += `${hours}h `
     }
-    if (output === '') {
-      output = `${minutes} minuto${minutes !== 1 ? 's' : ''}`
-    }
+    output += `${minutes}min`
 
     return output.trim()
   }
 
   let subtotal = 0
-  if (!treatment) {
-    return null
-  } else {
+  if (treatment) {
     subtotal = treatment.items.reduce((accumulator, item) => {
       const currentSubtotal = item.quantity * item.salesValue
       return accumulator + currentSubtotal
     }, 0)
   }
 
-  // Prepara os dados, agora sem o ponto final de status
-  const interactionData = prepareInteractionData(
-    treatment.interactions,
-    treatment.status,
-    treatment.opening_date,
-  )
-
-  // Calcula o tempo de atendimento
-  const totalDuration = calculateDuration(
+  // Calculate Duration
+  const totalDuration = treatment ? calculateDuration(
     treatment.opening_date,
     treatment.ending_date,
-  )
+  ) : ''
 
   // FUNÇÕES DE DOWNLOAD E COMPARTILHAMENTO
   const dataURLtoBlob = (dataurl: string, filename: string) => {
@@ -207,84 +128,35 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   ) => {
     e.stopPropagation()
 
-    if (
-      !dialogContentRef.current ||
-      !treatment ||
-      !buttonsContainerRef.current ||
-      !contentContainerRef.current ||
-      !interactionListRef.current
-    ) {
+    if (!dialogContentRef.current || !treatment || !buttonsContainerRef.current) {
       console.error('Dados ou elementos não encontrados.')
       return
     }
 
     const input = dialogContentRef.current
     const buttonsElement = buttonsContainerRef.current
-    const contentElement = contentContainerRef.current
-    const interactionsTitleElement = interactionsTitleRef.current
-    const merchandiseTitleElement = merchandiseTitleRef.current
-    const interactionsLabelElement = interactionsLabelRef.current
-    const merchandiseLabelElement = merchandiseLabelRef.current
-    const interactionListElement = interactionListRef.current
 
     // 1. SALVAR ESTILOS ORIGINAIS
     const originalBodyOverflow = document.body.style.overflow
     const originalDialogOverflow = input.style.overflowY
     const originalButtonsDisplay = buttonsElement.style.display
-    const originalContentMargin = contentElement.style.marginTop
-
-    let originalInteractionsClasses = ''
-    let originalMerchandiseClasses = ''
-
-    // --- LÓGICA DE REVELAR INTERAÇÕES PARA CAPTURA ---
-    interactionListElement.classList.remove('sr-only')
-    interactionListElement.classList.add(
-      'p-4',
-      'border',
-      'border-gray-200',
-      'rounded-md',
-      'text-sm',
-      'my-4',
-      'bg-gray-50',
-    )
-    // ----------------------------------------------------
 
     // 2. APLICAR ESTILOS DE CAPTURA
     buttonsElement.style.display = 'none'
-    contentElement.style.marginTop = '0'
-
-    if (interactionsTitleElement) {
-      originalInteractionsClasses = interactionsTitleElement.className
-      interactionsTitleElement.classList.remove('my-2')
-      interactionsTitleElement.classList.add('m-0')
-    }
-    if (merchandiseTitleElement) {
-      originalMerchandiseClasses = merchandiseTitleElement.className
-      merchandiseTitleElement.classList.remove('my-2')
-      merchandiseTitleElement.classList.add('m-0')
-    }
-
-    if (interactionsLabelElement) {
-      interactionsLabelElement.style.setProperty('padding', '0px', 'important')
-      interactionsLabelElement.style.setProperty('height', 'auto', 'important')
-    }
-    if (merchandiseLabelElement) {
-      merchandiseLabelElement.style.setProperty('padding', '0px', 'important')
-      merchandiseLabelElement.style.setProperty('height', 'auto', 'important')
-    }
-
     input.style.overflowY = 'visible'
     document.body.style.overflow = 'hidden'
 
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     try {
       const canvas = await html2canvas(input, {
-        scale: 3,
+        scale: 2, // Slightly lower scale for performance, usually enough
         allowTaint: true,
         useCORS: true,
+        backgroundColor: '#ffffff', // Ensure white background
         height: input.scrollHeight,
         width: input.scrollWidth,
+        ignoreElements: (element) => element.classList.contains('no-print') // Helper class to hide elements
       })
 
       const filename = `atendimento_${treatmentId}_${dayjs().format(
@@ -315,11 +187,7 @@ Total: R$ ${subtotal.toFixed(2)}
           })
           return
         } else {
-          const encodedText = encodeURIComponent(
-            resumo + '\n\n(A imagem será salva separadamente para anexar)',
-          )
-          window.open(`https://wa.me/?text=${encodedText}`, '_blank')
-
+          // Fallback for sharing
           const link = document.createElement('a')
           link.href = imageURL
           link.download = filename
@@ -336,387 +204,225 @@ Total: R$ ${subtotal.toFixed(2)}
         document.body.removeChild(link)
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('Erro ao gerar/compartilhar a imagem:', error)
-        alert(
-          'Ocorreu um erro ao gerar a imagem. Verifique se o navegador suporta o compartilhamento nativo.',
-        )
-      }
+      console.error('Erro ao gerar imagem:', error)
     } finally {
-      // 3. RESTAURAR ESTILOS ORIGINAIS
+      // 3. RESTAURAR ESTILOS
       buttonsElement.style.display = originalButtonsDisplay
-      contentElement.style.marginTop = originalContentMargin
-
-      if (interactionsTitleElement) {
-        interactionsTitleElement.className = originalInteractionsClasses
-      }
-      if (merchandiseTitleElement) {
-        merchandiseTitleElement.className = originalMerchandiseClasses
-      }
-
-      if (interactionsLabelElement) {
-        interactionsLabelElement.style.removeProperty('padding')
-        interactionsLabelElement.style.removeProperty('height')
-      }
-      if (merchandiseLabelElement) {
-        merchandiseLabelElement.style.removeProperty('padding')
-        merchandiseLabelElement.style.removeProperty('height')
-      }
-
-      // --- LÓGICA DE ESCONDER INTERAÇÕES APÓS CAPTURA ---
-      interactionListElement.classList.remove(
-        'p-4',
-        'border',
-        'border-gray-200',
-        'rounded-md',
-        'text-sm',
-        'my-4',
-        'bg-gray-50',
-      )
-      interactionListElement.classList.add('sr-only')
-      // ----------------------------------------------------
-
       input.style.overflowY = originalDialogOverflow
       document.body.style.overflow = originalBodyOverflow
     }
   }
 
-  const shareOnlyWhatsApp = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation()
-
-    if (!treatment) return
-
-    const resumo = `
-*Detalhes do Atendimento*
-Protocolo: ${treatmentId}
-Cliente: ${treatment.clients.name}
-Status: ${treatment.status === 'finished' ? 'Resolvido' : 'Em Andamento'}
-Total: R$ ${subtotal.toFixed(2)}
-      `.trim()
-
-    const encodedText = encodeURIComponent(resumo)
-    window.open(`https://wa.me/?text=${encodedText}`, '_blank')
-  }
 
   return (
     <Dialog.Overlay>
       <DialogContent
         ref={dialogContentRef}
-        className={`transition-all duration-300 overflow-y-auto ${isExpanded
-          ? 'max-h-[95vh] w-[95vw] max-w-[1200px] scale-100'
-          : 'max-h-[80vh] w-[90vw] max-w-2xl'
-          }`}
+        className={`bg-gray-50/95 transition-all duration-300 overflow-y-auto ${isExpanded
+          ? 'max-h-[95vh] w-[95vw] max-w-[1200px]'
+          : 'max-h-[85vh] w-[90vw] max-w-3xl'
+          } p-0 gap-0 border-0 shadow-2xl rounded-xl`}
         onEscapeKeyDown={() => setIsExpanded(false)}
       >
-        <DialogHeader>
-          <DialogTitle className="flex flex-wrap items-center justify-between gap-2">
-            <span className="whitespace-nowrap">
-              Atendimento: <span className="text-sm font-normal"> {treatmentId} </span>
-            </span>
-            <div ref={buttonsContainerRef} className="flex space-x-2">
-              <button
-                onClick={(e) => handleShareOrDownload(e, true)}
-                className="flex items-center gap-1 rounded-md bg-blue-500 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-600"
-                aria-label="Compartilhar imagem via menu nativo"
-              >
-                <Share2 className="h-4 w-4" /> Compartilhar
-              </button>
+        {/* HEADER FIXO DO DIALOG */}
+        <div className="sticky top-0 z-20 bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
+          <div className="flex flex-col">
+            <h2 className="text-lg font-bold text-gray-800">Detalhes do Atendimento</h2>
+            <span className="text-xs text-gray-500 font-mono">{treatmentId}</span>
+          </div>
 
-              <button
-                onClick={(e) => handleShareOrDownload(e, false)}
-                className="flex items-center gap-1 rounded-md bg-gray-500 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
-                aria-label="Baixar imagem"
-              >
-                <Download className="h-4 w-4" /> Download
-              </button>
+          <div ref={buttonsContainerRef} className="flex gap-2">
+            <button
+              onClick={(e) => handleShareOrDownload(e, true)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+              title="Compartilhar"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={(e) => handleShareOrDownload(e, false)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+              title="Baixar Imagem"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="rounded-md bg-minsk-100 px-3 py-1 text-sm transition-colors hover:bg-minsk-200"
-                aria-label={
-                  isExpanded ? 'Recolher visualização' : 'Expandir visualização'
-                }
-              >
-                {isExpanded ? 'Recolher' : 'Expandir'}
-              </button>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+        {treatment ? (
+          <div className="p-6 space-y-6">
 
-        <DialogDescription className="text-base font-bold text-minsk-600">
-          Detalhes do Atendimento
-        </DialogDescription>
-
-        {treatment && (
-          <div
-            ref={contentContainerRef}
-            className={
-              isExpanded ? 'grid grid-cols-1 gap-6 md:grid-cols-2' : ''
-            }
-          >
-            <div className={isExpanded ? 'space-y-6' : ''}>
-              <Table>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Status</TableCell>
-                    <TableCell className="flex justify-end">
-                      <TreatmentStatus status={treatment.status} />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Cliente</TableCell>
-                    <TableCell className="flex justify-end">
-                      {treatment.clients.name}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Requisição</TableCell>
-                    <TableCell className="flex justify-end text-end">
+            {/* 1. HEADER CARD PRINCIPAL */}
+            <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 w-full" />
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="mb-2 bg-blue-50 text-blue-700 border-blue-200">
+                      {treatment.status === 'finished' ? 'Finalizado' : 'Em Andamento'}
+                    </Badge>
+                    <CardTitle className="text-2xl font-bold text-gray-900 leading-tight">
                       {treatment.request}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Aberto em</TableCell>
-                    <TableCell className="flex justify-end">
-                      {dayjs(`${treatment.opening_date}`).format(
-                        'DD/MM/YYYY HH:mm',
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  {treatment.ending_date ? (
-                    <TableRow>
-                      <TableCell className="w-40 text-muted-foreground">
-                        Resolvido em
-                      </TableCell>
-                      <TableCell className="flex justify-end">
-                        {dayjs(`${treatment.ending_date}`).format(
-                          'DD/MM/YYYY HH:mm',
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                  {/* Linha para exibir o tempo total de atendimento */}
-                  <TableRow>
-                    <TableCell className="text-muted-foreground font-bold">
-                      Tempo Total
-                    </TableCell>
-                    <TableCell className="flex justify-end font-bold text-minsk-800">
-                      {totalDuration}
-                      <span className="ml-1 font-normal text-xs text-gray-500">
-                        ({treatment.status === 'finished' ? 'Total' : 'Até Agora'})
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                  {/* FIM NOVO */}
-
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">
-                      Observações
-                    </TableCell>
-                    <TableCell className="flex justify-end">
-                      {treatment.observations}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-
-              {/* Interações (Gráfico e Lista Oculta) */}
-              {interactionData.length >= 1 && (
-                <div className={isExpanded ? 'mt-6' : ''}>
-                  <div
-                    ref={interactionsTitleRef}
-                    className="my-2 flex w-full justify-center border-y-4 border-minsk-200 bg-minsk-50"
-                  >
-                    <Label
-                      ref={interactionsLabelRef}
-                      className="w-full text-center text-lg font-bold text-minsk-600"
-                    >
-                      Interações (Linha do Tempo)
-                    </Label>
+                    </CardTitle>
                   </div>
-
-                  {/* BLOCO: GRÁFICO DE INTERAÇÕES (Time Series Event Plot) */}
-                  <div className="h-40" style={{ width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart
-                        margin={{ top: 10, right: 10, bottom: 20, left: 10 }}
-                      >
-                        <XAxis
-                          dataKey="date"
-                          type="number"
-                          domain={['dataMin', 'dataMax']}
-                          padding={{ left: 15, right: 15 }}
-                          tickFormatter={(timestamp) =>
-                            dayjs(timestamp).format('DD/MM')
-                          }
-                          minTickGap={80}
-                          allowDataOverflow={true}
-                          stroke="#6B7280"
-                        />
-                        <YAxis
-                          dataKey="y"
-                          type="number"
-                          domain={[0.5, 1.5]}
-                          hide={true}
-                        />
-                        <Tooltip
-                          cursor={{ strokeDasharray: '3 3' }}
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload
-                              return (
-                                <div className="max-w-xs rounded-md border border-gray-300 bg-white p-2 text-sm shadow-lg">
-                                  <p className="font-bold text-minsk-600">
-                                    {data.originalDate}
-                                  </p>
-                                  <p className="whitespace-pre-wrap">
-                                    {data.description}
-                                  </p>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Scatter
-                          name="Interactions"
-                          data={interactionData}
-                          fill="#4F46E5"
-                          shape="circle"
-                          line={{ stroke: '#4F46E5', strokeWidth: 1 }}
-                        >
-                          {/* LabelList removida */}
-                        </Scatter>
-                      </ScatterChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* LISTA OCULTA DE INTERAÇÕES PARA CAPTURA (sr-only por padrão) */}
-                  <ul ref={interactionListRef} className="sr-only">
-                    <li className="mb-1 font-bold text-minsk-600">
-                      Registro Detalhado das Interações:
-                    </li>
-                    {/* Mapeamento das interações originais */}
-                    {treatment.interactions.map((interaction) => (
-                      <li
-                        key={interaction.id}
-                        className="ml-4 list-disc text-gray-800"
-                      >
-                        <span className="mr-2 font-semibold">
-                          {dayjs(`${interaction.date}`).format('DD/MM/YYYY HH:mm')}:
-                        </span>
-                        {interaction.description}
-                      </li>
-                    ))}
-                    {/* Status final removido da lista oculta também */}
-                  </ul>
+                  <TreatmentStatus status={treatment.status} />
                 </div>
-              )}
-
-              {/* Seção de mercadorias (mantida) */}
-              {treatment.items.length > 0 && (
-                <div className={isExpanded ? 'mt-0' : ''}>
-                  <div
-                    ref={merchandiseTitleRef}
-                    className="my-2 flex border-y-4 border-y-minsk-200 bg-minsk-50"
-                  >
-                    <Label
-                      ref={merchandiseLabelRef}
-                      className="w-full text-center text-lg font-bold text-minsk-600"
-                    >
-                      Mercadorias
-                    </Label>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                    <User className="h-5 w-5" />
                   </div>
-
                   <div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Produto</TableHead>
-                          <TableHead>Qtd.</TableHead>
-                          <TableHead>Valor</TableHead>
-                          <TableHead>Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {treatment.items.map((item) => {
-                          return (
-                            <TableRow key={item.item_id}>
-                              <TableCell>{item.items.name}</TableCell>
-                              <TableCell>{item.quantity}</TableCell>
-                              <TableCell>R$ {item.salesValue}</TableCell>
-                              <TableCell>
-                                R$ {(item.salesValue * item.quantity).toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                      <TableFooter>
-                        <TableRow>
-                          <TableCell colSpan={3}>Total do atendimento</TableCell>
-                          <TableCell className="text-right text-xl font-bold">
-                            R$ {subtotal.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
+                    <p className="text-sm font-medium text-gray-500">Cliente</p>
+                    <p className="font-semibold text-gray-900 line-clamp-1" title={treatment.clients.name}>
+                      {treatment.clients.name}
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
-            {/* ... Conteúdo expandido para a segunda coluna (Merchandise) ... */}
-            {treatment.items.length > 0 && isExpanded && (
-              <div className="col-span-1">
-                <div
-                  ref={merchandiseTitleRef}
-                  className="my-2 flex border-y-4 border-y-minsk-200 bg-minsk-50"
-                >
-                  <Label
-                    ref={merchandiseLabelRef}
-                    className="w-full text-center text-lg font-bold text-minsk-600"
-                  >
-                    Mercadorias
-                  </Label>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Aberto em</p>
+                    <p className="font-semibold text-gray-900">
+                      {dayjs(treatment.opening_date).format('DD/MM/YYYY')}
+                      <span className="text-xs text-gray-400 ml-1 font-normal">
+                        {dayjs(treatment.opening_date).format('HH:mm')}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Qtd.</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Subtotal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {treatment.items.map((item) => {
-                        return (
-                          <TableRow key={item.item_id}>
-                            <TableCell>{item.items.name}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell>R$ {item.salesValue}</TableCell>
-                            <TableCell>
-                              R$ {(item.salesValue * item.quantity).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow>
-                        <TableCell colSpan={3}>Total do atendimento</TableCell>
-                        <TableCell className="text-right text-xl font-bold">
-                          R$ {subtotal.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  </Table>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Duração</p>
+                    <p className="font-semibold text-gray-900">{totalDuration}</p>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. OBSERVATIONS & TIMELINE GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {/* Left Column: Observations & Items */}
+              <div className="md:col-span-2 space-y-6">
+                {/* Observações */}
+                {treatment.observations && (
+                  <Card className="border-l-4 border-l-yellow-400 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2 text-yellow-700">
+                        <FileText className="h-5 w-5" />
+                        <h3 className="font-semibold">Observações</h3>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {treatment.observations}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Mercadorias / Items */}
+                {treatment.items.length > 0 && (
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-3 border-b bg-gray-50/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <Package className="h-5 w-5" />
+                          <h3 className="font-semibold">Itens e Serviços</h3>
+                        </div>
+                        <Badge variant="secondary">{treatment.items.length} itens</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y">
+                        {treatment.items.map((item) => (
+                          <div key={item.item_id} className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-gray-50 transition-colors">
+                            <div className="col-span-6 font-medium text-gray-900">
+                              {item.items.name}
+                            </div>
+                            <div className="col-span-2 text-center text-sm bg-gray-100 rounded-md py-1 text-gray-600">
+                              {item.quantity}x
+                            </div>
+                            <div className="col-span-4 text-right font-medium text-gray-900">
+                              R$ {(item.quantity * item.salesValue).toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-gray-50 p-4 border-t flex justify-between items-center">
+                        <span className="text-gray-600 font-medium">Total Geral</span>
+                        <span className="text-xl font-bold text-green-600">R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            )}
+
+              {/* Right Column: Vertical Timeline */}
+              <div className="md:col-span-1">
+                <Card className="h-full shadow-sm border-0 bg-transparent shadow-none ring-0">
+                  <div className="flex items-center gap-2 mb-4 text-gray-700 px-1">
+                    <Activity className="h-5 w-5 text-indigo-500" />
+                    <h3 className="font-bold text-lg">Linha do Tempo</h3>
+                  </div>
+
+                  <div className="relative pl-4 border-l-2 border-indigo-100 space-y-8 ml-2">
+                    {/* Evento Inicial */}
+                    <div className="relative">
+                      <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white bg-indigo-400 ring-2 ring-indigo-100"></div>
+                      <div className="bg-white p-3 rounded-lg border shadow-sm text-sm">
+                        <p className="font-semibold text-gray-800">Atendimento Iniciado</p>
+                        <span className="text-xs text-gray-400 block mt-1">
+                          {dayjs(treatment.opening_date).format('DD/MM/YYYY HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Interações */}
+                    {treatment.interactions.map((interaction, idx) => (
+                      <div key={interaction.id} className="relative">
+                        <div className="absolute -left-[21px] top-3 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100"></div>
+                        <div className="bg-white p-4 rounded-lg border shadow-sm relative group hover:border-blue-200 transition-all">
+                          <div className="absolute -left-2 top-4 w-2 h-2 bg-white border-l border-b transform rotate-45"></div>
+                          <p className="text-gray-700 text-sm leading-relaxed mb-2">
+                            {interaction.description}
+                          </p>
+
+                          <div className="flex justify-between items-center pt-2 border-t border-gray-50 mt-2">
+                            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              Atualização
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {dayjs(interaction.date).fromNow()}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Data para referência de impressão */}
+                        <span className="sr-only p-print-date">
+                          {dayjs(interaction.date).format('DD/MM/YYYY HH:mm')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+
+            </div>
+
+          </div>
+        ) : (
+          <div className="p-12 text-center text-gray-400">
+            <Layers className="h-12 w-12 mx-auto mb-3 opacity-20" />
+            <p>Carregando informações...</p>
           </div>
         )}
       </DialogContent>

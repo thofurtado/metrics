@@ -33,7 +33,7 @@ export async function getTransactions({
   toDate
 }: GetTransactionsQuery) {
 
-  const response = await api.get('/transactions', {
+  const response = await api.get<GetTransactionsResponse>('/transactions', {
     params: {
       page,
       description,
@@ -44,6 +44,17 @@ export async function getTransactions({
       toDate
     },
   })
+
+  // Default values to prevent frontend crashes
+  if (!response.data) {
+    return {
+      ...response,
+      data: {
+        transactions: [],
+      }
+    }
+  }
+
   return response
 }
 

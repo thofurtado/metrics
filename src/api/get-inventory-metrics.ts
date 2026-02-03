@@ -14,7 +14,7 @@ export async function getInventoryMetrics(): Promise<GetInventoryMetricsResponse
     const response = await api.get('/inventory-summary')
     console.log('📦 Dados recebidos da API de Inventário:', response.data)
 
-    const apiData = response.data.inventorySummary
+    const apiData = response.data?.inventorySummary || {}
 
     return {
         patrimonioEstoque: apiData.patrimony || 0,

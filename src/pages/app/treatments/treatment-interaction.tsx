@@ -244,10 +244,15 @@ export function TreatmentInteraction({
   }
 
   async function onSubmit(data: FormSchemaType) {
+    // Check if status is changing to 'resolved' which usually triggers payment
     if (data.status === 'resolved' && status !== 'resolved') {
-      setPendingInteractionData(data)
-      setIsPaymentModalOpen(true)
-      return
+      // Conditional Logic: Only open payment modal if there is a positive amount to pay.
+      // If amount is 0 (e.g. Warranty, Doubt, or Contract), skip payment and finish directly.
+      if (amount && amount > 0) {
+        setPendingInteractionData(data)
+        setIsPaymentModalOpen(true)
+        return
+      }
     }
     await processSubmission(data)
   }

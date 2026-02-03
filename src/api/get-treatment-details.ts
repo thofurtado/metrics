@@ -11,5 +11,5 @@ export async function getTreatmentDetails({
   const response = await api.get<TreatmentTableRowProps>(
     `/treatment/${treatmentId}`,
   )
-  return response.data.treatments
+  return response.data?.treatments || null
 }

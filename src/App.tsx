@@ -14,9 +14,9 @@ export function App() {
     <HelmetProvider>
       <ThemeProvider storageKey="metrics-theme" defaultTheme="light">
         <Helmet titleTemplate="%s | metrics" />
-        <Toaster richColors />
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
+          <Toaster richColors closeButton />
         </QueryClientProvider>
       </ThemeProvider>
     </HelmetProvider>

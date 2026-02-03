@@ -60,5 +60,18 @@ export async function getTreatments({
     },
   })
 
+  // Default values to prevent frontend crashes
+  if (!response.data) {
+    return {
+      ...response,
+      data: {
+        treatments: [],
+        totalCount: 0,
+        perPage: 10,
+        pageIndex: page || 0,
+      }
+    }
+  }
+
   return response
 }

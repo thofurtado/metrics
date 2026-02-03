@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
 
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -18,7 +19,11 @@ import {
   treatmentFiltersSchema,
 } from './treatment-table-filters'
 
-export function TreatmentTableFilters() {
+interface TreatmentTableFiltersProps {
+  activeTab?: string
+}
+
+export function TreatmentTableFilters({ activeTab }: TreatmentTableFiltersProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const previousFilters = useRef({
     treatmentId: searchParams.get('treatmentId') ?? '',
@@ -30,7 +35,7 @@ export function TreatmentTableFilters() {
   const clientName = searchParams.get('clientName')
   const status = searchParams.get('status')
 
-  const { register, control, watch } = useForm<TreatmentFiltersSchema>({
+  const { register, control, watch, reset } = useForm<TreatmentFiltersSchema>({
     resolver: zodResolver(treatmentFiltersSchema),
     defaultValues: {
       treatmentId: treatmentId ?? '',
@@ -41,64 +46,91 @@ export function TreatmentTableFilters() {
 
   const watchedFields = watch()
 
+  // Reset Select when activeTab changes if the current status is not compatible? 
+  // actually handleTabChange in parent already removes 'status' param.
+  // We just need to ensure the form syncs with URL.
+  useEffect(() => {
+    if (!status) {
+      reset({
+        treatmentId: treatmentId ?? '',
+        clientName: clientName ?? '',
+        status: 'all'
+      })
+    }
+  }, [activeTab, status, reset, treatmentId, clientName])
+
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const { treatmentId, clientName, status } = watchedFields
 
-      // Verifica se realmente houve mudança nos filtros
-      const hasFiltersChanged = 
+      const hasFiltersChanged =
         treatmentId !== previousFilters.current.treatmentId ||
         clientName !== previousFilters.current.clientName ||
         status !== previousFilters.current.status
 
       if (hasFiltersChanged) {
         setSearchParams((state) => {
-          if (treatmentId) {
-            state.set('treatmentId', treatmentId)
-          } else {
-            state.delete('treatmentId')
-          }
+          if (treatmentId) state.set('treatmentId', treatmentId)
+          else state.delete('treatmentId')
 
-          if (clientName) {
-            state.set('clientName', clientName)
-          } else {
-            state.delete('clientName')
-          }
+          if (clientName) state.set('clientName', clientName)
+          else state.delete('clientName')
 
-          if (status && status !== 'all') {
-            state.set('status', status)
-          } else {
-            state.delete('status')
-          }
+          if (status && status !== 'all') state.set('status', status)
+          else state.delete('status')
 
-          // Só reseta a página se os filtros mudaram
           state.set('page', '1')
 
           return state
         })
 
-        // Atualiza a referência
-        previousFilters.current = { treatmentId, clientName, status }
+        previousFilters.current = {
+          treatmentId: treatmentId ?? '',
+          clientName: clientName ?? '',
+          status: status ?? 'all'
+        }
       }
     }, 500)
 
     return () => clearTimeout(timeoutId)
   }, [watchedFields, setSearchParams])
 
+  function handleClearFilters() {
+    setSearchParams((state) => {
+      state.delete('treatmentId')
+      state.delete('clientName')
+      state.delete('status')
+      state.set('page', '1')
+      return state
+    })
+
+    reset({
+      treatmentId: '',
+      clientName: '',
+      status: 'all',
+    })
+
+    previousFilters.current = { treatmentId: '', clientName: '', status: 'all' }
+  }
+
+  const hasFilters = watchedFields.treatmentId || watchedFields.clientName || (watchedFields.status && watchedFields.status !== 'all')
+
   return (
-    <div className="font-gaba flex items-center gap-2">
-      <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      
-      <Input
-        placeholder="Filtrar por ID"
-        className="hidden h-8 w-[0px] placeholder:text-slate-500 sm:block sm:w-[180px]"
-        {...register('treatmentId')}
-      />
+    <div className="font-gaba flex flex-col sm:flex-row items-start sm:items-center gap-2">
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Input
+          placeholder="Filtrar por Cliente"
+          className="h-8 w-full sm:w-[250px]"
+          {...register('clientName')}
+        />
+      </div>
 
       <Input
-        placeholder="Filtrar por Cliente"
-        className="h-8 w-full placeholder:text-slate-500 sm:w-[180px]"
-        {...register('clientName')}
+        placeholder="ID"
+        className="h-8 w-[80px]"
+        {...register('treatmentId')}
       />
 
       <Controller
@@ -114,22 +146,45 @@ export function TreatmentTableFilters() {
               disabled={disabled}
             >
               <SelectTrigger className="h-8 w-full sm:w-[180px]">
-                <SelectValue />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="pending">Pendentes</SelectItem>
-                <SelectItem value="in_progress">Em Andamento</SelectItem>
-                <SelectItem value="follow_up">Acompanhamento</SelectItem>
-                <SelectItem value="canceled">Cancelados</SelectItem>
-                <SelectItem value="on_hold">Em espera</SelectItem>
-                <SelectItem value="in_workbench">Em Bancada</SelectItem>
-                <SelectItem value="resolved">Resolvidos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+
+                {(!activeTab || activeTab === 'open') && (
+                  <>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="in_progress">Em Andamento</SelectItem>
+                    <SelectItem value="follow_up">Acompanhamento</SelectItem>
+                    <SelectItem value="on_hold">Em espera</SelectItem>
+                    <SelectItem value="in_workbench">Em Bancada</SelectItem>
+                  </>
+                )}
+
+                {(!activeTab || activeTab === 'history') && (
+                  <>
+                    <SelectItem value="resolved">Resolvidos</SelectItem>
+                    <SelectItem value="canceled">Cancelados</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           )
         }}
       />
+
+      {hasFilters && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={handleClearFilters}
+          title="Limpar filtros"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 }

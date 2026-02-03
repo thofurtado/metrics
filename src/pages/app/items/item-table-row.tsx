@@ -51,7 +51,9 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
         <div className="flex flex-col max-w-[150px] sm:max-w-[300px]">
           <span className="truncate" title={item.name}>{item.name}</span>
           {item.category && (
-            <span className="text-[10px] text-muted-foreground uppercase truncate">{item.category}</span>
+            <span className="text-[10px] text-muted-foreground uppercase truncate">
+              {typeof item.category === 'string' ? item.category : item.category.name}
+            </span>
           )}
           {/* Mobile Only ID */}
           {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
@@ -67,6 +69,9 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
             <Badge variant={isLowStock ? "destructive" : "secondary"} className="whitespace-nowrap">
               {stock ?? 0}
             </Badge>
+          </TableCell>
+          <TableCell className="w-[120px]">
+            {(item.product?.cost ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </TableCell>
           <TableCell className="w-[120px]">
             {(price ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}

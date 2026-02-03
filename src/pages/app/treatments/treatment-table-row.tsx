@@ -1,6 +1,6 @@
 import { } from '@radix-ui/react-dialog'
 import dayjs from 'dayjs'
-import { NotebookPen, Search, Shapes } from 'lucide-react'
+import { NotebookPen, Eye, Shapes } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -60,15 +60,12 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-              <Search className="h-3 w-3" />
+              <Eye className="h-3 w-3" />
               <span className="sr-only">Detalhes do Atendimento</span>
             </Button>
           </DialogTrigger>
           <TreatmentDetails open={isDetailsOpen} treatmentId={treatments.id} />
         </Dialog>
-      </TableCell>
-      <TableCell className="hidden text-sm xl:table-cell">
-        {treatments.id}
       </TableCell>
       <TableCell className="text-base text-muted-foreground">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
@@ -100,7 +97,6 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="h-8 w-8 border-minsk-400 p-0 text-base font-thin hover:bg-minsk-400 hover:text-white sm:h-9 sm:w-auto sm:px-3"
               variant="outline"
               size="sm"
             >
@@ -117,7 +113,8 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="h-8 w-8 bg-minsk-400 p-0 text-base font-thin text-white hover:bg-minsk-500 sm:h-9 sm:w-auto sm:px-3"
+              className="h-8 w-8 px-0 sm:px-3 sm:w-auto"
+              // Using default variant (primary) instead of custom minsk color
               size="sm"
             >
               <NotebookPen className="h-4 w-4 sm:mr-2" />

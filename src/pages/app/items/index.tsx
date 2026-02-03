@@ -5,7 +5,13 @@ import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { useState } from 'react'
 
-import { getItems } from '@/api/get-items'
+import { getProducts } from '@/api/get-products'
+import { getServices } from '@/api/get-services'
+import { getSupplies } from '@/api/get-supplies'
+
+import { EmptyState } from '@/components/empty-state'
+import { ErrorBoundary } from '@/components/error-boundary'
+import { TableSkeleton } from '@/components/table-skeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import {
@@ -23,7 +29,6 @@ import { ItemTableRow } from './item-table-row'
 import { ProductItemDialog } from './product-item-dialog'
 import { PageHeader } from '@/components/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 // Define the possible item types for tabs
 type ItemType = 'PRODUCT' | 'SERVICE' | 'SUPPLY'
@@ -34,24 +39,47 @@ export function Items() {
     // Parse filters from URL (1-based page)
     const pageIndex = z.coerce.number().parse(searchParams.get('page') ?? '1')
     const nameFilter = searchParams.get('name') ?? ''
+    // display_id only for Product/Service
     const displayIdFilter = searchParams.get('display_id') ?? ''
     // Use 'PRODUCT' as default for the type tab
     const activeTabType: ItemType = (searchParams.get('type') as ItemType) ?? 'PRODUCT'
-    const criticalStockFilter = searchParams.get('critical_stock') === 'true'
+    // critical_stock only for Product
+    // const criticalStockFilter = searchParams.get('critical_stock') === 'true'
 
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [createDialogType, setCreateDialogType] = useState<ItemType>('PRODUCT')
 
-    const { data: result, isFetching } = useQuery({
-        queryKey: ['items', activeTabType, pageIndex, nameFilter, displayIdFilter, criticalStockFilter],
-        queryFn: ({ signal }) => getItems({
-            signal,
-            pageIndex,
-            name: nameFilter || null,
-            display_id: displayIdFilter ? Number(displayIdFilter) : null,
-            type: activeTabType,
-            below_min_stock: criticalStockFilter
-        }),
+    const { data: result = { items: [], meta: { pageIndex: 1, perPage: 10, totalCount: 0 } }, isFetching, isLoading } = useQuery({
+        queryKey: ['items', activeTabType, pageIndex, nameFilter, displayIdFilter],
+        queryFn: async ({ signal }) => {
+            try {
+                if (activeTabType === 'PRODUCT') {
+                    const res = await getProducts({
+                        signal, pageIndex, query: nameFilter,
+                    })
+                    return {
+                        items: res.data?.products?.map((p: any) => ({ ...p, type: 'PRODUCT' })) ?? [],
+                        meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
+                    }
+                } else if (activeTabType === 'SERVICE') {
+                    const res = await getServices({ signal, pageIndex, query: nameFilter })
+                    return {
+                        items: res.data?.services?.map((s: any) => ({ ...s, type: 'SERVICE' })) ?? [],
+                        meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
+                    }
+                } else {
+                    const res = await getSupplies({ signal, pageIndex, query: nameFilter })
+                    return {
+                        items: res.data?.supplies?.map((s: any) => ({ ...s, type: 'SUPPLY' })) ?? [],
+                        meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
+                    }
+                }
+            } catch (error) {
+                // Interceptor already handles logging and returns safe structure,
+                // but we add a local catch for extra safety in mapping.
+                return { items: [], meta: { pageIndex: 1, perPage: 10, totalCount: 0 } }
+            }
+        },
     })
 
     function handlePaginate(newPageIndex: number) {
@@ -75,37 +103,21 @@ export function Items() {
     }
 
     return (
-        <>
+        <ErrorBoundary>
             <Helmet title="Mercadorias" />
             <div className="flex flex-col gap-6">
                 <PageHeader title="Mercadorias" description="Gerencie seus produtos, serviços e insumos.">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                aria-label="Criar Novo"
-                                className="h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 rounded-full sm:rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
-                            >
-                                <Plus className="h-5 w-5 sm:mr-2" />
-                                <span className="hidden sm:inline">Novo Item</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-56 p-2" align="end">
-                            <div className="grid gap-1">
-                                <Button variant="ghost" className="justify-start font-normal" onClick={() => handleOpenCreateDialog('PRODUCT')}>
-                                    <Package className="mr-2 h-4 w-4" />
-                                    Produto
-                                </Button>
-                                <Button variant="ghost" className="justify-start font-normal" onClick={() => handleOpenCreateDialog('SERVICE')}>
-                                    <Hammer className="mr-2 h-4 w-4" />
-                                    Serviço
-                                </Button>
-                                <Button variant="ghost" className="justify-start font-normal" onClick={() => handleOpenCreateDialog('SUPPLY')}>
-                                    <Syringe className="mr-2 h-4 w-4" />
-                                    Insumo
-                                </Button>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                    <Button
+                        onClick={() => handleOpenCreateDialog(activeTabType)}
+                        className="h-10 w-auto px-4 py-2 rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+                    >
+                        <Plus className="h-5 w-5 mr-2" />
+                        <span className="hidden sm:inline">
+                            {activeTabType === 'PRODUCT' ? 'Novo Produto' :
+                                activeTabType === 'SERVICE' ? 'Novo Serviço' : 'Novo Insumo'}
+                        </span>
+                        <span className="sm:hidden">Novo</span>
+                    </Button>
 
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <ProductItemDialog initialType={createDialogType} onSuccess={() => setIsCreateDialogOpen(false)} />
@@ -131,12 +143,12 @@ export function Items() {
 
                 <ItemsTableFilters />
 
-                <div className={`space-y-4 transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
+                <div className={`space-y-4 transition-opacity duration-200 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
                     <div className="rounded-md border bg-card shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <Table className="w-full">
                                 <TableHeader>
-                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50 text-base">
                                         {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
                                             <TableHead className="w-[80px] hidden sm:table-cell text-muted-foreground font-semibold">ID</TableHead>
                                         )}
@@ -145,6 +157,7 @@ export function Items() {
                                         {activeTabType === 'PRODUCT' && (
                                             <>
                                                 <TableHead className="text-muted-foreground font-semibold text-center w-[100px]">Estoque</TableHead>
+                                                <TableHead className="text-muted-foreground font-semibold w-[120px]">Custo</TableHead>
                                                 <TableHead className="text-muted-foreground font-semibold w-[120px]">Preço</TableHead>
                                                 <TableHead className="text-muted-foreground font-semibold hidden md:table-cell">Barras</TableHead>
                                             </>
@@ -166,33 +179,40 @@ export function Items() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {result?.data.items.map((item) => (
-                                        <ItemTableRow key={item.id} item={item as any} activeTabType={activeTabType} />
-                                    ))}
-                                    {result && result.data.items.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                                                Nenhum item encontrado.
-                                            </TableCell>
-                                        </TableRow>
+                                    {isLoading ? (
+                                        <TableSkeleton />
+                                    ) : (
+                                        <>
+                                            {result.items.map((item: any) => (
+                                                <ItemTableRow key={item.id} item={item as any} activeTabType={activeTabType} />
+                                            ))}
+                                            {result.items.length === 0 && (
+                                                <TableRow className="hover:bg-transparent">
+                                                    <TableCell colSpan={6} className="text-center py-10">
+                                                        <EmptyState
+                                                            title="Nenhum item encontrado"
+                                                            description={`Não encontramos nenhum ${activeTabType.toLowerCase()} cadastrado com os filtros aplicados.`}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </>
                                     )}
                                 </TableBody>
                             </Table>
                         </div>
                     </div>
 
-                    {result && (
-                        <div className="flex justify-end">
-                            <Pagination
-                                onPageChange={handlePaginate}
-                                pageIndex={result.data.meta.pageIndex}
-                                totalCount={result.data.meta.totalCount}
-                                perPage={result.data.meta.perPage}
-                            />
-                        </div>
-                    )}
+                    <div className="flex justify-end">
+                        <Pagination
+                            onPageChange={handlePaginate}
+                            pageIndex={result.meta.pageIndex}
+                            totalCount={result.meta.totalCount}
+                            perPage={result.meta.perPage}
+                        />
+                    </div>
                 </div>
             </div>
-        </>
+        </ErrorBoundary>
     )
 }

@@ -27,12 +27,14 @@ export function DeleteItemDialog({ id, name, onSuccess }: DeleteItemDialogProps)
         },
         onSuccess: async () => {
             // Invalidate all related queries to ensure cache consistency
-            await queryClient.invalidateQueries({ queryKey: ['items'] })
-            await queryClient.invalidateQueries({ queryKey: ['products'] })
-            await queryClient.invalidateQueries({ queryKey: ['services'] })
-            await queryClient.invalidateQueries({ queryKey: ['supplies'] })
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['items'] }),
+                queryClient.invalidateQueries({ queryKey: ['products'] }),
+                queryClient.invalidateQueries({ queryKey: ['services'] }),
+                queryClient.invalidateQueries({ queryKey: ['supplies'] })
+            ])
 
-            toast.success('Item removido permanentemente do sistema.')
+            toast.success('Item removido com sucesso!')
             onSuccess?.()
         },
         onError: (err: any) => {

@@ -5,16 +5,26 @@ export interface GetItemsResponse {
     id: string
     name: string
     description: string | null
-    category: string | null
+    category: string | { id: string; name: string } | null
     active: boolean
     type: 'PRODUCT' | 'SERVICE' | 'SUPPLY'
     product: {
       display_id: number
       price: number
+      cost: number | null
       stock: number
       min_stock: number | null
       barcode: string | null
       ncm: string | null
+      is_composite: boolean
+      compositions: {
+        quantity: number
+        supply: {
+          id: string
+          name: string
+          unit: string | null
+        }
+      }[]
     } | null
     service: {
       display_id: number
@@ -56,6 +66,21 @@ export async function getItems({ pageIndex, limit, name, display_id, type, below
     },
     signal
   })
+
+  // Default values to prevent frontend crashes
+  if (!response.data) {
+    return {
+      ...response,
+      data: {
+        items: [],
+        meta: {
+          pageIndex: pageIndex || 1,
+          perPage: limit || 10,
+          totalCount: 0
+        }
+      }
+    }
+  }
 
   return response
 }

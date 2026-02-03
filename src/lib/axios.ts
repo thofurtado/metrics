@@ -21,20 +21,46 @@ api.interceptors.request.use((config) => {
 
 // Interceptor de erro na resposta
 api.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   (error) => {
+    const isDev = import.meta.env.DEV
+
     if (axios.isAxiosError(error)) {
       const status = error.response?.status
-      const code = error.code
+      const message = error.message
 
+      // Professional logging for developers
+      if (isDev) {
+        console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, {
+          status,
+          message,
+          data: error.response?.data,
+          code: error.code,
+        })
+      }
+
+      // 401 Unauthorized: Trigger logout and redirect
       if (status === 401) {
         localStorage.clear()
-        window.location.href = '/sign-in'
+        if (typeof window !== 'undefined') {
+          window.location.href = '/sign-in'
+        }
         return Promise.reject(error)
       }
+
+      // Return a safe 'standard' object for 404, 500 or network errors
+      // This prevents the application from crashing on undefined data
+      return Promise.resolve({
+        data: null, // Default value to be handled at the API function level
+        status: status || 500,
+        statusText: message,
+        headers: error.response?.headers || {},
+        config: error.config,
+        isError: true,
+      })
     }
+
+    if (isDev) console.error('[Fatal Error]:', error)
     return Promise.reject(error)
   },
 )
