@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Package, Hammer, Syringe } from 'lucide-react'
+import { Plus, Hammer, UtensilsCrossed, ShoppingBasket } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -127,7 +127,7 @@ export function Items() {
                 <Tabs value={activeTabType} onValueChange={handleTabChange} className="w-full">
                     <TabsList className="w-full">
                         <TabsTrigger value="PRODUCT" className="flex-1">
-                            <Package className="mr-2 h-4 w-4" />
+                            <ShoppingBasket className="mr-2 h-4 w-4" />
                             Produtos
                         </TabsTrigger>
                         <TabsTrigger value="SERVICE" className="flex-1">
@@ -135,7 +135,7 @@ export function Items() {
                             Serviços
                         </TabsTrigger>
                         <TabsTrigger value="SUPPLY" className="flex-1">
-                            <Syringe className="mr-2 h-4 w-4" />
+                            <UtensilsCrossed className="mr-2 h-4 w-4" />
                             Insumos
                         </TabsTrigger>
                     </TabsList>

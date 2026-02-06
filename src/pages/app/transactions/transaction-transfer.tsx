@@ -1,4 +1,3 @@
-
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -22,12 +21,12 @@ import { QuickAddSelect } from '@/components/ui/quick-add-select'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
+    ResponsiveDialogContent,
+    ResponsiveDialogHeader,
+    ResponsiveDialogTitle,
+    ResponsiveDialogDescription,
+    ResponsiveDialogClose
+} from '@/components/ui/responsive-dialog'
 import {
     Form,
     FormControl,
@@ -131,20 +130,20 @@ export function TransactionTransfer() {
     }
 
     return (
-        <DialogContent className="w-full max-w-sm sm:max-w-md bg-white dark:bg-zinc-950">
-            <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 font-bold text-minsk-600 dark:text-minsk-500">
-                    <ArrowRightLeft className="h-5 w-5" />
+        <ResponsiveDialogContent className="w-full sm:max-w-md bg-white dark:bg-zinc-950 p-6">
+            <ResponsiveDialogHeader className="mb-6">
+                <ResponsiveDialogTitle className="flex items-center gap-2 font-bold text-minsk-600 dark:text-minsk-500 text-xl">
+                    <ArrowRightLeft className="h-6 w-6" />
                     Transferência
-                </DialogTitle>
-                <DialogDescription className="">
+                </ResponsiveDialogTitle>
+                <ResponsiveDialogDescription>
                     Mover valor entre contas.
-                </DialogDescription>
-            </DialogHeader>
+                </ResponsiveDialogDescription>
+            </ResponsiveDialogHeader>
 
             <Form {...form}>
                 <form
-                    className="flex flex-col gap-4 py-2"
+                    className="space-y-6"
                     onSubmit={form.handleSubmit(onSubmit)}
                 >
                     {/* Valor (Destaque Indigo/Minsk) */}
@@ -152,16 +151,17 @@ export function TransactionTransfer() {
                         control={form.control}
                         name="amount"
                         render={({ field }) => (
-                            <FormItem className="relative">
-                                <div className="flex items-center border-b-2 border-minsk-100 dark:border-minsk-900 pb-1">
-                                    <span className="text-2xl font-bold text-minsk-600 mr-2">R$</span>
+                            <FormItem className="relative bg-minsk-50/50 dark:bg-minsk-900/10 rounded-xl p-4 sm:p-6 border-2 border-minsk-100 dark:border-minsk-900">
+                                <div className="flex justify-center items-center">
+                                    <span className="text-3xl sm:text-4xl font-bold text-minsk-600 mr-2">R$</span>
                                     <FormControl>
                                         <Input
                                             {...field}
                                             type="number"
+                                            inputMode="decimal"
                                             step="0.01"
                                             placeholder="0,00"
-                                            className="border-none text-3xl font-bold text-minsk-600 placeholder:text-minsk-200 focus-visible:ring-0 p-0 h-10"
+                                            className="border-none text-4xl sm:text-5xl font-bold text-minsk-600 placeholder:text-minsk-200 focus-visible:ring-0 p-0 h-14 sm:h-16 w-full text-center bg-transparent"
                                             autoFocus
                                         />
                                     </FormControl>
@@ -170,39 +170,38 @@ export function TransactionTransfer() {
                         )}
                     />
 
-                    <div className="grid grid-cols-1 gap-4 pt-2">
+                    <div className="grid grid-cols-1 gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4 items-center">
+                            {/* Conta Origem */}
+                            <FormField
+                                control={form.control}
+                                name="account_origin"
+                                render={({ field: { onChange, value, disabled } }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel className="flex items-center gap-1">
+                                            De (Origem)
+                                        </FormLabel>
+                                        <QuickAddSelect
+                                            value={value}
+                                            onValueChange={onChange}
+                                            disabled={disabled}
+                                            isLoading={!accounts}
+                                            placeholder="Conta de saída"
+                                            emptyMessage="Nenhuma conta encontrada"
+                                            options={accounts?.accounts.map((account) => ({
+                                                label: account.name,
+                                                value: account.id,
+                                            }))}
+                                            quickAddLabel="Nova Conta"
 
-                        {/* Conta Origem */}
-                        <FormField
-                            control={form.control}
-                            name="account_origin"
-                            render={({ field: { onChange, value, disabled } }) => (
-                                <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Landmark className="h-3 w-3" /> De (Origem)
-                                    </FormLabel>
-                                    <QuickAddSelect
-                                        value={value}
-                                        onValueChange={onChange}
-                                        disabled={disabled}
-                                        isLoading={!accounts}
-                                        placeholder="Selecione a conta de saída"
-                                        emptyMessage="Nenhuma conta encontrada"
-                                        options={accounts?.accounts.map((account) => ({
-                                            label: account.name,
-                                            value: account.id,
-                                        }))}
-                                        quickAddLabel="Nova Conta"
+                                            onQuickAddClick={() => setCreateAccountTarget('origin')}
+                                        />
+                                    </FormItem>
+                                )}
+                            />
 
-                                        onQuickAddClick={() => setCreateAccountTarget('origin')}
-                                    />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="flex justify-center -my-2 z-10">
-                            <div className="bg-muted rounded-full p-1 border border-background">
-                                <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90 sm:rotate-0" />
+                            <div className="hidden sm:flex justify-center items-center pt-6">
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
                             </div>
                         </div>
 
@@ -212,15 +211,15 @@ export function TransactionTransfer() {
                             name="account_destination"
                             render={({ field: { onChange, value, disabled } }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Landmark className="h-3 w-3" /> Para (Destino)
+                                    <FormLabel className="flex items-center gap-1">
+                                        Para (Destino)
                                     </FormLabel>
                                     <QuickAddSelect
                                         value={value}
                                         onValueChange={onChange}
                                         disabled={disabled}
                                         isLoading={!accounts}
-                                        placeholder="Selecione a conta de entrada"
+                                        placeholder="Conta de entrada"
                                         emptyMessage="Nenhuma conta encontrada"
                                         options={accounts?.accounts
                                             .filter(acc => acc.id !== originAccount) // Filter out origin
@@ -243,14 +242,14 @@ export function TransactionTransfer() {
                             name="date"
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
-                                    <FormLabel className="text-xs text-muted-foreground">Data da Transferência</FormLabel>
+                                    <FormLabel>Data</FormLabel>
                                     <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                                         <PopoverTrigger asChild>
                                             <FormControl>
                                                 <Button
                                                     variant={"outline"}
                                                     className={cn(
-                                                        "w-full pl-3 text-left font-normal h-10",
+                                                        "w-full pl-3 text-left font-normal h-11",
                                                         !field.value && "text-muted-foreground"
                                                     )}
                                                 >
@@ -294,30 +293,28 @@ export function TransactionTransfer() {
                         name="description"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <NotebookText className="h-3 w-3" /> Observação (Opcional)
-                                </FormLabel>
+                                <FormLabel>Descrição (Opcional)</FormLabel>
                                 <FormControl>
                                     <Input
                                         {...field}
-                                        placeholder="Ex: Reserva de emergência, Pagamento fatura..."
-                                        className="h-10"
+                                        placeholder="Ex: Reserva de emergência..."
+                                        className="h-11"
                                     />
                                 </FormControl>
                             </FormItem>
                         )}
                     />
 
-                    <div className="flex w-full justify-end gap-2 pt-4">
-                        <DialogClose asChild>
-                            <Button variant="ghost" type="button">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 section-footer">
+                        <ResponsiveDialogClose asChild>
+                            <Button variant="ghost" type="button" className="w-full sm:w-auto h-11">
                                 Cancelar
                             </Button>
-                        </DialogClose>
+                        </ResponsiveDialogClose>
                         <Button
                             type="submit"
                             disabled={isPending}
-                            className="bg-minsk-600 text-white hover:bg-minsk-700 w-full sm:w-auto font-semibold shadow-sm"
+                            className="bg-minsk-600 text-white hover:bg-minsk-700 w-full sm:w-auto h-11 font-bold text-base shadow-sm"
                         >
                             {isPending ? 'Processando...' : 'Confirmar Transferência'}
                         </Button>
@@ -340,6 +337,6 @@ export function TransactionTransfer() {
                     }
                 }}
             />
-        </DialogContent>
+        </ResponsiveDialogContent>
     )
 }

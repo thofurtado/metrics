@@ -1,9 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FilePen, Building2 } from 'lucide-react'
-import React from 'react'
 import { useForm } from 'react-hook-form'
-import MaskInput from 'react-input-mask'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -14,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Form,
@@ -35,6 +34,42 @@ import { Switch } from '@/components/ui/switch'
 const cleanNumber = (value: string | undefined | null): string => {
   return (value || '').replace(/\D/g, '');
 };
+
+// Formatação manual (substituindo react-input-mask para evitar warnings de findDOMNode)
+const formatCPF = (value: string) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1')
+}
+
+const formatCNPJ = (value: string) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1')
+}
+
+const formatPhone = (value: string) => {
+  const clean = cleanNumber(value);
+  // (99) 99999-9999
+  if (clean.length > 10) {
+    return clean
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  }
+  // (99) 9999-9999
+  return clean
+    .replace(/^(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+    .replace(/(-\d{4})\d+?$/, '$1');
+}
 
 // ----------------------------------------
 // FUNÇÕES DE VALIDAÇÃO ROBUSTA (DÍGITO VERIFICADOR)
@@ -83,29 +118,6 @@ const isValidCnpj = (cnpj: string): boolean => {
   result = sum % 11 < 2 ? 0 : 11 - sum % 11;
   return result == parseInt(digits.charAt(1));
 };
-
-// Componente MaskedInput
-interface MaskedInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  mask: string | Array<string | RegExp>;
-  maskChar?: string | null;
-}
-
-const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
-  ({ mask, onChange, onBlur, value, className, ...props }, ref) => {
-    return (
-      <MaskInput
-        mask={mask}
-        onChange={onChange}
-        onBlur={onBlur}
-        value={value}
-        {...props}
-      >
-        {(inputProps: any) => <Input {...inputProps} ref={ref} className={className} />}
-      </MaskInput>
-    );
-  }
-);
-MaskedInput.displayName = 'MaskedInput';
 
 // ====================================================================
 // PARTE 2: ZOD SCHEMA
@@ -160,8 +172,7 @@ const formSchema = z.object({
 type FormSchemaType = z.infer<typeof formSchema>
 
 interface TreatmentClientProps {
-  open: boolean;
-  onClose: () => void; // ← ADICIONE ESTA PROP
+  onClose: () => void;
 }
 
 // ====================================================================
@@ -207,25 +218,9 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
     mode: 'onBlur',
   })
 
+  // Watchers
   const isEnterpriseValue = form.watch('isEnterprise');
-  const phoneValue = form.watch('phone');
   const errors = form.formState.errors;
-
-  // MÁSCARA INTELIGENTE BASEADA NO TIPO DE PESSOA
-  const getIdentificationMask = (isEnterprise: boolean) => {
-    return isEnterprise ? '99.999.999/9999-99' : '999.999.999-99';
-  };
-
-  const currentIdentificationMask = getIdentificationMask(isEnterpriseValue);
-
-  // MÁSCARA DE TELEFONE
-  const getPhoneMask = (value: string | undefined | null) => {
-    const cleaned = cleanNumber(value);
-    if (cleaned.length > 10 || cleaned[2] === '9') {
-      return '(99) 99999-9999';
-    }
-    return '(99) 9999-9999';
-  };
 
   async function onSubmit(data: FormSchemaType) {
     const identificationClean = cleanNumber(data.identification);
@@ -253,6 +248,9 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
     <DialogContent className="w-full max-w-lg sm:max-w-2xl overflow-y-auto max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Cadastro de Cliente</DialogTitle>
+        <DialogDescription>
+          Preencha os dados abaixo para cadastrar um novo cliente.
+        </DialogDescription>
       </DialogHeader>
 
       <Form {...form}>
@@ -276,7 +274,11 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                   <FormControl>
                     <Switch
                       checked={field.value}
-                      onCheckedChange={field.onChange}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        // Limpa identificação ao trocar o tipo para evitar formatos errados
+                        form.setValue('identification', '');
+                      }}
                       className="data-[state=checked]:bg-minsk-500"
                     />
                   </FormControl>
@@ -298,6 +300,7 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                       placeholder={isEnterpriseValue ? "Razão Social da Empresa" : "Nome do Cliente"}
                       className={getErrorClass('name')}
                       {...field}
+                      value={field.value ?? ''}
                     />
                   </FormControl>
                   {errors.name && (
@@ -317,14 +320,17 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                 <FormItem className="flex flex-col">
                   <FormLabel>{isEnterpriseValue ? 'CNPJ' : 'CPF'}</FormLabel>
                   <FormControl>
-                    <MaskedInput
-                      mask={currentIdentificationMask}
-                      maskChar={null}
+                    <Input
                       placeholder={isEnterpriseValue ? "00.000.000/0000-00" : "000.000.000-00"}
-                      className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${getErrorClass('identification')}`}
+                      className={getErrorClass('identification')}
                       value={field.value ?? ''}
-                      onChange={field.onChange}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const formatted = isEnterpriseValue ? formatCNPJ(raw) : formatCPF(raw);
+                        field.onChange(formatted);
+                      }}
                       onBlur={field.onBlur}
+                      maxLength={isEnterpriseValue ? 18 : 14}
                     />
                   </FormControl>
                   {errors.identification && (
@@ -344,14 +350,15 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                 <FormItem className="flex flex-col">
                   <FormLabel>Telefone / Celular</FormLabel>
                   <FormControl>
-                    <MaskedInput
-                      mask={getPhoneMask(phoneValue)}
-                      maskChar={null}
+                    <Input
                       placeholder="(99) 99999-9999"
-                      className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${getErrorClass('phone')}`}
+                      className={getErrorClass('phone')}
                       value={field.value ?? ''}
-                      onChange={field.onChange}
+                      onChange={(e) => {
+                        field.onChange(formatPhone(e.target.value));
+                      }}
                       onBlur={field.onBlur}
+                      maxLength={15}
                     />
                   </FormControl>
                   {errors.phone && (
@@ -367,23 +374,26 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
             <FormField
               control={form.control}
               name="email"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>E-mail</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="contato@empresa.com"
-                      className={getErrorClass('email')}
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  {errors.email && (
-                    <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
-                  )}
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const { value, ...fieldProps } = field
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="contato@empresa.com"
+                        className={getErrorClass('email')}
+                        {...fieldProps}
+                        value={value || ''}
+                      />
+                    </FormControl>
+                    {errors.email && (
+                      <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+                    )}
+                  </FormItem>
+                )
+              }}
             />
           </div>
 
@@ -400,7 +410,6 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                       <Input
                         placeholder="Nome do responsável"
                         className={getErrorClass('contact')}
-                        value={field.value ?? ''}
                         {...field}
                       />
                     </FormControl>
@@ -430,7 +439,7 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
                   </div>
                   <FormControl>
                     <Switch
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                       className="data-[state=checked]:bg-vida-loca-500"
                     />

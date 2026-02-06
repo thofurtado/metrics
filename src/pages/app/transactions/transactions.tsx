@@ -10,9 +10,9 @@ import { getTransactions } from '@/api/get-transactions'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  ResponsiveDialog,
+  ResponsiveDialogTrigger,
+} from '@/components/ui/responsive-dialog'
 import {
   Popover,
   PopoverContent,
@@ -139,8 +139,8 @@ export function Transactions() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" side="bottom" align="end">
-              <Dialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
-                <DialogTrigger asChild>
+              <ResponsiveDialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
+                <ResponsiveDialogTrigger asChild>
                   <Button
                     aria-label="Adicionar Despesa"
                     variant="ghost"
@@ -149,11 +149,11 @@ export function Transactions() {
                     <TrendingDown className="mr-3 h-4 w-4 text-red-500" />
                     Despesa
                   </Button>
-                </DialogTrigger>
+                </ResponsiveDialogTrigger>
                 <TransactionExpense />
-              </Dialog>
-              <Dialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
-                <DialogTrigger asChild>
+              </ResponsiveDialog>
+              <ResponsiveDialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
+                <ResponsiveDialogTrigger asChild>
                   <Button
                     aria-label="Adicionar Receita"
                     variant="ghost"
@@ -162,12 +162,12 @@ export function Transactions() {
                     <TrendingUp className="mr-3 h-4 w-4 text-green-500" />
                     Receita
                   </Button>
-                </DialogTrigger>
+                </ResponsiveDialogTrigger>
                 <TransactionIncome />
-              </Dialog>
+              </ResponsiveDialog>
 
-              <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-                <DialogTrigger asChild>
+              <ResponsiveDialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+                <ResponsiveDialogTrigger asChild>
                   <Button
                     variant="ghost"
                     className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
@@ -176,9 +176,9 @@ export function Transactions() {
                     <ArrowRightLeft className="mr-3 h-4 w-4 text-blue-500" />
                     Transferência
                   </Button>
-                </DialogTrigger>
+                </ResponsiveDialogTrigger>
                 <TransactionTransfer />
-              </Dialog>
+              </ResponsiveDialog>
             </PopoverContent>
           </Popover>
         </PageHeader>

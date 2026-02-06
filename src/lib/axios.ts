@@ -23,6 +23,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // If request was cancelled (e.g. by React Query), silently reject without logging
+    if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+      return Promise.reject(error);
+    }
+
     const isDev = import.meta.env.DEV
 
     if (axios.isAxiosError(error)) {

@@ -15,6 +15,7 @@ import { Items } from './pages/app/items'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { Accounts } from './pages/app/settings/accounts'
 import { Payments } from './pages/app/settings/payments'
+import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = () => {
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: 'treatment/new', element: <Treatment /> },
           { path: 'transactions', element: <Transactions /> },
           { path: 'items', element: <Items /> },
+          { path: 'suppliers', element: <SuppliersList /> },
           {
             path: 'settings',
             element: <SettingsLayout />,

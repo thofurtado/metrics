@@ -8,10 +8,11 @@ import {
   NotebookText,
   UserPlus,
   BetweenHorizonalStart,
-  Search,
 } from 'lucide-react'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+
+import { ClientSelectCombobox } from './client-select-combobox'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -63,93 +64,7 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-// Componente personalizado para o select de clientes
-function ClientSelect({
-  value,
-  onValueChange,
-  clients = []
-}: {
-  value: string
-  onValueChange: (value: string) => void
-  clients: Array<{
-    id: string
-    name: string
-    contract: boolean
-  }>
-}) {
-  const [searchTerm, setSearchTerm] = useState('')
 
-  // Ordenar clientes: primeiro os com contrato, depois os sem contrato, tudo em ordem alfabética
-  const sortedAndFilteredClients = useMemo(() => {
-    if (!clients) return []
-
-    // Filtrar por termo de pesquisa
-    const filtered = clients.filter(client =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    // Ordenar: primeiro clientes com contrato, depois sem contrato, tudo em ordem alfabética
-    return filtered.sort((a, b) => {
-      // Primeiro ordena por contrato (clientes com contrato primeiro)
-      if (a.contract && !b.contract) return -1
-      if (!a.contract && b.contract) return 1
-
-      // Depois ordena alfabeticamente por nome
-      return a.name.localeCompare(b.name)
-    })
-  }, [clients, searchTerm])
-
-  return (
-    <Select value={value} onValueChange={onValueChange}>
-      <FormControl>
-        <SelectTrigger className="h-9 w-full border-minsk-200 text-xs dark:border-minsk-600 dark:bg-minsk-800 dark:text-minsk-300 sm:h-10 sm:text-sm">
-          <SelectValue placeholder="Selecione um cliente" />
-        </SelectTrigger>
-      </FormControl>
-      <SelectContent className="border-minsk-200 max-w-[95vw] dark:border-minsk-600 dark:bg-minsk-800">
-        {/* Campo de pesquisa */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-minsk-800 p-2 border-b border-minsk-200 dark:border-minsk-600">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-minsk-400" />
-            <Input
-              placeholder="Pesquisar cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 h-8 text-xs border-minsk-200 dark:border-minsk-600 dark:bg-minsk-700"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        </div>
-
-        {/* Lista de clientes ordenada */}
-        <div className="max-h-60 overflow-y-auto">
-          {sortedAndFilteredClients.length === 0 ? (
-            <div className="px-2 py-4 text-center text-xs text-minsk-500 dark:text-minsk-400">
-              {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-            </div>
-          ) : (
-            sortedAndFilteredClients.map((client) => (
-              <SelectItem
-                value={client.id}
-                key={client.id}
-                className="text-xs sm:text-sm"
-              >
-                <span className="flex items-center gap-2 truncate">
-                  <span className="truncate flex-1">{client.name}</span>
-                  {client.contract && (
-                    <span className="shrink-0 text-[10px] bg-vida-loca-100 text-vida-loca-700 dark:bg-vida-loca-900/30 dark:text-vida-loca-300 px-1.5 py-0.5 rounded">
-                      Contrato
-                    </span>
-                  )}
-                </span>
-              </SelectItem>
-            ))
-          )}
-        </div>
-      </SelectContent>
-    </Select>
-  )
-}
 
 export function Treatment() {
   const [openClientDialog, setOpenClientDialog] = useState(false)
@@ -160,6 +75,15 @@ export function Treatment() {
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      openingDate: null,
+      request: '',
+      observation: '',
+      client: undefined, // client string required but can start undefined if valid
+      status: 'pending',
+      contact: '',
+      equipment_id: undefined,
+    },
   })
 
   const navigate = useNavigate()
@@ -324,7 +248,7 @@ export function Treatment() {
                     render={({ field: { onChange, value } }) => (
                       <FormItem className="flex-1 w-full">
                         <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Cliente Solicitante</FormLabel>
-                        <ClientSelect
+                        <ClientSelectCombobox
                           value={value || ''}
                           onValueChange={(newValue) => {
                             onChange(newValue)
@@ -342,7 +266,7 @@ export function Treatment() {
                         <UserPlus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <TreatmentClient open={openClientDialog} onClose={() => setOpenClientDialog(false)} />
+                    <TreatmentClient onClose={() => setOpenClientDialog(false)} />
                   </Dialog>
                 </div>
 

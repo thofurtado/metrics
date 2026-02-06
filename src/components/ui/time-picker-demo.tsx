@@ -15,10 +15,9 @@ interface TimePickerDemoProps {
 export function TimePickerDemo({ date, setDate }: TimePickerDemoProps) {
   const minuteRef = React.useRef<HTMLInputElement>(null)
   const hourRef = React.useRef<HTMLInputElement>(null)
-  const secondRef = React.useRef<HTMLInputElement>(null)
 
   return (
-    <div className="flex items-end gap-2">
+    <div className="flex items-end justify-center gap-2">
       <div className="grid gap-1 text-center">
         <Label htmlFor="hours" className="text-xs">
           Horas
@@ -31,6 +30,9 @@ export function TimePickerDemo({ date, setDate }: TimePickerDemoProps) {
           onRightFocus={() => minuteRef.current?.focus()}
         />
       </div>
+      <div className="flex h-10 items-center">
+        <span className="text-xl text-gray-300 mb-1">:</span>
+      </div>
       <div className="grid gap-1 text-center">
         <Label htmlFor="minutes" className="text-xs">
           Minutos
@@ -41,23 +43,10 @@ export function TimePickerDemo({ date, setDate }: TimePickerDemoProps) {
           setDate={setDate}
           ref={minuteRef}
           onLeftFocus={() => hourRef.current?.focus()}
-          onRightFocus={() => secondRef.current?.focus()}
-        />
-      </div>
-      <div className="grid gap-1 text-center">
-        <Label htmlFor="seconds" className="text-xs">
-          Segundos
-        </Label>
-        <TimePickerInput
-          picker="seconds"
-          date={date}
-          setDate={setDate}
-          ref={secondRef}
-          onLeftFocus={() => minuteRef.current?.focus()}
         />
       </div>
       <div className="flex h-10 items-center">
-        <Clock className="ml-2 h-4 w-4" />
+        <Clock className="ml-2 h-4 w-4 text-gray-400" />
       </div>
     </div>
   )

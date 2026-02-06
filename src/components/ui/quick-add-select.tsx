@@ -124,7 +124,7 @@ export function QuickAddSelect({
                         <Plus className="h-4 w-4" />
                     </Button>
                 ) : (
-                    <Popover open={isQuickAddOpen} onOpenChange={setIsQuickAddOpen}>
+                    <Popover modal={true} open={isQuickAddOpen} onOpenChange={setIsQuickAddOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
@@ -137,7 +137,7 @@ export function QuickAddSelect({
                                 <Plus className="h-4 w-4" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-72 p-3" align="end">
+                        <PopoverContent className="w-72 p-3 z-[9999]" align="end">
                             <div className="flex flex-col gap-2">
                                 <h4 className="font-medium leading-none mb-1 text-sm text-muted-foreground">{quickAddLabel}</h4>
                                 <div className="flex gap-2">

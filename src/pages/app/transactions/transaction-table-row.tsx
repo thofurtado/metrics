@@ -1,19 +1,18 @@
 import { AlertDialogTrigger } from '@radix-ui/react-alert-dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { CircleCheck, CircleMinus, Trash, Loader2, Undo2 } from 'lucide-react' // Added Undo2
+import { CircleMinus, Loader2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { deleteTransaction } from '@/api/delete-transaction'
 import { updateStatusTransaction } from '@/api/update-transaction-status'
-import { revertTransactionStatus } from '@/api/revert-transaction-status' // Added import
-// Removendo: import { createTransaction } from '@/api/create-transaction'
+import { revertTransactionStatus } from '@/api/revert-transaction-status'
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription, // Added import
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -22,6 +21,14 @@ import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { PaymentModal } from './payment-modal'
 import { toast } from 'sonner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreHorizontal, Scissors, Trash } from "lucide-react"
+import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -33,6 +40,7 @@ interface Transaction {
   amount: number
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
+  transaction_group_id?: string | null
 }
 
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
@@ -58,6 +66,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
+  const [openGroupDialog, setOpenGroupDialog] = useState(false)
   const [localLoading, setLocalLoading] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
@@ -282,43 +291,66 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
       )}
 
       <TableCell className="w-16 text-center">
-        <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
-          <AlertDialogTrigger asChild>
-            <Button
-              aria-label={`Deletar Transação: ${transactions.description}`}
-              variant="ghost"
-              className="p-0 h-6 w-6 flex items-center justify-center mx-auto"
-              disabled={localLoading}
-            >
-              {localLoading ? (
-                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-              ) : (
-                <Trash className="h-5 w-5 text-stone-500" />
-              )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="w-1/5">
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {transactions.transaction_group_id && (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  setOpenGroupDialog(true)
+                }}
+              >
+                <Scissors className="mr-2 h-4 w-4" />
+                Gerenciar Parcelamento
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => setOpenDeleteAlert(true)}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Deletar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* DIALOGS */}
+        <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Deletar Transação?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar esta transação permanentemente?
+              </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={localLoading}>Não</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => handleDelete(transactions.id)}
                 disabled={localLoading}
+                className="bg-red-600 focus:ring-red-600"
               >
                 {localLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Deletando...
-                  </div>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Sim'
+                  'Sim, Deletar'
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <TransactionGroupDetailsDialog
+          open={openGroupDialog}
+          onOpenChange={setOpenGroupDialog}
+          groupId={transactions.transaction_group_id || null}
+        />
       </TableCell>
     </TableRow>
   )

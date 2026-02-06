@@ -1,3 +1,5 @@
+import { api } from '@/lib/axios'
+
 export interface CreatePaymentEntryRequest {
   payment_id: string
   treatment_id: string
@@ -6,18 +8,20 @@ export interface CreatePaymentEntryRequest {
 }
 
 export async function createPaymentEntry(data: CreatePaymentEntryRequest) {
-  // Implementação simulada - substitua pela sua API real
-  const response = await fetch('/api/payment-entries', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
+  const response = await api.post('/payment-entry', {
+    payment_id: data.payment_id,
+    treatment_id: data.treatment_id,
+    occurrences: data.occurrences,
+    amount: data.amount,
   })
 
-  if (!response.ok) {
+  // The axios interceptor might handle errors or return a specific structure.
+  // Assuming standard axios behavior or the interceptor returns specific object.
+  // The current interceptor resolves errors with { isError: true }, so we should check that.
+
+  if ((response as any).isError) {
     throw new Error('Falha ao criar entrada de pagamento')
   }
 
-  return response.json()
+  return response.data
 }

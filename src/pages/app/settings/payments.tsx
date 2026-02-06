@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
 
 import { createPayment } from '@/api/create-payment'
 import { getPayments } from '@/api/get-payments'
@@ -61,13 +62,21 @@ export function Payments() {
         queryFn: getAccounts,
     })
 
-    const { register, handleSubmit, control, reset } = useForm<CreatePaymentSchema>({
+    const { register, handleSubmit, control, reset, setValue } = useForm<CreatePaymentSchema>({
         resolver: zodResolver(createPaymentSchema),
         defaultValues: {
             in_sight: false,
             installment_limit: 12
         }
     })
+
+    const inSight = useWatch({ control, name: 'in_sight' })
+
+    useEffect(() => {
+        if (inSight) {
+            setValue('installment_limit', 1)
+        }
+    }, [inSight, setValue])
 
     const { mutateAsync: registerPayment } = useMutation({
         mutationFn: createPayment,
@@ -101,7 +110,6 @@ export function Payments() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        {/* ... content remains same in memory, just ensuring structure ... */}
                         <DialogHeader>
                             <DialogTitle>Nova Forma de Pagamento</DialogTitle>
                             <DialogDescription>
@@ -117,8 +125,15 @@ export function Payments() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="installment_limit">Limite Parcelas</Label>
-                                    <Input id="installment_limit" type="number" {...register('installment_limit')} />
+                                    <Label htmlFor="installment_limit" className={inSight ? "text-muted-foreground" : ""}>
+                                        Limite Parcelas
+                                    </Label>
+                                    <Input
+                                        id="installment_limit"
+                                        type="number"
+                                        {...register('installment_limit')}
+                                        disabled={inSight}
+                                    />
                                 </div>
                                 <div className="flex items-end pb-2">
                                     <div className="flex items-center space-x-2">
@@ -133,7 +148,7 @@ export function Payments() {
                                                 />
                                             )}
                                         />
-                                        <Label htmlFor="in_sight">À Vista / Entrada Imediata</Label>
+                                        <Label htmlFor="in_sight" className="cursor-pointer">À Vista / Entrada Imediata</Label>
                                     </div>
                                 </div>
                             </div>
@@ -192,13 +207,16 @@ export function Payments() {
                         ) : (
                             payments?.map((payment) => {
                                 const linkedAccount = accountsResult?.accounts?.find(a => a.id === payment.account_id)
+                                const isInstallmentEnabled = payment.installment_limit > 1
 
                                 return (
                                     <TableRow key={payment.id}>
                                         <TableCell className="font-medium">{payment.name}</TableCell>
                                         <TableCell>{linkedAccount?.name || '-'}</TableCell>
                                         <TableCell>{payment.in_sight ? 'Sim' : 'Não'}</TableCell>
-                                        <TableCell className="text-right">{payment.installment_limit}x</TableCell>
+                                        <TableCell className="text-right">
+                                            {isInstallmentEnabled ? `${payment.installment_limit}x` : <span className="text-muted-foreground">-</span>}
+                                        </TableCell>
                                     </TableRow>
                                 )
                             })

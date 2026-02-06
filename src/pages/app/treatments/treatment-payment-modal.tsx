@@ -1,29 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
-  CreditCard,
-  DollarSign,
-  Wallet,
   Plus,
-  Minus,
-  X,
-  Check,
   Trash2,
-  Plane
+  Banknote,
+  CreditCard,
+  AlertCircle,
+  ArrowRight,
+  Wallet
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
-// Importações reais da API
 import { createPaymentEntry } from '@/api/create-payment-entry'
-import { getAccounts } from '@/api/get-accounts'
 import { getPayments } from '@/api/get-payments'
 import { finishTreatment } from '@/api/finish-treatment'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface PaymentModalProps {
@@ -34,11 +31,21 @@ interface PaymentModalProps {
   onSuccess: () => void
 }
 
-interface PaymentMethod {
+interface PaymentMethodItem {
   id: string
   paymentId: string
   amount: number
   installments: number
+}
+
+// Utility for currency formatting
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 export function TreatmentPaymentModal({
@@ -48,321 +55,275 @@ export function TreatmentPaymentModal({
   onClose,
   onSuccess
 }: PaymentModalProps) {
-  // Garantir que totalAmount seja sempre um número válido
   const safeTotalAmount = totalAmount || 0
+  const valueInputRef = useRef<HTMLInputElement>(null)
 
-  const [selectedPaymentType, setSelectedPaymentType] = useState<'single' | 'multiple'>('single')
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
-  const [currentPayment, setCurrentPayment] = useState<PaymentMethod>({
-    id: 'current',
+  const [paymentMethodsData, setPaymentMethodsData] = useState<PaymentMethodItem[]>([])
+  const [currentPayment, setCurrentPayment] = useState<{
+    paymentId: string
+    amount: string
+    installments: number
+  }>({
     paymentId: '',
-    amount: 0,
+    amount: '',
     installments: 1
   })
-  const [discount, setDiscount] = useState(0)
+  const [discount, setDiscount] = useState<string>('')
+  const [changeAlert, setChangeAlert] = useState<number | null>(null) // Stores the change amount to show
+  const [isFinishing, setIsFinishing] = useState(false)
 
-  // Buscar métodos de pagamento reais
-  const { data: payments = [], isLoading: isLoadingPayments } = useQuery({
+  // Fetch Payment Methods
+  const { data: availablePayments = [] } = useQuery({
     queryKey: ['payments'],
     queryFn: getPayments,
   })
 
-  const { mutateAsync: createPaymentEntryMutation, isPending } = useMutation({
+  const { mutateAsync: createPaymentEntryMutation } = useMutation({
     mutationFn: createPaymentEntry,
   })
 
-  // Efeito para resetar quando o modal abre
+  // Reset state on open
   useEffect(() => {
     if (isOpen) {
-      setSelectedPaymentType('single')
-      setPaymentMethods([])
-      setDiscount(0)
+      setPaymentMethodsData([])
+      setDiscount('')
+      setChangeAlert(null)
       setCurrentPayment({
-        id: 'current',
         paymentId: '',
-        amount: safeTotalAmount,
+        amount: safeTotalAmount.toFixed(2),
         installments: 1
       })
     }
   }, [isOpen, safeTotalAmount])
 
-  const paidAmount = paymentMethods.reduce((sum, method) => sum + method.amount, 0)
-  const finalAmount = safeTotalAmount - discount
-  const remainingAmount = finalAmount - paidAmount
-  const isPaymentComplete = Math.abs(remainingAmount) < 0.01
+  // Derived Calculations
+  const discountValue = parseFloat(discount) || 0
+  const totalWithDiscount = Math.max(0, safeTotalAmount - discountValue)
+  const totalPaid = paymentMethodsData.reduce((acc, item) => acc + item.amount, 0)
+  const remainingAmount = Math.max(0, totalWithDiscount - totalPaid)
+  const progressPercentage = totalWithDiscount > 0 ? (totalPaid / totalWithDiscount) * 100 : 0
+  const isFullyPaid = remainingAmount < 0.01
 
-  const getMaxInstallments = (paymentId: string) => {
-    const payment = payments.find(p => p.id === paymentId)
-    return payment?.installment_limit || 1
-  }
+  // Helpers
+  const selectedPaymentMethodObj = availablePayments.find(p => p.id === currentPayment.paymentId)
+  const isCreditCard = selectedPaymentMethodObj?.name?.toLowerCase().includes('crédito') || false
+  const maxInstallments = selectedPaymentMethodObj?.installment_limit || 1
 
-  const addCurrentPayment = () => {
-    if (!currentPayment.paymentId || currentPayment.amount <= 0) {
-      toast.error('Selecione a forma de pagamento e informe o valor')
+  // Effects
+  useEffect(() => {
+    if (remainingAmount > 0 && !currentPayment.paymentId && !changeAlert) {
+      setCurrentPayment(prev => ({
+        ...prev,
+        amount: remainingAmount.toFixed(2)
+      }))
+    }
+  }, [remainingAmount, currentPayment.paymentId, changeAlert])
+
+  // Auto-Focus Logic
+  useEffect(() => {
+    if (currentPayment.paymentId && valueInputRef.current) {
+      // Tiny delay to ensure select closes and input is ready/rendered
+      setTimeout(() => {
+        valueInputRef.current?.focus()
+      }, 100)
+    }
+  }, [currentPayment.paymentId])
+
+  const handleAddPayment = () => {
+    const inputAmount = parseFloat(currentPayment.amount)
+    setChangeAlert(null)
+
+    if (!currentPayment.paymentId) {
+      toast.error('Selecione uma forma de pagamento.')
+      return
+    }
+    if (isNaN(inputAmount) || inputAmount <= 0) {
+      toast.error('Informe um valor válido.')
       return
     }
 
-    if (currentPayment.amount > remainingAmount) {
-      toast.error(`Valor excede o restante. Restante: R$ ${remainingAmount.toFixed(2)}`)
+    let amountToRegister = inputAmount
+    let changeToReturn = 0
+
+    // CHANGE LOGIC
+    if (inputAmount > remainingAmount + 0.01) {
+      changeToReturn = inputAmount - remainingAmount
+      amountToRegister = remainingAmount
+      setChangeAlert(changeToReturn)
+    }
+
+    if (currentPayment.installments > maxInstallments) {
+      toast.error(`Máximo de parcelas: ${maxInstallments}`)
       return
     }
 
-    const payment = payments.find(p => p.id === currentPayment.paymentId)
-    if (!payment) {
-      toast.error('Método de pagamento inválido')
-      return
+    const newItem: PaymentMethodItem = {
+      id: crypto.randomUUID(),
+      paymentId: currentPayment.paymentId,
+      amount: amountToRegister,
+      installments: isCreditCard ? currentPayment.installments : 1
     }
 
-    // Validar parcelas
-    if (currentPayment.installments > payment.installment_limit) {
-      toast.error(`Número de parcelas excede o limite de ${payment.installment_limit}`)
-      return
-    }
+    setPaymentMethodsData([...paymentMethodsData, newItem])
 
-    setPaymentMethods(prev => [...prev, { ...currentPayment, id: Date.now().toString() }])
-
-    // Reset current payment
+    // Reset for next entry
+    const newRemaining = Math.max(0, remainingAmount - amountToRegister)
     setCurrentPayment({
-      id: 'current',
       paymentId: '',
-      amount: selectedPaymentType === 'single' ? 0 : Math.max(0, remainingAmount - currentPayment.amount),
+      amount: newRemaining > 0 ? newRemaining.toFixed(2) : '',
       installments: 1
     })
   }
 
-  const removePaymentMethod = (id: string) => {
-    setPaymentMethods(prev => prev.filter(method => method.id !== id))
+  const handleRemovePayment = (id: string) => {
+    setPaymentMethodsData(prev => prev.filter(item => item.id !== id))
+    setChangeAlert(null)
   }
 
-  const updateCurrentPayment = (updates: Partial<PaymentMethod>) => {
-    setCurrentPayment(prev => ({ ...prev, ...updates }))
-  }
+  const navigate = useNavigate()
 
   const handleSubmit = async () => {
+    if (remainingAmount > 0.01) {
+      toast.error('Venda não finalizada. Verifique o valor restante.')
+      return
+    }
+
+    setIsFinishing(true)
     try {
-      // Validar se o pagamento está completo
-      if (!isPaymentComplete) {
-        toast.error(`Valor total não confere. Restante: R$ ${remainingAmount.toFixed(2)}`)
-        return
-      }
+      console.log('Enviando pagamentos:', paymentMethodsData)
 
-      // Validar se há métodos de pagamento
-      if (paymentMethods.length === 0) {
-        toast.error('Adicione pelo menos uma forma de pagamento')
-        return
-      }
-
-      // Criar entradas de pagamento
-      for (const method of paymentMethods) {
+      // Sequential execution to avoid race conditions or backend overload
+      for (const method of paymentMethodsData) {
         await createPaymentEntryMutation({
           payment_id: method.paymentId,
           treatment_id: treatmentId,
-          occurrences: method.installments,
-          amount: method.amount / method.installments,
+          occurrences: method.installments || 1,
+          amount: method.amount,
         })
       }
 
-      // Finalizar tratamento (Botão Mágico)
-      try {
-        await finishTreatment({ treatmentId })
-        toast.success('Atendimento encerrado e financeiro gerado com sucesso!')
-      } catch (finishError) {
-        console.error(finishError)
-        toast.error('Pagamento registrado, mas houve erro ao finalizar atendimento. Verifique o status.')
-      }
+      // Finalize treatment status
+      await finishTreatment({ treatmentId })
 
+      toast.success('Venda finalizada com sucesso!')
       onSuccess()
       onClose()
 
-      // Resetar estado
-      setPaymentMethods([])
-      setSelectedPaymentType('single')
-      setDiscount(0)
-      setCurrentPayment({
-        id: 'current',
-        paymentId: '',
-        amount: 0,
-        installments: 1
-      })
+      // Navigate to the main list to prevent stale state
+      navigate('/treatments')
 
     } catch (error) {
-      toast.error('Erro ao registrar pagamento')
-      console.error(error)
+      console.error('Erro ao processar venda:', error)
+      toast.error('Erro ao finalizar venda. Verifique o console.')
+    } finally {
+      setIsFinishing(false)
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <Card className="w-full max-h-[90vh] overflow-hidden border-0">
-          <CardHeader className="border-b p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Finalizar Pagamento
-              </CardTitle>
+      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl h-[90vh] md:h-auto flex flex-col">
 
-            </div>
-          </CardHeader>
+        {/* HERO HEADER - PROGRESS & TOTAL */}
+        <div className="bg-primary/5 p-6 md:p-8 flex-shrink-0 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-border/20">
+            <motion.div
+              className="h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercentage}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
 
-          <CardContent className="p-4 sm:p-6 overflow-y-auto space-y-4">
-            {/* Resumo do Valor */}
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm sm:text-base">Valor Total do Atendimento</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">ID: {treatmentId}</p>
-
-                  {/* Desconto - Mobile em linha, Desktop em coluna */}
-                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="discount" className="text-xs sm:text-sm whitespace-nowrap">Desconto (R$):</Label>
-                      <Input
-                        id="discount"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max={safeTotalAmount}
-                        value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value))}
-                        className="h-8 text-sm w-24 sm:w-32"
-                      />
-                    </div>
-                    {discount > 0 && (
-                      <span className="text-xs text-red-600 font-medium">
-                        - R$ {discount.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right flex flex-col items-end gap-1">
-                  <p className="text-xl sm:text-2xl font-bold text-green-600">
-                    R$ {finalAmount.toFixed(2)}
-                  </p>
-                  <div className="flex flex-col gap-1 text-xs sm:text-sm">
-                    <span className="text-blue-600">
-                      Pago: R$ {paidAmount.toFixed(2)}
-                    </span>
-                    <span className={remainingAmount > 0 ? "text-orange-600" : "text-green-600"}>
-                      Restante: R$ {remainingAmount.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+            <div className="space-y-1">
+              <DialogTitle className="text-xl font-medium text-muted-foreground flex items-center gap-2">
+                <Banknote className="w-5 h-5" />
+                Finalizar Venda
+                <span className="text-xs bg-muted/20 px-2 py-0.5 rounded-full border border-primary/10 select-all">
+                  #{treatmentId.slice(0, 8)}
+                </span>
+              </DialogTitle>
+              <div>
+                <p className="text-4xl md:text-5xl font-bold tracking-tight text-foreground/90 tabular-nums">
+                  {formatCurrency(remainingAmount)}
+                </p>
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">
+                  {remainingAmount > 0 ? "Falta Pagar" : "Total Pago ✓"}
+                </p>
               </div>
             </div>
 
-            {/* Pagamentos Adicionados */}
-            {paymentMethods.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-base font-medium">Pagamentos Adicionados</Label>
-
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {paymentMethods.map((method) => {
-                    const payment = payments.find(p => p.id === method.paymentId)
-                    return (
-                      <div key={method.id} className="border rounded-lg p-3 bg-muted/50">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-sm truncate">{payment?.name}</span>
-                              {method.installments > 1 && (
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded whitespace-nowrap">
-                                  {method.installments}x
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
-                              <span>R$ {method.amount.toFixed(2)}</span>
-                              {method.installments > 1 && (
-                                <span>(R$ {(method.amount / method.installments).toFixed(2)}/parcela)</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removePaymentMethod(method.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                          >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
+            <div className="flex flex-col items-end gap-2 bg-background/50 p-3 rounded-lg border border-border/10 backdrop-blur-sm shadow-sm w-full md:w-auto">
+              <div className="flex justify-between w-full md:w-48 text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-medium">{formatCurrency(safeTotalAmount)}</span>
+              </div>
+              <div className="flex justify-between w-full md:w-48 text-sm items-center">
+                <span className="text-muted-foreground">Desconto</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-red-500 font-bold">-</span>
+                  <input
+                    type="number"
+                    className="w-16 text-right bg-transparent border-b border-dashed border-red-200 focus:border-red-500 outline-none text-red-600 font-medium text-sm p-0 h-5"
+                    placeholder="0.00"
+                    value={discount}
+                    onChange={e => setDiscount(e.target.value)}
+                  />
                 </div>
               </div>
-            )}
-
-            {/* Tipo de Pagamento */}
-            <div>
-              <Label className="text-base font-medium mb-3 block">Tipo de Pagamento</Label>
-              <RadioGroup
-                value={selectedPaymentType}
-                onValueChange={(value: 'single' | 'multiple') => {
-                  setSelectedPaymentType(value)
-                  setPaymentMethods([])
-                  setCurrentPayment({
-                    id: 'current',
-                    paymentId: '',
-                    amount: value === 'single' ? finalAmount : 0,
-                    installments: 1
-                  })
-                }}
-                className="flex flex-row gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="single" id="single" />
-                  <Label htmlFor="single" className="flex items-center gap-1 sm:gap-2 cursor-pointer text-sm">
-                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Pagamento Único</span>
-                    <span className="sm:hidden">Único</span>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="multiple" id="multiple" />
-                  <Label htmlFor="multiple" className="flex items-center gap-1 sm:gap-2 cursor-pointer text-sm">
-                    <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">Pagamento Múltiplo</span>
-                    <span className="sm:hidden">Múltiplo</span>
-                  </Label>
-                </div>
-              </RadioGroup>
+              <div className="w-full h-px bg-border/50 my-1" />
+              <div className="flex justify-between w-full md:w-48 text-base font-bold text-primary">
+                <span>Total Final</span>
+                <span>{formatCurrency(totalWithDiscount)}</span>
+              </div>
             </div>
+          </div>
+        </div>
 
-            {/* Forma de Pagamento Atual */}
-            <div className="border rounded-lg p-4 space-y-4">
-              <h3 className="font-medium text-lg">Adicionar Pagamento</h3>
+        {/* MAIN BODY - SPLIT VIEW */}
+        <div className="flex-1 overflow-y-auto md:overflow-hidden bg-background">
+          <div className="grid grid-cols-1 md:grid-cols-12 h-full">
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                {/* Método de Pagamento + Botão Adicionar - Lado a lado no mobile */}
-                <div className="flex flex-col sm:flex-row md:flex-col gap-3 md:col-span-1">
-                  <div className="space-y-2 flex-1">
-                    <Label className="text-sm">Forma de Pagamento</Label>
+            {/* LEFT: INPUT AREA */}
+            <div className="md:col-span-7 flex flex-col p-6 md:p-8 space-y-6 md:border-r border-border/40">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Registrar Pagamento</h3>
+                {changeAlert !== null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-2"
+                  >
+                    <AlertCircle className="w-3 h-3" />
+                    TROCO: {formatCurrency(changeAlert)}
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label className="sr-only">Forma de Pagamento</Label>
                     <Select
                       value={currentPayment.paymentId}
-                      onValueChange={(value) => updateCurrentPayment({
-                        paymentId: value,
-                        installments: 1
-                      })}
+                      onValueChange={(val) => {
+                        setCurrentPayment(prev => ({ ...prev, paymentId: val }))
+                      }}
+                      disabled={isFullyPaid}
                     >
-                      <SelectTrigger className="text-sm">
-                        <SelectValue placeholder={
-                          isLoadingPayments ? "Carregando..." : "Selecione"
-                        } />
+                      <SelectTrigger className="h-14 text-lg bg-card shadow-sm border-input hover:border-primary/50 transition-colors">
+                        <SelectValue placeholder="Selecione o método..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {(payments || []).map((payment) => (
-                          <SelectItem key={payment.id} value={payment.id} className="text-sm">
-                            <div className="flex items-center gap-2">
-                              {payment.name}
-                              {payment.in_sight && (
-                                <span className="text-xs bg-green-100 text-green-800 px-1 rounded">
-                                  À vista
-                                </span>
-                              )}
+                        {availablePayments.map(p => (
+                          <SelectItem key={p.id} value={p.id} className="text-base py-3">
+                            <div className="flex items-center gap-3">
+                              {p.name.toLowerCase().includes('crédito') ? <CreditCard className="w-5 h-5 text-blue-500 opacity-80" /> :
+                                p.name.toLowerCase().includes('débito') ? <CreditCard className="w-5 h-5 text-orange-500 opacity-80" /> :
+                                  p.name.toLowerCase().includes('pix') ? <div className="w-5 h-5 bg-teal-500/20 text-teal-600 rounded flex items-center justify-center text-[10px] font-bold">PIX</div> :
+                                    <Banknote className="w-5 h-5 text-green-600 opacity-80" />}
+                              <span className="font-medium">{p.name}</span>
                             </div>
                           </SelectItem>
                         ))}
@@ -370,120 +331,170 @@ export function TreatmentPaymentModal({
                     </Select>
                   </div>
 
-                  {/* Botão Adicionar - Ao lado no mobile, embaixo no desktop */}
-                  <div className="flex sm:hidden md:flex justify-end sm:justify-start md:justify-end">
-                    <Button
-                      onClick={addCurrentPayment}
-                      disabled={!currentPayment.paymentId || currentPayment.amount <= 0 || remainingAmount <= 0}
-                      className="bg-blue-500 hover:bg-blue-600 text-sm h-9 w-full sm:w-auto"
-                      size="sm"
-                    >
-                      <Plane className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Adicionar Pagamento</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Valor e Parcelas - Lado a lado no mobile */}
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:col-span-2">
-                  {/* Valor */}
-                  <div className="space-y-2">
-                    <Label className="text-sm">Valor (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      max={selectedPaymentType === 'single' ? finalAmount : remainingAmount}
-                      value={currentPayment.amount}
-                      onChange={(e) => updateCurrentPayment({ amount: Number(e.target.value) })}
-                      placeholder={`Máx: R$ ${selectedPaymentType === 'single' ? finalAmount.toFixed(2) : remainingAmount.toFixed(2)}`}
-                      className="text-sm"
-                    />
-                  </div>
-
-                  {/* Parcelas */}
-                  <div className="space-y-2">
-                    <Label className="text-sm">Parcelas</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateCurrentPayment({
-                          installments: Math.max(1, currentPayment.installments - 1)
-                        })}
-                        disabled={currentPayment.installments <= 1 || getMaxInstallments(currentPayment.paymentId) <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-
+                  <div className={cn("col-span-2 transition-all", isCreditCard ? "md:col-span-1" : "md:col-span-2")}>
+                    <div className="relative">
+                      <Label className="sr-only">Valor</Label>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-lg">R$</span>
                       <Input
+                        ref={valueInputRef}
                         type="number"
-                        min="1"
-                        max={getMaxInstallments(currentPayment.paymentId)}
-                        value={currentPayment.installments}
-                        onChange={(e) => updateCurrentPayment({
-                          installments: Math.max(1, Math.min(getMaxInstallments(currentPayment.paymentId), Number(e.target.value)))
-                        })}
-                        className="text-center text-sm h-8"
-                        disabled={getMaxInstallments(currentPayment.paymentId) <= 1}
+                        inputMode="decimal" // Better mobile keyboard
+                        value={currentPayment.amount}
+                        onChange={e => setCurrentPayment(prev => ({ ...prev, amount: e.target.value }))}
+                        className="h-14 pl-12 text-xl font-bold bg-card shadow-sm transition-all focus:ring-2 ring-primary/20"
+                        placeholder="0.00"
+                        disabled={isFullyPaid}
                       />
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => updateCurrentPayment({
-                          installments: Math.min(getMaxInstallments(currentPayment.paymentId), currentPayment.installments + 1)
-                        })}
-                        disabled={currentPayment.installments >= getMaxInstallments(currentPayment.paymentId) || getMaxInstallments(currentPayment.paymentId) <= 1}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                      {remainingAmount > 0 && !isFullyPaid && (
+                        <button
+                          onClick={() => setCurrentPayment(prev => ({ ...prev, amount: remainingAmount.toFixed(2) }))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors"
+                        >
+                          Restante
+                        </button>
+                      )}
                     </div>
-                    {currentPayment.paymentId && (
-                      <p className="text-xs text-muted-foreground">
-                        {getMaxInstallments(currentPayment.paymentId) <= 1
-                          ? 'Pagamento à vista'
-                          : `Limite: ${getMaxInstallments(currentPayment.paymentId)} parcelas`}
-                      </p>
-                    )}
                   </div>
+
+                  {/* Conditional Installments Input */}
+                  <AnimatePresence>
+                    {isCreditCard && (
+                      <motion.div
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="col-span-1"
+                      >
+                        <Select
+                          value={String(currentPayment.installments)}
+                          onValueChange={val => setCurrentPayment(prev => ({ ...prev, installments: Number(val) }))}
+                          disabled={isFullyPaid}
+                        >
+                          <SelectTrigger className="h-14 bg-card shadow-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground text-sm uppercase font-bold">Parcelas:</span>
+                              <SelectValue placeholder="1x" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: maxInstallments }, (_, i) => i + 1).map(i => (
+                              <SelectItem key={i} value={String(i)}>{i}x</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* Botão Adicionar - Visível apenas no desktop md */}
-                <div className="hidden sm:flex md:hidden justify-end">
-                  <Button
-                    onClick={addCurrentPayment}
-                    disabled={!currentPayment.paymentId || currentPayment.amount <= 0 || remainingAmount <= 0}
-                    className="bg-blue-500 hover:bg-blue-600 text-sm h-9"
-                    size="sm"
-                  >
-                    <Plane className="h-4 w-4 mr-2" />
-                    Adicionar Pagamento
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleAddPayment}
+                  disabled={isFullyPaid || !currentPayment.paymentId || !currentPayment.amount}
+                  className="w-full h-14 text-lg uppercase tracking-wide font-bold shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Lançar Pagamento
+                </Button>
               </div>
             </div>
 
-            {/* Ações */}
-            <div className="flex flex-row gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!isPaymentComplete || paymentMethods.length === 0 || isPending}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-sm h-9"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {isPending ? 'Processando...' : 'Confirmar Pagamento'}
-              </Button>
+            {/* RIGHT: LIST / RECEIPT */}
+            <div className="md:col-span-5 bg-muted/30 p-6 md:p-8 flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-border/40 min-h-[300px]">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center justify-between">
+                <span>Extrato de Lançamentos</span>
+                <span className="bg-muted px-2 py-1 rounded text-[10px] font-mono">{paymentMethodsData.length} items</span>
+              </h3>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-2 -mr-2">
+                <AnimatePresence mode='popLayout'>
+                  {paymentMethodsData.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="h-full flex flex-col items-center justify-center text-muted-foreground/30 border-2 border-dashed border-border/50 rounded-xl"
+                    >
+                      <Wallet className="w-12 h-12 mb-3" />
+                      <p className="text-sm font-medium">Aguardando lançamentos...</p>
+                    </motion.div>
+                  ) : (
+                    paymentMethodsData.map((item) => {
+                      const methodInfo = availablePayments.find(p => p.id === item.paymentId)
+                      return (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="group bg-card p-4 rounded-lg shadow-sm border border-border/50 relative overflow-hidden flex justify-between items-center hover:border-primary/30 transition-colors"
+                        >
+                          <div className="flex flex-col gap-1 relative z-10">
+                            <span className="font-mono font-bold text-lg text-foreground tracking-tight">
+                              {formatCurrency(item.amount)}
+                            </span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase font-semibold">
+                              {methodInfo?.name}
+                              {item.installments > 1 && (
+                                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px]">
+                                  {item.installments}x
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                            onClick={() => handleRemovePayment(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+
+                          {/* Decorative receipt jagged edge effect could go here */}
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </motion.div>
+                      )
+                    })
+                  )}
+                </AnimatePresence>
+              </div>
+
+
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* FOOTER ACTIONS */}
+        <div className="p-4 md:p-6 bg-background border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 z-20">
+          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto h-12 text-muted-foreground hover:text-foreground">
+            Cancelar Operação
+          </Button>
+
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            {/* Removed redundant remaining Amount display here */}
+
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={remainingAmount > 0.01 || isFinishing}
+              className={cn(
+                "w-full sm:w-48 h-12 text-lg font-bold transition-all shadow-lg",
+                remainingAmount < 0.01 ? "bg-green-600 hover:bg-green-700 shadow-green-200 hover:scale-105" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {isFinishing ? (
+                <span className="flex items-center gap-2 animate-pulse">Processando...</span>
+              ) : (
+                <>
+                  Finalizar
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
       </DialogContent>
     </Dialog>
   )
