@@ -59,9 +59,10 @@ interface PaymentTransaction {
 
 interface TransactionTableRowProps {
   transactions: Transaction
+  customPrefix?: React.ReactNode
 }
 
-export function TransactionTableRow({ transactions }: TransactionTableRowProps) {
+export function TransactionTableRow({ transactions, customPrefix }: TransactionTableRowProps) {
   const queryClient = useQueryClient()
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
@@ -207,6 +208,7 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
 
   return (
     <TableRow className="h-16 bg-white dark:bg-stone-900">
+      {customPrefix}
       <TableCell className="w-16 text-center">
         {/* Botão que abre o modal ou alerta */}
         <Button
@@ -271,11 +273,11 @@ export function TransactionTableRow({ transactions }: TransactionTableRowProps) 
 
       <TableCell>{transactions.description}</TableCell>
 
-      <TableCell className="text-center">
+      <TableCell className="text-center hidden md:table-cell">
         {(transactions.sectors && transactions.sectors.name) || ''}
       </TableCell>
 
-      <TableCell className="text-center">
+      <TableCell className="text-center hidden md:table-cell">
         {transactions.accounts.name}
       </TableCell>
 

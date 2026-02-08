@@ -40,6 +40,11 @@ import { TransactionTableRow } from './transaction-table-row'
 import { TransactionTableFilters } from './TransactionTableFilters'
 import { PageHeader } from '@/components/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
+import { TransactionTableBulkActions } from './components/transaction-table-bulk-actions'
+import { bulkPayTransactions } from '@/api/bulk-pay-transactions'
+import { toast } from 'sonner'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -58,6 +63,56 @@ export function Transactions() {
   const value = searchParams.get('value')
   const sectorId = searchParams.get('sectorId')
   const accountId = searchParams.get('accountId')
+  const supplierId = searchParams.get('supplierId')
+  const perPage = searchParams.get('per_page') ? Number(searchParams.get('per_page')) : 6
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const queryClient = useQueryClient()
+
+  const { mutateAsync: bulkPay, isPending: isBulkPaying } = useMutation({
+    mutationFn: bulkPayTransactions,
+    onSuccess: () => {
+      toast.success('Transações marcadas como pagas!')
+      setSelectedIds([])
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+    },
+    onError: () => {
+      toast.error('Erro ao processar pagamentos em massa.')
+    }
+  })
+
+  function handleBulkPay() {
+    bulkPay({ transactionIds: selectedIds })
+      .catch((error) => {
+        console.error("Failed to bulk pay", error)
+      })
+  }
+
+  function handleSelectAll(checked: boolean, transactions: any[]) {
+    if (checked) {
+      const allIds = transactions.map((t: any) => t.id)
+      setSelectedIds(allIds)
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  function handleSelectOne(checked: boolean, id: string) {
+    if (checked) {
+      setSelectedIds((prev) => [...prev, id])
+    } else {
+      setSelectedIds((prev) => prev.filter((item) => item !== id))
+    }
+  }
+
+  function handlePerPageChange(value: string) {
+    setSearchParams((state) => {
+      state.set('per_page', value)
+      state.set('page', '1')
+      return state
+    })
+  }
 
   const pageIndex = z.coerce
     .number()
@@ -93,15 +148,19 @@ export function Transactions() {
       accountId,
       activeTab, // Re-fetch when tab changes
       timeHorizon,
-      customDate
+      customDate,
+      perPage,
+      supplierId
     ],
     queryFn: () =>
       getTransactions({
         page: pageIndex,
+        perPage,
         description,
         value: value ? Number(value) : null,
         sectorId: sectorId === 'all' ? null : sectorId,
         accountId,
+        supplierId: supplierId === 'all' ? null : supplierId,
         status: activeTab === 'payable' ? 'pending' : 'completed',
         toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined // Pass toDate only for payable
       }),
@@ -132,10 +191,10 @@ export function Transactions() {
             <PopoverTrigger asChild>
               <Button
                 aria-label="Adicionar"
-                className="h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 rounded-full sm:rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+                className="w-full sm:w-auto h-10 px-4 py-2 rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
               >
-                <Plus className="h-5 w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Nova Transação</span>
+                <Plus className="h-5 w-5 mr-2" />
+                <span>Nova Transação</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" side="bottom" align="end">
@@ -183,7 +242,6 @@ export function Transactions() {
           </Popover>
         </PageHeader>
 
-        {/* TABS HEADER */}
         {/* TABS HEADER */}
         <Tabs
           value={activeTab}
@@ -245,6 +303,15 @@ export function Transactions() {
                       </>
                     ) : (
                       <>
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={
+                              transactionsResult?.data.transactions.transactions.length! > 0 &&
+                              selectedIds.length === transactionsResult?.data.transactions.transactions.length
+                            }
+                            onCheckedChange={(checked) => handleSelectAll(!!checked, transactionsResult?.data.transactions.transactions || [])}
+                          />
+                        </TableHead>
                         <TableHead className="w-1/12 text-center text-muted-foreground font-semibold">
                           Pago
                         </TableHead>
@@ -254,10 +321,10 @@ export function Transactions() {
                         <TableHead className="w-4/12 text-muted-foreground font-semibold">
                           Descrição
                         </TableHead>
-                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold">
+                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold hidden md:table-cell">
                           Setor
                         </TableHead>
-                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold">
+                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold hidden md:table-cell">
                           Conta
                         </TableHead>
                         <TableHead className="w-1/12 text-right text-muted-foreground font-semibold">
@@ -276,6 +343,14 @@ export function Transactions() {
                           <TransactionTableRow
                             key={transaction.id}
                             transactions={transaction}
+                            customPrefix={
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedIds.includes(transaction.id)}
+                                  onCheckedChange={(checked) => handleSelectOne(!!checked, transaction.id)}
+                                />
+                              </TableCell>
+                            }
                           />
                         )
                       },
@@ -313,7 +388,7 @@ export function Transactions() {
                   {/* EMPTY STATES */}
                   {activeTab !== 'transfers' && transactionsResult && transactionsResult.data.transactions.transactions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                         Nenhuma transação encontrada nesta categoria.
                       </TableCell>
                     </TableRow>
@@ -342,6 +417,27 @@ export function Transactions() {
                 }
                 perPage={transactionsResult && transactionsResult.data.transactions.perPage}
               />
+              <TransactionTableBulkActions
+                selectedCount={selectedIds.length}
+                onBulkPay={handleBulkPay}
+                isPending={isBulkPaying}
+                onClearSelection={() => setSelectedIds([])}
+              />
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Itens por página:</span>
+                <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={String(perPage)} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="6">6</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>

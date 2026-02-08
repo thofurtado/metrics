@@ -1,9 +1,9 @@
 import {
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog'
+    ResponsiveDialogContent,
+    ResponsiveDialogHeader,
+    ResponsiveDialogTitle,
+    ResponsiveDialogDescription,
+} from '@/components/ui/responsive-dialog'
 import { GetItemsResponse } from '@/api/get-items'
 import { ProductForm } from './forms/product-form'
 import { ServiceForm } from './forms/service-form'
@@ -35,13 +35,15 @@ export function ProductItemDialog({ initialData, initialType, onSuccess }: Produ
     }
 
     return (
-        <DialogContent className="max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-[700px] overflow-hidden">
-            <DialogHeader className="px-6 py-4 border-b shrink-0 bg-muted/40">
-                <DialogTitle>{isEdit ? `Editar ${typeLabels[type]}` : `Novo ${typeLabels[type]}`}</DialogTitle>
-                <DialogDescription>
-                    {isEdit ? 'Atualize as informações do item.' : 'Preencha os dados abaixo para cadastrar.'}
-                </DialogDescription>
-            </DialogHeader>
+        <ResponsiveDialogContent className="max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-[700px] overflow-hidden bg-background">
+            <ResponsiveDialogHeader className="px-6 py-4 border-b shrink-0 bg-muted/40">
+                <ResponsiveDialogTitle className="text-lg font-bold tracking-tight">
+                    {isEdit ? `Editar ${typeLabels[type]}` : `Novo ${typeLabels[type]}`}
+                </ResponsiveDialogTitle>
+                <ResponsiveDialogDescription className="text-sm text-muted-foreground">
+                    {isEdit ? 'Atualize as informações do item abaixo.' : 'Preencha os dados abaixo para realizar o cadastro.'}
+                </ResponsiveDialogDescription>
+            </ResponsiveDialogHeader>
 
             {type === 'PRODUCT' && (
                 <ProductForm initialData={initialData} onSuccess={onSuccess} />
@@ -52,6 +54,6 @@ export function ProductItemDialog({ initialData, initialType, onSuccess }: Produ
             {type === 'SUPPLY' && (
                 <SupplyForm initialData={initialData} onSuccess={onSuccess} />
             )}
-        </DialogContent>
+        </ResponsiveDialogContent>
     )
 }

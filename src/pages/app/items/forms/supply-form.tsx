@@ -3,14 +3,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { Syringe } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { createSupply } from '@/api/create-supply'
 import { updateItem } from '@/api/update-item'
 import { Button } from '@/components/ui/button'
-import { DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { ResponsiveDialogFooter, ResponsiveDialogClose } from '@/components/ui/responsive-dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 
 const supplySchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
@@ -100,73 +101,139 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
 
     return (
         <Form {...form}>
-            <form id="supply-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex-1 overflow-y-auto px-6 py-4">
-                {/* ... form fields ... */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                        <Syringe className="h-5 w-5" />
-                        <h3 className="font-semibold text-lg">Dados do Insumo</h3>
+            <form id="supply-form" onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-6 flex-1 overflow-y-auto flex flex-col gap-8">
+
+                {/* --- HEADER: Name & Active --- */}
+                <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 sm:col-span-8 space-y-2">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Nome do Insumo</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        placeholder="Ex: Cimento CP-II"
+                                        {...field}
+                                        className="h-12 text-lg font-medium"
+                                        autoFocus
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
                     </div>
 
-                    <FormField control={form.control} name="name" render={({ field }) => (
+                    <div className="col-span-12 sm:col-span-4 flex items-end pb-3">
+                        <FormField control={form.control} name="active" render={({ field }) => (
+                            <FormItem className="flex items-center space-x-3 space-y-0 rounded-xl border p-3 w-full bg-muted/20">
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormLabel className="font-medium cursor-pointer">
+                                    Insumo Ativo
+                                </FormLabel>
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
+
+                {/* --- DETAILS: Category, Unit, Stock --- */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="category" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Nome <span className="text-destructive">*</span></FormLabel>
-                            <FormControl><Input placeholder="Nome do insumo" {...field} /></FormControl>
+                            <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Categoria</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: Construção" {...field} className="h-10" />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="category" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Categoria</FormLabel>
-                                <FormControl><Input placeholder="Ex: Limpeza" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="unit" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Unidade</FormLabel>
-                                <FormControl><Input placeholder="Ex: kg, un, l" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="cost" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Preço de Custo (R$)</FormLabel>
-                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="stock" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>{!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}</FormLabel>
-                                <FormControl><Input type="number" {...field} disabled={isEdit} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                    </div>
-
-                    <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormField control={form.control} name="unit" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Descrição</FormLabel>
-                            <FormControl><Textarea placeholder="Observações..." className="resize-none" {...field} /></FormControl>
+                            <FormLabel className="flex items-center gap-1 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                                <Package className="w-3 h-3" /> Unidade
+                            </FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: kg, m, un" {...field} className="h-10" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="stock" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} disabled={isEdit} className={isEdit ? "bg-muted" : ""} />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
                 </div>
+
+
+                {/* --- COST HERO --- */}
+                <div className="bg-muted/10 rounded-2xl border p-4 sm:p-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1 h-6 bg-red-500 rounded-full"></div>
+                        <h4 className="text-lg font-bold tracking-tight">Custo do Insumo</h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="cost" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs font-bold text-red-600/70 uppercase tracking-wide">Preço de Custo</FormLabel>
+                                <FormControl>
+                                    <div className="relative shadow-sm rounded-md">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-600 font-bold">R$</span>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            inputMode="decimal"
+                                            {...field}
+                                            className="h-14 pl-10 text-2xl font-bold text-red-600 border-red-200 bg-red-50/20 focus-visible:ring-red-500 focus-visible:border-red-500 shadow-sm tabular-nums"
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        <div className="flex flex-col justify-center gap-1 text-sm text-muted-foreground bg-white rounded-lg p-3 border">
+                            <span className="font-semibold text-xs uppercase">Nota Importante:</span>
+                            <span>Alterar este custo impactará automaticamente o custo de produtos compostos.</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- DESCRIPTION --- */}
+                <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Descrição / Observações</FormLabel>
+                        <FormControl>
+                            <Textarea placeholder="Detalhes do insumo..." className="resize-none min-h-[100px]" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
             </form>
-            <DialogFooter className="px-6 py-4 border-t bg-muted/40 shrink-0">
-                <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
-                <Button form="supply-form" type="submit" disabled={form.formState.isSubmitting} className="bg-primary hover:bg-primary/90">
-                    {form.formState.isSubmitting ? 'Salvando...' : 'Salvar'}
+            <ResponsiveDialogFooter className="border-t bg-background p-6 z-20">
+                <ResponsiveDialogClose asChild>
+                    <Button type="button" variant="ghost" className="h-12 w-full sm:w-auto">Cancelar</Button>
+                </ResponsiveDialogClose>
+                <Button
+                    form="supply-form"
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    className="bg-primary hover:bg-primary/90 h-12 w-full sm:w-auto px-8 font-bold text-md shadow-lg"
+                >
+                    {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Insumo'}
                 </Button>
-            </DialogFooter>
+            </ResponsiveDialogFooter>
         </Form>
     )
 }

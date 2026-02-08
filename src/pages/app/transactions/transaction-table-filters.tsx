@@ -5,6 +5,7 @@ export const transactionFiltersSchema = z.object({
   value: z.string().optional(),
   sectorId: z.string().optional(),
   accountId: z.string().optional(),
+  supplierId: z.string().optional(),
 })
 
 export type TransactionFiltersSchema = z.infer<typeof transactionFiltersSchema>

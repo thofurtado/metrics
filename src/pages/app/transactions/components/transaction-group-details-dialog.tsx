@@ -137,67 +137,69 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                 <div><strong>Ocorrências:</strong> {groupDetails.installmentsCount}</div>
                             </div>
 
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Data</TableHead>
-                                        <TableHead>Descrição</TableHead>
-                                        <TableHead>Valor</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="w-[140px] text-right">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {groupDetails.transactions.map((tx, index) => {
-                                        const isLast = index === groupDetails.transactions.length - 1
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Data</TableHead>
+                                            <TableHead>Descrição</TableHead>
+                                            <TableHead>Valor</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="w-[140px] text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {groupDetails.transactions.map((tx, index) => {
+                                            const isLast = index === groupDetails.transactions.length - 1
 
-                                        return (
-                                            <TableRow key={tx.id}>
-                                                <TableCell>{dayjs(tx.date).format('DD/MM/YYYY')}</TableCell>
-                                                <TableCell>{tx.description}</TableCell>
-                                                <TableCell>R$ {tx.amount.toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <span
-                                                        onClick={() => setPaymentAction({
-                                                            id: tx.id,
-                                                            type: tx.confirmed ? 'unpay' : 'pay',
-                                                            amount: tx.amount
-                                                        })}
-                                                        className={cn(
-                                                            "cursor-pointer select-none px-2 py-1 rounded transition-colors border border-transparent hover:border-border",
-                                                            tx.confirmed
-                                                                ? "text-green-600 font-bold hover:bg-green-50"
-                                                                : "text-yellow-600 font-medium hover:bg-yellow-50"
-                                                        )}
-                                                        title={tx.confirmed ? "Clique para tornar pendente" : "Clique para pagar agora"}
-                                                    >
-                                                        {tx.confirmed ? "Pago" : "Pendente"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {!isLast && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            title="Encerrar contrato AQUI (Mantém esta, apaga futuras)"
-                                                            disabled={terminatingId !== null}
-                                                            onClick={() => handleTerminate(tx.id)}
-                                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                            return (
+                                                <TableRow key={tx.id}>
+                                                    <TableCell className="whitespace-nowrap">{dayjs(tx.date).format('DD/MM/YYYY')}</TableCell>
+                                                    <TableCell className="min-w-[150px]">{tx.description}</TableCell>
+                                                    <TableCell className="whitespace-nowrap">R$ {tx.amount.toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <span
+                                                            onClick={() => setPaymentAction({
+                                                                id: tx.id,
+                                                                type: tx.confirmed ? 'unpay' : 'pay',
+                                                                amount: tx.amount
+                                                            })}
+                                                            className={cn(
+                                                                "cursor-pointer select-none px-2 py-1 rounded transition-colors border border-transparent hover:border-border whitespace-nowrap",
+                                                                tx.confirmed
+                                                                    ? "text-green-600 font-bold hover:bg-green-50"
+                                                                    : "text-yellow-600 font-medium hover:bg-yellow-50"
+                                                            )}
+                                                            title={tx.confirmed ? "Clique para tornar pendente" : "Clique para pagar agora"}
                                                         >
-                                                            {terminatingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
-                                                                <div className="flex items-center gap-1">
-                                                                    <Scissors className="h-4 w-4" />
-                                                                    <span className="text-xs">Encerrar</span>
-                                                                </div>
-                                                            }
-                                                        </Button>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
+                                                            {tx.confirmed ? "Pago" : "Pendente"}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {!isLast && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                title="Encerrar contrato AQUI (Mantém esta, apaga futuras)"
+                                                                disabled={terminatingId !== null}
+                                                                onClick={() => handleTerminate(tx.id)}
+                                                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            >
+                                                                {terminatingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Scissors className="h-4 w-4" />
+                                                                        <span className="text-xs">Encerrar</span>
+                                                                    </div>
+                                                                }
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center py-4 text-muted-foreground">Não foi possível carregar os detalhes.</div>

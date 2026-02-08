@@ -2,7 +2,7 @@ import { Package2, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
-import { Dialog } from '@/components/ui/dialog'
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
@@ -124,41 +124,53 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
             <DropdownMenuSeparator />
 
             {isStockable && (
-              <DropdownMenuItem onClick={() => setIsAdjustStockOpen(true)}>
+              <DropdownMenuItem onSelect={(e) => {
+                e.preventDefault()
+                setIsAdjustStockOpen(true)
+              }}>
                 <Package2 className="mr-2 h-4 w-4" />
                 Ajustar Estoque
               </DropdownMenuItem>
             )}
 
-            <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+            <DropdownMenuItem onSelect={(e) => {
+              e.preventDefault()
+              setIsEditDialogOpen(true)
+            }}>
               <Pencil className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onSelect={(e) => {
+              e.preventDefault()
+              setIsDeleteDialogOpen(true)
+            }} className="text-red-600 focus:text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
+
+
         {/* Dialogs - Conditional Rendering controlled by state */}
         {isStockable && (
-          <Dialog open={isAdjustStockOpen} onOpenChange={setIsAdjustStockOpen}>
+          <ResponsiveDialog open={isAdjustStockOpen} onOpenChange={setIsAdjustStockOpen}>
             <StockAdjustmentDialog
               itemId={item.id}
               itemName={item.name}
+              currentCost={item.product?.cost || item.supply?.cost}
               onSuccess={() => setIsAdjustStockOpen(false)}
             />
-          </Dialog>
+          </ResponsiveDialog>
         )}
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <ResponsiveDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <ProductItemDialog
             initialData={item as any}
             onSuccess={() => setIsEditDialogOpen(false)}
           />
-        </Dialog>
+        </ResponsiveDialog>
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DeleteItemDialog

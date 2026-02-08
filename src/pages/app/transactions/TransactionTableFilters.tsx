@@ -1,3 +1,4 @@
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X } from 'lucide-react'
@@ -7,6 +8,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
+import { getSuppliers } from '@/api/get-suppliers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -24,26 +26,29 @@ import {
 
 export function TransactionTableFilters() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const previousFilters = useRef({
-    description: searchParams.get('description') ?? '',
-    value: searchParams.get('value') ?? '',
-    sectorId: searchParams.get('sectorId') ?? 'all',
-    accountId: searchParams.get('accountId') ?? 'all',
-  })
+  const descriptionParam = searchParams.get('description')
+  const valueParam = searchParams.get('value')
+  const sectorIdParam = searchParams.get('sectorId')
+  const accountIdParam = searchParams.get('accountId')
+  const supplierIdParam = searchParams.get('supplierId')
 
-  const description = searchParams.get('description')
-  const value = searchParams.get('value')
-  const sectorId = searchParams.get('sectorId')
-  const accountId = searchParams.get('accountId')
+  const previousFilters = useRef({
+    description: descriptionParam ?? '',
+    value: valueParam ?? '',
+    sectorId: sectorIdParam ?? 'all',
+    accountId: accountIdParam ?? 'all',
+    supplierId: supplierIdParam ?? 'all',
+  })
 
   const { register, control, watch, reset } =
     useForm<TransactionFiltersSchema>({
       resolver: zodResolver(transactionFiltersSchema),
       defaultValues: {
-        description: description ?? '',
-        value: value ?? '',
-        sectorId: sectorId ?? 'all',
-        accountId: accountId ?? 'all',
+        description: descriptionParam ?? '',
+        value: valueParam ?? '',
+        sectorId: sectorIdParam ?? 'all',
+        accountId: accountIdParam ?? 'all',
+        supplierId: supplierIdParam ?? 'all',
       },
     })
 
@@ -51,14 +56,15 @@ export function TransactionTableFilters() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const { description, value, sectorId, accountId } = watchedFields
+      const { description, value, sectorId, accountId, supplierId } = watchedFields
 
       // Verifica se realmente houve mudança nos filtros
       const hasFiltersChanged =
         description !== previousFilters.current.description ||
         value !== previousFilters.current.value ||
         sectorId !== previousFilters.current.sectorId ||
-        accountId !== previousFilters.current.accountId
+        accountId !== previousFilters.current.accountId ||
+        supplierId !== previousFilters.current.supplierId
 
       if (hasFiltersChanged) {
         setSearchParams((state) => {
@@ -86,6 +92,12 @@ export function TransactionTableFilters() {
             state.delete('accountId')
           }
 
+          if (supplierId && supplierId !== 'all') {
+            state.set('supplierId', supplierId)
+          } else {
+            state.delete('supplierId')
+          }
+
           // Só reseta a página se os filtros mudaram
           state.set('page', '1')
 
@@ -93,7 +105,13 @@ export function TransactionTableFilters() {
         })
 
         // Atualiza a referência
-        previousFilters.current = { description, value, sectorId, accountId }
+        previousFilters.current = {
+          description: description ?? '',
+          value: value ?? '',
+          sectorId: sectorId ?? 'all',
+          accountId: accountId ?? 'all',
+          supplierId: supplierId ?? 'all'
+        }
       }
     }, 500)
 
@@ -108,6 +126,10 @@ export function TransactionTableFilters() {
     queryKey: ['accounts'],
     queryFn: () => getAccounts(),
   })
+  const { data: suppliers } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => getSuppliers({ page: 1, perPage: 1000 }),
+  })
 
   function handleClearFilter() {
     setSearchParams((state) => {
@@ -115,6 +137,7 @@ export function TransactionTableFilters() {
       state.delete('value')
       state.delete('sectorId')
       state.delete('accountId')
+      state.delete('supplierId')
       state.set('page', '1')
       return state
     })
@@ -124,6 +147,7 @@ export function TransactionTableFilters() {
       value: '',
       sectorId: 'all',
       accountId: 'all',
+      supplierId: 'all',
     })
 
     // Atualiza a referência ao limpar filtros
@@ -132,10 +156,11 @@ export function TransactionTableFilters() {
       value: '',
       sectorId: 'all',
       accountId: 'all',
+      supplierId: 'all',
     }
   }
 
-  const hasFilters = description || value || (sectorId && sectorId !== 'all') || (accountId && accountId !== 'all')
+  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all')
 
   return (
     <div className="flex items-center gap-2 font-gaba">
@@ -211,6 +236,37 @@ export function TransactionTableFilters() {
                 {accounts?.accounts?.map((account) => (
                   <SelectItem value={account.id} key={account.id} className="text-xs sm:text-sm">
                     {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }}
+      />
+
+      <Controller
+        name="supplierId"
+        control={control}
+        render={({ field: { name, onChange, value, disabled } }) => {
+          return (
+            <Select
+              defaultValue="all"
+              name={name}
+              onValueChange={onChange}
+              value={value}
+              disabled={disabled}
+            >
+              <SelectTrigger
+                className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm"
+                aria-label="Fornecedores"
+              >
+                <SelectValue placeholder="Fornecedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs sm:text-sm">Todos os Fornecedores</SelectItem>
+                {suppliers?.suppliers?.map((supplier) => (
+                  <SelectItem value={supplier.id} key={supplier.id} className="text-xs sm:text-sm">
+                    {supplier.name}
                   </SelectItem>
                 ))}
               </SelectContent>
