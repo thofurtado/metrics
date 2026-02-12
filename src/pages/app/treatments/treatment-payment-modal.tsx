@@ -311,6 +311,9 @@ export function TreatmentPaymentModal({
                         setCurrentPayment(prev => ({ ...prev, paymentId: val }))
                       }}
                       disabled={isFullyPaid}
+                      onOpenChange={(isOpen) => {
+                        if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                      }}
                     >
                       <SelectTrigger className="h-14 text-lg bg-card shadow-sm border-input hover:border-primary/50 transition-colors">
                         <SelectValue placeholder="Selecione o método..." />
@@ -369,6 +372,9 @@ export function TreatmentPaymentModal({
                           value={String(currentPayment.installments)}
                           onValueChange={val => setCurrentPayment(prev => ({ ...prev, installments: Number(val) }))}
                           disabled={isFullyPaid}
+                          onOpenChange={(isOpen) => {
+                            if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                          }}
                         >
                           <SelectTrigger className="h-14 bg-card shadow-sm">
                             <div className="flex items-center gap-2">

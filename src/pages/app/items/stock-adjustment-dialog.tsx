@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package2, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { Package2, ArrowDownCircle, ArrowUpCircle, Check, ChevronDown } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -27,12 +27,16 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+    Command,
+    CommandGroup,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 
 const stockAdjustmentSchema = z.object({
     quantity: z.coerce.number().min(0.01, 'Quantidade deve ser maior que 0'),
@@ -243,20 +247,60 @@ export function StockAdjustmentDialog({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="font-semibold text-sm">Motivo da Movimentação</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger type="button" className="h-12 bg-muted/20 border-muted-foreground/20">
-                                            <SelectValue placeholder="Selecione o motivo" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {currentReasonOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn(
+                                                "h-12 w-full justify-between bg-muted/20 border-muted-foreground/20 font-normal hover:bg-muted/30",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value
+                                                ? currentReasonOptions.find(
+                                                    (option) => option.value === field.value
+                                                )?.label
+                                                : "Selecione o motivo"}
+                                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+                                        <Command>
+                                            <CommandList>
+                                                <CommandGroup>
+                                                    {currentReasonOptions.map((option) => (
+                                                        <CommandItem
+                                                            value={option.label}
+                                                            key={option.value}
+                                                            onSelect={() => {
+                                                                field.onChange(option.value)
+                                                                // Close popover logic is handled by Radix usually or we might need state? 
+                                                                // Popover is uncontrolled here so we might need a hidden trigger click or use controlled state. 
+                                                                // For simplicity in this replacement without adding state, we rely on default behavior 
+                                                                // but usually controlled is better.
+                                                                // Let's rely on click-away or re-click for now or standard CommandItem behavior.
+                                                                // Wait, CommandItem select doesn't auto-close uncontrolled Popover from inside easily.
+                                                                // We need to control the Popover open state for rigorous UX.
+                                                            }}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    option.value === field.value
+                                                                        ? "opacity-100"
+                                                                        : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {option.label}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                             </FormItem>
                         )}

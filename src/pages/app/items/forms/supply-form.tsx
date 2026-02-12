@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -47,6 +48,15 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
         },
     })
 
+    const isMounted = useRef(true)
+
+    useEffect(() => {
+        isMounted.current = true
+        return () => {
+            isMounted.current = false
+        }
+    }, [])
+
     const { mutateAsync: createSupplyFn } = useMutation({
         mutationFn: createSupply,
         onSuccess: () => {
@@ -64,6 +74,8 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
     })
 
     async function onSubmit(data: SupplySchema) {
+        if (!isMounted.current) return
+
         try {
             if (isEdit) {
                 // If cost changed, backend will trigger cascade update. Warn user.
@@ -78,6 +90,8 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                     ...data
                 } as any)
 
+                if (!isMounted.current) return
+
                 if (costChanged) toast.dismiss('save-supply')
                 toast.success('Insumo atualizado!')
             } else {
@@ -90,9 +104,13 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                     stock: data.stock,
                     active: data.active
                 })
+
+                if (!isMounted.current) return
+
                 toast.success('Insumo cadastrado!')
             }
         } catch (err) {
+            if (!isMounted.current) return
             toast.dismiss('save-supply')
             toast.error('Erro ao salvar insumo. Verifique a conexão.')
             console.error(err)
@@ -114,7 +132,6 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                                         placeholder="Ex: Cimento CP-II"
                                         {...field}
                                         className="h-12 text-lg font-medium"
-                                        autoFocus
                                     />
                                 </FormControl>
                                 <FormMessage />

@@ -11,6 +11,7 @@ import { TreatmentStatus } from '@/components/ui/treatment-status'
 import { TreatmentDetails } from './treatment-details'
 import { TreatmentInteraction } from './treatment-interaction'
 import { TreatmentItems } from './treatment-items'
+import { useModules } from '@/context/module-context'
 
 export interface TreatmentTableRowProps {
   treatments: {
@@ -49,6 +50,7 @@ export interface TreatmentTableRowProps {
 }
 
 export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
+  const { isModuleActive } = useModules()
   const dias = dayjs(new Date()).diff(dayjs(treatments.opening_date), 'day')
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isInteractionsOpen, setIsInteractionsOpen] = useState(false)
@@ -93,20 +95,33 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
         })}
       </TableCell>
       <TableCell>
-        <Dialog open={isItemsOpen} onOpenChange={setIsItemsOpen}>
-          <DialogTrigger asChild>
-            <Button
-              disabled={['canceled', 'resolved'].includes(treatments.status)}
-              variant="outline"
-              size="sm"
-            >
-              <Shapes className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Itens</span>
-              <span className="sr-only">Itens</span>
-            </Button>
-          </DialogTrigger>
-          <TreatmentItems open={isItemsOpen} treatmentId={treatments.id} />
-        </Dialog>
+        {isModuleActive('merchandise') && isModuleActive('financial') ? (
+          <Dialog open={isItemsOpen} onOpenChange={setIsItemsOpen}>
+            <DialogTrigger asChild>
+              <Button
+                disabled={['canceled', 'resolved'].includes(treatments.status)}
+                variant="outline"
+                size="sm"
+              >
+                <Shapes className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Itens</span>
+                <span className="sr-only">Itens</span>
+              </Button>
+            </DialogTrigger>
+            <TreatmentItems open={isItemsOpen} treatmentId={treatments.id} />
+          </Dialog>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled
+            title="Módulo de Mercadorias ou Financeiro desativado"
+            className="opacity-50"
+          >
+            <Shapes className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Itens</span>
+          </Button>
+        )}
       </TableCell>
       <TableCell>
         <Dialog open={isInteractionsOpen} onOpenChange={setIsInteractionsOpen}>

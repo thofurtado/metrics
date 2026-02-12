@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
 import { LandingPage } from './pages/landing-page'
+import { DownloadsPage } from './pages/downloads'
 import { NotFound } from './pages/404'
 import { Dashboard } from './pages/app/dashboard/dashboard'
 import { Transactions } from './pages/app/transactions/transactions'
@@ -16,6 +17,8 @@ import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { Accounts } from './pages/app/settings/accounts'
 import { Payments } from './pages/app/settings/payments'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
+import { ModulesSettings } from './pages/app/settings/modules-settings'
+import { ModuleGuard } from './components/module-guard'
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = () => {
@@ -32,21 +35,54 @@ export const router = createBrowserRouter([
         element: isAuthenticated() ? <Navigate to="/dashboard" replace /> : <LandingPage />,
       },
       {
+        path: 'downloads',
+        element: <DownloadsPage />,
+      },
+      {
         element: <AppLayout />,
         children: [
           { path: 'dashboard', element: <Dashboard /> },
-          { path: 'treatments', element: <Treatments /> },
-          { path: 'treatment/new', element: <Treatment /> },
-          { path: 'transactions', element: <Transactions /> },
-          { path: 'items', element: <Items /> },
+          {
+            path: 'treatments',
+            element: (
+              <ModuleGuard module="treatments">
+                <Treatments />
+              </ModuleGuard>
+            )
+          },
+          {
+            path: 'treatment/new',
+            element: (
+              <ModuleGuard module="treatments">
+                <Treatment />
+              </ModuleGuard>
+            )
+          },
+          {
+            path: 'transactions',
+            element: (
+              <ModuleGuard module="financial">
+                <Transactions />
+              </ModuleGuard>
+            )
+          },
+          {
+            path: 'items',
+            element: (
+              <ModuleGuard module="merchandise">
+                <Items />
+              </ModuleGuard>
+            )
+          },
           { path: 'suppliers', element: <SuppliersList /> },
           {
             path: 'settings',
             element: <SettingsLayout />,
             children: [
-              { index: true, element: <Navigate to="accounts" replace /> },
+              { index: true, element: <Navigate to="modules" replace /> }, // Default to modules or accounts? Modules seems appropriate for admin.
               { path: 'accounts', element: <Accounts /> },
               { path: 'payments', element: <Payments /> },
+              { path: 'modules', element: <ModulesSettings /> },
             ]
           }
         ],

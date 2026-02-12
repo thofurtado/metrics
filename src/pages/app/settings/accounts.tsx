@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus } from 'lucide-react'
+import { Pencil, Plus, Wallet, MoreVertical } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,18 +18,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const createAccountSchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
@@ -130,69 +123,87 @@ export function Accounts() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
             <Dialog open={isAdjustModalOpen} onOpenChange={setIsAdjustModalOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>Ajustar Saldo</DialogTitle>
+                        <DialogTitle>Ajustar Saldo Manualmente</DialogTitle>
                         <DialogDescription>
-                            Informe o novo saldo real da conta. Uma transação de ajuste será gerada automaticamente.
+                            Isso criará uma transação de ajuste para corrigir o saldo atual.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmitAdjust(handleAdjustBalance)} className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="newBalance">Novo Saldo</Label>
-                            <Input
-                                id="newBalance"
-                                type="number"
-                                step="0.01"
-                                {...registerAdjust('newBalance')}
-                                autoFocus
-                            />
+                            <Label htmlFor="newBalance">Novo Saldo Real</Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-muted-foreground">R$</span>
+                                <Input
+                                    id="newBalance"
+                                    type="number"
+                                    step="0.01"
+                                    className="pl-9 text-lg font-medium"
+                                    {...registerAdjust('newBalance')}
+                                    autoFocus
+                                />
+                            </div>
                         </div>
-                        <Button type="submit" className="w-full">
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
                             Confirmar Ajuste
                         </Button>
                     </form>
                 </DialogContent>
             </Dialog>
 
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Contas Bancárias</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Contas Bancárias</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Gerencie seus saldos e caixas.
+                    </p>
+                </div>
+
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button size="sm">
-                            <Plus className="mr-2 h-4 w-4" /> Nova Conta
+                        <Button size="lg" className="shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:to-primary transition-all active:scale-95">
+                            <Plus className="mr-2 h-5 w-5" /> Nova Conta
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                             <DialogTitle>Nova Conta Bancária</DialogTitle>
                             <DialogDescription>
-                                Crie uma nova conta para gerenciar seu saldo.
+                                Adicione uma conta para controlar entradas e saídas.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form onSubmit={handleSubmit(handleRegisterAccount)} className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Nome da Conta</Label>
-                                <Input id="name" {...register('name')} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Descrição</Label>
-                                <Input id="description" {...register('description')} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSubmit(handleRegisterAccount)} className="space-y-6 py-4">
+                            <div className="grid gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="balance">Saldo Inicial</Label>
-                                    <Input id="balance" type="number" step="0.01" {...register('balance')} />
+                                    <Label htmlFor="name">Nome da Conta</Label>
+                                    <Input id="name" placeholder="Ex: Nubank, Caixa 01..." {...register('name')} className="h-11" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="goal">Meta (Opcional)</Label>
-                                    <Input id="goal" type="number" step="0.01" {...register('goal')} />
+                                    <Label htmlFor="description">Descrição (Opcional)</Label>
+                                    <Input id="description" placeholder="Uso principal, reserva..." {...register('description')} className="h-11" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="balance">Saldo Inicial</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-3 text-muted-foreground">R$</span>
+                                            <Input id="balance" type="number" step="0.01" {...register('balance')} className="pl-9 h-11" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="goal">Meta (Opcional)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-3 text-muted-foreground">R$</span>
+                                            <Input id="goal" type="number" step="0.01" {...register('goal')} className="pl-9 h-11" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <Button type="submit" className="w-full">
+                            <Button type="submit" size="lg" className="w-full">
                                 Criar Conta
                             </Button>
                         </form>
@@ -200,52 +211,107 @@ export function Accounts() {
                 </Dialog>
             </div>
 
-            <div className="border rounded-md overflow-x-auto">
-                <Table className="min-w-[500px]">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Descrição</TableHead>
-                            <TableHead className="text-right">Saldo Atual</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                                    <TableCell className="text-right"><Skeleton className="h-4 w-[80px] ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            accountsResult?.accounts?.map((account) => (
-                                <TableRow key={account.id}>
-                                    <TableCell className="font-medium">{account.name}</TableCell>
-                                    <TableCell>{account.description}</TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {new Intl.NumberFormat('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL',
-                                            }).format(account.balance)}
-
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => openAdjustModal(account)}
-                                            >
-                                                <Pencil className="h-3 w-3" />
-                                                <span className="sr-only">Editar Saldo</span>
-                                            </Button>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {isLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-40 rounded-xl border bg-card p-6 shadow-sm">
+                            <Skeleton className="h-6 w-1/3 mb-4" />
+                            <Skeleton className="h-4 w-2/3 mb-8" />
+                            <Skeleton className="h-8 w-1/2" />
+                        </div>
+                    ))
+                ) : (
+                    accountsResult?.accounts?.map((account) => {
+                        const isPositive = account.balance >= 0
+                        return (
+                            <div
+                                key={account.id}
+                                className="group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20 aspect-video flex flex-col justify-between"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                                                <Wallet className="h-5 w-5" />
+                                            </div>
+                                            <h3 className="font-semibold text-lg tracking-tight">{account.name}</h3>
                                         </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                                        {account.description && (
+                                            <p className="text-sm text-muted-foreground line-clamp-1 pl-1">
+                                                {account.description}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="-mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => openAdjustModal(account)}
+                                        title="Ajustar Saldo"
+                                    >
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                <div className="mt-4">
+                                    <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Saldo Atual</span>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <span className="text-sm font-medium text-muted-foreground">R$</span>
+                                        <span className={cn(
+                                            "text-3xl font-bold tracking-tighter",
+                                            isPositive ? "text-foreground" : "text-red-500"
+                                        )}>
+                                            {account.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Background decoration */}
+                                <div className="absolute -right-12 -bottom-12 h-32 w-32 rounded-full bg-primary/5 blur-3xl transition-all group-hover:bg-primary/10" />
+                            </div>
+                        )
+                    })
+                )}
+                {/* Empty State / Add New Card visual cue */}
+                {!isLoading && (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <button className="flex h-full min-h-[160px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/5 p-6 transition-all hover:bg-muted/10 hover:border-primary/50 text-muted-foreground hover:text-primary">
+                                <div className="rounded-full bg-background p-3 shadow-sm">
+                                    <Plus className="h-6 w-6" />
+                                </div>
+                                <span className="font-medium">Adicionar Nova Conta</span>
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            {/* Reusing Form Logic would require refactoring to a component, but for now duplicating the Trigger/Content structure inside the button works or using a shared state for dialog open */}
+                            <DialogHeader>
+                                <DialogTitle>Nova Conta Bancária</DialogTitle>
+                                <DialogDescription>
+                                    Crie uma nova conta para gerenciar seu saldo.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit(handleRegisterAccount)} className="space-y-6 py-4">
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name-card">Nome da Conta</Label>
+                                        <Input id="name-card" {...register('name')} className="h-11" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="description-card">Descrição</Label>
+                                        <Input id="description-card" {...register('description')} className="h-11" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="balance-card">Saldo Inicial</Label>
+                                        <Input id="balance-card" type="number" step="0.01" {...register('balance')} className="h-11" />
+                                    </div>
+                                </div>
+                                <Button type="submit" size="lg" className="w-full">Criar Conta</Button>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
         </div>
     )

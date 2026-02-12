@@ -9,6 +9,8 @@ import { updateItem } from '@/api/update-item'
 import { getSupplies } from '@/api/get-supplies'
 import { createCategory } from '@/api/create-category'
 import { getCategories } from '@/api/get-categories'
+import { getNextProductId } from '@/api/get-next-product-id'
+import { checkProductCode } from '@/api/check-product-code'
 import { Button } from '@/components/ui/button'
 import {
     ResponsiveDialog,
@@ -42,8 +44,8 @@ const productSchema = z.object({
     min_stock: z.coerce.number().optional().default(0),
 
     // Details
-    barcode: z.string().optional(),
-    ncm: z.string().optional(),
+    barcode: z.string().regex(/^\d*$/, 'Apenas números').optional(),
+    ncm: z.string().regex(/^\d*$/, 'Apenas números').optional(),
 
     active: z.boolean().default(true),
 
@@ -207,6 +209,20 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
         }
     }, [initialData, form])
 
+    // Fetch next ID only in Create mode
+    const { data: nextIdData } = useQuery({
+        queryKey: ['next-product-id'],
+        queryFn: getNextProductId,
+        enabled: !isEdit
+    })
+
+    // Set next ID if available and field is empty
+    useEffect(() => {
+        if (!isEdit && nextIdData?.nextId && !form.getValues('display_id')) {
+            form.setValue('display_id', nextIdData.nextId)
+        }
+    }, [nextIdData, isEdit, form])
+
     async function onSubmit(data: ProductSchema) {
         if (data.is_composite && (!data.compositions || data.compositions.length === 0)) {
             toast.error('Produtos compostos devem ter pelo menos um insumo.')
@@ -279,22 +295,24 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             )} />
                         </div>
 
-                        {/* Active Switch */}
-                        <div className="col-span-12 sm:col-span-4 flex items-end pb-3">
-                            <FormField control={form.control} name="active" render={({ field }) => (
-                                <FormItem className="flex items-center space-x-3 space-y-0 rounded-xl border p-3 w-full bg-muted/20">
-                                    <FormControl>
-                                        <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="font-medium cursor-pointer">
-                                        Produto Ativo
-                                    </FormLabel>
-                                </FormItem>
-                            )} />
-                        </div>
+                        {/* Active Switch - Only on Edit */}
+                        {isEdit && (
+                            <div className="col-span-12 sm:col-span-4 flex items-end pb-3">
+                                <FormField control={form.control} name="active" render={({ field }) => (
+                                    <FormItem className="flex items-center space-x-3 space-y-0 rounded-xl border p-3 w-full bg-muted/20">
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        <FormLabel className="font-medium cursor-pointer">
+                                            Produto Ativo
+                                        </FormLabel>
+                                    </FormItem>
+                                )} />
+                            </div>
+                        )}
                     </div>
 
 
@@ -305,7 +323,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                 <FormField control={form.control} name="category" render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Categoria</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                            onOpenChange={(isOpen) => {
+                                                if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                                            }}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger className="h-10">
                                                     <SelectValue placeholder="Selecione..." />
@@ -339,7 +363,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                     <ScanBarcode className="w-3 h-3" /> Código de Barras
                                 </FormLabel>
                                 <FormControl>
-                                    <Input placeholder="EAN / GTIN" {...field} className="h-10 font-mono text-sm" />
+                                    <Input
+                                        placeholder="EAN / GTIN"
+                                        {...field}
+                                        className="h-10 font-mono text-sm"
+                                        onFocus={(e) => e.target.select()}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -351,11 +380,23 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                 <FormControl>
                                     <Input
                                         type="number"
-                                        placeholder="Automático"
+                                        placeholder={isEdit ? "ID" : (nextIdData?.nextId?.toString() ?? "Automático")}
                                         {...field}
                                         value={field.value ?? ''}
                                         className="h-10 font-mono text-sm bg-muted/50"
-                                        disabled
+                                        onBlur={async (e) => {
+                                            field.onBlur()
+                                            const val = parseInt(e.target.value)
+                                            if (val && val !== initialData?.product?.display_id) {
+                                                const check = await checkProductCode({ code: val })
+                                                if (!check.available) {
+                                                    form.setError('display_id', { message: 'ID já em uso' })
+                                                } else {
+                                                    form.clearErrors('display_id')
+                                                }
+                                            }
+                                        }}
+                                        onFocus={(e) => e.target.select()}
                                     />
                                 </FormControl>
                             </FormItem>
@@ -396,6 +437,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                     setProfit(profit)
                                                     setMargin(margin)
                                                 }}
+                                                onFocus={(e) => e.target.select()}
                                             />
                                         </div>
                                     </FormControl>
@@ -471,6 +513,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                     const newMargin = currentCost > 0 ? (newProfit / currentCost) * 100 : 0
                                                     setMargin(newMargin)
                                                 }}
+                                                onFocus={(e) => e.target.select()}
                                             />
                                         </div>
                                     </FormControl>
@@ -492,6 +535,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                         {...field}
                                         disabled={isComposite}
                                         className={cn("h-10 font-mono", isComposite && "bg-muted")}
+                                        onFocus={(e) => e.target.select()}
                                     />
                                 </FormControl>
                                 {isComposite && <span className="text-[10px] text-muted-foreground">Gerenciado pelos insumos</span>}
@@ -503,7 +547,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             <FormItem>
                                 <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Estoque Mínimo</FormLabel>
                                 <FormControl>
-                                    <Input type="number" {...field} disabled={isComposite} className={cn("h-10 font-mono", isComposite && "bg-muted")} />
+                                    <Input
+                                        type="number"
+                                        {...field}
+                                        disabled={isComposite}
+                                        className={cn("h-10 font-mono", isComposite && "bg-muted")}
+                                        onFocus={(e) => e.target.select()}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -514,7 +564,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                 <FormItem>
                                     <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">NCM / Fiscal</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="0000.00.00" {...field} className="h-10 font-mono" />
+                                        <Input
+                                            placeholder="0000.00.00"
+                                            {...field}
+                                            className="h-10 font-mono"
+                                            onFocus={(e) => e.target.select()}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -571,7 +626,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                     <div className="col-span-8 sm:col-span-7">
                                                         <FormField control={form.control} name={`compositions.${index}.supply_id`} render={({ field }) => (
                                                             <FormItem className="space-y-0">
-                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                <Select
+                                                                    onValueChange={field.onChange}
+                                                                    value={field.value}
+                                                                    onOpenChange={(isOpen) => {
+                                                                        if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                                                                    }}
+                                                                >
                                                                     <FormControl>
                                                                         <SelectTrigger className="h-9 text-sm">
                                                                             <SelectValue placeholder="Selecione..." />

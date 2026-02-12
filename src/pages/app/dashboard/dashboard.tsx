@@ -10,7 +10,10 @@ import { ExpensesBySectorChart } from './expenses-by-sector-chart'
 import { BalanceProjectionChart } from './BalanceProjectionChart'
 
 
+import { useModules } from '@/context/module-context'
+
 export function Dashboard() {
+  const { isModuleActive } = useModules()
   return (
     <>
       <Helmet title="Dashboard" />
@@ -28,20 +31,30 @@ export function Dashboard() {
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4 font-gaba lg:grid-cols-3">
 
           {/* PRIMEIRO CARD: Gestão de Serviços */}
-          <MonthTreatmentAmountCard className="lg:col-span-1" />
+          {isModuleActive('treatments') && (
+            <MonthTreatmentAmountCard className="lg:col-span-1" />
+          )}
 
           {/* SEGUNDO CARD: Visão Financeira */}
-          <FinanceCard className="lg:col-span-1" />
+          {isModuleActive('financial') && (
+            <FinanceCard className="lg:col-span-1" />
+          )}
 
           {/* TERCEIRO CARD: Inventário e Vendas */}
-          <InventoryCard className="lg:col-span-1" />
+          {isModuleActive('merchandise') && (
+            <InventoryCard className="lg:col-span-1" />
+          )}
 
         </div>
 
         {/* GRID DE GRÁFICOS */}
         <div className="grid grid-cols-1 gap-4 font-gaba lg:grid-cols-9">
-          <BalanceProjectionChart className="lg:col-span-6" />
-          <ExpensesBySectorChart className="lg:col-span-3" />
+          {isModuleActive('financial') && (
+            <>
+              <BalanceProjectionChart className="lg:col-span-6" />
+              <ExpensesBySectorChart className="lg:col-span-3" />
+            </>
+          )}
         </div>
       </div>
     </>

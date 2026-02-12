@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Banknote, CreditCard, Wallet } from 'lucide-react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
+import { cn } from '@/lib/utils'
 
 import { createPayment } from '@/api/create-payment'
 import { getPayments } from '@/api/get-payments'
@@ -18,17 +19,10 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import {
     Select,
     SelectContent,
@@ -100,16 +94,22 @@ export function Payments() {
     }
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-2xl font-bold tracking-tight">Formas de Pagamento</h2>
+        <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Formas de Pagamento</h1>
+                    <p className="text-muted-foreground text-lg">
+                        Configure opções de recebimento e parcelamento.
+                    </p>
+                </div>
+
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button size="sm">
-                            <Plus className="mr-2 h-4 w-4" /> Nova Forma
+                        <Button size="lg" className="shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:to-primary transition-all active:scale-95">
+                            <Plus className="mr-2 h-5 w-5" /> Nova Forma
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                             <DialogTitle>Nova Forma de Pagamento</DialogTitle>
                             <DialogDescription>
@@ -117,10 +117,10 @@ export function Payments() {
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form onSubmit={handleSubmit(handleRegisterPayment)} className="space-y-4 py-4">
+                        <form onSubmit={handleSubmit(handleRegisterPayment)} className="space-y-6 py-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Nome (Ex: Cartão Crédito)</Label>
-                                <Input id="name" {...register('name')} />
+                                <Input id="name" placeholder="Digite o nome..." {...register('name')} className="h-11" />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -133,23 +133,24 @@ export function Payments() {
                                         type="number"
                                         {...register('installment_limit')}
                                         disabled={inSight}
+                                        className="h-11"
                                     />
                                 </div>
-                                <div className="flex items-end pb-2">
-                                    <div className="flex items-center space-x-2">
-                                        <Controller
-                                            control={control}
-                                            name="in_sight"
-                                            render={({ field }) => (
-                                                <Checkbox
-                                                    id="in_sight"
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            )}
-                                        />
-                                        <Label htmlFor="in_sight" className="cursor-pointer">À Vista / Entrada Imediata</Label>
-                                    </div>
+                                <div className="flex items-center space-x-2 pt-8">
+                                    <Controller
+                                        control={control}
+                                        name="in_sight"
+                                        render={({ field }) => (
+                                            <Checkbox
+                                                id="in_sight"
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        )}
+                                    />
+                                    <Label htmlFor="in_sight" className="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        À Vista / Entrada Imediata
+                                    </Label>
                                 </div>
                             </div>
 
@@ -160,7 +161,7 @@ export function Payments() {
                                     control={control}
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-11">
                                                 <SelectValue placeholder="Selecione uma conta..." />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -174,55 +175,88 @@ export function Payments() {
                                         </Select>
                                     )}
                                 />
+                                <p className="text-[0.8rem] text-muted-foreground">
+                                    O valor entrará automaticamente nesta conta ao receber.
+                                </p>
                             </div>
 
-                            <Button type="submit" className="w-full">
-                                Criar
+                            <Button type="submit" size="lg" className="w-full">
+                                Criar Forma de Pagamento
                             </Button>
                         </form>
                     </DialogContent>
                 </Dialog>
             </div>
 
-            <div className="border rounded-md overflow-x-auto">
-                <Table className="min-w-[500px]">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Conta Vinculada</TableHead>
-                            <TableHead>À Vista?</TableHead>
-                            <TableHead className="text-right">Max. Parcelas</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-                                    <TableCell className="text-right"><Skeleton className="h-4 w-[50px] ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            payments?.map((payment) => {
-                                const linkedAccount = accountsResult?.accounts?.find(a => a.id === payment.account_id)
-                                const isInstallmentEnabled = payment.installment_limit > 1
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {isLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-32 rounded-xl border bg-card p-6 shadow-sm flex flex-col justify-between">
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-[120px]" />
+                                    <Skeleton className="h-3 w-[80px]" />
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    payments?.map((payment) => {
+                        const linkedAccount = accountsResult?.accounts?.find(a => a.id === payment.account_id)
+                        const isInstallmentEnabled = payment.installment_limit > 1
+                        const IsCash = payment.in_sight
 
-                                return (
-                                    <TableRow key={payment.id}>
-                                        <TableCell className="font-medium">{payment.name}</TableCell>
-                                        <TableCell>{linkedAccount?.name || '-'}</TableCell>
-                                        <TableCell>{payment.in_sight ? 'Sim' : 'Não'}</TableCell>
-                                        <TableCell className="text-right">
-                                            {isInstallmentEnabled ? `${payment.installment_limit}x` : <span className="text-muted-foreground">-</span>}
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })
-                        )}
-                    </TableBody>
-                </Table>
+                        return (
+                            <div
+                                key={payment.id}
+                                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/20"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "flex h-10 w-10 items-center justify-center rounded-lg shadow-sm",
+                                            IsCash ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                                        )}>
+                                            {IsCash ? <Banknote className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold tracking-tight">{payment.name}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {linkedAccount ? (
+                                                    <Badge variant="outline" className="text-xs bg-muted/50 font-normal">
+                                                        <Wallet className="mr-1 h-3 w-3" />
+                                                        {linkedAccount.name}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">Sem conta vinculada</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 flex items-center justify-between border-t pt-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Tipo</span>
+                                        <span className="text-sm font-medium">
+                                            {IsCash ? "À Vista" : "Crédito / Parcelado"}
+                                        </span>
+                                    </div>
+
+                                    {!IsCash && (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Parcelas</span>
+                                            <Badge variant="secondary" className="mt-0.5">
+                                                Até {payment.installment_limit}x
+                                            </Badge>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })
+                )}
             </div>
         </div>
     )

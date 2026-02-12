@@ -280,7 +280,20 @@ export function TreatmentInteraction({
                 <FormItem>
                   <FormLabel>Qual o estado do atendimento?</FormLabel>
                   <FormControl>
-                    <Select value={value ?? undefined} onValueChange={onChange} disabled={disabled}>
+                    <Select
+                      value={value ?? undefined}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                      onOpenChange={(isOpen) => {
+                        if (isOpen) {
+                          // Fix for "Blocked aria-hidden" error where Dialog contains focused trigger
+                          // forcing aria-hidden conflict when Select (modal-ish) opens.
+                          requestAnimationFrame(() => {
+                            (document.activeElement as HTMLElement)?.blur()
+                          })
+                        }
+                      }}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pendente</SelectItem>

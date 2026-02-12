@@ -165,6 +165,9 @@ export function Treatment() {
                         defaultValue="pending"
                         value={value || undefined}
                         onValueChange={onChange}
+                        onOpenChange={(isOpen) => {
+                          if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                        }}
                       >
                         <FormControl>
                           <SelectTrigger className="h-10 w-full">
@@ -282,6 +285,9 @@ export function Treatment() {
                           value={value || undefined}
                           onValueChange={onChange}
                           disabled={isEquipmentDisabled}
+                          onOpenChange={(isOpen) => {
+                            if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                          }}
                         >
                           <FormControl>
                             <SelectTrigger className={cn("h-10 w-full", isEquipmentDisabled && "bg-gray-50 opacity-70")}>
