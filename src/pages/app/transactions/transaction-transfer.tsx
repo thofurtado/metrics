@@ -143,34 +143,36 @@ export function TransactionTransfer() {
 
                 <Form {...form}>
                     <form
-                        className="space-y-6"
+                        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
                         onSubmit={form.handleSubmit(onSubmit)}
                     >
                         {/* Valor (Destaque Indigo/Minsk) */}
-                        <FormField
-                            control={form.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem className="relative bg-minsk-50/50 dark:bg-minsk-900/10 rounded-xl p-4 sm:p-6 border-2 border-minsk-100 dark:border-minsk-900">
-                                    <div className="flex justify-center items-center">
-                                        <span className="text-3xl sm:text-4xl font-bold text-minsk-600 mr-2">R$</span>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                type="number"
-                                                inputMode="decimal"
-                                                step="0.01"
-                                                placeholder="0,00"
-                                                className="border-none text-4xl sm:text-5xl font-bold text-minsk-600 placeholder:text-minsk-200 focus-visible:ring-0 p-0 h-14 sm:h-16 w-full text-center bg-transparent"
-                                                autoFocus
-                                            />
-                                        </FormControl>
-                                    </div>
-                                </FormItem>
-                            )}
-                        />
+                        <div className="col-span-1 lg:col-span-2">
+                            <FormField
+                                control={form.control}
+                                name="amount"
+                                render={({ field }) => (
+                                    <FormItem className="relative bg-minsk-50/50 dark:bg-minsk-900/10 rounded-xl p-4 sm:p-6 border-2 border-minsk-100 dark:border-minsk-900">
+                                        <div className="flex justify-center items-center h-full">
+                                            <span className="text-3xl sm:text-4xl font-bold text-minsk-600 mr-2">R$</span>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    step="0.01"
+                                                    placeholder="0,00"
+                                                    className="border-none text-4xl sm:text-5xl font-bold text-minsk-600 placeholder:text-minsk-200 focus-visible:ring-0 p-0 h-14 sm:h-16 w-full text-center bg-transparent"
+                                                    autoFocus
+                                                />
+                                            </FormControl>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="col-span-1 lg:col-span-2 grid grid-cols-1 gap-4">
                             <div className="flex flex-col sm:flex-row gap-4 items-center">
                                 {/* Conta Origem */}
                                 <FormField
@@ -235,7 +237,7 @@ export function TransactionTransfer() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="col-span-1 grid grid-cols-1 gap-4">
                             {/* Data */}
                             <FormField
                                 control={form.control}
@@ -288,24 +290,26 @@ export function TransactionTransfer() {
                         </div>
 
                         {/* Descrição */}
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Descrição (Opcional)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            {...field}
-                                            placeholder="Ex: Reserva de emergência..."
-                                            className="h-11"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
+                        <div className="col-span-1">
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Descrição (Opcional)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                placeholder="Ex: Reserva de emergência..."
+                                                className="h-11"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 section-footer">
+                        <div className="col-span-1 lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 section-footer">
                             <ResponsiveDialogClose asChild>
                                 <Button variant="ghost" type="button" className="w-full sm:w-auto h-11">
                                     Cancelar

@@ -241,8 +241,8 @@ export function TransactionIncome() {
 
         <Form {...form}>
           <form
-            className="space-y-6"
             onSubmit={form.handleSubmit(onSubmit)}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
           >
             {/* Amount Hero Input */}
             <FormField
@@ -289,7 +289,7 @@ export function TransactionIncome() {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="col-span-1 flex flex-col gap-6 justify-center">
               {/* Date */}
               <FormField
                 control={form.control}
@@ -368,7 +368,7 @@ export function TransactionIncome() {
 
             {/* INSTALLMENT SPECIFIC */}
             {activeTab === 'installment' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
+              <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
                 <div className="absolute -top-3 left-6 bg-background px-3 text-xs text-muted-foreground font-semibold uppercase tracking-wider border rounded-full shadow-sm">
                   Configuração de Recorrência
                 </div>
@@ -436,7 +436,7 @@ export function TransactionIncome() {
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent portal={false}>
                           <SelectItem value="WEEKLY">Semanal</SelectItem>
                           <SelectItem value="MONTHLY">Mensal</SelectItem>
                           <SelectItem value="YEARLY">Anual</SelectItem>
@@ -466,7 +466,7 @@ export function TransactionIncome() {
               )}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Categoria/Setor */}
               <FormField
                 control={form.control}
@@ -522,7 +522,7 @@ export function TransactionIncome() {
               />
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
+            <div className="col-span-1 lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
               <ResponsiveDialogClose asChild>
                 <Button variant="ghost" type="button" className="w-full sm:w-auto h-12 rounded-xl text-base font-medium text-muted-foreground hover:text-foreground">
                   Cancelar
