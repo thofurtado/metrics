@@ -33,7 +33,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
 
     return (
         <div className="flex items-center gap-2">
-            <Popover modal={true} open={open} onOpenChange={setOpen}>
+            <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
@@ -54,7 +54,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 z-[9999]" align="start">
+                <PopoverContent portal={false} className="w-[300px] p-0 z-[9999]" align="start">
                     <Command filter={(value, search) => {
                         // value is the 'value' prop of CommandItem (normalized)
                         const normalizedSearch = search.toLowerCase()

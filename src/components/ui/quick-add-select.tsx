@@ -95,7 +95,7 @@ export function QuickAddSelect({
                 <SelectTrigger className="flex-1 h-10">
                     <SelectValue placeholder={isLoading ? "Carregando..." : placeholder} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent portal={false}>
                     {options && options.length > 0 ? (
                         options.map((option) => (
                             <SelectItem value={option.value} key={option.value}>
