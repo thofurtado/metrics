@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package2, ArrowDownCircle, ArrowUpCircle, Check, ChevronDown } from 'lucide-react'
+import { Package2, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
 import { cn } from '@/lib/utils'
 
 import { registerStockMovement } from '@/api/register-stock-movement'
@@ -27,22 +29,22 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
-    Command,
-    CommandGroup,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command'
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover'
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+
 
 const stockAdjustmentSchema = z.object({
     quantity: z.coerce.number().min(0.01, 'Quantidade deve ser maior que 0'),
     operation: z.enum(['IN', 'OUT']),
     description: z.string().min(1, 'Motivo é obrigatório'),
-    unit_cost: z.coerce.number().min(0, 'Custo não pode ser negativo').optional(),
+    unit_cost: z.preprocess(
+        (val) => (val === '' ? undefined : val),
+        z.coerce.number().min(0, 'Custo não pode ser negativo').optional()
+    ),
 })
 
 type StockAdjustmentSchema = z.infer<typeof stockAdjustmentSchema>
@@ -77,6 +79,8 @@ export function StockAdjustmentDialog({
     onSuccess,
 }: StockAdjustmentDialogProps) {
     const queryClient = useQueryClient()
+    const [isSelectOpen, setIsSelectOpen] = useState(false)
+
 
     const { mutateAsync: adjustStockFn, isPending } = useMutation({
         mutationFn: registerStockMovement,
@@ -137,7 +141,17 @@ export function StockAdjustmentDialog({
     const isEntry = watchedOperation === 'IN'
 
     return (
-        <ResponsiveDialogContent className="sm:max-w-[425px] bg-background">
+        <ResponsiveDialogContent
+            className="sm:max-w-[425px] bg-background"
+            onPointerDownOutside={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest('[data-radix-select-content]')) {
+                    e.preventDefault();
+                }
+            }}
+
+        >
+
             <ResponsiveDialogHeader className="border-b pb-4">
                 <ResponsiveDialogTitle className="flex items-center gap-2 text-xl">
                     <Package2 className="h-6 w-6 text-primary" />
@@ -247,60 +261,40 @@ export function StockAdjustmentDialog({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="font-semibold text-sm">Motivo da Movimentação</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    value={field.value}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            setIsSelectOpen(true)
+                                        } else {
+                                            // Small delay to prevent ghost clicks on underlying buttons
+                                            setTimeout(() => setIsSelectOpen(false), 300)
+                                        }
+                                    }}
+                                >
+
+                                    <FormControl>
+                                        <SelectTrigger
+                                            type="button"
                                             className={cn(
-                                                "h-12 w-full justify-between bg-muted/20 border-muted-foreground/20 font-normal hover:bg-muted/30",
+                                                "h-12 w-full bg-muted/20 border-muted-foreground/20 font-normal hover:bg-muted/30",
                                                 !field.value && "text-muted-foreground"
                                             )}
                                         >
-                                            {field.value
-                                                ? currentReasonOptions.find(
-                                                    (option) => option.value === field.value
-                                                )?.label
-                                                : "Selecione o motivo"}
-                                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
-                                        <Command>
-                                            <CommandList>
-                                                <CommandGroup>
-                                                    {currentReasonOptions.map((option) => (
-                                                        <CommandItem
-                                                            value={option.label}
-                                                            key={option.value}
-                                                            onSelect={() => {
-                                                                field.onChange(option.value)
-                                                                // Close popover logic is handled by Radix usually or we might need state? 
-                                                                // Popover is uncontrolled here so we might need a hidden trigger click or use controlled state. 
-                                                                // For simplicity in this replacement without adding state, we rely on default behavior 
-                                                                // but usually controlled is better.
-                                                                // Let's rely on click-away or re-click for now or standard CommandItem behavior.
-                                                                // Wait, CommandItem select doesn't auto-close uncontrolled Popover from inside easily.
-                                                                // We need to control the Popover open state for rigorous UX.
-                                                            }}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    option.value === field.value
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {option.label}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                                            <SelectValue placeholder="Selecione o motivo" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent position="popper" sideOffset={4} onCloseAutoFocus={(e) => e.preventDefault()}>
+
+                                        {currentReasonOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -308,15 +302,16 @@ export function StockAdjustmentDialog({
 
                     <ResponsiveDialogFooter className="pt-4 flex-col gap-3 sm:flex-row">
                         <ResponsiveDialogClose asChild>
-                            <Button type="button" variant="ghost" className="h-12 w-full sm:w-auto">Cancelar</Button>
+                            <Button type="button" variant="ghost" className="h-12 w-full sm:w-auto" disabled={isSelectOpen}>Cancelar</Button>
                         </ResponsiveDialogClose>
                         <Button
                             type="submit"
                             className={cn("h-12 w-full sm:w-auto px-8 font-bold shadow-md", isEntry ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700")}
-                            disabled={isPending}
+                            disabled={isPending || isSelectOpen}
                         >
                             {isPending ? 'Salvando...' : 'Confirmar Ajuste'}
                         </Button>
+
                     </ResponsiveDialogFooter>
                 </form>
             </Form>

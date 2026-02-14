@@ -22,6 +22,7 @@ export interface GetItemsResponse {
         supply: {
           id: string
           name: string
+          stock: number
           unit: string | null
         }
       }[]

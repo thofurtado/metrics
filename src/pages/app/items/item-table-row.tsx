@@ -39,6 +39,11 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
   const minStock = activeTabType === 'PRODUCT' ? item.product?.min_stock : null
   const isLowStock = (stock ?? 0) <= (minStock ?? 0)
 
+  // DEBUG: Inspect item structure
+  if (activeTabType === 'PRODUCT') {
+    console.log(`[ItemTableRow] Product: ${item.name}`, item)
+  }
+
   return (
     <TableRow>
       {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
@@ -49,7 +54,15 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
 
       <TableCell className="font-medium">
         <div className="flex flex-col max-w-[150px] sm:max-w-[300px]">
-          <span className="truncate" title={item.name}>{item.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="truncate" title={item.name}>{item.name}</span>
+            {/* Visual Indicator for Composite Products */}
+            {activeTabType === 'PRODUCT' && item.product?.is_composite && (
+              <Badge variant="outline" className="text-[10px] h-5 px-1 bg-amber-50 text-amber-600 border-amber-200">
+                Composto
+              </Badge>
+            )}
+          </div>
           {item.category && (
             <span className="text-[10px] text-muted-foreground uppercase truncate">
               {typeof item.category === 'string' ? item.category : item.category.name}
@@ -59,6 +72,13 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
           {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
             <span className="text-[10px] text-zinc-400 sm:hidden">#{displayId}</span>
           )}
+
+          {/* USER REQUESTED DEBUG */}
+          {activeTabType === 'PRODUCT' && (
+            <div className="text-[10px] text-red-500 font-mono hidden">
+              DEBUG: Cost={String(item.product?.cost)} | Comp={String(item.product?.is_composite)}
+            </div>
+          )}
         </div>
       </TableCell>
 
@@ -66,11 +86,30 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
       {activeTabType === 'PRODUCT' && (
         <>
           <TableCell className="text-center w-[100px]">
-            <Badge variant={isLowStock ? "destructive" : "secondary"} className="whitespace-nowrap">
-              {stock ?? 0}
-            </Badge>
+            {item.product?.is_composite ? (
+              <Badge className="whitespace-nowrap bg-blue-600 hover:bg-blue-700">
+                {(() => {
+                  const comps = item.product?.compositions || []
+                  if (comps.length === 0) return 0
+
+                  const possibleAmounts = comps.map(comp => {
+                    const supplyStock = comp.supply?.stock || 0
+                    const needed = comp.quantity || 0
+                    if (needed <= 0) return 0
+                    return Math.floor(supplyStock / needed)
+                  })
+
+                  return Math.min(...possibleAmounts)
+                })()}
+              </Badge>
+            ) : (
+              <Badge variant={isLowStock ? "destructive" : "secondary"} className="whitespace-nowrap">
+                {stock ?? 0}
+              </Badge>
+            )}
           </TableCell>
           <TableCell className="w-[120px]">
+            {/* Explicit check for cost, defaulting to 0 only if strictly null/undefined */}
             {(item.product?.cost ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </TableCell>
           <TableCell className="w-[120px]">
@@ -123,7 +162,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 
-            {isStockable && (
+            {isStockable && !item.product?.is_composite && (
               <DropdownMenuItem onSelect={(e) => {
                 e.preventDefault()
                 setIsAdjustStockOpen(true)
@@ -159,7 +198,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
             <StockAdjustmentDialog
               itemId={item.id}
               itemName={item.name}
-              currentCost={item.product?.cost || item.supply?.cost}
+              currentCost={item.product?.cost ?? item.supply?.cost}
               onSuccess={() => setIsAdjustStockOpen(false)}
             />
           </ResponsiveDialog>

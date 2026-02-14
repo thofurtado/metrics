@@ -18,6 +18,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
         queryFn: getSystemConfig,
         staleTime: 1000 * 60 * 5, // 5 minutes
         retry: false,
+        enabled: !!localStorage.getItem('token')
     })
 
     // Default fallback if loading or error

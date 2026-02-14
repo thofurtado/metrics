@@ -111,7 +111,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             description: initialData?.description ?? '',
             category: initialData?.category ?? '',
 
-            cost: initialData?.product?.cost ?? 0,
+            cost: (initialData?.product && typeof initialData.product.cost === 'number') ? initialData.product.cost : 0,
             price: initialData?.product?.price ?? 0,
             stock: initialData?.product?.stock ?? 0,
             min_stock: initialData?.product?.min_stock ?? 0,
@@ -272,432 +272,436 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     return (
         <>
             <Form {...form}>
-                <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-6 flex-1 overflow-y-auto flex flex-col gap-8">
+                <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col w-full h-full overflow-hidden text-left">
 
-                    {/* --- HEADER: Basic Info --- */}
-                    <div className="grid grid-cols-12 gap-6">
+                    {/* SCROLLABLE CONTENT */}
+                    <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8 space-y-8">
 
-                        {/* Name Field - Hero */}
-                        <div className="col-span-12 sm:col-span-8 space-y-2">
-                            <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Nome do Produto</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Ex: Torneira Esfera 1/2"
-                                            {...field}
-                                            className="h-12 text-lg font-medium"
-                                            autoFocus
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        </div>
+                        {/* --- HEADER: Basic Info --- */}
+                        <div className="grid grid-cols-12 gap-6">
 
-                        {/* Active Switch - Only on Edit */}
-                        {isEdit && (
-                            <div className="col-span-12 sm:col-span-4 flex items-end pb-3">
-                                <FormField control={form.control} name="active" render={({ field }) => (
-                                    <FormItem className="flex items-center space-x-3 space-y-0 rounded-xl border p-3 w-full bg-muted/20">
+                            {/* Name Field - Hero */}
+                            <div className="col-span-12 sm:col-span-8 space-y-2">
+                                <FormField control={form.control} name="name" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Nome do Produto</FormLabel>
                                         <FormControl>
-                                            <Switch
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                            <Input
+                                                placeholder="Ex: Torneira Esfera 1/2"
+                                                {...field}
+                                                className="h-12 text-lg font-medium"
+                                                autoFocus
                                             />
                                         </FormControl>
-                                        <FormLabel className="font-medium cursor-pointer">
-                                            Produto Ativo
-                                        </FormLabel>
-                                    </FormItem>
-                                )} />
-                            </div>
-                        )}
-                    </div>
-
-
-                    {/* --- DETAILS: Category, Barcode, ID --- */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-1">
-                            <div className="flex gap-2 items-end">
-                                <FormField control={form.control} name="category" render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Categoria</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            value={field.value}
-                                            onOpenChange={(isOpen) => {
-                                                if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
-                                            }}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger className="h-10">
-                                                    <SelectValue placeholder="Selecione..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {(categoriesData?.categories || []).map((cat: any) => (
-                                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-10 w-10 shrink-0"
-                                    onClick={() => setIsNewCategoryOpen(true)}
-                                    title="Nova Categoria"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </div>
-                        </div>
 
-                        <FormField control={form.control} name="barcode" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-1 text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                                    <ScanBarcode className="w-3 h-3" /> Código de Barras
-                                </FormLabel>
-                                <FormControl>
-                                    <Input
-                                        placeholder="EAN / GTIN"
-                                        {...field}
-                                        className="h-10 font-mono text-sm"
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="display_id" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ID Interno</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        type="number"
-                                        placeholder={isEdit ? "ID" : (nextIdData?.nextId?.toString() ?? "Automático")}
-                                        {...field}
-                                        value={field.value ?? ''}
-                                        className="h-10 font-mono text-sm bg-muted/50"
-                                        onBlur={async (e) => {
-                                            field.onBlur()
-                                            const val = parseInt(e.target.value)
-                                            if (val && val !== initialData?.product?.display_id) {
-                                                const check = await checkProductCode({ code: val })
-                                                if (!check.available) {
-                                                    form.setError('display_id', { message: 'ID já em uso' })
-                                                } else {
-                                                    form.clearErrors('display_id')
-                                                }
-                                            }
-                                        }}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </FormControl>
-                            </FormItem>
-                        )} />
-                    </div>
-
-
-                    {/* --- GROUP: PRICING (HERO SECTION) --- */}
-                    <div className="bg-muted/10 rounded-2xl border p-4 sm:p-6 space-y-6">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-1 h-6 bg-primary rounded-full"></div>
-                            <h4 className="text-lg font-bold tracking-tight">Formação de Preço</h4>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-
-                            {/* Cost - Hero Input */}
-                            <FormField control={form.control} name="cost" render={({ field }) => (
-                                <FormItem className="col-span-2 sm:col-span-1">
-                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Custo Unitário</FormLabel>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">R$</span>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                inputMode="decimal"
-                                                {...field}
-                                                value={isComposite ? calculatedCost.toFixed(2) : field.value}
-                                                disabled={isComposite}
-                                                className={cn("h-12 pl-10 text-lg font-bold tabular-nums", isComposite && "bg-muted text-muted-foreground")}
-                                                onChange={(e) => {
-                                                    field.onChange(e)
-                                                    const newCost = parseFloat(e.target.value) || 0
-                                                    const currentPrice = form.getValues('price') || 0
-                                                    const profit = currentPrice - newCost
-                                                    const margin = newCost > 0 ? (profit / newCost) * 100 : 0
-                                                    setProfit(profit)
-                                                    setMargin(margin)
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                            />
-                                        </div>
-                                    </FormControl>
-                                    {isComposite && <FormMessage className="text-[10px]">Calculado via composição</FormMessage>}
-                                </FormItem>
-                            )} />
-
-                            {/* Profit & Margin Indicators */}
-                            <div className="col-span-2 sm:col-span-2 flex gap-4">
-                                <div className="space-y-2 flex-1">
-                                    <FormLabel className="text-xs font-bold text-emerald-600/70 uppercase tracking-wide">Lucro Estimado</FormLabel>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-semibold">R$</span>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={profit.toFixed(2)}
-                                            className="h-12 pl-10 text-lg font-semibold text-emerald-700 bg-emerald-50/50 border-emerald-100"
-                                            onChange={(e) => {
-                                                const newProfit = parseFloat(e.target.value) || 0
-                                                setProfit(newProfit)
-                                                const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
-                                                const newPrice = currentCost + newProfit
-                                                form.setValue('price', parseFloat(newPrice.toFixed(2)))
-                                                const newMargin = currentCost > 0 ? (newProfit / currentCost) * 100 : 0
-                                                setMargin(newMargin)
-                                            }}
-                                        />
-                                    </div>
+                            {/* Active Switch - Only on Edit */}
+                            {isEdit && (
+                                <div className="col-span-12 sm:col-span-4 flex items-end pb-1">
+                                    <FormField control={form.control} name="active" render={({ field }) => (
+                                        <FormItem className="flex items-center space-x-3 space-y-0 rounded-xl border p-3 w-full bg-muted/20 h-12">
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="font-medium cursor-pointer text-sm">
+                                                Produto Ativo
+                                            </FormLabel>
+                                        </FormItem>
+                                    )} />
                                 </div>
-                                <div className="space-y-2 flex-1">
-                                    <FormLabel className="text-xs font-bold text-blue-600/70 uppercase tracking-wide">Margem %</FormLabel>
-                                    <div className="relative">
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={margin.toFixed(2)}
-                                            className="h-12 pr-8 text-lg font-semibold text-blue-700 bg-blue-50/50 border-blue-100 text-right"
-                                            onChange={(e) => {
-                                                const newMargin = parseFloat(e.target.value) || 0
-                                                setMargin(newMargin)
-                                                const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
-                                                const newProfit = currentCost * (newMargin / 100)
-                                                setProfit(newProfit)
-                                                const newPrice = currentCost + newProfit
-                                                form.setValue('price', parseFloat(newPrice.toFixed(2)))
-                                            }}
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 font-bold">%</span>
-                                    </div>
+                            )}
+                        </div>
+
+
+                        {/* --- DETAILS: Category, Barcode, ID --- */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div className="sm:col-span-1">
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Categoria</FormLabel>
+                                <div className="flex gap-2">
+                                    <FormField control={form.control} name="category" render={({ field }) => (
+                                        <FormItem className="flex-1 space-y-0">
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                                onOpenChange={(isOpen) => {
+                                                    if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                                                }}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger className="h-10">
+                                                        <SelectValue placeholder="Selecione..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {(categoriesData?.categories || []).map((cat: any) => (
+                                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-10 w-10 shrink-0"
+                                        onClick={() => setIsNewCategoryOpen(true)}
+                                        title="Nova Categoria"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
 
-                            {/* Sale Price - MAIN HERO */}
-                            <FormField control={form.control} name="price" render={({ field }) => (
-                                <FormItem className="col-span-2 sm:col-span-1">
-                                    <FormLabel className="text-xs font-bold text-primary uppercase tracking-wide">Preço de Venda</FormLabel>
-                                    <FormControl>
-                                        <div className="relative shadow-sm rounded-md">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold">R$</span>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                inputMode="decimal"
-                                                {...field}
-                                                className="h-12 pl-10 text-xl font-bold text-primary border-primary/30 bg-primary/5 focus-visible:ring-primary focus-visible:border-primary shadow-sm tabular-nums"
-                                                onChange={(e) => {
-                                                    field.onChange(e)
-                                                    const newPrice = parseFloat(e.target.value) || 0
-                                                    const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
-                                                    const newProfit = newPrice - currentCost
-                                                    setProfit(newProfit)
-                                                    const newMargin = currentCost > 0 ? (newProfit / currentCost) * 100 : 0
-                                                    setMargin(newMargin)
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                            />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                        </div>
-                    </div>
-
-
-                    {/* --- STOCK & LOGISTICS --- */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="stock" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        type="number"
-                                        {...field}
-                                        disabled={isComposite}
-                                        className={cn("h-10 font-mono", isComposite && "bg-muted")}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </FormControl>
-                                {isComposite && <span className="text-[10px] text-muted-foreground">Gerenciado pelos insumos</span>}
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="min_stock" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Estoque Mínimo</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        type="number"
-                                        {...field}
-                                        disabled={isComposite}
-                                        className={cn("h-10 font-mono", isComposite && "bg-muted")}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <div className="col-span-2 sm:col-span-1">
-                            <FormField control={form.control} name="ncm" render={({ field }) => (
+                            <FormField control={form.control} name="barcode" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">NCM / Fiscal</FormLabel>
+                                    <FormLabel className="flex items-center gap-1 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                                        <ScanBarcode className="w-3 h-3" /> Código de Barras
+                                    </FormLabel>
                                     <FormControl>
                                         <Input
-                                            placeholder="0000.00.00"
+                                            placeholder="EAN / GTIN"
                                             {...field}
-                                            className="h-10 font-mono"
+                                            className="h-10 font-mono text-sm"
                                             onFocus={(e) => e.target.select()}
                                         />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
+                            <FormField control={form.control} name="display_id" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ID Interno</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            placeholder={isEdit ? "ID" : (nextIdData?.nextId?.toString() ?? "Automático")}
+                                            {...field}
+                                            value={field.value ?? ''}
+                                            className="h-10 font-mono text-sm bg-muted/50"
+                                            onBlur={async (e) => {
+                                                field.onBlur()
+                                                const val = parseInt(e.target.value)
+                                                if (val && val !== initialData?.product?.display_id) {
+                                                    const check = await checkProductCode({ code: val })
+                                                    if (!check.available) {
+                                                        form.setError('display_id', { message: 'ID já em uso' })
+                                                    } else {
+                                                        form.clearErrors('display_id')
+                                                    }
+                                                }
+                                            }}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+
+
+                        {/* --- GROUP: PRICING (HERO SECTION) --- */}
+                        <div className="bg-muted/10 rounded-2xl border p-6 space-y-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1 h-6 bg-primary rounded-full"></div>
+                                <h4 className="text-lg font-bold tracking-tight">Formação de Preço</h4>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+
+                                {/* Cost - Hero Input */}
+                                <FormField control={form.control} name="cost" render={({ field }) => (
+                                    <FormItem className="sm:col-span-1">
+                                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Custo Unitário</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">R$</span>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    inputMode="decimal"
+                                                    {...field}
+                                                    value={isComposite ? calculatedCost.toFixed(2) : field.value}
+                                                    disabled={isComposite}
+                                                    className={cn("h-12 pl-10 text-lg font-bold tabular-nums", isComposite && "bg-muted text-muted-foreground")}
+                                                    onChange={(e) => {
+                                                        field.onChange(e)
+                                                        const newCost = parseFloat(e.target.value) || 0
+                                                        const currentPrice = form.getValues('price') || 0
+                                                        const profit = currentPrice - newCost
+                                                        const margin = newCost > 0 ? (profit / newCost) * 100 : 0
+                                                        setProfit(profit)
+                                                        setMargin(margin)
+                                                    }}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </FormControl>
+                                        {isComposite && <FormMessage className="text-[10px]">Calculado via composição</FormMessage>}
+                                    </FormItem>
+                                )} />
+
+                                {/* Profit & Margin Indicators */}
+                                <div className="sm:col-span-2 flex gap-4">
+                                    <div className="space-y-2 flex-1">
+                                        <FormLabel className="text-xs font-bold text-emerald-600/70 uppercase tracking-wide">Lucro Estimado</FormLabel>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-semibold">R$</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={profit.toFixed(2)}
+                                                className="h-12 pl-10 text-lg font-semibold text-emerald-700 bg-emerald-50/50 border-emerald-100"
+                                                onChange={(e) => {
+                                                    const newProfit = parseFloat(e.target.value) || 0
+                                                    setProfit(newProfit)
+                                                    const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
+                                                    const newPrice = currentCost + newProfit
+                                                    form.setValue('price', parseFloat(newPrice.toFixed(2)))
+                                                    const newMargin = currentCost > 0 ? (newProfit / currentCost) * 100 : 0
+                                                    setMargin(newMargin)
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 flex-1">
+                                        <FormLabel className="text-xs font-bold text-blue-600/70 uppercase tracking-wide">Margem %</FormLabel>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={margin.toFixed(2)}
+                                                className="h-12 pr-8 text-lg font-semibold text-blue-700 bg-blue-50/50 border-blue-100 text-right"
+                                                onChange={(e) => {
+                                                    const newMargin = parseFloat(e.target.value) || 0
+                                                    setMargin(newMargin)
+                                                    const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
+                                                    const newProfit = currentCost * (newMargin / 100)
+                                                    setProfit(newProfit)
+                                                    const newPrice = currentCost + newProfit
+                                                    form.setValue('price', parseFloat(newPrice.toFixed(2)))
+                                                }}
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Sale Price - MAIN HERO */}
+                                <FormField control={form.control} name="price" render={({ field }) => (
+                                    <FormItem className="sm:col-span-1">
+                                        <FormLabel className="text-xs font-bold text-primary uppercase tracking-wide">Preço de Venda</FormLabel>
+                                        <FormControl>
+                                            <div className="relative shadow-sm rounded-md">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold">R$</span>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    inputMode="decimal"
+                                                    {...field}
+                                                    className="h-12 pl-10 text-xl font-bold text-primary border-primary/30 bg-primary/5 focus-visible:ring-primary focus-visible:border-primary shadow-sm tabular-nums"
+                                                    onChange={(e) => {
+                                                        field.onChange(e)
+                                                        const newPrice = parseFloat(e.target.value) || 0
+                                                        const currentCost = isComposite ? calculatedCost : (form.getValues('cost') || 0)
+                                                        const newProfit = newPrice - currentCost
+                                                        setProfit(newProfit)
+                                                        const newMargin = currentCost > 0 ? (newProfit / currentCost) * 100 : 0
+                                                        setMargin(newMargin)
+                                                    }}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+                        </div>
+
+
+                        {/* --- STOCK & LOGISTICS --- */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+                            <FormField control={form.control} name="stock" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            {...field}
+                                            disabled={isComposite}
+                                            className={cn("h-10 font-mono", isComposite && "bg-muted")}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                    </FormControl>
+                                    {isComposite && <span className="text-[10px] text-muted-foreground">Gerenciado pelos insumos</span>}
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="min_stock" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Estoque Mínimo</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            {...field}
+                                            disabled={isComposite}
+                                            className={cn("h-10 font-mono", isComposite && "bg-muted")}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <div className="col-span-2 sm:col-span-1">
+                                <FormField control={form.control} name="ncm" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">NCM / Fiscal</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="0000.00.00"
+                                                {...field}
+                                                className="h-10 font-mono"
+                                                onFocus={(e) => e.target.select()}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+                        </div>
+
+                        {/* --- DESCRIPTION --- */}
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Descrição / Observações</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Informações adicionais..." className="resize-none min-h-[80px]" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+
+                        {/* --- COMPOSITION SWITCH --- */}
+                        <div className="border-t pt-4">
+                            <FormField control={form.control} name="is_composite" render={({ field }) => (
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">Produto Composto / Kit</FormLabel>
+                                            <p className="text-sm text-muted-foreground">
+                                                Este produto é formado por outros insumos (ex: Burger = Pão + Carne).
+                                            </p>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={(val) => {
+                                                    field.onChange(val)
+                                                    if (val && fields.length === 0) append({ supply_id: '', quantity: 1 })
+                                                }}
+                                            />
+                                        </FormControl>
+                                    </div>
+
+                                    {isComposite && (
+                                        <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-semibold text-sm flex items-center gap-2"><Hammer className="w-4 h-4" /> Lista de Insumos</h4>
+                                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-bold">
+                                                    Custo Total: {calculatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {(fields || []).map((field, index) => (
+                                                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-background p-2 rounded-lg border shadow-sm">
+                                                        <div className="col-span-8 sm:col-span-7">
+                                                            <FormField control={form.control} name={`compositions.${index}.supply_id`} render={({ field }) => (
+                                                                <FormItem className="space-y-0">
+                                                                    <Select
+                                                                        onValueChange={field.onChange}
+                                                                        value={field.value}
+                                                                        onOpenChange={(isOpen) => {
+                                                                            if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                                                                        }}
+                                                                    >
+                                                                        <FormControl>
+                                                                            <SelectTrigger className="h-9 text-sm">
+                                                                                <SelectValue placeholder="Selecione..." />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            {(suppliesData?.data.supplies || []).map(s => (
+                                                                                <SelectItem key={s.id} value={s.id}>
+                                                                                    <span className="flex justify-between w-full gap-4">
+                                                                                        <span>{s.name}</span>
+                                                                                        <span className="text-muted-foreground font-mono">R$ {s.cost.toFixed(2)}</span>
+                                                                                    </span>
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        <div className="col-span-3 sm:col-span-4 relative">
+                                                            <FormField control={form.control} name={`compositions.${index}.quantity`} render={({ field }) => (
+                                                                <FormItem className="space-y-0">
+                                                                    <FormControl>
+                                                                        <Input type="number" step="0.0001" {...field} className="h-9 text-center pl-8" />
+                                                                    </FormControl>
+                                                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">Qtd</span>
+                                                                </FormItem>
+                                                            )} />
+                                                        </div>
+
+                                                        <div className="col-span-1 items-center flex justify-end">
+                                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                                                                <Trash className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <Button type="button" variant="outline" size="sm" onClick={() => append({ supply_id: '', quantity: 1 })} className="w-full mt-2 border-dashed">
+                                                <Plus className="h-3 w-3 mr-2" /> Adicionar Insumo
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )} />
                         </div>
                     </div>
 
-                    {/* --- DESCRIPTION --- */}
-                    <FormField control={form.control} name="description" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Descrição / Observações</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="Informações adicionais..." className="resize-none min-h-[80px]" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-
-
-                    {/* --- COMPOSITION SWITCH --- */}
-                    <div className="border-t pt-4">
-                        <FormField control={form.control} name="is_composite" render={({ field }) => (
-                            <div className="flex flex-col gap-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <FormLabel className="text-base">Produto Composto / Kit</FormLabel>
-                                        <p className="text-sm text-muted-foreground">
-                                            Este produto é formado por outros insumos (ex: Burger = Pão + Carne).
-                                        </p>
-                                    </div>
-                                    <FormControl>
-                                        <Switch
-                                            checked={field.value}
-                                            onCheckedChange={(val) => {
-                                                field.onChange(val)
-                                                if (val && fields.length === 0) append({ supply_id: '', quantity: 1 })
-                                            }}
-                                        />
-                                    </FormControl>
-                                </div>
-
-                                {isComposite && (
-                                    <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className="font-semibold text-sm flex items-center gap-2"><Hammer className="w-4 h-4" /> Lista de Insumos</h4>
-                                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-bold">
-                                                Custo Total: {calculatedCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                            </span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {(fields || []).map((field, index) => (
-                                                <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-background p-2 rounded-lg border shadow-sm">
-                                                    <div className="col-span-8 sm:col-span-7">
-                                                        <FormField control={form.control} name={`compositions.${index}.supply_id`} render={({ field }) => (
-                                                            <FormItem className="space-y-0">
-                                                                <Select
-                                                                    onValueChange={field.onChange}
-                                                                    value={field.value}
-                                                                    onOpenChange={(isOpen) => {
-                                                                        if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
-                                                                    }}
-                                                                >
-                                                                    <FormControl>
-                                                                        <SelectTrigger className="h-9 text-sm">
-                                                                            <SelectValue placeholder="Selecione..." />
-                                                                        </SelectTrigger>
-                                                                    </FormControl>
-                                                                    <SelectContent>
-                                                                        {(suppliesData?.data.supplies || []).map(s => (
-                                                                            <SelectItem key={s.id} value={s.id}>
-                                                                                <span className="flex justify-between w-full gap-4">
-                                                                                    <span>{s.name}</span>
-                                                                                    <span className="text-muted-foreground font-mono">R$ {s.cost.toFixed(2)}</span>
-                                                                                </span>
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </FormItem>
-                                                        )} />
-                                                    </div>
-
-                                                    <div className="col-span-3 sm:col-span-4 relative">
-                                                        <FormField control={form.control} name={`compositions.${index}.quantity`} render={({ field }) => (
-                                                            <FormItem className="space-y-0">
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.0001" {...field} className="h-9 text-center pl-8" />
-                                                                </FormControl>
-                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">Qtd</span>
-                                                            </FormItem>
-                                                        )} />
-                                                    </div>
-
-                                                    <div className="col-span-1 items-center flex justify-end">
-                                                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
-                                                            <Trash className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <Button type="button" variant="outline" size="sm" onClick={() => append({ supply_id: '', quantity: 1 })} className="w-full mt-2 border-dashed">
-                                            <Plus className="h-3 w-3 mr-2" /> Adicionar Insumo
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        )} />
+                    {/* --- FIXED FOOTER --- */}
+                    <div className="shrink-0 p-6 sm:p-8 border-t bg-background flex justify-end gap-3 z-10">
+                        <ResponsiveDialogClose asChild>
+                            <Button type="button" variant="ghost" className="h-12 w-full sm:w-auto font-medium">Cancelar</Button>
+                        </ResponsiveDialogClose>
+                        <Button
+                            form="product-form"
+                            type="submit"
+                            disabled={form.formState.isSubmitting}
+                            className="bg-primary hover:bg-primary/90 h-12 w-full sm:w-auto px-8 font-bold text-md shadow-lg"
+                        >
+                            {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Produto'}
+                        </Button>
                     </div>
 
                 </form>
-
-                {/* --- STICKY FOOTER --- */}
-                <ResponsiveDialogFooter className="border-t bg-background p-6 z-20">
-                    <ResponsiveDialogClose asChild>
-                        <Button type="button" variant="ghost" className="h-12 w-full sm:w-auto">Cancelar</Button>
-                    </ResponsiveDialogClose>
-                    <Button
-                        form="product-form"
-                        type="submit"
-                        disabled={form.formState.isSubmitting}
-                        className="bg-primary hover:bg-primary/90 h-12 w-full sm:w-auto px-8 font-bold text-md shadow-lg"
-                    >
-                        {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Produto'}
-                    </Button>
-                </ResponsiveDialogFooter>
             </Form>
 
             <ResponsiveDialog open={isNewCategoryOpen} onOpenChange={setIsNewCategoryOpen}>

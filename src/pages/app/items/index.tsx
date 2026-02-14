@@ -58,19 +58,31 @@ export function Items() {
                         signal, pageIndex, query: nameFilter,
                     })
                     return {
-                        items: res.data?.products?.map((p: any) => ({ ...p, type: 'PRODUCT' })) ?? [],
+                        items: res.data?.products?.map((p: any) => ({
+                            ...p,
+                            type: 'PRODUCT',
+                            product: p // Adaptador para ItemTableRow
+                        })) ?? [],
                         meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
                     }
                 } else if (activeTabType === 'SERVICE') {
                     const res = await getServices({ signal, pageIndex, query: nameFilter })
                     return {
-                        items: res.data?.services?.map((s: any) => ({ ...s, type: 'SERVICE' })) ?? [],
+                        items: res.data?.services?.map((s: any) => ({
+                            ...s,
+                            type: 'SERVICE',
+                            service: s // Adaptador para ItemTableRow
+                        })) ?? [],
                         meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
                     }
                 } else {
                     const res = await getSupplies({ signal, pageIndex, query: nameFilter })
                     return {
-                        items: res.data?.supplies?.map((s: any) => ({ ...s, type: 'SUPPLY' })) ?? [],
+                        items: res.data?.supplies?.map((s: any) => ({
+                            ...s,
+                            type: 'SUPPLY',
+                            supply: s // Adaptador para ItemTableRow
+                        })) ?? [],
                         meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
                     }
                 }

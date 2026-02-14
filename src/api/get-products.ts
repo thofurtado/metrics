@@ -13,6 +13,7 @@ export interface GetProductsResponse {
         // Product specific
         display_id: number
         price: number
+        cost: number | null
         stock: number
         min_stock: number | null
         barcode: string | null

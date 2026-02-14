@@ -11,7 +11,6 @@ import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import {
   ResponsiveDialog,
-  ResponsiveDialogTrigger,
 } from '@/components/ui/responsive-dialog'
 import {
   Popover,
@@ -51,6 +50,7 @@ export function Transactions() {
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
   const [isIncomeOpen, setIsIncomeOpen] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
@@ -187,7 +187,7 @@ export function Transactions() {
       <Helmet title="Transações" />
       <div className="flex flex-col gap-6 font-gaba">
         <PageHeader title="Transações" description="Gerencie suas receitas, despesas e transferências.">
-          <Popover>
+          <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <PopoverTrigger asChild>
               <Button
                 aria-label="Adicionar"
@@ -198,48 +198,56 @@ export function Transactions() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" side="bottom" align="end">
-              <ResponsiveDialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
-                <ResponsiveDialogTrigger asChild>
-                  <Button
-                    aria-label="Adicionar Despesa"
-                    variant="ghost"
-                    className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
-                  >
-                    <TrendingDown className="mr-3 h-4 w-4 text-red-500" />
-                    Despesa
-                  </Button>
-                </ResponsiveDialogTrigger>
-                <TransactionExpense />
-              </ResponsiveDialog>
-              <ResponsiveDialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
-                <ResponsiveDialogTrigger asChild>
-                  <Button
-                    aria-label="Adicionar Receita"
-                    variant="ghost"
-                    className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
-                  >
-                    <TrendingUp className="mr-3 h-4 w-4 text-green-500" />
-                    Receita
-                  </Button>
-                </ResponsiveDialogTrigger>
-                <TransactionIncome />
-              </ResponsiveDialog>
-
-              <ResponsiveDialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-                <ResponsiveDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
-                    aria-label="Adicionar Transação"
-                  >
-                    <ArrowRightLeft className="mr-3 h-4 w-4 text-blue-500" />
-                    Transferência
-                  </Button>
-                </ResponsiveDialogTrigger>
-                <TransactionTransfer />
-              </ResponsiveDialog>
+              <Button
+                aria-label="Adicionar Despesa"
+                variant="ghost"
+                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  setIsExpenseOpen(true)
+                }}
+              >
+                <TrendingDown className="mr-3 h-4 w-4 text-red-500" />
+                Despesa
+              </Button>
+              <Button
+                aria-label="Adicionar Receita"
+                variant="ghost"
+                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  setIsIncomeOpen(true)
+                }}
+              >
+                <TrendingUp className="mr-3 h-4 w-4 text-green-500" />
+                Receita
+              </Button>
+              <Button
+                variant="ghost"
+                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                aria-label="Adicionar Transação"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  setIsTransferOpen(true)
+                }}
+              >
+                <ArrowRightLeft className="mr-3 h-4 w-4 text-blue-500" />
+                Transferência
+              </Button>
             </PopoverContent>
           </Popover>
+
+          <ResponsiveDialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
+            <TransactionExpense />
+          </ResponsiveDialog>
+
+          <ResponsiveDialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
+            <TransactionIncome />
+          </ResponsiveDialog>
+
+          <ResponsiveDialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+            <TransactionTransfer />
+          </ResponsiveDialog>
         </PageHeader>
 
         {/* TABS HEADER */}

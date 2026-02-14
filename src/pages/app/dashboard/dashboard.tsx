@@ -19,7 +19,7 @@ export function Dashboard() {
       <Helmet title="Dashboard" />
 
       {/* CONTAINER PRINCIPAL: Redução de padding e gap para subir o conteúdo. */}
-      <div className="flex flex-col gap-3 p-3 md:p-5 overflow-x-hidden">
+      <div className="flex flex-col gap-3 p-3 md:p-5">
 
         <div className="flex items-center justify-between">
           <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900 dark:text-minsk-50">
