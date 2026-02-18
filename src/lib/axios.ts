@@ -50,19 +50,9 @@ api.interceptors.response.use(
         if (typeof window !== 'undefined') {
           window.location.href = '/sign-in'
         }
-        return Promise.reject(error)
       }
 
-      // Return a safe 'standard' object for 404, 500 or network errors
-      // This prevents the application from crashing on undefined data
-      return Promise.resolve({
-        data: null, // Default value to be handled at the API function level
-        status: status || 500,
-        statusText: message,
-        headers: error.response?.headers || {},
-        config: error.config,
-        isError: true,
-      })
+      return Promise.reject(error)
     }
 
     if (isDev) console.error('[Fatal Error]:', error)

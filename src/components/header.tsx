@@ -1,4 +1,5 @@
-import { Blocks, Headset, Home, PiggyBank, Pyramid } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Blocks, Headset, PiggyBank, Pyramid, Users } from 'lucide-react'
 
 import { NavLink } from './nav-link'
 import { ModeToggle } from './theme/theme-toogle'
@@ -13,15 +14,14 @@ export function Header() {
     <div className="border-b">
       <div className="flex h-16 items-center gap-6 px-6">
         {/* Logo - sempre visível em todas as telas */}
-        <Pyramid className="h-6 w-6" />
+        <Link to="/" aria-label="Início" className="flex items-center gap-2 text-foreground font-semibold">
+          <Pyramid className="h-6 w-6" />
+          <span className="hidden lg:inline-block">metrics</span>
+        </Link>
 
         <Separator orientation="vertical" className="h-6" />
 
         <nav className="flex flex-1 items-center justify-between sm:justify-start sm:space-x-4 lg:space-x-6">
-          <NavLink to="/">
-            <Home className="h-5 w-5" />
-            <span className="hidden sm:inline">Início</span>
-          </NavLink>
 
           {isModuleActive('merchandise') && (
             <NavLink to="/items">
@@ -41,6 +41,13 @@ export function Header() {
             <NavLink to="/transactions">
               <PiggyBank className="h-5 w-5" />
               <span className="hidden sm:inline">Financeiro</span>
+            </NavLink>
+          )}
+
+          {isModuleActive('hr_module') && (
+            <NavLink to="/hr">
+              <Users className="h-5 w-5" />
+              <span className="hidden sm:inline">RH</span>
             </NavLink>
           )}
         </nav>

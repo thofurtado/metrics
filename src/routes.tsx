@@ -1,6 +1,5 @@
-
 // routes.tsx
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
 import { LandingPage } from './pages/landing-page'
@@ -20,6 +19,10 @@ import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { ModuleGuard } from './components/module-guard'
 
+import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
+import { HRDashboard } from './pages/hr/dashboard'
+import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
+
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = () => {
   return !!localStorage.getItem('token')
@@ -37,6 +40,18 @@ export const router = createBrowserRouter([
       {
         path: 'downloads',
         element: <DownloadsPage />,
+      },
+      {
+        path: 'time-clock',
+        element: <TimeClockKiosk />,
+      },
+      {
+        path: 'hr/timesheet/:employeeId',
+        element: (
+          <ModuleGuard module="hr_module">
+            <TimeSheetPage />
+          </ModuleGuard>
+        ),
       },
       {
         element: <AppLayout />,
@@ -84,6 +99,14 @@ export const router = createBrowserRouter([
               { path: 'payments', element: <Payments /> },
               { path: 'modules', element: <ModulesSettings /> },
             ]
+          },
+          {
+            path: 'hr',
+            element: (
+              <ModuleGuard module="hr_module">
+                <HRDashboard />
+              </ModuleGuard>
+            ),
           }
         ],
       },

@@ -4,7 +4,8 @@ import {
     DollarSign,
     ClipboardList,
     Info,
-    AlertCircle
+    AlertCircle,
+    Users
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -24,6 +25,8 @@ const formSchema = z.object({
     merchandise: z.boolean(),
     financial: z.boolean(),
     treatments: z.boolean(),
+    hr_module: z.boolean(),
+    cestaBasicaValue: z.coerce.number().min(0),
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -38,6 +41,8 @@ export function ModulesSettings() {
             merchandise: true,
             financial: true,
             treatments: true,
+            hr_module: false,
+            cestaBasicaValue: 0,
         },
     })
 
@@ -48,6 +53,8 @@ export function ModulesSettings() {
                 merchandise: modules.merchandise,
                 financial: modules.financial,
                 treatments: modules.treatments,
+                hr_module: modules.hr_module ?? false,
+                cestaBasicaValue: modules.cestaBasicaValue ?? 0
             })
         }
     }, [modules, form])
@@ -75,6 +82,7 @@ export function ModulesSettings() {
     const merchandise = form.watch('merchandise')
     const financial = form.watch('financial')
     const treatments = form.watch('treatments')
+    const hr_module = form.watch('hr_module')
 
     const isDependenciesMet = merchandise && financial
 
@@ -111,7 +119,7 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {/* Card: Mercadorias */}
                         <ModuleCard
                             icon={<Package className="h-6 w-6 text-white" />}
@@ -141,6 +149,54 @@ export function ModulesSettings() {
                                 />
                             }
                         />
+
+                        {/* Card: Recursos Humanos */}
+                        <ModuleCard
+                            icon={<Users className="h-6 w-6 text-white" />}
+                            color="bg-pink-600"
+                            title="Recursos Humanos"
+                            description="Gestão de funcionários, registro de ponto e processamento de folha/rateio."
+                            isActive={hr_module}
+                            control={
+                                <Switch
+                                    checked={hr_module}
+                                    onCheckedChange={(val) => form.setValue('hr_module', val, { shouldDirty: true })}
+                                />
+                            }
+                        />
+                    </div>
+                </section>
+
+                <section className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-vida-loca-500" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                            Parâmetros Globais
+                        </h2>
+                    </div>
+
+                    <div className="rounded-lg border bg-card p-6 shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400">
+                                <DollarSign className="h-6 w-6" />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <h3 className="font-semibold text-lg leading-none tracking-tight">Valor da Cesta Básica</h3>
+                                <p className="text-sm text-muted-foreground">Valor utilizado nos cálculos automáticos de folha (Dia 05 e 20) do módulo RH.</p>
+                            </div>
+                            <div className="ml-auto w-full md:w-48">
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-muted-foreground">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        placeholder="0.00"
+                                        {...form.register('cestaBasicaValue')}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

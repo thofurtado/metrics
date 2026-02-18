@@ -26,6 +26,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
         merchandise: true,
         financial: true,
         treatments: true,
+        hr_module: false,
     }
 
     function isModuleActive(moduleName: keyof SystemConfig) {
