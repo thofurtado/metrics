@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,11 +25,15 @@ export function TimeSheetPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     // Queries
-    const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
-    const employee = employees?.find(e => e.id === employeeId);
+    const { data: employeesData } = useQuery({ queryKey: ['employees'], queryFn: () => getEmployees({ limit: 1000 }) });
+    const employee = employeesData?.data?.find(e => e.id === employeeId);
 
-    const startDate = startOfMonth(month);
-    const endDate = endOfMonth(month);
+    const { startDate, endDate, days } = useMemo(() => {
+        const start = startOfMonth(month);
+        const end = endOfMonth(month);
+        const daysInterval = eachDayOfInterval({ start, end });
+        return { startDate: start, endDate: end, days: daysInterval };
+    }, [month]);
 
     const { data: timeClocks, isLoading } = useQuery({
         queryKey: ['time-clocks-mirror', employeeId, month.toISOString()],
@@ -42,8 +46,6 @@ export function TimeSheetPage() {
         enabled: !!employeeId,
         staleTime: 5 * 60 * 1000
     });
-
-    const days = eachDayOfInterval({ start: startDate, end: endDate });
 
     const { register, control, handleSubmit, watch, setValue } = useForm({
         defaultValues: {
@@ -419,12 +421,13 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         {...register(`rows.${index}.isExtraDay`, {
                             onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                                 const isChecked = e.target.checked;
-                                if (isChecked && dailyRate > 0) {
+                                // Only auto-fill if checking the box and we have a valid daily rate
+                                if (isChecked && dailyRate && Number(dailyRate) > 0) {
                                     const currentVal = watch(`rows.${index}.negotiatedValue`);
                                     // Auto-fill if empty or zero
                                     if (!currentVal || Number(currentVal) === 0) {
-                                        setValue(`rows.${index}.negotiatedValue`, dailyRate);
-                                        toast.info("Valor da diária preenchido!", { duration: 1500 });
+                                        setValue(`rows.${index}.negotiatedValue`, Number(dailyRate));
+                                        toast.info(`Valor da diária preenchido: R$ ${Number(dailyRate).toFixed(2)}`, { duration: 1500 });
                                     }
                                 }
                             }

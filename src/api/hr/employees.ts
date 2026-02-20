@@ -34,8 +34,30 @@ export interface UpdateEmployeeInput extends CreateEmployeeInput {
     id: string
 }
 
-export async function getEmployees() {
-    const response = await api.get<Employee[]>('/hr/employees')
+export interface EmployeeSummary {
+    total: number
+    registered: number
+    unregistered: number
+    daily: number
+}
+
+export interface PaginatedResponse<T> {
+    data: T[]
+    meta: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+}
+
+export async function getEmployees(params?: { page?: number; limit?: number; name?: string; isRegistered?: boolean }) {
+    const response = await api.get<PaginatedResponse<Employee>>('/hr/employees', { params })
+    return response.data
+}
+
+export async function getEmployeeSummary() {
+    const response = await api.get<EmployeeSummary>('/hr/employees/summary')
     return response.data
 }
 

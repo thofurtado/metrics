@@ -94,3 +94,8 @@ export async function getExtrasPreview(month: number, year: number) {
     const response = await api.get('/hr/payroll/extras-preview', { params: { month, year } })
     return response.data
 }
+
+export async function getPayrollHistory(params?: { month?: number, year?: number, type?: string }) {
+    const response = await api.get('/hr/payroll/history', { params })
+    return response.data
+}

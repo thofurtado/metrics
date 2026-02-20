@@ -271,13 +271,13 @@ export function TransactionExpense() {
         </Tabs>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
             {/* Amount Hero Input */}
             <FormField
               control={form.control}
               name="amount"
               render={({ field }) => (
-                <FormItem className="relative bg-red-50/50 dark:bg-red-950/10 rounded-3xl p-8 pb-10 transition-all duration-300 hover:bg-red-50/80 dark:hover:bg-red-950/20">
+                <FormItem className="relative bg-red-50/50 dark:bg-red-950/10 rounded-3xl p-8 pb-10 transition-all duration-300 hover:bg-red-50/80 dark:hover:bg-red-950/20 w-full">
                   {activeTab === 'installment' && (
                     <div className="absolute top-4 left-0 w-full text-center text-xs font-semibold text-red-600/60 uppercase tracking-widest">
                       Valor Total do Contrato
@@ -291,8 +291,8 @@ export function TransactionExpense() {
                         onChange={(e) => {
                           field.onChange(e)
                           // When Total changes, update Installment Value View
-                          const val = parseFloat(e.target.value)
-                          const count = parseInt(form.getValues('installments_count') || '1')
+                          const val = parseFloat(e.target.value) || 0
+                          const count = parseInt(form.getValues('installments_count') || '1') || 1
                           if (!isNaN(val) && !isNaN(count) && count > 0) {
                             setInstallmentValue((val / count).toFixed(2))
                           } else {
@@ -317,15 +317,16 @@ export function TransactionExpense() {
               )}
             />
 
-            <div className="col-span-1 flex flex-col gap-6 justify-center">
-              {/* Date / Start Date */}
+            {/* Confirmed (Inline Switch & Date) -> Row of two */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+              {/* Date */}
               <FormField
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1">
+                  <FormItem className="flex flex-col gap-1 w-full">
                     <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Data</FormLabel>
-                    <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -367,151 +368,69 @@ export function TransactionExpense() {
                 )}
               />
 
-              {/* Confirmed (Only Single) */}
+              {/* Status Box */}
               {activeTab === 'single' && (
                 <FormField
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col gap-1 justify-end">
-                      <FormLabel className="sr-only">Status Pagamento</FormLabel>
-                      <div className="flex items-center justify-between px-4 h-14 rounded-xl border border-input/60 bg-background/50">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {field.value ? 'Já Paguei' : 'A Pagar'}
-                        </span>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-red-600"
-                          />
-                        </FormControl>
-                      </div>
+                    <FormItem className="flex flex-row items-center justify-between p-4 h-14 rounded-xl border border-input/60 bg-background/50 space-y-0">
+                      <FormLabel className="text-sm font-medium text-muted-foreground cursor-pointer">
+                        {field.value ? 'Já Paguei' : 'A Pagar'}
+                      </FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-red-600"
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
               )}
             </div>
 
-            {/* INSTALLMENT SPECIFIC */}
-            {activeTab === 'installment' && (
-              <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
-                <div className="absolute -top-3 left-6 bg-background px-3 text-xs text-muted-foreground font-semibold uppercase tracking-wider border rounded-full shadow-sm">
-                  Configuração de Recorrência
-                </div>
+            {/* Description & Supplier */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Descrição</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Ex: Aluguel do escritório..."
+                        className="h-14 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/40"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="installments_count"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Repetições</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="12"
-                          className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
-                          onChange={(e) => {
-                            field.onChange(e)
-                            const count = parseInt(e.target.value)
-                            const total = parseFloat(form.getValues('amount') || '0')
-                            if (!isNaN(total) && !isNaN(count) && count > 0) {
-                              setInstallmentValue((total / count).toFixed(2))
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Visual Installment Value Input */}
-                <FormItem className="sm:col-span-1 space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Valor Parcela</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={installmentValue}
-                      className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
-                      onChange={(e) => {
-                        const val = e.target.value
-                        setInstallmentValue(val)
-                        const instVal = parseFloat(val)
-                        const count = parseInt(form.getValues('installments_count') || '1')
-                        if (!isNaN(instVal) && !isNaN(count) && count > 0) {
-                          const newTotal = instVal * count
-                          form.setValue('amount', newTotal.toFixed(2))
-                        }
-                      }}
+              {/* Supplier */}
+              <FormField
+                control={form.control}
+                name="supplier"
+                render={({ field: { onChange, value, disabled } }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Fornecedor</FormLabel>
+                    <SupplierCombobox
+                      value={value}
+                      onSelect={onChange}
+                      suppliers={suppliersResult?.suppliers}
+                      isLoading={!suppliersResult}
+                      onQuickAdd={() => setCreateSupplierOpen(true)}
                     />
-                  </FormControl>
-                </FormItem>
-                <FormField
-                  control={form.control}
-                  name="interval_frequency"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Frequência</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-input/60 bg-background/50 font-medium text-base">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent portal={false}>
-                          <SelectItem value="WEEKLY">Semanal</SelectItem>
-                          <SelectItem value="MONTHLY">Mensal</SelectItem>
-                          <SelectItem value="YEARLY">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Descrição</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ex: Aluguel do escritório, Conta de Luz..."
-                      className="h-14 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/40"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Supplier */}
-            <FormField
-              control={form.control}
-              name="supplier"
-              render={({ field: { onChange, value, disabled } }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Fornecedor</FormLabel>
-                  <SupplierCombobox
-                    value={value}
-                    onSelect={onChange}
-                    suppliers={suppliersResult?.suppliers}
-                    isLoading={!suppliersResult}
-                    onQuickAdd={() => setCreateSupplierOpen(true)}
-                  />
-                </FormItem>
-              )}
-            />
-
-            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Sector */}
               <FormField
                 control={form.control}
@@ -565,7 +484,89 @@ export function TransactionExpense() {
               />
             </div>
 
-            <div className="col-span-1 lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
+            {/* INSTALLMENT SPECIFIC - moved near the bottom before buttons */}
+            {activeTab === 'installment' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
+                <div className="absolute -top-3 left-6 bg-background px-3 text-xs text-muted-foreground font-semibold uppercase tracking-wider border rounded-full shadow-sm">
+                  Configuração de Recorrência
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="installments_count"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Repetições</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="12"
+                          className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
+                          onChange={(e) => {
+                            field.onChange(e)
+                            const count = parseInt(e.target.value) || 1
+                            const total = parseFloat(form.getValues('amount') || '0') || 0
+                            if (!isNaN(total) && !isNaN(count) && count > 0) {
+                              setInstallmentValue((total / count).toFixed(2))
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Visual Installment Value Input */}
+                <FormItem className="sm:col-span-1 space-y-1">
+                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Valor Parcela</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={installmentValue}
+                      className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setInstallmentValue(val)
+                        const instVal = parseFloat(val) || 0
+                        const count = parseInt(form.getValues('installments_count') || '1') || 1
+                        if (!isNaN(instVal) && !isNaN(count) && count > 0) {
+                          const newTotal = instVal * count
+                          form.setValue('amount', newTotal.toFixed(2))
+                        }
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="interval_frequency"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Frequência</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-12 rounded-xl border-input/60 bg-background/50 font-medium text-base">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent portal={false}>
+                          <SelectItem value="WEEKLY">Semanal</SelectItem>
+                          <SelectItem value="MONTHLY">Mensal</SelectItem>
+                          <SelectItem value="YEARLY">Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
               <ResponsiveDialogClose asChild>
                 <Button variant="ghost" type="button" className="w-full sm:w-auto h-12 rounded-xl text-base font-medium text-muted-foreground hover:text-foreground">Cancelar</Button>
               </ResponsiveDialogClose>

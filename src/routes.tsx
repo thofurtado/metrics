@@ -22,6 +22,7 @@ import { ModuleGuard } from './components/module-guard'
 import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
 import { HRDashboard } from './pages/hr/dashboard'
 import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
+import { PayrollHistory } from './pages/hr/payroll/history'
 
 // Função para verificar se o usuário está autenticado
 const isAuthenticated = () => {
@@ -105,6 +106,14 @@ export const router = createBrowserRouter([
             element: (
               <ModuleGuard module="hr_module">
                 <HRDashboard />
+              </ModuleGuard>
+            ),
+          },
+          {
+            path: 'hr/payroll/history',
+            element: (
+              <ModuleGuard module="hr_module">
+                <PayrollHistory />
               </ModuleGuard>
             ),
           }

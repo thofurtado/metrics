@@ -240,16 +240,13 @@ export function TransactionIncome() {
         </Tabs>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
             {/* Amount Hero Input */}
             <FormField
               control={form.control}
               name="amount"
               render={({ field }) => (
-                <FormItem className="relative bg-emerald-50/50 dark:bg-emerald-950/10 rounded-3xl p-8 pb-10 transition-all duration-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/20">
+                <FormItem className="relative bg-emerald-50/50 dark:bg-emerald-950/10 rounded-3xl p-8 pb-10 transition-all duration-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/20 w-full">
                   {activeTab === 'installment' && (
                     <div className="absolute top-4 left-0 w-full text-center text-xs font-semibold text-emerald-600/60 uppercase tracking-widest">
                       Valor Total do Contrato
@@ -289,15 +286,16 @@ export function TransactionIncome() {
               )}
             />
 
-            <div className="col-span-1 flex flex-col gap-6 justify-center">
+            {/* Confirmed (Inline Switch & Date) -> Row of two */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
               {/* Date */}
               <FormField
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1">
+                  <FormItem className="flex flex-col gap-1 w-full">
                     <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Data</FormLabel>
-                    <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -340,35 +338,105 @@ export function TransactionIncome() {
                 )}
               />
 
-              {/* Recebido? */}
+              {/* Status Box */}
               {activeTab === 'single' && (
                 <FormField
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col gap-1 justify-end">
-                      <FormLabel className="sr-only">Status Recebimento</FormLabel>
-                      <div className="flex items-center justify-between px-4 h-14 rounded-xl border border-input/60 bg-background/50">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {field.value ? 'Recebido' : 'A Receber'}
-                        </span>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-emerald-600"
-                          />
-                        </FormControl>
-                      </div>
+                    <FormItem className="flex flex-row items-center justify-between p-4 h-14 rounded-xl border border-input/60 bg-background/50 space-y-0">
+                      <FormLabel className="text-sm font-medium text-muted-foreground cursor-pointer">
+                        {field.value ? 'Recebido' : 'A Receber'}
+                      </FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-emerald-600"
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
               )}
             </div>
 
-            {/* INSTALLMENT SPECIFIC */}
+            {/* Descrição */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Descrição</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Ex: Venda de serviço, Consultoria..."
+                      className="h-14 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/40"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Categoria/Setor */}
+              <FormField
+                control={form.control}
+                name="sector"
+                render={({ field: { onChange, value, disabled } }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Categoria</FormLabel>
+                    <QuickAddSelect
+                      value={value}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                      isLoading={!sectors}
+                      placeholder="Selecione"
+                      emptyMessage="Nenhuma categoria encontrada"
+                      options={sectors?.data.sectors
+                        .filter((sector) => sector.type === 'in') // Income sectors only
+                        .map((sector) => ({
+                          label: sector.name,
+                          value: sector.id,
+                        }))}
+                      quickAddLabel="Nova Categoria"
+                      onQuickAddClick={() => setCreateSectorOpen(true)}
+                    />
+                  </FormItem>
+                )}
+              />
+
+              {/* Conta */}
+              <FormField
+                control={form.control}
+                name="account"
+                render={({ field: { onChange, value, disabled } }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Conta</FormLabel>
+                    <QuickAddSelect
+                      value={value}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                      isLoading={!accounts}
+                      placeholder="Selecione"
+                      emptyMessage="Nenhuma conta encontrada"
+                      options={accounts?.accounts.map((account) => ({
+                        label: account.name,
+                        value: account.id,
+                        balance: account.balance
+                      }))}
+                      quickAddLabel="Nova Conta"
+                      onQuickAddClick={() => setCreateAccountOpen(true)}
+                    />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* INSTALLMENT SPECIFIC - moved near the bottom before buttons */}
             {activeTab === 'installment' && (
-              <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
                 <div className="absolute -top-3 left-6 bg-background px-3 text-xs text-muted-foreground font-semibold uppercase tracking-wider border rounded-full shadow-sm">
                   Configuração de Recorrência
                 </div>
@@ -448,81 +516,7 @@ export function TransactionIncome() {
               </div>
             )}
 
-            {/* Descrição */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Descrição</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ex: Venda de serviço, Consultoria..."
-                      className="h-14 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/40"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Categoria/Setor */}
-              <FormField
-                control={form.control}
-                name="sector"
-                render={({ field: { onChange, value, disabled } }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Categoria</FormLabel>
-                    <QuickAddSelect
-                      value={value}
-                      onValueChange={onChange}
-                      disabled={disabled}
-                      isLoading={!sectors}
-                      placeholder="Selecione"
-                      emptyMessage="Nenhuma categoria encontrada"
-                      options={sectors?.data.sectors
-                        .filter((sector) => sector.type === 'in') // Income sectors only
-                        .map((sector) => ({
-                          label: sector.name,
-                          value: sector.id,
-                        }))}
-                      quickAddLabel="Nova Categoria"
-
-                      onQuickAddClick={() => setCreateSectorOpen(true)}
-                    />
-                  </FormItem>
-                )}
-              />
-
-              {/* Conta */}
-              <FormField
-                control={form.control}
-                name="account"
-                render={({ field: { onChange, value, disabled } }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Conta</FormLabel>
-                    <QuickAddSelect
-                      value={value}
-                      onValueChange={onChange}
-                      disabled={disabled}
-                      isLoading={!accounts}
-                      placeholder="Selecione"
-                      emptyMessage="Nenhuma conta encontrada"
-                      options={accounts?.accounts.map((account) => ({
-                        label: account.name,
-                        value: account.id,
-                        balance: account.balance
-                      }))}
-                      quickAddLabel="Nova Conta"
-                      onQuickAddClick={() => setCreateAccountOpen(true)}
-                    />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="col-span-1 lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
               <ResponsiveDialogClose asChild>
                 <Button variant="ghost" type="button" className="w-full sm:w-auto h-12 rounded-xl text-base font-medium text-muted-foreground hover:text-foreground">
                   Cancelar

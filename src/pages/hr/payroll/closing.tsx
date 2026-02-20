@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPayrollPreview, calculateRateio, generatePayrollBatch, confirmPayroll, updatePayrollEntry, deletePayrollBatch, PayrollType, getExtrasPreview } from "@/api/hr/payroll"
 import { getAccounts } from "@/api/get-accounts"
@@ -530,6 +531,7 @@ function GroupDetailsModal({ group, onSuccess }: { group: any, onSuccess: () => 
 
 export function PayrollClosing() {
     const queryClient = useQueryClient()
+    const navigate = useNavigate()
 
     const { data, isLoading } = useQuery({
         queryKey: ['payroll-preview'],
@@ -587,6 +589,10 @@ export function PayrollClosing() {
                     <p className="text-muted-foreground">Gestão de pagamentos, rateio e auditoria final.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => navigate('/hr/payroll/history')}>
+                        <CalendarDays className="h-4 w-4 mr-2" />
+                        Histórico
+                    </Button>
                     <GenerateBatchDialog onSuccess={refresh} />
                     <CalculateRateioDialog onSuccess={refresh} />
                 </div>

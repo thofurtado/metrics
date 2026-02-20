@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { createPayrollEntry, listPendingDebts, PayrollEntry } from "@/api/hr/payroll"
+import { createPayrollEntry, listPendingDebts } from "@/api/hr/payroll"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -11,8 +11,9 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { AlertTriangle, Utensils, Wallet, Plus } from "lucide-react"
+import { AlertTriangle, Utensils, Wallet, Plus, Trash2, History } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Schema
 const formSchema = z.object({
@@ -71,7 +72,7 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
             })
         },
         onSuccess: () => {
-            toast.success("Débito lançado com sucesso!")
+            toast.success("Lançamento registrado com sucesso!")
             queryClient.invalidateQueries({ queryKey: ['pending-debts', employeeId] })
             form.reset({
                 type: "VALE",
@@ -80,56 +81,73 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
                 referenceDate: new Date().toISOString().split('T')[0]
             })
         },
-        onError: () => toast.error("Erro ao lançar débito.")
+        onError: () => toast.error("Erro ao registrar lançamento.")
     })
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-200 hover:bg-orange-50">
+                <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700">
                     <Wallet className="h-4 w-4" />
-                    Gestão de Débitos
+                    Débitos / Vales
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle>Gestão de Débitos: {employeeName}</DialogTitle>
+            <DialogContent className="sm:max-w-[700px] gap-0 p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2 bg-muted/30">
+                    <DialogTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-orange-600" />
+                        Gestão Financeira: {employeeName}
+                    </DialogTitle>
                     <DialogDescription>
-                        Lance novos débitos ou visualize pendências. Serão descontados na próxima folha.
+                        Gerencie vales, adiantamentos e débitos (quebras/consumo) para desconto em folha.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-6 py-4">
-                    {/* Form Section */}
-                    <div className="space-y-4 border rounded-md p-4 bg-muted/50">
-                        <h4 className="font-medium flex items-center gap-2">
+                <div className="flex flex-col md:flex-row h-[500px]">
+                    {/* Left: Form */}
+                    <div className="w-full md:w-1/2 p-6 border-r flex flex-col gap-4 bg-muted/10">
+                        <div className="flex items-center gap-2 mb-2 font-medium text-sm uppercase tracking-wider text-muted-foreground">
                             <Plus className="h-4 w-4" /> Novo Lançamento
-                        </h4>
+                        </div>
+
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit((data) => createDebt(data))} className="grid gap-4">
+                            <form onSubmit={form.handleSubmit((data) => createDebt(data))} className="flex flex-col gap-4 flex-1">
+                                <FormField
+                                    control={form.control}
+                                    name="type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo de Lançamento</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="bg-background">
+                                                        <SelectValue placeholder="Selecione..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent portal={false}>
+                                                    <SelectItem value="VALE">
+                                                        <div className="flex items-center gap-2">
+                                                            <Wallet className="h-4 w-4 text-emerald-600" /> Vale (Adiantamento)
+                                                        </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="ERRO">
+                                                        <div className="flex items-center gap-2">
+                                                            <AlertTriangle className="h-4 w-4 text-red-600" /> Erro / Quebra
+                                                        </div>
+                                                    </SelectItem>
+                                                    <SelectItem value="CONSUMACAO">
+                                                        <div className="flex items-center gap-2">
+                                                            <Utensils className="h-4 w-4 text-orange-600" /> Consumo Interno
+                                                        </div>
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="type"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Tipo</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Tipo" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="VALE">Vale (Adiantamento)</SelectItem>
-                                                        <SelectItem value="ERRO">Erro / Quebra</SelectItem>
-                                                        <SelectItem value="CONSUMACAO">Consumo Interno</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
                                     <FormField
                                         control={form.control}
                                         name="amount"
@@ -137,66 +155,92 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
                                             <FormItem>
                                                 <FormLabel>Valor (R$)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" step="0.01" {...field} />
+                                                    <Input type="number" step="0.01" placeholder="0.00" className="bg-background" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="referenceDate"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Data</FormLabel>
+                                                <FormControl>
+                                                    <Input type="date" className="bg-background" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </div>
+
                                 <FormField
                                     control={form.control}
                                     name="description"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Descrição</FormLabel>
+                                            <FormLabel>Descrição / Motivo</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Ex: Quebra de copo..." {...field} />
+                                                <Input placeholder="Ex: Quebra de copo, adiantamento..." className="bg-background" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <div className="flex justify-end">
-                                    <Button type="submit" size="sm" disabled={isPending}>
-                                        {isPending ? "Lançando..." : "Lançar Débito"}
+
+                                <div className="mt-auto pt-4">
+                                    <Button type="submit" className="w-full" disabled={isPending}>
+                                        {isPending ? "Processando..." : "Confirmar Lançamento"}
                                     </Button>
                                 </div>
                             </form>
                         </Form>
                     </div>
 
-                    <Separator />
+                    {/* Right: List */}
+                    <div className="w-full md:w-1/2 flex flex-col bg-background">
+                        <div className="p-4 border-b bg-muted/5 flex items-center justify-between">
+                            <h4 className="font-semibold text-sm">Histórico Pendente</h4>
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full border">
+                                {debts?.length || 0} itens
+                            </span>
+                        </div>
 
-                    {/* List Section */}
-                    <div className="space-y-4">
-                        <h4 className="font-medium">Débitos em Aberto (Pendente)</h4>
-                        {isLoading ? (
-                            <p className="text-sm text-muted-foreground">Carregando...</p>
-                        ) : debts?.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic">Nenhum débito pendente.</p>
-                        ) : (
-                            <div className="border rounded-md divide-y max-h-[200px] overflow-y-auto">
-                                {debts?.map((debt) => (
-                                    <div key={debt.id} className="p-3 flex items-center justify-between text-sm">
-                                        <div className="grid gap-1">
-                                            <div className="font-medium flex items-center gap-2">
-                                                {debt.type === 'VALE' && <Wallet className="h-3 w-3 text-blue-500" />}
-                                                {debt.type === 'ERRO' && <AlertTriangle className="h-3 w-3 text-red-500" />}
-                                                {debt.type === 'CONSUMACAO' && <Utensils className="h-3 w-3 text-orange-500" />}
-                                                {debt.description}
+                        <ScrollArea className="flex-1 p-4">
+                            {isLoading ? (
+                                <p className="text-sm text-center py-8 text-muted-foreground">Carregando...</p>
+                            ) : debts?.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-50">
+                                    <History className="h-8 w-8 mb-2" />
+                                    <p className="text-sm">Nenhum lançamento pendente.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {debts?.map((debt) => (
+                                        <div key={debt.id} className="flex items-start justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group">
+                                            <div className="flex gap-3">
+                                                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${debt.type === 'VALE' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium leading-none">{debt.description}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                        <span>{new Date(debt.referenceDate || debt.created_at).toLocaleDateString()}</span>
+                                                        <span>•</span>
+                                                        <span className="uppercase">{debt.type}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-muted-foreground text-xs">
-                                                {new Date(debt.created_at || new Date()).toLocaleDateString()}
+                                            <div className="text-right">
+                                                <p className={`font-mono text-sm font-semibold ${Number(debt.amount) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                    {formatCurrency(Number(debt.amount))}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className={`font-medium ${Number(debt.amount) > 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                                            {formatCurrency(Number(debt.amount))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
                     </div>
                 </div>
             </DialogContent>
