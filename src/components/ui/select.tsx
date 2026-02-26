@@ -67,8 +67,8 @@ SelectScrollDownButton.displayName =
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & { portal?: boolean }
->(({ className, children, position = "popper", portal = true, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & { withPortal?: boolean }
+>(({ className, children, position = "popper", withPortal = true, ...props }, ref) => {
   const SelectContentJSX = (
     <SelectPrimitive.Content
       ref={ref}
@@ -95,7 +95,7 @@ const SelectContent = React.forwardRef<
     </SelectPrimitive.Content>
   )
 
-  if (portal) {
+  if (withPortal) {
     return <SelectPrimitive.Portal>{SelectContentJSX}</SelectPrimitive.Portal>
   }
 

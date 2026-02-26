@@ -554,7 +554,7 @@ export function TransactionExpense() {
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent portal={false}>
+                        <SelectContent withPortal={false}>
                           <SelectItem value="WEEKLY">Semanal</SelectItem>
                           <SelectItem value="MONTHLY">Mensal</SelectItem>
                           <SelectItem value="YEARLY">Anual</SelectItem>

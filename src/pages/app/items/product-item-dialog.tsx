@@ -35,7 +35,7 @@ export function ProductItemDialog({ initialData, initialType, onSuccess }: Produ
     }
 
     return (
-        <ResponsiveDialogContent className="fixed z-[9999] gap-0 p-0 bg-background w-full h-[100dvh] max-w-none shadow-none border-0 top-0 left-0 outline-none data-[state=open]:slide-in-from-bottom-0 sm:fixed sm:z-[9999] sm:left-[50%] sm:top-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-[800px] sm:h-auto sm:max-h-[90vh] sm:rounded-xl sm:border sm:shadow-2xl sm:data-[state=open]:slide-in-from-bottom-auto sm:data-[state=open]:slide-in-from-top-[48%] flex flex-col">
+        <ResponsiveDialogContent className="fixed z-[9999] gap-0 p-0 bg-background w-full h-[100dvh] max-w-none shadow-none border-0 top-0 left-0 outline-none data-[state=open]:slide-in-from-bottom-0 sm:fixed sm:z-[9999] sm:left-[50%] sm:top-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-[800px] sm:h-auto sm:max-h-[90vh] sm:rounded-xl sm:border sm:shadow-2xl sm:data-[state=open]:slide-in-from-bottom-auto sm:data-[state=open]:slide-in-from-top-[48%] flex flex-col overflow-hidden">
 
             <ResponsiveDialogHeader className="px-6 py-5 border-b shrink-0 bg-muted/40 text-left">
                 <ResponsiveDialogTitle className="text-xl font-bold tracking-tight">

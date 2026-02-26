@@ -187,7 +187,7 @@ function CalculateRateioDialog({ onSuccess }: { onSuccess: () => void }) {
                                                     <SelectValue placeholder="Mês" />
                                                 </SelectTrigger>
                                             </FormControl>
-                                            <SelectContent portal={false}>
+                                            <SelectContent withPortal={false}>
                                                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                                                     <SelectItem key={m} value={String(m)}>
                                                         {new Date(0, m - 1).toLocaleString('default', { month: 'long' })}
@@ -278,7 +278,7 @@ function GenerateBatchDialog({ onSuccess }: { onSuccess: () => void }) {
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent portal={false}>
+                            <SelectContent withPortal={false}>
                                 <SelectItem value="SALARIO_60">Salário (Dia 05)</SelectItem>
                                 <SelectItem value="VALE">Vale (Dia 20)</SelectItem>
                                 <SelectItem value="CESTA_BASICA">Cesta Básica</SelectItem>
@@ -344,7 +344,7 @@ function ConfirmPayrollDialog({ totalAmount, onSuccess }: { totalAmount: number,
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecione uma conta..." />
                             </SelectTrigger>
-                            <SelectContent portal={false}>
+                            <SelectContent withPortal={false}>
                                 {accountsData?.accounts.map(acc => (
                                     <SelectItem key={acc.id} value={acc.id}>
                                         {acc.name} ({formatCurrency(acc.balance)})

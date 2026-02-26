@@ -124,7 +124,7 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
                                                         <SelectValue placeholder="Selecione..." />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent portal={false}>
+                                                <SelectContent withPortal={false}>
                                                     <SelectItem value="VALE">
                                                         <div className="flex items-center gap-2">
                                                             <Wallet className="h-4 w-4 text-emerald-600" /> Vale (Adiantamento)

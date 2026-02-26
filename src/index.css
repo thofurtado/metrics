@@ -1,7 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Electrolize&family=Gabarito:wght@400..900&family=Martian+Mono:wght@100..800&family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lemonada:wght@300..700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Itim&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cinzel:wght@400..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,83 +7,137 @@
 @layer base {
   :root {
     /* Base Neutral: Slate (Modern Blue-Grey) */
-    --background: 0 0% 100%; /* White */
-    --foreground: 222.2 84% 4.9%; /* Slate 950 */
-    
+    --background: 0 0% 100%;
+    /* White */
+    --foreground: 222.2 84% 4.9%;
+    /* Slate 950 */
+
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    
+
     /* Primary: Minsk (Vibrant Indigo/Purple) */
-    --primary: 249 72% 60%; /* #7c3aed-ish */
+    --primary: 249 72% 60%;
+    /* #7c3aed-ish */
     --primary-foreground: 210 40% 98%;
 
     /* Secondary: Light Gray/Slate */
-    --secondary: 210 40% 96.1%; /* Slate 100 */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* Slate 900 */
-    
+    --secondary: 210 40% 96.1%;
+    /* Slate 100 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Slate 900 */
+
     /* Muted: Subtle Gray */
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%; /* Slate 500 */
-    
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Slate 500 */
+
     /* Accent: Interactive Gray */
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-    
+
     /* Destructive: Stiletto (Rose/Red) */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%; /* Slate 200 */
+    --border: 214.3 31.8% 91.4%;
+    /* Slate 200 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 249 72% 60%; /* Match Primary */
-    
+    --ring: 249 72% 60%;
+    /* Match Primary */
+
     --radius: 0.75rem;
 
     /* Semantic Colors Custom Variables if needed */
-    --success: 151 55% 41.5%; /* Emerald */
-    --warning: 38 92% 50%;    /* Amber */
+    --success: 151 55% 41.5%;
+    /* Emerald */
+    --warning: 38 92% 50%;
+    /* Amber */
   }
 
   .dark {
     /* Base Neutral: Deep Slate (Not Pure Black) */
-    --background: 222.2 47.4% 11.2%; /* Slate 950 */
-    --foreground: 210 40% 98%; /* Slate 50 */
-    
-    --card: 222.2 47.4% 13%; /* Slightly lighter than bg */
+    --background: 222.2 47.4% 11.2%;
+    /* Slate 950 */
+    --foreground: 210 40% 98%;
+    /* Slate 50 */
+
+    --card: 222.2 47.4% 13%;
+    /* Slightly lighter than bg */
     --card-foreground: 210 40% 98%;
-    
+
     --popover: 222.2 47.4% 11.2%;
     --popover-foreground: 210 40% 98%;
-    
+
     /* Primary: Minsk in Dark Mode (Lighter/Brighter) */
     --primary: 249 72% 65%;
     --primary-foreground: 222.2 47.4% 11.2%;
-    
+
     /* Secondary */
-    --secondary: 217.2 32.6% 17.5%; /* Slate 800 */
+    --secondary: 217.2 32.6% 17.5%;
+    /* Slate 800 */
     --secondary-foreground: 210 40% 98%;
-    
+
     /* Muted */
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%; /* Slate 400 */
-    
+    --muted-foreground: 215 20.2% 65.1%;
+    /* Slate 400 */
+
     /* Accent */
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    
+
     /* Destructive */
-    --destructive: 0 62.8% 30.6%; /* Darker Red bg */
+    --destructive: 0 62.8% 30.6%;
+    /* Darker Red bg */
     --destructive-foreground: 210 40% 98%;
-    
-    --border: 217.2 32.6% 17.5%; /* Slate 800 */
+
+    --border: 217.2 32.6% 17.5%;
+    /* Slate 800 */
     --input: 217.2 32.6% 17.5%;
     --ring: 249 72% 65%;
 
     --success: 151 55% 41.5%;
-    --warning: 48 96% 53%; /* Lighter Amber for dark mode */
+    --warning: 48 96% 53%;
+    /* Lighter Amber for dark mode */
+  }
+
+  .theme-marujo {
+    /* Tema: Rústico, bar de piratas/marinheiros */
+    /* background deixado transparente para usar classe radial-gradient no tailwind */
+    --background: transparent;
+
+    /* Marrom-chumbo muito escuro para garantir contraste premium */
+    --foreground: 28 20% 15%;
+
+    --card: 35 30% 85%;
+    --card-foreground: 28 20% 15%;
+
+    --popover: 35 30% 85%;
+    --popover-foreground: 28 20% 15%;
+
+    --primary: 15 80% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 20% 70%;
+    --secondary-foreground: 28 20% 15%;
+
+    --muted: 30 15% 75%;
+    --muted-foreground: 28 15% 35%;
+
+    --accent: 30 20% 70%;
+    --accent-foreground: 28 20% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 30 20% 65%;
+    --input: 30 20% 65%;
+    --ring: 15 80% 45%;
+
+    --radius: 0.2rem;
   }
 }
 
@@ -94,6 +145,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
   }

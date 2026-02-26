@@ -272,10 +272,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     return (
         <>
             <Form {...form}>
-                <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col w-full h-full overflow-hidden text-left">
+                <form id="product-form" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 w-full text-left relative overflow-hidden">
 
                     {/* SCROLLABLE CONTENT */}
-                    <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8 space-y-8">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8 space-y-8">
 
                         {/* --- HEADER: Basic Info --- */}
                         <div className="grid grid-cols-12 gap-6">
@@ -338,7 +338,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                         <SelectValue placeholder="Selecione..." />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent withPortal={false} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.stopPropagation()}>
                                                     {(categoriesData?.categories || []).map((cat: any) => (
                                                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                                     ))}
@@ -641,7 +641,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                                                 <SelectValue placeholder="Selecione..." />
                                                                             </SelectTrigger>
                                                                         </FormControl>
-                                                                        <SelectContent>
+                                                                        <SelectContent withPortal={false} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.stopPropagation()}>
                                                                             {(suppliesData?.data.supplies || []).map(s => (
                                                                                 <SelectItem key={s.id} value={s.id}>
                                                                                     <span className="flex justify-between w-full gap-4">

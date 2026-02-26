@@ -1,8 +1,14 @@
 // routes.tsx
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
-import { LandingPage } from './pages/landing-page'
+import { LandingInterceptor } from './pages/landings/LandingInterceptor'
+
+const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
+const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
+const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
+
 import { DownloadsPage } from './pages/downloads'
 import { NotFound } from './pages/404'
 import { Dashboard } from './pages/app/dashboard/dashboard'
@@ -24,10 +30,6 @@ import { HRDashboard } from './pages/hr/dashboard'
 import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
 import { PayrollHistory } from './pages/hr/payroll/history'
 
-// Função para verificar se o usuário está autenticado
-const isAuthenticated = () => {
-  return !!localStorage.getItem('token')
-}
 
 export const router = createBrowserRouter([
   {
@@ -36,7 +38,35 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: isAuthenticated() ? <Navigate to="/dashboard" replace /> : <LandingPage />,
+        element: <LandingInterceptor />,
+      },
+      {
+        path: 'eureca',
+        element: (
+          <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+            <EurecaLanding />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'marujo',
+        element: (
+          <div className="theme-marujo">
+            <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+              <MarujoLanding />
+            </Suspense>
+          </div>
+        ),
+      },
+      {
+        path: 'cardapio',
+        element: (
+          <div className="theme-marujo">
+            <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+              <Cardapio />
+            </Suspense>
+          </div>
+        )
       },
       {
         path: 'downloads',

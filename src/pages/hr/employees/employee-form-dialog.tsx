@@ -233,7 +233,7 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                                             <SelectValue placeholder="Selecione" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent portal={false}>
+                                                    <SelectContent withPortal={false}>
                                                         <SelectItem value="REGISTERED">Registrado (CLT)</SelectItem>
                                                         <SelectItem value="UNREGISTERED">Sem Registro (Estágio/Outro)</SelectItem>
                                                         <SelectItem value="DAILY">Diarista (Freelance)</SelectItem>

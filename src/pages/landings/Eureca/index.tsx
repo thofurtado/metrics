@@ -1,12 +1,12 @@
 // pages/landing-page.tsx
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
-import { Button } from '../components/ui/button'
-import { ParticleBackground } from '../components/three/ParticleBackground'
+import { Button } from '../../../components/ui/button'
+import { ParticleBackground } from '../../../components/three/ParticleBackground'
 import { useEffect, useState } from 'react'
 import { Download } from 'lucide-react'
 
-export function LandingPage() {
+export default function EurecaLanding() {
   const whatsappMessage = "Olá! Gostaria de saber mais sobre o Plano Cuidado Total para minha empresa."
   const whatsappLink = `https://wa.me/5512992193644?text=${encodeURIComponent(whatsappMessage)}`
   const [isLoaded, setIsLoaded] = useState(false)
