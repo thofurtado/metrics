@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Minus, Trash2, ShoppingBag } from 'lucide-react'
+import { Plus, Minus, Trash2, ShoppingBag, Loader2 } from 'lucide-react'
 import { useCart } from './CartContext'
 
 export function CartDrawer() {
@@ -16,11 +16,67 @@ export function CartDrawer() {
 
     const [name, setName] = useState('')
     const [phone, setPhone] = useState('')
+    const [cep, setCep] = useState('')
     const [street, setStreet] = useState('')
     const [number, setNumber] = useState('')
     const [neighborhood, setNeighborhood] = useState('')
+    const [city, setCity] = useState('')
+    const [state, setState] = useState('')
     const [reference, setReference] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('Dinheiro')
+
+    const [isLoadingCep, setIsLoadingCep] = useState(false)
+    const [cepError, setCepError] = useState('')
+
+    const formatPhone = (val: string) => {
+        let v = val.replace(/\D/g, '').substring(0, 11)
+        if (v.length > 10) {
+            return v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+        } else if (v.length > 6) {
+            return v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+        } else if (v.length > 2) {
+            return v.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+        } else if (v.length > 0) {
+            return v.replace(/^(\d{0,2})/, '($1')
+        }
+        return v
+    }
+
+    const formatCep = (val: string) => {
+        let v = val.replace(/\D/g, '').substring(0, 8)
+        if (v.length > 5) {
+            return v.replace(/^(\d{5})(\d{1,3})/, '$1-$2')
+        }
+        return v
+    }
+
+    const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawCep = e.target.value.replace(/\D/g, '')
+        setCep(rawCep)
+        setCepError('')
+
+        if (rawCep.length === 8) {
+            setIsLoadingCep(true)
+            try {
+                const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
+                if (!res.ok) throw new Error('CEP não encontrado')
+
+                const data = await res.json()
+                setStreet(data.street || '')
+                setNeighborhood(data.neighborhood || '')
+                setCity(data.city || '')
+                setState(data.state || '')
+
+                setTimeout(() => {
+                    document.getElementById('number-input')?.focus()
+                }, 100)
+            } catch (err) {
+                setCepError('CEP não encontrado')
+            } finally {
+                setIsLoadingCep(false)
+            }
+        }
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -30,7 +86,11 @@ export function CartDrawer() {
         const formattedItems = items.map(i => `*${i.quantity}x* ${i.name} - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}`).join('%0A')
         const formattedTotal = total.toFixed(2).replace('.', ',')
 
-        const message = `Olá Marujo! Gostaria de fazer o seguinte pedido:%0A%0A${formattedItems}%0A%0ATotal: *R$ ${formattedTotal}*%0A%0ADados de Entrega:%0A${name} - ${phone}%0A${street}, ${number} - ${neighborhood}%0ARef: ${reference}%0A%0APagamento: *${paymentMethod}*`
+        const adrressString = cep
+            ? `${street}, ${number} - ${neighborhood}%0A${city}/${state} - CEP: ${formatCep(cep)}`
+            : `${street}, ${number} - ${neighborhood}`
+
+        const message = `Olá Marujo! Gostaria de fazer o seguinte pedido:%0A%0A${formattedItems}%0A%0ATotal: *R$ ${formattedTotal}*%0A%0ADados de Entrega:%0A${name} - ${formatPhone(phone)}%0A${adrressString}%0ARef: ${reference}%0A%0APagamento: *${paymentMethod}*`
 
         window.open(`https://wa.me/5512996293344?text=${message}`, '_blank')
         clearCart()
@@ -91,13 +151,28 @@ export function CartDrawer() {
 
                             <div className="space-y-3">
                                 <Input required placeholder="Seu Nome" value={name} onChange={(e) => setName(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
-                                <Input required placeholder="Telefone / WhatsApp" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+                                <Input required placeholder="Telefone / WhatsApp" value={formatPhone(phone)} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+
+                                <div className="space-y-1">
+                                    <div className="relative">
+                                        <Input required placeholder="CEP" value={formatCep(cep)} onChange={handleCepChange} maxLength={9} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+                                        {isLoadingCep && <Loader2 className="absolute right-3 top-2.5 h-5 w-5 animate-spin text-orange-900/50" />}
+                                    </div>
+                                    {cepError && <p className="text-red-500 text-xs font-bold px-1">{cepError}</p>}
+                                </div>
 
                                 <div className="grid grid-cols-3 gap-3">
                                     <Input required placeholder="Rua" value={street} onChange={(e) => setStreet(e.target.value)} className="col-span-2 bg-white border-orange-900/20 focus-visible:ring-orange-900" />
-                                    <Input required placeholder="Núm." value={number} onChange={(e) => setNumber(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+                                    <Input required id="number-input" placeholder="Núm." value={number} onChange={(e) => setNumber(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
                                 </div>
+
                                 <Input required placeholder="Bairro" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+
+                                <div className="grid grid-cols-4 gap-3">
+                                    <Input required placeholder="Cidade" value={city} onChange={(e) => setCity(e.target.value)} className="col-span-3 bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+                                    <Input required placeholder="UF" value={state} onChange={(e) => setState(e.target.value)} maxLength={2} className="uppercase bg-white border-orange-900/20 focus-visible:ring-orange-900" />
+                                </div>
+
                                 <Input placeholder="Ponto de Referência (Opcional)" value={reference} onChange={(e) => setReference(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900" />
 
                                 <div className="pt-2">

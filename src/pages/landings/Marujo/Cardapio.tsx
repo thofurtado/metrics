@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../../lib/axios'
 import { useState } from 'react'
-import { TENANTS_CONFIG } from '../../../config/tenants'
+import { TENANTS_CONFIG, getCurrentTenant } from '../../../config/tenants'
 import { ArrowLeft, Anchor, RotateCw, Plus, ShoppingBag } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { CartProvider, useCart } from './CartContext'
 import { CartDrawer } from './CartDrawer'
 
@@ -15,6 +15,10 @@ interface Product {
 }
 
 function CardapioContent() {
+    if (getCurrentTenant().id !== 'marujo') {
+        return <Navigate to="/" />
+    }
+
     const tenant = TENANTS_CONFIG['metrics-two-gamma.vercel.app']
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [logoError, setLogoError] = useState(false)

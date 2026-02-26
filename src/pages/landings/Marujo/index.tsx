@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { TENANTS_CONFIG } from '../../../config/tenants'
 import { useState } from 'react'
+import { Lock } from 'lucide-react'
 
 export default function MarujoLanding() {
     // Forçamos o tenant do Marujo pois esta é a Landing específica dele
@@ -9,20 +10,29 @@ export default function MarujoLanding() {
 
     return (
         <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#f5ebd8] via-[#e8d5b5] to-[#d4b88c] text-foreground font-sans">
-            <header className="p-6 flex justify-center border-b border-border/20 bg-black/5 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-2">
+            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-border/20 bg-black/5 backdrop-blur-sm">
+                <div className="w-1/4 sm:w-1/3"></div>
+
+                <div className="flex flex-col items-center gap-2 w-2/4 sm:w-1/3">
                     {!logoError ? (
                         <img
                             src={tenant.logo}
                             alt={`Logo de ${tenant.name}`}
-                            className="h-20 object-contain drop-shadow-xl"
+                            className="h-14 sm:h-20 object-contain drop-shadow-xl"
                             onError={() => setLogoError(true)}
                         />
                     ) : (
-                        <h1 className="text-4xl font-bold text-primary tracking-wider drop-shadow-md" style={{ fontFamily: '"Pirata One", cursive' }}>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-wider drop-shadow-md text-center" style={{ fontFamily: '"Pirata One", cursive' }}>
                             {tenant.name}
                         </h1>
                     )}
+                </div>
+
+                <div className="w-1/4 sm:w-1/3 flex justify-end pr-2 sm:pr-0">
+                    <Link to="/sign-in" className="flex items-center gap-2 text-white bg-orange-900/80 hover:bg-orange-800 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors border border-orange-900/50 shadow-md" title="Acesso ao Sistema">
+                        <Lock size={16} />
+                        <span className="hidden sm:inline font-bold" style={{ fontFamily: '"Cinzel", serif' }}>Acesso Restrito</span>
+                    </Link>
                 </div>
             </header>
 

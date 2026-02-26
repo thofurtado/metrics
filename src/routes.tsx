@@ -5,9 +5,8 @@ import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
 import { LandingInterceptor } from './pages/landings/LandingInterceptor'
 
-const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
-const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
 const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
+import { getCurrentTenant } from './config/tenants'
 
 import { DownloadsPage } from './pages/downloads'
 import { NotFound } from './pages/404'
@@ -40,34 +39,20 @@ export const router = createBrowserRouter([
         index: true,
         element: <LandingInterceptor />,
       },
-      {
-        path: 'eureca',
-        element: (
-          <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
-            <EurecaLanding />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'marujo',
-        element: (
-          <div className="theme-marujo">
-            <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
-              <MarujoLanding />
-            </Suspense>
-          </div>
-        ),
-      },
-      {
-        path: 'cardapio',
-        element: (
-          <div className="theme-marujo">
-            <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
-              <Cardapio />
-            </Suspense>
-          </div>
-        )
-      },
+      ...(getCurrentTenant().id === 'marujo'
+        ? [
+          {
+            path: 'cardapio',
+            element: (
+              <div className="theme-marujo">
+                <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+                  <Cardapio />
+                </Suspense>
+              </div>
+            )
+          }
+        ]
+        : []),
       {
         path: 'downloads',
         element: <DownloadsPage />,
