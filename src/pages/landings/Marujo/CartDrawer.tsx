@@ -83,7 +83,9 @@ export function CartDrawer() {
 
         if (items.length === 0) return
 
-        const formattedItems = items.map(i => `*${i.quantity}x* ${i.name} - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}`).join('%0A')
+        const formatQty = (q: number) => q === 0.5 ? '1/2' : q === 1.5 ? '1.5' : q === 2.5 ? '2.5' : q;
+
+        const formattedItems = items.map(i => `*${formatQty(i.quantity)}x* ${i.name} - R$ ${(i.price * i.quantity).toFixed(2).replace('.', ',')}${i.observation ? `%0A  _Obs: ${i.observation}_` : ''}`).join('%0A')
         const formattedTotal = total.toFixed(2).replace('.', ',')
 
         const adrressString = cep
@@ -114,34 +116,44 @@ export function CartDrawer() {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {items.map(item => (
-                                <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-orange-900/10">
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-orange-950">{item.name}</h4>
-                                        <div className="text-orange-800 font-medium mt-1">
-                                            R$ {item.price.toFixed(2).replace('.', ',')}
+                            {items.map(item => {
+                                const step = item.measureUnit === 'FRACTIONAL' ? 0.5 : 1;
+                                const formatQtyLocal = (q: number) => q === 0.5 ? '1/2' : q;
+
+                                return (
+                                    <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-orange-900/10">
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-orange-950">{item.name}</h4>
+                                            {item.observation && (
+                                                <p className="text-xs text-orange-900/70 italic mt-0.5 max-w-[180px] break-words line-clamp-2">
+                                                    Obs: {item.observation}
+                                                </p>
+                                            )}
+                                            <div className="text-orange-800 font-medium mt-1">
+                                                R$ {item.price.toFixed(2).replace('.', ',')}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 bg-orange-50 rounded-lg p-1 border border-orange-200">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQuantity(item.id, item.quantity - step)}
+                                                className="w-8 h-8 flex items-center justify-center bg-white text-orange-900 rounded-md shadow-sm border border-orange-200 hover:bg-orange-100 transition-colors"
+                                            >
+                                                {item.quantity <= step ? <Trash2 size={16} className="text-red-500" /> : <Minus size={16} />}
+                                            </button>
+                                            <span className="font-bold text-orange-950 w-6 text-center">{formatQtyLocal(item.quantity)}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQuantity(item.id, item.quantity + step)}
+                                                className="w-8 h-8 flex items-center justify-center bg-orange-900 text-white rounded-md shadow-sm hover:bg-orange-800 transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <div className="flex items-center gap-3 bg-orange-50 rounded-lg p-1 border border-orange-200">
-                                        <button
-                                            type="button"
-                                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                            className="w-8 h-8 flex items-center justify-center bg-white text-orange-900 rounded-md shadow-sm border border-orange-200 hover:bg-orange-100 transition-colors"
-                                        >
-                                            {item.quantity <= 1 ? <Trash2 size={16} className="text-red-500" /> : <Minus size={16} />}
-                                        </button>
-                                        <span className="font-bold text-orange-950 w-4 text-center">{item.quantity}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                            className="w-8 h-8 flex items-center justify-center bg-orange-900 text-white rounded-md shadow-sm hover:bg-orange-800 transition-colors"
-                                        >
-                                            <Plus size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
 

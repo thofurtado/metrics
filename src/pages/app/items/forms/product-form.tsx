@@ -57,6 +57,7 @@ const productSchema = z.object({
 
     // Composition
     is_composite: z.boolean().default(false),
+    measureUnit: z.enum(['UNITARY', 'FRACTIONAL']).default('UNITARY'),
     compositions: z.array(z.object({
         supply_id: z.string().min(1, "Selecione um insumo"),
         quantity: z.coerce.number().min(0.0001, "Qtd deve ser maior que 0")
@@ -121,6 +122,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
             display_id: initialData?.product?.display_id ?? undefined,
             active: initialData?.active ?? true,
+            measureUnit: initialData?.product?.measureUnit ?? 'UNITARY',
 
             is_composite: Boolean(initialData?.product?.is_composite),
             compositions: initialData?.product?.compositions?.map((c: any) => ({
@@ -174,6 +176,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 ncm: initialData.product?.ncm ?? '',
                 display_id: initialData.product?.display_id,
                 active: initialData.active ?? true,
+                measureUnit: initialData.product?.measureUnit ?? 'UNITARY',
                 is_composite: Boolean(initialData.product?.is_composite),
                 compositions: initialData.product?.compositions?.map((c: any) => ({
                     supply_id: c.supply.id,
@@ -201,6 +204,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 ncm: '',
                 display_id: undefined,
                 active: true,
+                measureUnit: 'UNITARY',
                 is_composite: false,
                 compositions: []
             })
@@ -252,6 +256,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     category: data.category,
                     active: data.active,
                     display_id: data.display_id,
+                    measureUnit: data.measureUnit,
                     is_composite: data.is_composite,
                     compositions: data.is_composite && data.compositions ? data.compositions : undefined,
                     cost: finalCost
@@ -319,8 +324,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                         </div>
 
 
-                        {/* --- DETAILS: Category, Barcode, ID --- */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        {/* --- DETAILS: Category, Unit, Barcode, ID --- */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div className="sm:col-span-1">
                                 <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Categoria</FormLabel>
                                 <div className="flex gap-2">
@@ -359,6 +364,24 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                     </Button>
                                 </div>
                             </div>
+
+                            <FormField control={form.control} name="measureUnit" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Unidade de Medida</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="h-10 border-amber-500/30 focus:ring-amber-500/20">
+                                                <SelectValue placeholder="Selecione..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="UNITARY">Unitário</SelectItem>
+                                            <SelectItem value="FRACTIONAL">Fracionado (ex: kg, meia-pizza)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
 
                             <FormField control={form.control} name="barcode" render={({ field }) => (
                                 <FormItem>

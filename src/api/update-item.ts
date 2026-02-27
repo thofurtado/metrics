@@ -14,6 +14,7 @@ export interface UpdateItemBody {
     ncm?: string | null
     estimated_time?: string | null
     unit?: string | null
+    measureUnit?: 'UNITARY' | 'FRACTIONAL'
 }
 
 export async function updateItem({ id, ...body }: UpdateItemBody) {

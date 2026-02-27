@@ -12,6 +12,7 @@ export interface CreateProductBody {
     active?: boolean | null
     display_id?: number | null
     is_composite?: boolean
+    measureUnit?: 'UNITARY' | 'FRACTIONAL'
     cost?: number | null
     compositions?: {
         supply_id: string

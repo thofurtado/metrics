@@ -3,14 +3,17 @@ import { toast } from 'sonner'
 
 export interface CartItem {
     id: string
+    productId: string
     name: string
     price: number
     quantity: number
+    observation?: string
+    measureUnit?: 'UNITARY' | 'FRACTIONAL'
 }
 
 interface CartContextData {
     items: CartItem[]
-    addToCart: (product: { id: string; name: string; price: number }) => void
+    addToCart: (product: { id: string; name: string; price: number; measureUnit?: string }, quantity?: number, observation?: string) => void
     removeFromCart: (id: string) => void
     updateQuantity: (id: string, quantity: number) => void
     clearCart: () => void
@@ -25,13 +28,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([])
     const [isCartOpen, setIsCartOpen] = useState(false)
 
-    const addToCart = (product: { id: string; name: string; price: number }) => {
+    const addToCart = (product: { id: string; name: string; price: number; measureUnit?: string }, quantity: number = 1, observation?: string) => {
         setItems(prev => {
-            const existing = prev.find(i => i.id === product.id)
+            const cartItemId = `${product.id}-${observation || ''}`
+            const existing = prev.find(i => i.id === cartItemId)
             if (existing) {
-                return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
+                return prev.map(i => i.id === cartItemId ? { ...i, quantity: i.quantity + quantity } : i)
             }
-            return [...prev, { ...product, quantity: 1 }]
+            return [...prev, { id: cartItemId, productId: product.id, name: product.name, price: product.price, quantity, observation, measureUnit: product.measureUnit as any }]
         })
         toast.success(`${product.name} adicionado ao carrinho!`, {
             style: { background: '#7c2d12', color: '#fff', border: 'none' },
@@ -45,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const updateQuantity = (id: string, quantity: number) => {
-        if (quantity < 1) {
+        if (quantity < 0.5) {
             removeFromCart(id)
             return
         }

@@ -2,10 +2,20 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../../lib/axios'
 import { useState, useRef } from 'react'
 import { getCurrentTenant } from '../../../config/tenants'
-import { ArrowLeft, Anchor, RotateCw, Plus, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Anchor, RotateCw, Plus, Minus, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { CartProvider, useCart } from './CartContext'
 import { CartDrawer } from './CartDrawer'
+import {
+    ResponsiveDialog,
+    ResponsiveDialogContent,
+    ResponsiveDialogHeader,
+    ResponsiveDialogTitle,
+    ResponsiveDialogFooter,
+    ResponsiveDialogClose,
+    ResponsiveDialogDescription
+} from '@/components/ui/responsive-dialog'
+import { Textarea } from '@/components/ui/textarea'
 
 interface Product {
     id: string
@@ -13,6 +23,8 @@ interface Product {
     price: number
     category: string
     display_id?: string
+    description?: string
+    measureUnit?: 'UNITARY' | 'FRACTIONAL'
 }
 
 function CardapioContent() {
@@ -27,6 +39,10 @@ function CardapioContent() {
     const [logoError, setLogoError] = useState(false)
     const { addToCart, setIsCartOpen, items } = useCart()
     const cartCount = items.reduce((acc, i) => acc + i.quantity, 0)
+
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+    const [modalQuantity, setModalQuantity] = useState(1)
+    const [modalObservation, setModalObservation] = useState('')
 
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -163,16 +179,23 @@ function CardapioContent() {
                         <div className="space-y-4">
                             {activeCategory && groupedProducts[activeCategory]?.map(product => (
                                 <div key={product.id} data-testid={`product-item-${product.display_id}`} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center shadow-lg hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-300 gap-4">
-                                    <div className="flex-1 pr-4">
+                                    <div className="flex-1 pr-4 min-h-[4rem] flex flex-col justify-center">
                                         <h3 className="text-xl font-bold text-stone-100" style={{ fontFamily: '"Cinzel", serif' }}>{product.name}</h3>
+                                        <p className="text-sm text-stone-400 mt-1 line-clamp-2 min-h-[2.5rem]">
+                                            {product.description || ''}
+                                        </p>
                                     </div>
-                                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
                                         <div className="text-2xl font-bold text-amber-500 shrink-0">
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
                                         </div>
                                         <button
                                             data-testid={`add-to-cart-${product.display_id}`}
-                                            onClick={() => addToCart(product)}
+                                            onClick={() => {
+                                                setSelectedProduct(product)
+                                                setModalQuantity(1)
+                                                setModalObservation('')
+                                            }}
                                             className="w-10 h-10 flex flex-shrink-0 items-center justify-center bg-amber-600/20 border border-amber-600/50 text-amber-400 rounded-full shadow-lg hover:bg-amber-600 hover:text-stone-950 hover:scale-105 transition-all"
                                         >
                                             <Plus size={20} />
@@ -206,6 +229,90 @@ function CardapioContent() {
                     </span>
                 </button>
             )}
+
+            <ResponsiveDialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+                <ResponsiveDialogContent className="sm:max-w-md bg-stone-950 border border-white/10 text-stone-200">
+                    <ResponsiveDialogHeader>
+                        <ResponsiveDialogTitle className="text-2xl text-amber-500 font-bold" style={{ fontFamily: '"Cinzel", serif' }}>
+                            {selectedProduct?.name}
+                        </ResponsiveDialogTitle>
+                        <ResponsiveDialogDescription className="text-stone-400">
+                            {selectedProduct?.description || 'Adicione ao pedido e conte com o melhor sabor.'}
+                        </ResponsiveDialogDescription>
+                    </ResponsiveDialogHeader>
+
+                    <div className="py-6 space-y-6">
+                        <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5">
+                            <span className="text-stone-300 font-medium">Preço</span>
+                            <span className="text-xl font-bold text-amber-500">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedProduct?.price || 0)}
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold text-stone-400 uppercase tracking-wide block">Alguma observação?</label>
+                            <Textarea
+                                placeholder="Ex: Tirar cebola, ponto da carne..."
+                                value={modalObservation}
+                                onChange={(e) => setModalObservation(e.target.value)}
+                                className="bg-stone-900 border-white/10 text-stone-200 placeholder:text-stone-600 focus-visible:ring-amber-500 resize-none min-h-[80px]"
+                            />
+                        </div>
+
+                        {selectedProduct?.measureUnit === 'FRACTIONAL' && (
+                            <div className="flex gap-2 w-full justify-center my-4">
+                                <button
+                                    onClick={() => setModalQuantity(1)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${modalQuantity === 1 ? 'bg-amber-500 text-stone-950 border-amber-500' : 'bg-transparent text-amber-500 border-amber-500/50 hover:bg-amber-500/10'}`}
+                                >
+                                    Comprar Inteira (1x)
+                                </button>
+                                <button
+                                    onClick={() => setModalQuantity(0.5)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${modalQuantity === 0.5 ? 'bg-amber-500 text-stone-950 border-amber-500' : 'bg-transparent text-amber-500 border-amber-500/50 hover:bg-amber-500/10'}`}
+                                >
+                                    Metade (0.5x)
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between p-1 bg-stone-900 rounded-lg border border-white/10 w-full max-w-[160px] mx-auto mt-4">
+                            <button
+                                onClick={() => setModalQuantity(Math.max(selectedProduct?.measureUnit === 'FRACTIONAL' ? 0.5 : 1, modalQuantity - (selectedProduct?.measureUnit === 'FRACTIONAL' ? 0.5 : 1)))}
+                                className="w-10 h-10 flex items-center justify-center text-amber-500 hover:bg-white/10 rounded-md transition-colors"
+                            >
+                                <Minus size={20} />
+                            </button>
+                            <span className="font-bold text-xl w-10 text-center">{modalQuantity === 0.5 ? '1/2' : modalQuantity}</span>
+                            <button
+                                onClick={() => setModalQuantity(modalQuantity + (selectedProduct?.measureUnit === 'FRACTIONAL' ? 0.5 : 1))}
+                                className="w-10 h-10 flex items-center justify-center text-amber-500 hover:bg-white/10 rounded-md transition-colors"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <ResponsiveDialogFooter className="flex-col sm:flex-row gap-3 pt-2">
+                        <ResponsiveDialogClose asChild>
+                            <button className="flex-1 py-3 text-stone-300 font-bold hover:bg-white/5 rounded-lg transition-colors hidden sm:block">
+                                Cancelar
+                            </button>
+                        </ResponsiveDialogClose>
+                        <button
+                            onClick={() => {
+                                if (selectedProduct) {
+                                    addToCart(selectedProduct, modalQuantity, modalObservation.trim())
+                                    setSelectedProduct(null)
+                                }
+                            }}
+                            className="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold rounded-lg transition-colors"
+                        >
+                            Adicionar - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((selectedProduct?.price || 0) * modalQuantity)}
+                        </button>
+                    </ResponsiveDialogFooter>
+                </ResponsiveDialogContent>
+            </ResponsiveDialog>
 
         </div>
     )
