@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { TENANTS_CONFIG } from '../../../config/tenants'
 import { useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Compass } from 'lucide-react'
 
 export default function MarujoLanding() {
     // Forçamos o tenant do Marujo pois esta é a Landing específica dele
@@ -15,8 +15,12 @@ export default function MarujoLanding() {
     ]
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans">
-            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md">
+        <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans z-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center -z-10">
+                <Compass className="w-[800px] h-[800px] text-amber-600/5 animate-spin-slow" />
+            </div>
+
+            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10">
                 <div className="w-1/4 sm:w-1/3"></div>
 
                 <div className="flex flex-col items-center gap-2 w-2/4 sm:w-1/3">
@@ -42,13 +46,13 @@ export default function MarujoLanding() {
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-20 flex flex-col items-center">
+            <main className="container mx-auto px-4 py-20 flex flex-col items-center relative z-10">
                 <section className="text-center mb-16 space-y-6">
                     <h2 className="text-5xl md:text-7xl text-amber-500 font-bold drop-shadow-lg" style={{ fontFamily: '"Pirata One", cursive' }}>
                         Tricampeão do Caraguá a Gosto
                     </h2>
-                    <p className="max-w-2xl mx-auto text-xl text-stone-300 font-medium tracking-wide">
-                        Uma imersão rústica e pirata para o seu paladar. Venha explorar os mares revoltos de sabores incríveis e pratos premiados no melhor Gastro Bar da região!
+                    <p className="max-w-3xl mx-auto text-xl text-stone-300 font-medium tracking-wide">
+                        Alta gastronomia, clima litorâneo e uma experiência inesquecível para toda a família. Saboreie nossos pratos premiados no ambiente mais charmoso e rústico de Caraguatatuba, enquanto as crianças se divertem em nosso Espaço Kids completo, com fliperamas e escorregador gigante.
                     </p>
                 </section>
 
