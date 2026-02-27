@@ -8,7 +8,7 @@ import { LandingInterceptor } from './pages/landings/LandingInterceptor'
 const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
 const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
 const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
-import { getCurrentTenant } from './config/tenants'
+
 
 const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
 
@@ -65,7 +65,7 @@ export const router = createBrowserRouter([
           },
         ]
         : []),
-      ...(getCurrentTenant().id === 'marujo' || isDev
+      ...(window.location.hostname.includes('marujogastrobar') || window.location.hostname.includes('metrics-two-gamma') || isDev
         ? [
           {
             path: 'cardapio',
