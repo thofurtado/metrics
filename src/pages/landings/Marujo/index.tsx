@@ -67,7 +67,7 @@ const AntiqueCompass = () => (
 
 export default function MarujoLanding() {
     // Forçamos o tenant do Marujo pois esta é a Landing específica dele
-    const tenant = TENANTS_CONFIG['metrics-two-gamma.vercel.app']
+    const tenant = TENANTS_CONFIG['marujogastrobar.vercel.app']
     const [logoError, setLogoError] = useState(false)
 
     const heroItems = [
@@ -77,10 +77,10 @@ export default function MarujoLanding() {
     ]
 
     return (
-        <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans z-0 overflow-hidden">
+        <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans z-0 overflow-hidden flex flex-col justify-between">
             <AntiqueCompass />
 
-            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10">
+            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10 shrink-0">
                 <div className="w-1/4 sm:w-1/3"></div>
 
                 <div className="flex flex-col items-center gap-2 w-2/4 sm:w-1/3">
@@ -106,37 +106,37 @@ export default function MarujoLanding() {
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-20 flex flex-col items-center relative z-10">
-                <section className="text-center mb-16 space-y-6">
+            <main className="container mx-auto px-4 pt-12 pb-16 md:pt-8 md:pb-8 flex-1 flex flex-col items-center justify-center relative z-10">
+                <section className="text-center mb-12 md:mb-6 space-y-6 md:space-y-3">
                     <h2 className="text-5xl md:text-7xl text-amber-500 font-bold drop-shadow-lg" style={{ fontFamily: '"Pirata One", cursive' }}>
                         Tricampeão do Caraguá a Gosto
                     </h2>
-                    <p className="max-w-3xl mx-auto text-xl text-stone-300 font-medium tracking-wide">
+                    <p className="max-w-3xl mx-auto text-lg sm:text-xl text-stone-300 font-medium tracking-wide">
                         Alta gastronomia, clima litorâneo e uma experiência inesquecível para toda a família. Saboreie nossos pratos premiados no ambiente mais charmoso e rústico de Caraguatatuba, enquanto as crianças se divertem em nosso Espaço Kids completo, com fliperamas e escorregador gigante.
                     </p>
                 </section>
 
-                <section className="w-full max-w-5xl mb-24 overflow-hidden relative">
-                    <div className="flex flex-nowrap justify-center gap-6 pb-8 px-4 flex-col sm:flex-row items-center">
+                <section className="w-full max-w-5xl mb-16 md:mb-6 overflow-hidden relative shrink-0">
+                    <div className="flex flex-nowrap justify-center gap-6 md:gap-4 pb-4 md:pb-2 px-4 flex-col sm:flex-row items-center">
                         {heroItems.map((item, index) => (
                             <div
                                 key={index}
                                 data-testid={`carousel-item-${index}`}
-                                className="w-full sm:w-80 h-96 rounded-2xl bg-stone-900/50 backdrop-blur-sm shadow-2xl flex items-center justify-center relative overflow-hidden group hover:-translate-y-2 hover:shadow-amber-500/20 transition-all duration-300 border border-white/10"
+                                className="w-full sm:w-80 h-80 md:h-[18rem] lg:h-[20rem] rounded-2xl bg-stone-900/50 backdrop-blur-sm shadow-2xl flex items-center justify-center relative overflow-hidden group hover:-translate-y-2 hover:shadow-amber-500/20 transition-all duration-300 border border-white/10 shrink-0"
                             >
                                 <img src={item.image} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/40 to-transparent opacity-90"></div>
-                                <span className="absolute bottom-8 text-2xl text-stone-100 font-bold drop-shadow-lg group-hover:scale-105 transition-transform text-center px-4" style={{ fontFamily: '"Cinzel", serif' }}>{item.title}</span>
+                                <span className="absolute bottom-6 md:bottom-8 text-xl md:text-2xl text-stone-100 font-bold drop-shadow-lg group-hover:scale-105 transition-transform text-center px-4" style={{ fontFamily: '"Cinzel", serif' }}>{item.title}</span>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                <section className="text-center pb-20">
+                <section className="text-center pb-8 md:pb-4">
                     <Link to="/cardapio">
                         <button
                             data-testid="main-cta-button"
-                            className="bg-gradient-to-r from-stone-800 to-stone-900 text-amber-500 text-2xl sm:text-3xl font-bold px-12 py-5 rounded-xl shadow-2xl transform transition-transform hover:-translate-y-1 hover:shadow-amber-500/20 border border-amber-600/30"
+                            className="bg-gradient-to-r from-stone-800 to-stone-900 text-amber-500 text-xl sm:text-2xl md:text-3xl font-bold px-10 py-4 md:px-12 md:py-5 rounded-xl shadow-2xl transform transition-transform hover:-translate-y-1 hover:shadow-amber-500/20 border border-amber-600/30"
                             style={{ fontFamily: '"Cinzel", serif' }}
                         >
                             Faça seu pedido

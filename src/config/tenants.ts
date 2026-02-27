@@ -26,9 +26,24 @@ export const TENANTS_CONFIG = {
     }
 };
 
-const DEFAULT_TENANT = 'localhost';
+
+
+const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
 
 export function getCurrentTenant() {
-    const host = window.location.hostname;
-    return TENANTS_CONFIG[host as keyof typeof TENANTS_CONFIG] || TENANTS_CONFIG[DEFAULT_TENANT];
+    const hostname = window.location.hostname;
+
+    if (hostname === 'marujogastrobar.vercel.app' || hostname === 'metrics-two-gamma.vercel.app') {
+        return TENANTS_CONFIG['marujogastrobar.vercel.app'];
+    }
+
+    if (hostname === 'www.eurecatech.com.br' || hostname === 'eurecatech.com.br') {
+        return TENANTS_CONFIG['www.eurecatech.com.br'];
+    }
+
+    if (isDev) {
+        return TENANTS_CONFIG['localhost'];
+    }
+
+    return TENANTS_CONFIG['www.eurecatech.com.br']; // Fallback padrão para prod
 }

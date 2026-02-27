@@ -10,7 +10,7 @@ const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
 const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
 import { getCurrentTenant } from './config/tenants'
 
-const isDev = import.meta.env.DEV;
+const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
 
 import { DownloadsPage } from './pages/downloads'
 import { NotFound } from './pages/404'
