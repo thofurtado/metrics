@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../../lib/axios'
 import { useState, useRef } from 'react'
-import { TENANTS_CONFIG, getCurrentTenant } from '../../../config/tenants'
+import { getCurrentTenant } from '../../../config/tenants'
 import { ArrowLeft, Anchor, RotateCw, Plus, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { CartProvider, useCart } from './CartContext'
@@ -12,6 +12,7 @@ interface Product {
     name: string
     price: number
     category: string
+    display_id?: string
 }
 
 function CardapioContent() {
@@ -21,7 +22,7 @@ function CardapioContent() {
         return <Navigate to="/" />
     }
 
-    const tenant = TENANTS_CONFIG['metrics-two-gamma.vercel.app']
+    const tenant = getCurrentTenant()
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [logoError, setLogoError] = useState(false)
     const { addToCart, setIsCartOpen, items } = useCart()
