@@ -34,7 +34,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             return [...prev, { ...product, quantity: 1 }]
         })
         toast.success(`${product.name} adicionado ao carrinho!`, {
-            style: { background: '#7c2d12', color: '#fff', border: 'none' }
+            style: { background: '#7c2d12', color: '#fff', border: 'none' },
+            duration: 1500,
+            position: 'top-center'
         })
     }
 

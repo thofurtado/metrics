@@ -110,7 +110,10 @@ function CardapioContent() {
                 ) : (
                     <div>
                         {/* Tabs de Categorias */}
-                        <div className="flex overflow-x-auto gap-4 pb-4 mb-8 snap-x hide-scrollbars no-scrollbar border-b border-orange-900/20">
+                        <div
+                            className="flex max-w-full overflow-x-auto flex-nowrap whitespace-nowrap justify-start gap-4 pb-4 mb-8 snap-x border-b border-orange-900/20 [&::-webkit-scrollbar]:hidden"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
                             {categories.map(category => (
                                 <button
                                     key={category}
