@@ -12,6 +12,52 @@ import { Plus, Minus, Trash2, ShoppingBag, Loader2, Search } from 'lucide-react'
 import { useCart } from './CartContext'
 import { api } from '../../../lib/axios'
 import { toast } from 'sonner'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { MapPin } from 'lucide-react'
+
+const DELIVERY_FEES = [
+    { neighborhood: "Balneário California", fee: 5.00 },
+    { neighborhood: "Balneário Copacabana", fee: 5.00 },
+    { neighborhood: "Benfica", fee: 23.00 },
+    { neighborhood: "Capricórnio 1, 2, 3", fee: 5.00 },
+    { neighborhood: "Caputera", fee: 23.00 },
+    { neighborhood: "Centro", fee: 23.00 },
+    { neighborhood: "Chocolate", fee: 10.00 },
+    { neighborhood: "Cidade Jardim", fee: 20.00 },
+    { neighborhood: "Cocanha", fee: 15.00 },
+    { neighborhood: "Getuba", fee: 10.00 },
+    { neighborhood: "Golfinho", fee: 30.00 },
+    { neighborhood: "Hotel Costa Norte", fee: 7.00 },
+    { neighborhood: "Indaiá", fee: 27.00 },
+    { neighborhood: "Jaraguazinho", fee: 27.00 },
+    { neighborhood: "Jd. Jaqueira", fee: 27.00 },
+    { neighborhood: "Jd. Santa Rosa", fee: 10.00 },
+    { neighborhood: "Mar Verde", fee: 23.00 },
+    { neighborhood: "Maranduba", fee: 40.00 },
+    { neighborhood: "Martin de Sá", fee: 20.00 },
+    { neighborhood: "Massaguaçu", fee: 10.00 },
+    { neighborhood: "Palmeiras", fee: 30.00 },
+    { neighborhood: "Parque Imperial", fee: 15.00 },
+    { neighborhood: "Patrimônio", fee: 10.00 },
+    { neighborhood: "Pinheirinho", fee: 10.00 },
+    { neighborhood: "Poiares", fee: 30.00 },
+    { neighborhood: "Portal Fazendinha", fee: 10.00 },
+    { neighborhood: "Porto Novo", fee: 36.00 },
+    { neighborhood: "Prainha", fee: 20.00 },
+    { neighborhood: "Primavera", fee: 23.00 },
+    { neighborhood: "Rio do Ouro", fee: 27.00 },
+    { neighborhood: "Sapê", fee: 40.00 },
+    { neighborhood: "Sertão da Quina", fee: 40.00 },
+    { neighborhood: "Tabatinga", fee: 23.00 },
+    { neighborhood: "Tinga", fee: 27.00 },
+    { neighborhood: "Verde Mar", fee: 15.00 }
+];
 
 export function CartDrawer() {
     const { items, isCartOpen, setIsCartOpen, updateQuantity, total, clearCart } = useCart()
@@ -178,8 +224,26 @@ export function CartDrawer() {
             const message = `Olá Marujo! Gostaria de fazer o seguinte pedido:%0A%0A${formattedItems}%0A%0ATotal: *R$ ${formattedTotal}*%0A%0ADados de Entrega:%0A${name} - ${formatPhone(phone)}%0A${adrressString}%0ARef: ${reference}%0A%0APagamento: *${paymentMethod}*`
 
             window.open(`https://wa.me/5512996293344?text=${message}`, '_blank')
+
             clearCart()
             setIsCartOpen(false)
+
+            setTimeout(() => {
+                setName('')
+                setPhone('')
+                setCep('')
+                setStreet('')
+                setNumber('')
+                setNeighborhood('')
+                setCity('')
+                setState('')
+                setReference('')
+                setPaymentMethod('Dinheiro')
+                setHasSearchedPhone(false)
+                setClientFound(false)
+                setAddressReadonly(false)
+                setIsNewAddress(false)
+            }, 300)
         } catch (error) {
             toast.error("Ocorreu um erro ao registrar as informações da entrega.")
         } finally {
@@ -331,6 +395,36 @@ export function CartDrawer() {
                             </span>
                         </div>
                     )}
+
+                    <div className="flex justify-center mb-4">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button type="button" className="text-sm text-orange-800 underline flex items-center gap-1 hover:text-orange-950 transition-colors font-medium">
+                                    <MapPin size={16} />
+                                    Consulte aqui a taxa de entrega para o seu bairro
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-sm rounded-[1rem] bg-white border outline-none">
+                                <DialogHeader>
+                                    <DialogTitle className="text-center font-serif text-2xl text-orange-950 font-bold mb-2">
+                                        Taxas de Entrega
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="space-y-2">
+                                        {DELIVERY_FEES.map((item, index) => (
+                                            <div key={index} className="flex justify-between items-center py-2 border-b border-orange-900/10 last:border-0">
+                                                <span className="text-sm font-medium text-stone-700">{item.neighborhood}</span>
+                                                <span className="text-sm font-bold text-orange-900">
+                                                    R$ {item.fee.toFixed(2).replace('.', ',')}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
 
                     <Button
                         type="submit"
