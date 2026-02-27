@@ -1,7 +1,69 @@
 import { Link } from 'react-router-dom'
 import { TENANTS_CONFIG } from '../../../config/tenants'
 import { useState } from 'react'
-import { Lock, Compass } from 'lucide-react'
+import { Lock } from 'lucide-react'
+
+const AntiqueCompass = () => (
+    <div className="absolute top-0 left-0 w-full h-[800px] sm:h-screen overflow-hidden pointer-events-none -z-10 flex items-center justify-center">
+        <div className="relative flex items-center justify-center w-[150vw] h-[150vw] sm:w-[1400px] sm:h-[1400px] opacity-20 mix-blend-soft-light text-amber-500">
+            {/* Outer Ring - Spins Clockwise Very Slowly */}
+            <svg viewBox="0 0 100 100" className="absolute w-full h-full animate-[spin_240s_linear_infinite] fill-current">
+                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="0.3" />
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.2" strokeDasharray="1 1.5" />
+                <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="0.1" />
+
+                {Array.from({ length: 72 }).map((_, i) => (
+                    <line key={`tick-${i}`} x1="50" y1="2" x2="50" y2={i % 9 === 0 ? "6" : "4"} transform={`rotate(${i * 5} 50 50)`} stroke="currentColor" strokeWidth={i % 9 === 0 ? "0.5" : "0.2"} />
+                ))}
+
+                <text x="50" y="10" textAnchor="middle" fontSize="4.5" fontFamily="Cinzel" fill="currentColor" fontWeight="bold">N</text>
+                <text x="50" y="93" textAnchor="middle" fontSize="4.5" fontFamily="Cinzel" fill="currentColor" fontWeight="bold">S</text>
+                <text x="93" y="52" textAnchor="middle" fontSize="4.5" fontFamily="Cinzel" fill="currentColor" fontWeight="bold">E</text>
+                <text x="7" y="52" textAnchor="middle" fontSize="4.5" fontFamily="Cinzel" fill="currentColor" fontWeight="bold">W</text>
+            </svg>
+
+            {/* Inner Star - Spins Counter-Clockwise Faster */}
+            <svg viewBox="0 0 100 100" className="absolute w-[80%] h-[80%] animate-[spin_180s_linear_infinite_reverse] fill-current">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.3" strokeDasharray="2 4" />
+                <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.1" />
+
+                <g transform="translate(50, 50)">
+                    {/* Background faint ray burst */}
+                    <g opacity="0.15">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                            <path key={`p${i}`} d="M0 -38 L1.5 -10 L0 0 Z" transform={`rotate(${i * 22.5})`} fill="currentColor" />
+                        ))}
+                    </g>
+
+                    {/* Minor points */}
+                    <g transform="rotate(45)">
+                        <path d="M0 -30 L3 -6 L0 0 Z" fill="currentColor" opacity="0.3" />
+                        <path d="M0 -30 L-3 -6 L0 0 Z" fill="currentColor" opacity="0.6" />
+                        <path d="M0 30 L3 6 L0 0 Z" fill="currentColor" opacity="0.6" />
+                        <path d="M0 30 L-3 6 L0 0 Z" fill="currentColor" opacity="0.3" />
+                        <path d="M30 0 L6 3 L0 0 Z" fill="currentColor" opacity="0.3" />
+                        <path d="M30 0 L6 -3 L0 0 Z" fill="currentColor" opacity="0.6" />
+                        <path d="M-30 0 L-6 3 L0 0 Z" fill="currentColor" opacity="0.6" />
+                        <path d="M-30 0 L-6 -3 L0 0 Z" fill="currentColor" opacity="0.3" />
+                    </g>
+
+                    {/* Major points */}
+                    <path d="M0 -40 L4.5 -8 L0 0 Z" fill="currentColor" opacity="0.4" />
+                    <path d="M0 -40 L-4.5 -8 L0 0 Z" fill="currentColor" opacity="0.9" />
+                    <path d="M0 40 L4.5 8 L0 0 Z" fill="currentColor" opacity="0.9" />
+                    <path d="M0 40 L-4.5 8 L0 0 Z" fill="currentColor" opacity="0.4" />
+                    <path d="M40 0 L8 4.5 L0 0 Z" fill="currentColor" opacity="0.4" />
+                    <path d="M40 0 L8 -4.5 L0 0 Z" fill="currentColor" opacity="0.9" />
+                    <path d="M-40 0 L-8 4.5 L0 0 Z" fill="currentColor" opacity="0.9" />
+                    <path d="M-40 0 L-8 -4.5 L0 0 Z" fill="currentColor" opacity="0.4" />
+                </g>
+
+                <circle cx="50" cy="50" r="5" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                <circle cx="50" cy="50" r="2" fill="currentColor" opacity="0.8" />
+            </svg>
+        </div>
+    </div>
+)
 
 export default function MarujoLanding() {
     // Forçamos o tenant do Marujo pois esta é a Landing específica dele
@@ -16,9 +78,7 @@ export default function MarujoLanding() {
 
     return (
         <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans z-0 overflow-hidden">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center -z-10">
-                <Compass className="w-[800px] h-[800px] text-amber-600/5 animate-spin-slow" />
-            </div>
+            <AntiqueCompass />
 
             <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10">
                 <div className="w-1/4 sm:w-1/3"></div>
