@@ -105,37 +105,40 @@
   }
 
   .theme-marujo {
-    /* Tema: Rústico, bar de piratas/marinheiros */
-    /* background deixado transparente para usar classe radial-gradient no tailwind */
+    /* Tema: Dark Tavern Premium */
     --background: transparent;
 
-    /* Marrom-chumbo muito escuro para garantir contraste premium */
-    --foreground: 28 20% 15%;
+    /* Texto principal: stone-200 (60 5% 90%) para leitura suave */
+    --foreground: 60 5% 90%;
 
-    --card: 35 30% 85%;
-    --card-foreground: 28 20% 15%;
+    /* Fundos de card/modais: stone-900 (24 10% 10%) or white/5 */
+    --card: 24 10% 10%;
+    --card-foreground: 60 5% 90%;
 
-    --popover: 35 30% 85%;
-    --popover-foreground: 28 20% 15%;
+    --popover: 24 10% 10%;
+    --popover-foreground: 60 5% 90%;
 
-    --primary: 15 80% 45%;
+    /* Primary: Amber 600 elegante (38 92% 43%) */
+    --primary: 38 92% 43%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 20% 70%;
-    --secondary-foreground: 28 20% 15%;
+    /* Tons atenuados para elementos secundários */
+    --secondary: 24 10% 15%;
+    --secondary-foreground: 60 5% 90%;
 
-    --muted: 30 15% 75%;
-    --muted-foreground: 28 15% 35%;
+    --muted: 24 10% 15%;
+    --muted-foreground: 60 5% 65%;
 
-    --accent: 30 20% 70%;
-    --accent-foreground: 28 20% 15%;
+    --accent: 24 10% 15%;
+    --accent-foreground: 60 5% 90%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 30 20% 65%;
-    --input: 30 20% 65%;
-    --ring: 15 80% 45%;
+    --border: 0 0% 15%;
+    /* white/10ish */
+    --input: 0 0% 15%;
+    --ring: 38 92% 43%;
 
     --radius: 0.2rem;
   }
