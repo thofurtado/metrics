@@ -109,7 +109,7 @@ export default function MarujoLanding() {
             <main className="container mx-auto px-4 pt-12 pb-16 md:pt-8 md:pb-8 flex-1 flex flex-col items-center justify-center relative z-10">
                 <section className="text-center mb-12 md:mb-6 space-y-6 md:space-y-3">
                     <h2 className="text-5xl md:text-7xl text-amber-500 font-bold drop-shadow-lg" style={{ fontFamily: '"Pirata One", cursive' }}>
-                        Tricampeão do Caraguá a Gosto
+                        <span className="inline-block text-amber-400 text-6xl md:text-8xl animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] pr-2">7x</span> Campeão do Caraguá a Gosto
                     </h2>
                     <p className="max-w-3xl mx-auto text-lg sm:text-xl text-stone-300 font-medium tracking-wide">
                         Alta gastronomia, clima litorâneo e uma experiência inesquecível para toda a família. Saboreie nossos pratos premiados no ambiente mais charmoso e rústico de Caraguatatuba, enquanto as crianças se divertem em nosso Espaço Kids completo, com fliperamas e escorregador gigante.
