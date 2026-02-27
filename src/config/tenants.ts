@@ -17,7 +17,7 @@ export const TENANTS_CONFIG = {
         landingComponent: lazy(() => import('../pages/landings/Eureca')),
     },
     // Domínio do White Label Marujo
-    'metrics-two-gamma.vercel.app': {
+    'marujogastrobar.vercel.app': {
         id: 'marujo',
         name: 'Marujo Gastro Bar',
         logo: '/assets/marujo/logo.svg',

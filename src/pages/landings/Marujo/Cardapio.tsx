@@ -15,7 +15,9 @@ interface Product {
 }
 
 function CardapioContent() {
-    if (getCurrentTenant().id !== 'marujo') {
+    const isDev = import.meta.env.DEV;
+
+    if (!isDev && getCurrentTenant().id !== 'marujo') {
         return <Navigate to="/" />
     }
 
@@ -159,7 +161,7 @@ function CardapioContent() {
                         {/* Listagem de Produtos */}
                         <div className="space-y-4">
                             {activeCategory && groupedProducts[activeCategory]?.map(product => (
-                                <div key={product.id} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center shadow-lg hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-300 gap-4">
+                                <div key={product.id} data-testid={`product-item-${product.display_id}`} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-5 flex flex-col sm:flex-row justify-between sm:items-center shadow-lg hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-300 gap-4">
                                     <div className="flex-1 pr-4">
                                         <h3 className="text-xl font-bold text-stone-100" style={{ fontFamily: '"Cinzel", serif' }}>{product.name}</h3>
                                     </div>
@@ -168,6 +170,7 @@ function CardapioContent() {
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.price)}
                                         </div>
                                         <button
+                                            data-testid={`add-to-cart-${product.display_id}`}
                                             onClick={() => addToCart(product)}
                                             className="w-10 h-10 flex flex-shrink-0 items-center justify-center bg-amber-600/20 border border-amber-600/50 text-amber-400 rounded-full shadow-lg hover:bg-amber-600 hover:text-stone-950 hover:scale-105 transition-all"
                                         >

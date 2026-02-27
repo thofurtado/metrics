@@ -63,6 +63,7 @@
     "zod": "^3.22.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@rocketseat/eslint-config": "^2.2.2",
     "@types/node": "^20.11.28",
     "@types/react": "^18.2.64",

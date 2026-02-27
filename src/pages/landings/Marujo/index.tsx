@@ -121,6 +121,7 @@ export default function MarujoLanding() {
                         {heroItems.map((item, index) => (
                             <div
                                 key={index}
+                                data-testid={`carousel-item-${index}`}
                                 className="w-full sm:w-80 h-96 rounded-2xl bg-stone-900/50 backdrop-blur-sm shadow-2xl flex items-center justify-center relative overflow-hidden group hover:-translate-y-2 hover:shadow-amber-500/20 transition-all duration-300 border border-white/10"
                             >
                                 <img src={item.image} alt={item.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
@@ -134,6 +135,7 @@ export default function MarujoLanding() {
                 <section className="text-center pb-20">
                     <Link to="/cardapio">
                         <button
+                            data-testid="main-cta-button"
                             className="bg-gradient-to-r from-stone-800 to-stone-900 text-amber-500 text-2xl sm:text-3xl font-bold px-12 py-5 rounded-xl shadow-2xl transform transition-transform hover:-translate-y-1 hover:shadow-amber-500/20 border border-amber-600/30"
                             style={{ fontFamily: '"Cinzel", serif' }}
                         >
