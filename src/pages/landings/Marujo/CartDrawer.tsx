@@ -88,6 +88,9 @@ export function CartDrawer() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [hasSearchedPhone, setHasSearchedPhone] = useState(false)
 
+    const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+    const [isAddressesModalOpen, setIsAddressesModalOpen] = useState(false)
+
     const formatPhone = (val: string) => {
         let v = val.replace(/\D/g, '').substring(0, 11)
         if (v.length > 10) {
@@ -151,6 +154,7 @@ export function CartDrawer() {
                 setClientFound(true)
 
                 if (client.addresses && client.addresses.length > 0) {
+                    setSavedAddresses(client.addresses)
                     const addr = client.addresses[0]
                     setCep(addr.zipcode?.toString().padStart(8, '0') || '')
                     setStreet(addr.street || '')
@@ -243,6 +247,7 @@ export function CartDrawer() {
                 setClientFound(false)
                 setAddressReadonly(false)
                 setIsNewAddress(false)
+                setSavedAddresses([])
             }, 300)
         } catch (error) {
             toast.error("Ocorreu um erro ao registrar as informações da entrega.")
@@ -351,13 +356,68 @@ export function CartDrawer() {
                                             <Input required placeholder="UF" value={state} onChange={(e) => setState(e.target.value)} disabled={addressReadonly} maxLength={2} className="uppercase bg-white border-orange-900/20 focus-visible:ring-orange-900 disabled:opacity-75 disabled:bg-orange-900/5" />
                                         </div>
 
-                                        {clientFound && addressReadonly && (
-                                            <div className="flex justify-start mt-1 mb-2 pt-1">
-                                                <button type="button" onClick={handleNewAddress} className="text-xs text-orange-800 font-bold underline hover:text-orange-950 flex items-center gap-1">
-                                                    <Plus size={14} /> Entregar em outro endereço
-                                                </button>
+                                        {(clientFound && addressReadonly) || savedAddresses.length > 1 ? (
+                                            <div className="flex justify-start gap-4 mt-1 mb-2 pt-1 flex-wrap">
+                                                {clientFound && addressReadonly && (
+                                                    <button type="button" onClick={handleNewAddress} className="text-xs text-orange-800 font-bold underline hover:text-orange-950 flex items-center gap-1">
+                                                        <Plus size={14} /> Entregar em outro endereço
+                                                    </button>
+                                                )}
+
+                                                {savedAddresses.length > 1 && (
+                                                    <Dialog open={isAddressesModalOpen} onOpenChange={setIsAddressesModalOpen}>
+                                                        <DialogTrigger asChild>
+                                                            <button type="button" className="text-xs text-orange-800 font-bold underline hover:text-orange-950 flex items-center gap-1">
+                                                                <MapPin size={14} /> Escolher endereços salvos
+                                                            </button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="max-w-sm rounded-[1rem] bg-white border outline-none">
+                                                            <DialogHeader>
+                                                                <DialogTitle className="text-center font-serif text-2xl text-orange-950 font-bold mb-2">
+                                                                    Meus Endereços
+                                                                </DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                                                                <div className="space-y-3">
+                                                                    {savedAddresses.map((addr, index) => (
+                                                                        <button
+                                                                            key={index}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setCep(addr.zipcode?.toString().padStart(8, '0') || '')
+                                                                                setStreet(addr.street || '')
+                                                                                setNumber(addr.number?.toString() || '')
+                                                                                setNeighborhood(addr.neighborhood || '')
+                                                                                setCity(addr.city || '')
+                                                                                setState(addr.state || '')
+                                                                                setAddressReadonly(true)
+                                                                                setIsNewAddress(false)
+                                                                                setIsAddressesModalOpen(false)
+                                                                            }}
+                                                                            className="w-full text-left p-3 border rounded-lg border-orange-900/10 hover:border-orange-500 hover:bg-orange-50 transition-colors"
+                                                                        >
+                                                                            <div className="flex justify-between items-start mb-1">
+                                                                                <span className="text-sm font-bold text-orange-950">
+                                                                                    {addr.street}, {addr.number}
+                                                                                </span>
+                                                                                {addr.is_main && (
+                                                                                    <span className="text-[10px] uppercase font-bold text-white bg-orange-800 px-2 py-0.5 rounded-full">
+                                                                                        Principal
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <p className="text-xs text-stone-600">
+                                                                                {addr.neighborhood} - {addr.city}/{addr.state}
+                                                                            </p>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                )}
                                             </div>
-                                        )}
+                                        ) : null}
 
                                         <Input placeholder="Ponto de Referência (Opcional)" value={reference} onChange={(e) => setReference(e.target.value)} className="bg-white border-orange-900/20 focus-visible:ring-orange-900 mt-2" />
 
