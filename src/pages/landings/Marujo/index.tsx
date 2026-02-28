@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
-import { TENANTS_CONFIG } from '../../../config/tenants'
-import { useState } from 'react'
 import { Lock } from 'lucide-react'
+import { LogoMarujo } from '../../../components/logos/LogoMarujo'
 
 const AntiqueCompass = () => (
     <div className="absolute top-0 left-0 w-full h-[800px] sm:h-screen overflow-hidden pointer-events-none -z-10 flex items-center justify-center">
@@ -66,10 +65,6 @@ const AntiqueCompass = () => (
 )
 
 export default function MarujoLanding() {
-    // Forçamos o tenant do Marujo pois esta é a Landing específica dele
-    const tenant = TENANTS_CONFIG['marujogastrobar.vercel.app']
-    const [logoError, setLogoError] = useState(false)
-
     const heroItems = [
         { title: "Palmito Caiçara", image: "/assets/marujo/Palmito%20%C3%A0%20Cai%C3%A7ara.jpg" },
         { title: "Sereníssima", image: "/assets/marujo/Serenissima.jpg" },
@@ -80,39 +75,34 @@ export default function MarujoLanding() {
         <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans z-0 overflow-hidden flex flex-col justify-between">
             <AntiqueCompass />
 
-            <header className="p-4 sm:p-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10 shrink-0">
-                <div className="w-1/4 sm:w-1/3"></div>
+            <header className="py-6 px-4 sm:px-6 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md relative z-10 shrink-0 h-24 sm:h-28 md:h-32">
+                <div className="flex-1 flex justify-start z-10"></div>
 
-                <div className="flex flex-col items-center gap-2 w-2/4 sm:w-1/3">
-                    {!logoError ? (
-                        <img
-                            src={tenant.logo}
-                            alt={`Logo de ${tenant.name}`}
-                            className="h-14 sm:h-20 object-contain drop-shadow-xl"
-                            onError={() => setLogoError(true)}
-                        />
-                    ) : (
-                        <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-wider drop-shadow-md text-center" style={{ fontFamily: '"Pirata One", cursive' }}>
-                            {tenant.name}
-                        </h1>
-                    )}
-                </div>
+                {/* Logo Centralizado Absoluto */}
+                <LogoMarujo />
 
-                <div className="w-1/4 sm:w-1/3 flex justify-end pr-2 sm:pr-0">
-                    <Link to="/sign-in" className="flex items-center gap-2 text-stone-200 bg-amber-600/20 hover:bg-amber-600/40 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors border border-amber-600/30 shadow-md" title="Acesso ao Sistema">
+                <div className="flex-1 flex justify-end z-10 pr-2 sm:pr-0">
+                    <Link to="/sign-in" className="flex items-center gap-2 text-stone-200 bg-amber-600/20 hover:bg-amber-600/40 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors border border-amber-600/30 shadow-md pointer-events-auto" title="Acesso ao Sistema">
                         <Lock size={16} className="text-amber-500" />
                         <span className="hidden sm:inline font-bold text-amber-500" style={{ fontFamily: '"Cinzel", serif' }}>Acesso Restrito</span>
                     </Link>
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 pt-12 pb-16 md:pt-8 md:pb-8 flex-1 flex flex-col items-center justify-center relative z-10">
-                <section className="text-center mb-12 md:mb-6 space-y-6 md:space-y-3">
-                    <h2 className="text-5xl md:text-7xl text-amber-500 font-bold drop-shadow-lg" style={{ fontFamily: '"Pirata One", cursive' }}>
-                        <span className="inline-block text-amber-400 text-6xl md:text-8xl animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] pr-2">7x</span> Campeão do Caraguá a Gosto
-                    </h2>
-                    <p className="max-w-3xl mx-auto text-lg sm:text-xl text-stone-300 font-medium tracking-wide">
-                        Alta gastronomia, clima litorâneo e uma experiência inesquecível para toda a família. Saboreie nossos pratos premiados no ambiente mais charmoso e rústico de Caraguatatuba, enquanto as crianças se divertem em nosso Espaço Kids completo, com fliperamas e escorregador gigante.
+            <main className="container mx-auto px-4 pt-10 pb-16 md:pt-12 md:pb-12 flex-1 flex flex-col items-center justify-center relative z-10">
+
+                {/* Título Principal */}
+                <section className="text-center mt-12 mb-16 md:mt-16 md:mb-20 w-full px-4">
+                    <h1
+                        className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 md:mb-12 bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-700 drop-shadow-sm tracking-wide"
+                        style={{ fontFamily: '"Cinzel", serif' }}
+                    >
+                        7x Campeão do Caraguá a Gosto
+                    </h1>
+
+                    {/* Descrição com Alta Legibilidade */}
+                    <p className="text-lg sm:text-xl md:text-2xl text-stone-200 font-normal tracking-wide leading-relaxed drop-shadow-md">
+                        Alta gastronomia, clima litorâneo e uma experiência inesquecível para toda a família. Saboreie nossos pratos premiados no ambiente mais charmoso e rústico de Caraguatatuba, enquanto as crianças se divertem em nosso Espaço Kids completo.
                     </p>
                 </section>
 
@@ -136,8 +126,8 @@ export default function MarujoLanding() {
                     <Link to="/cardapio">
                         <button
                             data-testid="main-cta-button"
-                            className="bg-gradient-to-r from-stone-800 to-stone-900 text-amber-500 text-xl sm:text-2xl md:text-3xl font-bold px-10 py-4 md:px-12 md:py-5 rounded-xl shadow-2xl transform transition-transform hover:-translate-y-1 hover:shadow-amber-500/20 border border-amber-600/30"
-                            style={{ fontFamily: '"Cinzel", serif' }}
+                            className="bg-gradient-to-br from-amber-700 to-amber-900 text-stone-100 text-xl sm:text-2xl md:text-3xl font-bold px-10 py-4 md:px-12 md:py-5 rounded-xl shadow-2xl transform transition-all duration-300 hover:-translate-y-1 drop-shadow-[0_0_15px_rgba(217,119,6,0.3)] hover:drop-shadow-[0_0_25px_rgba(251,191,36,0.5)] border border-amber-500/50 hover:from-amber-600 hover:to-amber-800"
+                            style={{ fontFamily: '"Cinzel", serif', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
                         >
                             Faça seu pedido
                         </button>

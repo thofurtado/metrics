@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { getCurrentTenant } from '../../../config/tenants'
 import { ArrowLeft, Anchor, RotateCw, Plus, Minus, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
+import { LogoMarujo } from '../../../components/logos/LogoMarujo'
 import { CartProvider, useCart } from './CartContext'
 import { CartDrawer } from './CartDrawer'
 import {
@@ -34,9 +35,7 @@ function CardapioContent() {
         return <Navigate to="/" />
     }
 
-    const tenant = getCurrentTenant()
     const [activeCategory, setActiveCategory] = useState<string>('')
-    const [logoError, setLogoError] = useState(false)
     const { addToCart, setIsCartOpen, items } = useCart()
     const cartCount = items.reduce((acc, i) => acc + i.quantity, 0)
 
@@ -80,28 +79,21 @@ function CardapioContent() {
 
     return (
         <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-stone-900 to-black text-stone-200 font-sans pb-20">
-            <header className="p-4 flex flex-row items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-50 w-full">
-                <Link to="/" className="text-amber-500 hover:text-amber-400 transition-colors flex items-center gap-2 font-bold font-serif w-1/4">
-                    <ArrowLeft size={24} />
-                    <span className="hidden sm:inline">Voltar</span>
-                </Link>
-
-                <div className="flex-1 flex justify-center w-2/4">
-                    {!logoError ? (
-                        <img
-                            src={tenant.logo}
-                            alt={`Logo de ${tenant.name}`}
-                            className="h-14 object-contain drop-shadow-md"
-                            onError={() => setLogoError(true)}
-                        />
-                    ) : (
-                        <span className="text-2xl font-bold text-amber-500 tracking-wider whitespace-nowrap drop-shadow-md" style={{ fontFamily: '"Pirata One", cursive' }}>
-                            {tenant.name}
-                        </span>
-                    )}
+            <header className="py-4 px-4 sm:px-6 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md sticky top-0 z-50 w-full relative shrink-0 h-20 sm:h-24 md:h-28">
+                {/* Botão de Voltar à Esquerda */}
+                <div className="flex-1 flex justify-start z-10">
+                    <Link to="/" className="text-amber-500 hover:text-amber-400 transition-colors flex items-center gap-2 font-bold font-serif pointer-events-auto">
+                        <ArrowLeft size={24} />
+                        <span className="hidden sm:inline">Voltar</span>
+                    </Link>
                 </div>
 
-                <div className="w-1/4"></div>
+                {/* Logo Centralizado Absoluto */}
+                <LogoMarujo />
+
+                {/* Espaço à Direita (Para Botões Futuros ou Carrinho) */}
+                <div className="flex-1 flex justify-end z-10">
+                </div>
             </header>
 
             <main className="container mx-auto px-4 py-8 max-w-4xl">
