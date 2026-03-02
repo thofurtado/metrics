@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInMinutes, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Loader2, Save, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -63,11 +63,16 @@ export function TimeSheetPage() {
         if (!isLoading && timeClocks) {
             const list = timeClocks.timeClocks || timeClocks.data || [];
             const newRows = days.map(day => {
-                const dayClock = list.find(tc => tc.date && isSameDay(parseISO(tc.date), day));
+                const dayStr = format(day, 'yyyy-MM-dd');
+                const dayClock = list.find(tc => {
+                    if (!tc.date) return false;
+                    const tcDateStr = tc.date.split('T')[0];
+                    return tcDateStr === dayStr;
+                });
                 const formatTime = (iso?: string | null) => iso ? format(parseISO(iso), 'HH:mm') : '';
 
                 return {
-                    date: day.toISOString(),
+                    date: dayStr,
                     day,
                     worked: !!dayClock,
                     clockIn: formatTime(dayClock?.clockIn),
@@ -92,8 +97,8 @@ export function TimeSheetPage() {
                     const buildDateTime = (timeStr?: string) => {
                         if (!timeStr) return null;
                         const [h, m] = timeStr.split(':').map(Number);
-                        const d = new Date(r.date);
-                        d.setHours(h, m, 0, 0);
+                        const [yyyy, mm, dd] = r.date.split('-').map(Number);
+                        const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
                         return d.toISOString();
                     };
 
