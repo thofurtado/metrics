@@ -13,6 +13,8 @@ export interface TimeClock {
     breakStart: string | null
     breakEnd: string | null
     clockOut: string | null
+    extraClockIn: string | null
+    extraClockOut: string | null
     isExtraDay: boolean
     negotiatedValue: number | null
     isVerified: boolean
@@ -96,6 +98,8 @@ export interface UpsertTimeClockInput {
     breakStart?: string | null
     breakEnd?: string | null
     clockOut?: string | null
+    extraClockIn?: string | null
+    extraClockOut?: string | null
     isExtraDay?: boolean
     negotiatedValue?: number | null
     isVerified?: boolean

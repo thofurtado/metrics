@@ -74,6 +74,8 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
                     clockOut: formatTime(dayClock?.clockOut),
+                    extraClockIn: formatTime(dayClock?.extraClockIn),
+                    extraClockOut: formatTime(dayClock?.extraClockOut),
                     isExtraDay: dayClock?.isExtraDay ?? false,
                     negotiatedValue: dayClock?.negotiatedValue ?? undefined,
                 };
@@ -87,7 +89,7 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
         setIsSaving(true);
         try {
             const entries = data.rows
-                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut) // Only send relevant rows? Or all? User said "batch complete". Sending all is safer for "upsert". Wait, if I send empty rows, backend might create empty records?
+                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut || r.extraClockIn || r.extraClockOut) // Only send relevant rows? Or all? User said "batch complete". Sending all is safer for "upsert". Wait, if I send empty rows, backend might create empty records?
                 // Actually, if "worked" is false and everything is empty, we probably shouldn't send unless we want to clear existing?
                 // Current backend upsert logic: if existing, update. If fields are null, it updates to null.
                 // So sending all is correct to clear data if needed.
@@ -107,6 +109,8 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                         breakStart: buildDateTime(r.breakStart),
                         breakEnd: buildDateTime(r.breakEnd),
                         clockOut: buildDateTime(r.clockOut),
+                        extraClockIn: buildDateTime(r.extraClockIn),
+                        extraClockOut: buildDateTime(r.extraClockOut),
                         isExtraDay: r.isExtraDay,
                         negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
                         isVerified: true,
@@ -151,14 +155,16 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                             <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                 <TableRow>
                                     <TableHead className="w-[100px]">Data</TableHead>
-                                    <TableHead className="w-[110px]">Iniciar Expediente</TableHead>
-                                    <TableHead className="w-[110px]">Pausa para Almoço</TableHead>
-                                    <TableHead className="w-[110px]">Retorno do Almoço</TableHead>
-                                    <TableHead className="w-[110px]">Fim de Expediente</TableHead>
-                                    <TableHead className="w-[60px] text-center">Trab.?</TableHead>
-                                    <TableHead className="w-[60px] text-center">Extra?</TableHead>
-                                    <TableHead className="w-[100px]">Valor (R$)</TableHead>
-                                    <TableHead className="w-[100px] text-right">Saldo</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 1</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Saída 1</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 2</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Saída 2</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 3</TableHead>
+                                    <TableHead className="w-[85px] text-xs px-1 text-center">Saída 3</TableHead>
+                                    <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
+                                    <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
+                                    <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
+                                    <TableHead className="w-[90px] text-right text-xs pr-2">Saldo</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -209,9 +215,11 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
     const breakStart = watch(`rows.${index}.breakStart`);
     const breakEnd = watch(`rows.${index}.breakEnd`);
     const clockOut = watch(`rows.${index}.clockOut`);
+    const extraClockIn = watch(`rows.${index}.extraClockIn`);
+    const extraClockOut = watch(`rows.${index}.extraClockOut`);
 
     // Calculate hours helper
-    const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string) => {
+    const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string, xcin?: string, xcout?: string) => {
         let total = 0;
         const setTime = (t: string) => {
             if (!t) return new Date();
@@ -231,12 +239,18 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
             total += differenceInMinutes(setTime(cout), setTime(bin));
         }
 
+        if (xcin && xcout) {
+            total += differenceInMinutes(setTime(xcout), setTime(xcin));
+        }
+
         if (total <= 0) return "--";
 
-        return Math.floor(total / 60) + "h " + (total % 60).toString().padStart(2, '0') + "m";
+        const h = Math.floor(Math.abs(total) / 60);
+        const m = Math.abs(total) % 60;
+        return `${h}h ${m.toString().padStart(2, '0')}m`;
     }
 
-    const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut);
+    const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut, extraClockIn, extraClockOut);
 
     return (
         <TableRow className={cn({ "bg-muted/20": isWeekend })}>
@@ -249,17 +263,23 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                 <input type="hidden" {...register(`rows.${index}.date`)} />
             </TableCell>
 
-            <TableCell>
-                <Input type="time" {...register(`rows.${index}.clockIn`)} className="h-8" disabled={!worked} />
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.clockIn`)} className="h-8 px-1 text-center" disabled={!worked} />
             </TableCell>
-            <TableCell>
-                <Input type="time" {...register(`rows.${index}.breakStart`)} className="h-8" disabled={!worked} />
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.breakStart`)} className="h-8 px-1 text-center" disabled={!worked} />
             </TableCell>
-            <TableCell>
-                <Input type="time" {...register(`rows.${index}.breakEnd`)} className="h-8" disabled={!worked} />
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.breakEnd`)} className="h-8 px-1 text-center" disabled={!worked} />
             </TableCell>
-            <TableCell>
-                <Input type="time" {...register(`rows.${index}.clockOut`)} className="h-8" disabled={!worked} />
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.clockOut`)} className="h-8 px-1 text-center" disabled={!worked} />
+            </TableCell>
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.extraClockIn`)} className="h-8 px-1 text-center" disabled={!worked} />
+            </TableCell>
+            <TableCell className="px-1">
+                <Input type="time" {...register(`rows.${index}.extraClockOut`)} className="h-8 px-1 text-center" disabled={!worked} />
             </TableCell>
 
             <TableCell className="text-center">

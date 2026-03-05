@@ -79,6 +79,8 @@ export function TimeSheetPage() {
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
                     clockOut: formatTime(dayClock?.clockOut),
+                    extraClockIn: formatTime(dayClock?.extraClockIn),
+                    extraClockOut: formatTime(dayClock?.extraClockOut),
                     isExtraDay: dayClock?.isExtraDay ?? false,
                     negotiatedValue: dayClock?.negotiatedValue ?? undefined,
                 };
@@ -92,7 +94,7 @@ export function TimeSheetPage() {
         setIsSaving(true);
         try {
             const entries = data.rows
-                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut)
+                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut || r.extraClockIn || r.extraClockOut)
                 .map((r: any) => {
                     const buildDateTime = (timeStr?: string) => {
                         if (!timeStr) return null;
@@ -109,6 +111,8 @@ export function TimeSheetPage() {
                         breakStart: buildDateTime(r.breakStart),
                         breakEnd: buildDateTime(r.breakEnd),
                         clockOut: buildDateTime(r.clockOut),
+                        extraClockIn: buildDateTime(r.extraClockIn),
+                        extraClockOut: buildDateTime(r.extraClockOut),
                         isExtraDay: r.isExtraDay,
                         negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
                         isVerified: true,
@@ -170,6 +174,8 @@ export function TimeSheetPage() {
                                         const bin = setTime(row.breakStart);
                                         const bout = setTime(row.breakEnd);
                                         const cout = setTime(row.clockOut);
+                                        const xcin = setTime(row.extraClockIn);
+                                        const xcout = setTime(row.extraClockOut);
 
                                         if (cin !== null && bin !== null && bout !== null && cout !== null) {
                                             totalMinutes += (bin - cin) + (cout - bout);
@@ -177,6 +183,10 @@ export function TimeSheetPage() {
                                             if (bin === null && bout === null) {
                                                 totalMinutes += (cout - cin);
                                             }
+                                        }
+
+                                        if (xcin !== null && xcout !== null) {
+                                            totalMinutes += (xcout - xcin);
                                         }
                                     });
 
@@ -230,21 +240,23 @@ export function TimeSheetPage() {
                     <Table className="border-collapse">
                         <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
                             <TableRow className="border-b-2 border-muted-foreground/20">
-                                <TableHead className="w-[120px] bg-muted font-bold pl-6">Data</TableHead>
-                                <TableHead className="w-[130px] bg-muted font-bold text-center">Iniciar Expediente</TableHead>
-                                <TableHead className="w-[130px] bg-muted font-bold text-center">Pausa para Almoço</TableHead>
-                                <TableHead className="w-[130px] bg-muted font-bold text-center">Retorno do Almoço</TableHead>
-                                <TableHead className="w-[130px] bg-muted font-bold text-center">Fim de Expediente</TableHead>
-                                <TableHead className="w-[80px] bg-muted font-bold text-center">Trab.?</TableHead>
-                                <TableHead className="w-[80px] bg-muted font-bold text-center">Extra?</TableHead>
-                                <TableHead className="w-[120px] bg-muted font-bold">Valor (R$)</TableHead>
-                                <TableHead className="w-[100px] bg-muted font-bold text-right pr-6">Saldo</TableHead>
+                                <TableHead className="w-[100px] bg-muted font-bold pl-6">Data</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Entrada 1</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Saída 1</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Entrada 2</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Saída 2</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Entrada 3</TableHead>
+                                <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Saída 3</TableHead>
+                                <TableHead className="w-[60px] bg-muted font-bold text-center text-xs">Trab.?</TableHead>
+                                <TableHead className="w-[60px] bg-muted font-bold text-center text-xs">Extra?</TableHead>
+                                <TableHead className="w-[90px] bg-muted font-bold text-xs pr-2">Valor</TableHead>
+                                <TableHead className="w-[80px] bg-muted font-bold text-right pr-4 text-xs">Saldo</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">
+                                    <TableCell colSpan={11} className="h-24 text-center">
                                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                                     </TableCell>
                                 </TableRow>
@@ -301,6 +313,8 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
     const breakStart = watch(`rows.${index}.breakStart`);
     const breakEnd = watch(`rows.${index}.breakEnd`);
     const clockOut = watch(`rows.${index}.clockOut`);
+    const extraClockIn = watch(`rows.${index}.extraClockIn`);
+    const extraClockOut = watch(`rows.${index}.extraClockOut`);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -321,7 +335,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
         }
     };
 
-    const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string) => {
+    const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string, xcin?: string, xcout?: string) => {
         let total = 0;
         const setTime = (t: string) => {
             if (!t) return new Date();
@@ -341,14 +355,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
             total += differenceInMinutes(setTime(cout), setTime(bin));
         }
 
+        if (xcin && xcout) {
+            total += differenceInMinutes(setTime(xcout), setTime(xcin));
+        }
+
         if (total <= 0) return "--";
 
-        const h = Math.floor(total / 60);
-        const m = total % 60;
+        const h = Math.floor(Math.abs(total) / 60);
+        const m = Math.abs(total) % 60;
         return `${h}h ${m.toString().padStart(2, '0')}m`;
     }
 
-    const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut);
+    const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut, extraClockIn, extraClockOut);
 
     return (
         <TableRow className={cn("hover:bg-muted/10 transition-colors", { "bg-blue-50/50": isWeekend })}>
@@ -364,7 +382,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 <Input
                     type="time"
                     {...register(`rows.${index}.clockIn`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent"
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
                     disabled={!worked}
                     onKeyDown={(e) => handleKeyDown(e)}
                     id={`clockIn-${index}`}
@@ -374,7 +392,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 <Input
                     type="time"
                     {...register(`rows.${index}.breakStart`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent"
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
                     disabled={!worked}
                     onKeyDown={(e) => handleKeyDown(e)}
                 />
@@ -383,7 +401,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 <Input
                     type="time"
                     {...register(`rows.${index}.breakEnd`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent"
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
                     disabled={!worked}
                     onKeyDown={(e) => handleKeyDown(e)}
                 />
@@ -392,7 +410,25 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 <Input
                     type="time"
                     {...register(`rows.${index}.clockOut`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent"
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
+                    disabled={!worked}
+                    onKeyDown={(e) => handleKeyDown(e)}
+                />
+            </TableCell>
+            <TableCell className="p-1 border-r">
+                <Input
+                    type="time"
+                    {...register(`rows.${index}.extraClockIn`)}
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
+                    disabled={!worked}
+                    onKeyDown={(e) => handleKeyDown(e)}
+                />
+            </TableCell>
+            <TableCell className="p-1 border-r">
+                <Input
+                    type="time"
+                    {...register(`rows.${index}.extraClockOut`)}
+                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
                     disabled={!worked}
                     onKeyDown={(e) => handleKeyDown(e)}
                 />
