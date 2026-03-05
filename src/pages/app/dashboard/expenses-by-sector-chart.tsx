@@ -104,10 +104,10 @@ const CustomizedContent: React.FC<any> = (props) => {
   )
 }
 
-export function ExpensesBySectorChart({ className }: { className?: string }) {
+export function ExpensesBySectorChart({ className, month, year }: { className?: string; month: number; year: number }) {
   const { data: monthExpenseBySector } = useQuery({
-    queryFn: getMonthExpenseBySector,
-    queryKey: ['metrics', 'month-expense-by-sector'],
+    queryFn: () => getMonthExpenseBySector({ month, year }),
+    queryKey: ['metrics', 'month-expense-by-sector', month, year],
   })
 
   const hasData = monthExpenseBySector && monthExpenseBySector.length > 0
@@ -147,7 +147,7 @@ export function ExpensesBySectorChart({ className }: { className?: string }) {
                     minimumFractionDigits: 2,
                   })
                 }
-                labelFormatter={(label, payload) =>
+                labelFormatter={(_, payload) =>
                   payload[0]?.payload.sector_name || 'Setor'
                 }
               />

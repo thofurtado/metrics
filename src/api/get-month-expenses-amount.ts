@@ -6,9 +6,15 @@ export interface GetMonthExpensesAmountResponse {
   diffFromLastMonth: number
 }
 
-export async function getMonthExpensesAmount() {
+export interface MonthExpensesAmountFilters {
+  month?: number
+  year?: number
+}
+
+export async function getMonthExpensesAmount({ month, year }: MonthExpensesAmountFilters = {}) {
   const response = await api.get<GetMonthExpensesAmountResponse>(
     '/metrics/month-expense-amount',
+    { params: { month, year } }
   )
   return response.data
 }

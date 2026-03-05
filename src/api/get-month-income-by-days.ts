@@ -5,9 +5,15 @@ export interface GetMonthIncomesByDayResponse {
   revenue: number
 }
 
-export async function getMonthIncomesByDay() {
+export interface MonthIncomesByDayFilters {
+  month?: number
+  year?: number
+}
+
+export async function getMonthIncomesByDay({ month, year }: MonthIncomesByDayFilters = {}) {
   const response = await api.get<GetMonthIncomesByDayResponse[]>(
     '/metrics/month-income-by-days',
+    { params: { month, year } }
   )
   return response.data
 }

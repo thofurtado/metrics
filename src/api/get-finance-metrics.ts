@@ -10,9 +10,16 @@ export interface GetFinanceMetricsResponse {
   despesaVencida: number
 }
 
-export async function getFinanceMetrics(): Promise<GetFinanceMetricsResponse> {
+export interface FinanceMetricsFilters {
+  month?: number
+  year?: number
+}
+
+export async function getFinanceMetrics({ month, year }: FinanceMetricsFilters = {}): Promise<GetFinanceMetricsResponse> {
   try {
-    const response = await api.get('/summary')
+    const response = await api.get('/summary', {
+      params: { month, year }
+    })
     console.log('📊 Dados COMPLETOS recebidos da API:', response.data)
     console.log('📊 Estrutura do summary:', response.data.summary)
 

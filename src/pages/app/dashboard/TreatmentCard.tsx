@@ -5,13 +5,15 @@ import { type ComponentProps } from 'react'
 
 import {
   getServiceMetrics,
-  type GetServiceMetricsResponse
 } from '@/api/get-service-management'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-type MonthTreatmentAmountCardProps = ComponentProps<'div'>
+interface MonthTreatmentAmountCardProps extends ComponentProps<'div'> {
+  month: number
+  year: number
+}
 
 // Função para formatar o TMA (em minutos e segundos)
 const formatTime = (seconds: number) => {
@@ -20,10 +22,10 @@ const formatTime = (seconds: number) => {
   return `${min}m ${sec.toString().padStart(2, '0')}s`
 }
 
-export function MonthTreatmentAmountCard({ className, ...props }: MonthTreatmentAmountCardProps) {
+export function MonthTreatmentAmountCard({ className, month, year, ...props }: MonthTreatmentAmountCardProps) {
   const { data: serviceData, isLoading } = useQuery({
-    queryFn: getServiceMetrics,
-    queryKey: ['metrics', 'service-metrics'],
+    queryFn: () => getServiceMetrics({ month, year }),
+    queryKey: ['metrics', 'service-metrics', month, year],
   })
 
   // Mapeamento direto dos dados da API

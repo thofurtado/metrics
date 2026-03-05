@@ -7,20 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import {
     getFinanceMetrics,
-    type GetFinanceMetricsResponse
 } from '@/api/get-finance-metrics'
 
-type FinanceCardProps = ComponentProps<'div'>
+interface FinanceCardProps extends ComponentProps<'div'> {
+    month: number
+    year: number
+}
 
 // Função auxiliar para formatar em Reais
 const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function FinanceCard({ className, ...props }: FinanceCardProps) {
+export function FinanceCard({ className, month, year, ...props }: FinanceCardProps) {
     // Query para buscar todos os dados financeiros
     const { data: financeData, isLoading } = useQuery({
-        queryFn: getFinanceMetrics,
-        queryKey: ['metrics', 'finance-metrics'],
+        queryFn: () => getFinanceMetrics({ month, year }),
+        queryKey: ['metrics', 'finance-metrics', month, year],
     })
 
     // Mapeamento dos dados da API

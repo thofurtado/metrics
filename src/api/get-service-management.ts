@@ -10,11 +10,18 @@ export interface GetServiceMetricsResponse {
   ativosTotais: number
 }
 
-export async function getServiceMetrics(): Promise<GetServiceMetricsResponse> {
-  const response = await api.get('/service-management')
-  
+export interface ServiceMetricsFilters {
+  month?: number
+  year?: number
+}
+
+export async function getServiceMetrics({ month, year }: ServiceMetricsFilters = {}): Promise<GetServiceMetricsResponse> {
+  const response = await api.get('/service-management', {
+    params: { month, year }
+  })
+
   const apiData = response.data.serviceData
-  
+
   // Mapeamento direto apenas dos campos que a API fornece
   return {
     totalMes: apiData.totalTreatments || 0,

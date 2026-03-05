@@ -13,17 +13,20 @@ import {
 } from '@/api/get-inventory-metrics'
 
 
-type InventoryCardProps = ComponentProps<'div'>
+interface InventoryCardProps extends ComponentProps<'div'> {
+    month: number
+    year: number
+}
 
 // Função auxiliar para formatar em Reais
 const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function InventoryCard({ className, ...props }: InventoryCardProps) {
+export function InventoryCard({ className, month, year, ...props }: InventoryCardProps) {
     // 1. Query para buscar todos os dados de inventário
     const { data: metrics, isLoading } = useQuery<GetInventoryMetricsResponse>({
-        queryFn: getInventoryMetrics,
-        queryKey: ['metrics', 'inventory-metrics'],
+        queryFn: () => getInventoryMetrics({ month, year }),
+        queryKey: ['metrics', 'inventory-metrics', month, year],
     })
 
     // Mapeamento dos dados da API

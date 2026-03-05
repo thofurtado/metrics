@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
 // 1. IMPORTAÇÃO DOS CARDS
@@ -11,9 +12,15 @@ import { BalanceProjectionChart } from './BalanceProjectionChart'
 
 
 import { useModules } from '@/context/module-context'
+import { MonthPicker } from '@/components/MonthPicker'
 
 export function Dashboard() {
   const { isModuleActive } = useModules()
+  const [date, setDate] = useState<Date>(new Date())
+
+  const month = date.getMonth() + 1
+  const year = date.getFullYear()
+
   return (
     <>
       <Helmet title="Dashboard" />
@@ -25,6 +32,8 @@ export function Dashboard() {
           <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900 dark:text-minsk-50">
             Centro de Comando
           </h1>
+
+          <MonthPicker date={date} setDate={setDate} />
         </div>
 
         {/* LINHA DE CARDS: Reordenada para priorizar Serviços */}
@@ -32,17 +41,17 @@ export function Dashboard() {
 
           {/* PRIMEIRO CARD: Gestão de Serviços */}
           {isModuleActive('treatments') && (
-            <MonthTreatmentAmountCard className="lg:col-span-1" />
+            <MonthTreatmentAmountCard month={month} year={year} className="lg:col-span-1" />
           )}
 
           {/* SEGUNDO CARD: Visão Financeira */}
           {isModuleActive('financial') && (
-            <FinanceCard className="lg:col-span-1" />
+            <FinanceCard month={month} year={year} className="lg:col-span-1" />
           )}
 
           {/* TERCEIRO CARD: Inventário e Vendas */}
           {isModuleActive('merchandise') && (
-            <InventoryCard className="lg:col-span-1" />
+            <InventoryCard month={month} year={year} className="lg:col-span-1" />
           )}
 
         </div>
@@ -52,7 +61,7 @@ export function Dashboard() {
           {isModuleActive('financial') && (
             <>
               <BalanceProjectionChart className="lg:col-span-6" />
-              <ExpensesBySectorChart className="lg:col-span-3" />
+              <ExpensesBySectorChart month={month} year={year} className="lg:col-span-3" />
             </>
           )}
         </div>

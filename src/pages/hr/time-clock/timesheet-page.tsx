@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { getEmployees } from "@/api/hr/employees";
+import { MonthPicker } from "@/components/MonthPicker";
 
 // Page Component
 export function TimeSheetPage() {
@@ -283,26 +284,7 @@ export function TimeSheetPage() {
 
 // Subcomponents
 
-function MonthPicker({ date, setDate }: { date: Date, setDate: (d: Date) => void }) {
-    const nextMonth = () => setDate(new Date(date.getFullYear(), date.getMonth() + 1, 1));
-    const prevMonth = () => setDate(new Date(date.getFullYear(), date.getMonth() - 1, 1));
-    // Check if current month
-    // const isCurrentMonth = isSameMonth(date, new Date()); // Optional restriction
 
-    return (
-        <>
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8" type="button">
-                {"<"}
-            </Button>
-            <div className="font-medium w-32 text-center capitalize text-sm">
-                {format(date, 'MMMM yyyy', { locale: ptBR })}
-            </div>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8" type="button">
-                {">"}
-            </Button>
-        </>
-    )
-}
 
 function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { index: number, register: any, watch: any, setValue: any, day: Date, dailyRate: number }) {
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
