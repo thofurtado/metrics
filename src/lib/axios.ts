@@ -1,10 +1,37 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL
-console.log('DEBUG: BASE_URL lida de VITE_API_URL:', BASE_URL);
-if (!BASE_URL) {
-  throw new Error('VITE_API_URL não está configurada nas variáveis de ambiente.')
+/**
+ * Função para detectar dinamicamente a URL da API com base no domínio de acesso.
+ */
+const getDynamicBaseUrl = () => {
+  // 1. Ambiente de Desenvolvimento (Localhost)
+  if (import.meta.env.DEV) {
+    return import.meta.env.VITE_API_URL
+  }
+
+  // 2. Ambiente de Produção (Navegador)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+
+    // Identifica Marujo Gastro Bar
+    if (hostname.includes('marujo')) {
+      return 'https://api.marujogastrobar.tech'
+    }
+
+    // Identifica Eureca Tech
+    if (hostname.includes('eureca')) {
+      return 'https://api.eurecatech.com.br'
+    }
+  }
+
+  // Fallback: Usa a variável do .env se nada acima coincidir
+  return import.meta.env.VITE_API_URL
 }
+
+const BASE_URL = getDynamicBaseUrl()
+
+// Log para ajudar no debug se houver erro de conexão
+console.log('DEBUG: Conectando na API:', BASE_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -23,7 +50,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // If request was cancelled (e.g. by React Query), silently reject without logging
+    // Se a requisição foi cancelada (ex: pelo React Query), ignora silenciosamente
     if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
       return Promise.reject(error);
     }
@@ -34,7 +61,7 @@ api.interceptors.response.use(
       const status = error.response?.status
       const message = error.message
 
-      // Professional logging for developers
+      // Logs profissionais para desenvolvimento
       if (isDev) {
         console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, {
           status,
@@ -44,7 +71,7 @@ api.interceptors.response.use(
         })
       }
 
-      // 401 Unauthorized: Trigger logout and redirect
+      // 401 Unauthorized: Limpa sessão e redireciona para login
       if (status === 401) {
         localStorage.clear()
         if (typeof window !== 'undefined') {

@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 
 export const TENANTS_CONFIG = {
-    // Domínio de Desenvolvimento / Produção Principal
+    // Domínio de Desenvolvimento / Local
     'localhost': {
         id: 'eureca',
         name: 'Eureca Tech',
@@ -9,15 +9,16 @@ export const TENANTS_CONFIG = {
         themeClass: '', // Tema padrão
         landingComponent: lazy(() => import('../pages/landings/Eureca')),
     },
-    'www.eurecatech.com.br': {
+    // Configuração Eureca
+    'eureca': {
         id: 'eureca',
         name: 'Eureca Tech',
         logo: '/assets/eureca/logo.svg',
         themeClass: '',
         landingComponent: lazy(() => import('../pages/landings/Eureca')),
     },
-    // Domínio do White Label Marujo
-    'marujogastrobar.vercel.app': {
+    // Configuração Marujo
+    'marujo': {
         id: 'marujo',
         name: 'Marujo Gastro Bar',
         logo: '/assets/marujo/logo.svg',
@@ -26,24 +27,26 @@ export const TENANTS_CONFIG = {
     }
 };
 
-
-
 const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
 
 export function getCurrentTenant() {
     const hostname = window.location.hostname;
 
-    if (hostname === 'marujogastrobar.vercel.app' || hostname === 'metrics-two-gamma.vercel.app') {
-        return TENANTS_CONFIG['marujogastrobar.vercel.app'];
+    // 1. Verificação para Marujo (Cobre www, sem www e o link antigo da Vercel)
+    if (hostname.includes('marujo') || hostname.includes('metrics-two-gamma')) {
+        return TENANTS_CONFIG['marujo'];
     }
 
-    if (hostname === 'www.eurecatech.com.br' || hostname === 'eurecatech.com.br') {
-        return TENANTS_CONFIG['www.eurecatech.com.br'];
+    // 2. Verificação para Eureca (Cobre www e sem www)
+    if (hostname.includes('eurecatech')) {
+        return TENANTS_CONFIG['eureca'];
     }
 
+    // 3. Ambiente de desenvolvimento
     if (isDev) {
         return TENANTS_CONFIG['localhost'];
     }
 
-    return TENANTS_CONFIG['www.eurecatech.com.br']; // Fallback padrão para prod
+    // Fallback padrão para produção (Eureca)
+    return TENANTS_CONFIG['eureca'];
 }
