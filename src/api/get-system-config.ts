@@ -7,6 +7,7 @@ export interface SystemConfig {
     treatments: boolean
     hr_module: boolean
     cestaBasicaValue: number
+    financial_management_profile: 'ANALYTICAL' | 'OPERATIONAL'
 }
 
 export async function getSystemConfig() {

@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 
 // 1. IMPORTAÇÃO DOS CARDS
 import { FinanceCard } from './FinanceCard'
+import { FinanceCardOperacional } from './FinanceCardOperacional'
 import { InventoryCard } from './InventoryCard'
 import { MonthTreatmentAmountCard } from './TreatmentCard' // Card de Serviços
 import { AgendaPagamentosCard } from './AgendaPagamentosCard' // Card de Agenda (Fallback)
@@ -16,7 +17,7 @@ import { useModules } from '@/context/module-context'
 import { MonthPicker } from '@/components/MonthPicker'
 
 export function Dashboard() {
-  const { isModuleActive } = useModules()
+  const { isModuleActive, modules } = useModules()
   const [date, setDate] = useState<Date>(new Date())
 
   const month = date.getMonth() + 1
@@ -45,9 +46,13 @@ export function Dashboard() {
             <MonthTreatmentAmountCard month={month} year={year} className="lg:col-span-1" />
           )}
 
-          {/* SEGUNDO CARD: Visão Financeira */}
+          {/* SEGUNDO CARD: Visão Financeira (Condicionado ao Perfil) */}
           {isModuleActive('financial') && (
-            <FinanceCard month={month} year={year} className="lg:col-span-1" />
+            modules.financial_management_profile === 'OPERATIONAL' ? (
+              <FinanceCardOperacional month={month} year={year} className="lg:col-span-1" />
+            ) : (
+              <FinanceCard month={month} year={year} className="lg:col-span-1" />
+            )
           )}
 
           {/* TERCEIRO CARD: Inventário e Vendas */}

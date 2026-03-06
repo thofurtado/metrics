@@ -27,6 +27,7 @@ const formSchema = z.object({
     treatments: z.boolean(),
     hr_module: z.boolean(),
     cestaBasicaValue: z.coerce.number().min(0),
+    financial_management_profile: z.enum(['ANALYTICAL', 'OPERATIONAL']),
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -43,6 +44,7 @@ export function ModulesSettings() {
             treatments: true,
             hr_module: false,
             cestaBasicaValue: 0,
+            financial_management_profile: 'ANALYTICAL'
         },
     })
 
@@ -54,7 +56,8 @@ export function ModulesSettings() {
                 financial: modules.financial,
                 treatments: modules.treatments,
                 hr_module: modules.hr_module ?? false,
-                cestaBasicaValue: modules.cestaBasicaValue ?? 0
+                cestaBasicaValue: modules.cestaBasicaValue ?? 0,
+                financial_management_profile: modules.financial_management_profile ?? 'ANALYTICAL'
             })
         }
     }, [modules, form])
@@ -164,6 +167,78 @@ export function ModulesSettings() {
                                 />
                             }
                         />
+                    </div>
+                </section>
+
+                {/* GRUPO: PERFIL FINANCEIRO */}
+                <section className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-vida-loca-500" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                            Perfil de Gestão Financeira
+                        </h2>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <label className={cn(
+                            "cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-muted/50",
+                            form.watch('financial_management_profile') === 'ANALYTICAL'
+                                ? "border-minsk-500 bg-minsk-50 dark:bg-minsk-900/20"
+                                : "border-muted"
+                        )}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <input
+                                    type="radio"
+                                    value="ANALYTICAL"
+                                    className="hidden"
+                                    {...form.register('financial_management_profile')}
+                                />
+                                <div className={cn(
+                                    "flex h-4 w-4 items-center justify-center rounded-full border",
+                                    form.watch('financial_management_profile') === 'ANALYTICAL'
+                                        ? "border-minsk-500 bg-minsk-500"
+                                        : "border-muted-foreground"
+                                )}>
+                                    {form.watch('financial_management_profile') === 'ANALYTICAL' && (
+                                        <div className="h-2 w-2 rounded-full bg-white" />
+                                    )}
+                                </div>
+                                <span className="font-semibold text-lg">Analítico (Padrão)</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-6">
+                                Focado em contas individuais e detalhamento (quem deve, quem eu devo, fluxo por setores).
+                            </p>
+                        </label>
+
+                        <label className={cn(
+                            "cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-muted/50",
+                            form.watch('financial_management_profile') === 'OPERATIONAL'
+                                ? "border-minsk-500 bg-minsk-50 dark:bg-minsk-900/20"
+                                : "border-muted"
+                        )}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <input
+                                    type="radio"
+                                    value="OPERATIONAL"
+                                    className="hidden"
+                                    {...form.register('financial_management_profile')}
+                                />
+                                <div className={cn(
+                                    "flex h-4 w-4 items-center justify-center rounded-full border",
+                                    form.watch('financial_management_profile') === 'OPERATIONAL'
+                                        ? "border-minsk-500 bg-minsk-500"
+                                        : "border-muted-foreground"
+                                )}>
+                                    {form.watch('financial_management_profile') === 'OPERATIONAL' && (
+                                        <div className="h-2 w-2 rounded-full bg-white" />
+                                    )}
+                                </div>
+                                <span className="font-semibold text-lg">Operacional (Grande Empresa)</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-6">
+                                Focado em fluxo de caixa macro, giro de capital e ponto de equilíbrio.
+                            </p>
+                        </label>
                     </div>
                 </section>
 
