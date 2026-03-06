@@ -5,6 +5,7 @@ export interface OperationalSummary {
     totalVencido: number
     projecao14Dias: number
     receitaAcumulada: number
+    ticketMedio: number
     totalDespesasMes: number
     despesasPagasMes: number
 }
