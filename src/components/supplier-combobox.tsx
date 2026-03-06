@@ -33,7 +33,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
 
     return (
         <div className="flex items-center gap-2">
-            <Popover open={open} onOpenChange={setOpen} modal={false}>
+            <Popover open={open} onOpenChange={setOpen} modal={true}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
@@ -54,7 +54,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent portal={false} className="w-[300px] p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
+                <PopoverContent className="w-[300px] p-0 z-[100000]" align="start">
                     <Command filter={(value, search) => {
                         // value is the 'value' prop of CommandItem (normalized)
                         const normalizedSearch = search.toLowerCase()
@@ -68,10 +68,14 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                                 {suppliers.map((supplier) => (
                                     <CommandItem
                                         key={supplier.id}
-                                        value={`${supplier.name} ${supplier.document ?? ''}`} // Searchable content
+                                        value={`${supplier.name} ${supplier.document ?? ''}`.toLowerCase()}
                                         onSelect={() => {
                                             onSelect(supplier.id)
                                             setOpen(false)
+                                        }}
+                                        onPointerDown={(e) => {
+                                            // Fix for Radix Dialog pointer events
+                                            e.stopPropagation()
                                         }}
                                     >
                                         <Check
@@ -80,7 +84,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                                                 value === supplier.id ? "opacity-100" : "opacity-0"
                                             )}
                                         />
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col gap-0.5">
                                             <span>{supplier.name}</span>
                                             {supplier.document && <span className="text-xs text-muted-foreground">{supplier.document}</span>}
                                         </div>
