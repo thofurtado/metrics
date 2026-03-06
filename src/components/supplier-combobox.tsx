@@ -3,19 +3,6 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import { Supplier } from "@/api/get-suppliers"
 
 interface SupplierComboboxProps {
@@ -28,79 +15,121 @@ interface SupplierComboboxProps {
 
 export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, onQuickAdd }: SupplierComboboxProps) {
     const [open, setOpen] = React.useState(false)
+    const [search, setSearch] = React.useState("")
+    const wrapperRef = React.useRef<HTMLDivElement>(null)
 
-    const selectedSupplier = suppliers.find((supplier) => supplier.id === value)
+    const selectedSupplier = React.useMemo(() =>
+        suppliers.find((supplier) => supplier.id === value),
+        [suppliers, value])
+
+    const filteredSuppliers = React.useMemo(() => {
+        if (!search) return suppliers.slice(0, 50) // limit initial render array to avoid performance hits
+        return suppliers.filter((supplier) => {
+            const searchLower = search.toLowerCase()
+            const nameMatch = supplier.name.toLowerCase().includes(searchLower)
+            const docMatch = supplier.document?.toLowerCase().includes(searchLower)
+            return nameMatch || docMatch
+        }).sort((a, b) => a.name.localeCompare(b.name))
+    }, [suppliers, search])
+
+    // Close on click outside
+    React.useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
 
     return (
-        <div className="flex items-center gap-2">
-            <Popover open={open} onOpenChange={setOpen} modal={true}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant="outline"
-                        role="combobox"
-                        type="button"
-                        aria-expanded={open}
-                        className="w-full justify-between"
-                        disabled={isLoading}
-                    >
-                        {value
-                            ? selectedSupplier ? (
-                                <span className="truncate">
-                                    {selectedSupplier.name}
-                                    {selectedSupplier.document && <span className="text-muted-foreground ml-1">({selectedSupplier.document})</span>}
+        <div className="flex items-center gap-2 w-full" ref={wrapperRef}>
+            <div className="relative w-full">
+                <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn(
+                        "w-full justify-between font-normal text-left h-10 px-4 py-2",
+                        !value && "text-muted-foreground",
+                        isLoading && "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={isLoading}
+                    onClick={() => setOpen(!open)}
+                >
+                    {selectedSupplier ? (
+                        <span className="flex items-center gap-2 truncate">
+                            <span className="truncate">{selectedSupplier.name}</span>
+                            {selectedSupplier.document && (
+                                <span className="text-muted-foreground ml-1 text-xs">
+                                    ({selectedSupplier.document})
                                 </span>
-                            ) : "Fornecedor não encontrado"
-                            : <span className="text-muted-foreground">Selecione um fornecedor...</span>}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 z-[100000]" align="start">
-                    <Command filter={(value, search) => {
-                        // value is the 'value' prop of CommandItem (normalized)
-                        const normalizedSearch = search.toLowerCase()
-                        const normalizedValue = value.toLowerCase()
-                        return normalizedValue.includes(normalizedSearch) ? 1 : 0
-                    }}>
-                        <CommandInput placeholder="Buscar por Nome ou Documento..." onPointerDown={(e) => e.stopPropagation()} />
-                        <CommandList>
-                            <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
-                            <CommandGroup>
-                                {suppliers.map((supplier) => (
-                                    <CommandItem
+                            )}
+                        </span>
+                    ) : (
+                        "Selecione um fornecedor..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+
+                {open && (
+                    <div className="absolute top-full left-0 mt-1 w-[300px] z-[999999] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
+                        <div className="flex items-center border-b px-3">
+                            <input
+                                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="Buscar por Nome ou Documento..."
+                                autoFocus
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto overflow-x-hidden p-1">
+                            {filteredSuppliers.length === 0 ? (
+                                <div className="py-6 text-center text-sm text-muted-foreground">Nenhum fornecedor encontrado.</div>
+                            ) : (
+                                filteredSuppliers.map((supplier) => (
+                                    <div
                                         key={supplier.id}
-                                        value={`${supplier.name} ${supplier.document ?? ''}`.toLowerCase()}
-                                        onSelect={() => {
+                                        onClick={() => {
                                             onSelect(supplier.id)
                                             setOpen(false)
+                                            setSearch("")
                                         }}
-                                        onPointerDown={(e) => {
-                                            // Fix for Radix Dialog pointer events
-                                            e.stopPropagation()
-                                        }}
+                                        className={cn(
+                                            "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                                            value === supplier.id && "bg-accent text-accent-foreground"
+                                        )}
                                     >
                                         <Check
                                             className={cn(
-                                                "mr-2 h-4 w-4",
+                                                "mr-2 h-4 w-4 shrink-0",
                                                 value === supplier.id ? "opacity-100" : "opacity-0"
                                             )}
                                         />
-                                        <div className="flex flex-col gap-0.5">
-                                            <span>{supplier.name}</span>
-                                            {supplier.document && <span className="text-xs text-muted-foreground">{supplier.document}</span>}
+                                        <div className="flex flex-col flex-1 overflow-hidden ml-1">
+                                            <span className="truncate leading-tight mb-0.5">{supplier.name}</span>
+                                            {supplier.document && (
+                                                <span className="truncate text-[10px] text-muted-foreground">
+                                                    {supplier.document}
+                                                </span>
+                                            )}
                                         </div>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {onQuickAdd && (
                 <Button
                     variant="outline"
                     size="icon"
                     type="button"
-                    className="shrink-0 h-10 w-10"
+                    className="shrink-0 h-10 w-10 mt-0"
                     onClick={onQuickAdd}
                     title="Novo Fornecedor"
                     disabled={isLoading}

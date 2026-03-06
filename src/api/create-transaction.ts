@@ -4,7 +4,8 @@ import { api } from '@/lib/axios'
 
 const transactionForm = z.object({
   operation: z.string(),
-  date: z.date().nullish(),
+  data_vencimento: z.date().nullish(),
+  data_emissao: z.date().nullish(),
   description: z.string().nullish(),
   account: z.string().nullish(),
   destination_account: z.string().nullish(),
@@ -15,7 +16,8 @@ const transactionForm = z.object({
   installments_count: z.number().nullish(),
   interval_frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']).nullish(),
   custom_installments: z.array(z.object({
-    date: z.date(),
+    data_vencimento: z.date(),
+    data_emissao: z.date().optional(),
     amount: z.number()
   })).nullish(),
 })
@@ -23,7 +25,8 @@ const transactionForm = z.object({
 type TransactionForm = z.infer<typeof transactionForm>
 
 export async function createTransaction({
-  date,
+  data_vencimento,
+  data_emissao,
   description,
   account,
   destination_account,
@@ -41,7 +44,8 @@ export async function createTransaction({
     amount,
     account_id: account,
     destination_account_id: destination_account,
-    date,
+    data_vencimento,
+    data_emissao,
     description: description || null,
     sector_id: sector || null,
     confirmed,

@@ -59,7 +59,8 @@ type PaymentFormData = z.infer<typeof paymentSchema>
 
 interface Transaction {
     id: string
-    date: Date
+    data_vencimento: Date
+    data_emissao: Date
     description: string
     confirmed: boolean
     operation: 'income' | 'expense'
@@ -74,7 +75,7 @@ interface PaymentModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     transaction: Transaction
-    onConfirm: (data: { id: string, amount: number, date: Date, remainingDate?: Date, accountId?: string }) => Promise<void>
+    onConfirm: (data: { id: string, amount: number, data_vencimento: Date, data_emissao?: Date, remainingDate?: Date, accountId?: string }) => Promise<void>
 }
 
 export function PaymentModal({
@@ -183,7 +184,8 @@ export function PaymentModal({
             const confirmationPayload = {
                 id: transaction.id,
                 amount: paidAmountNum, // We send the FINAL paid amount (which includes interest/discount implicit)
-                date: data.paymentDate,
+                data_vencimento: data.paymentDate,
+                data_emissao: transaction.data_emissao, // Or can keep it
                 remainingDate: isPartialActive ? data.remainingDueDate : undefined,
                 accountId: data.accountId // Send selected account
             }
@@ -286,7 +288,7 @@ export function PaymentModal({
                                                 <label className="text-xs text-slate-400 font-medium">Vencimento Original</label>
                                                 <div className="flex items-center gap-2 text-slate-700 font-medium">
                                                     <Calendar className="h-4 w-4 text-slate-400" />
-                                                    {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                                                    {new Date(transaction.data_vencimento).toLocaleDateString("pt-BR")}
                                                 </div>
                                             </div>
 

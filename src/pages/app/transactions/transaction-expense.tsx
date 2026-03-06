@@ -53,7 +53,8 @@ import { Dialog } from '@/components/ui/dialog'
 
 // Schema
 const formSchema = z.object({
-  date: z.date({ required_error: "Data é obrigatória" }),
+  data_vencimento: z.date({ required_error: "Vencimento é obrigatório" }),
+  data_emissao: z.date({ required_error: "Emissão é obrigatória" }),
   description: z.string().min(1, "Descrição é obrigatória"),
   account: z.string().min(1, "Conta é obrigatória"),
   sector: z.string().min(1, "Categoria é obrigatória"),
@@ -69,7 +70,8 @@ const formSchema = z.object({
   interval_frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
 
   custom_installments: z.array(z.object({
-    date: z.date(),
+    data_vencimento: z.date(),
+    data_emissao: z.date().optional(),
     amount: z.number()
   })).optional()
 })
@@ -85,6 +87,7 @@ export function TransactionExpense() {
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
 
   // Bidirectional Calculator State
@@ -93,7 +96,8 @@ export function TransactionExpense() {
   function handleConfirmInstallments(installments: InstallmentItem[]) {
     // Sanitization: Remove visual/unique IDs from component, send only clean data
     const cleanInstallments = installments.map(i => ({
-      date: i.date,
+      data_vencimento: i.date,
+      data_emissao: new Date(),
       amount: i.amount
     }))
 
@@ -112,7 +116,8 @@ export function TransactionExpense() {
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: new Date(),
+      data_vencimento: new Date(),
+      data_emissao: new Date(),
       description: '',
       account: '',
       sector: '',
@@ -188,7 +193,8 @@ export function TransactionExpense() {
         account: data.account, // mapped to account_id or account generic
         sector: data.sector, // mapped to sector_id
         supplier: data.supplier,
-        date: data.date,
+        data_vencimento: data.data_vencimento,
+        data_emissao: data.data_emissao,
       }
 
       // Single or Installment
@@ -197,7 +203,8 @@ export function TransactionExpense() {
       // Final Sanitization before sending to API
       const cleanInstallments = isInstallment && data.custom_installments
         ? data.custom_installments.map(i => ({
-          date: i.date,
+          data_vencimento: i.data_vencimento, // the InstallmentItem component is keeping it named 'date' under the hood
+          data_emissao: data.data_emissao,
           amount: i.amount
         }))
         : undefined
@@ -213,7 +220,8 @@ export function TransactionExpense() {
 
       // Reset
       form.reset({
-        date: new Date(),
+        data_vencimento: new Date(),
+        data_emissao: new Date(),
         description: '',
         account: '',
         sector: '',
@@ -319,13 +327,62 @@ export function TransactionExpense() {
 
             {/* Confirmed (Inline Switch & Date) -> Row of two */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
-              {/* Date */}
+              {/* Data Emissão */}
               <FormField
                 control={form.control}
-                name="date"
+                name="data_emissao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1 w-full">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Data</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Emissão</FormLabel>
+                    <Popover modal={false} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            type="button"
+                            className={cn(
+                              "w-full pl-4 text-left font-normal h-14 rounded-xl border-input/60 bg-background/50 hover:bg-background hover:border-input transition-colors",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              <span className="text-base text-foreground font-medium">{format(field.value, "PPP", { locale: ptBR })}</span>
+                            ) : (
+                              <span>Selecione</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto p-0 z-[9999]"
+                        align="start"
+                        style={{ pointerEvents: 'auto' }}
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date)
+                              setIsEmissaoPopoverOpen(false)
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </FormItem>
+                )}
+              />
+
+              {/* Data Vencimento */}
+              <FormField
+                control={form.control}
+                name="data_vencimento"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1 w-full">
+                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Vencimento</FormLabel>
                     <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -611,7 +668,7 @@ export function TransactionExpense() {
           totalAmount={Number(watchedAmount) || 0}
           installmentsCount={Number(watchedCount) || 1}
           frequency={form.getValues('interval_frequency') || 'MONTHLY'}
-          startDate={form.getValues('date') || new Date()}
+          startDate={form.getValues('data_vencimento') || new Date()}
           variant="expense"
           onConfirm={handleConfirmInstallments}
         />

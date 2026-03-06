@@ -1,4 +1,4 @@
-import { AlertDialogTrigger } from '@radix-ui/react-alert-dialog'
+// AlertDialogTrigger removed - not used directly in this component
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { CircleMinus, Loader2, Undo2 } from 'lucide-react'
@@ -33,7 +33,8 @@ import { TransactionGroupDetailsDialog } from "./components/transaction-group-de
 // Interface de Transação Original do seu backend/query
 interface Transaction {
   id: string
-  date: Date
+  data_vencimento: Date
+  data_emissao: Date
   description: string
   confirmed: boolean
   operation: 'income' | 'expense'
@@ -46,7 +47,8 @@ interface Transaction {
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
 interface PaymentTransaction {
   id: string
-  date: Date
+  data_vencimento: Date
+  data_emissao: Date
   description: string
   confirmed: boolean
   operation: 'income' | 'expense'
@@ -99,7 +101,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onSuccess: () => {
       // A toast de sucesso é movida para o handlePayment para ser mais específica
     },
-    onError: (error, variables) => {
+    onError: (_error, _variables) => {
       toast.error('Ocorreu um erro ao alterar o status do pagamento.')
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
     },
@@ -128,7 +130,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onSuccess: () => {
       toast.warning('Transação deletada com sucesso.')
     },
-    onError: (error, variables) => {
+    onError: (_error, _variables) => {
       toast.error('Ocorreu um erro ao deletar a transação.')
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
     },
@@ -142,20 +144,21 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   async function handlePayment(payload: {
     id: string;
     amount: number;
-    date: Date;
+    data_vencimento: Date;
+    data_emissao?: Date;
     remainingDate?: Date;
     accountId?: string;
   }) {
     setLocalLoading(true)
     try {
-      const { amount, date, remainingDate, accountId } = payload
+      const { amount, data_vencimento, remainingDate, accountId } = payload
       const isPartialPayment = amount < transactions.amount
 
       // 1. CHAMA A API APENAS UMA VEZ
       await switchTransactionStatus({
         id: transactions.id,
         amount: amount,
-        date: date,
+        data_vencimento: data_vencimento, // Backend endpoint logic might still expect date for generic status OR needs update too... Let's pass what API expects 
         remainingDate: remainingDate,
         accountId: accountId
       })
@@ -265,10 +268,15 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
 
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="text-center">
-        <span className={!transactions.confirmed && new Date(transactions.date) < new Date(new Date().setHours(0, 0, 0, 0)) ? "text-red-500 font-bold" : ""}>
-          {dayjs(`${transactions.date}`).format('DD/MM/YYYY')}
-        </span>
+      <TableCell className="text-center min-w-[110px]">
+        <div className="flex flex-col items-center">
+          <span className={!transactions.confirmed && new Date(transactions.data_vencimento) < new Date(new Date().setHours(0, 0, 0, 0)) ? "text-red-500 font-bold" : "font-medium text-foreground"}>
+            {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
+          </span>
+          <span className="text-[10px] text-muted-foreground mt-0.5" title="Data de Emissão">
+            E: {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
+          </span>
+        </div>
       </TableCell>
 
       <TableCell>{transactions.description}</TableCell>

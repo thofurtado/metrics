@@ -2,7 +2,8 @@ export interface GetTransactionsDTO {
   transactions: {
     id: string
     operation: string
-    date: Date
+    data_vencimento: Date
+    data_emissao: Date
     amount: number
     account_id: string
     sector_id: string
