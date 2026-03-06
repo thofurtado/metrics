@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import { FinanceCard } from './FinanceCard'
 import { InventoryCard } from './InventoryCard'
 import { MonthTreatmentAmountCard } from './TreatmentCard' // Card de Serviços
+import { AgendaPagamentosCard } from './AgendaPagamentosCard' // Card de Agenda (Fallback)
 
 // Os outros imports permanecem:
 import { ExpensesBySectorChart } from './expenses-by-sector-chart'
@@ -52,6 +53,11 @@ export function Dashboard() {
           {/* TERCEIRO CARD: Inventário e Vendas */}
           {isModuleActive('merchandise') && (
             <InventoryCard month={month} year={year} className="lg:col-span-1" />
+          )}
+
+          {/* QUARTO CARD: Agenda de Pagamentos (Fallback fallback se algum módulo for desativado) */}
+          {(!isModuleActive('treatments') || !isModuleActive('merchandise')) && (
+            <AgendaPagamentosCard className="lg:col-span-1" />
           )}
 
         </div>
