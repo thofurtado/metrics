@@ -29,10 +29,10 @@
     --secondary-foreground: 222.2 47.4% 11.2%;
     /* Slate 900 */
 
-    /* Muted: Subtle Gray */
+    /* Muted: Subtle Gray — raised to Slate 600 level for WCAG AA compliance */
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    /* Slate 500 */
+    --muted-foreground: 215.4 16.3% 34%;
+    /* ↑ Was 46.9% (Slate 500) → now 34% (Slate 600) — +AA contrast on white */
 
     /* Accent: Interactive Gray */
     --accent: 210 40% 96.1%;
@@ -80,10 +80,10 @@
     /* Slate 800 */
     --secondary-foreground: 210 40% 98%;
 
-    /* Muted */
+    /* Muted — raised to 70% lightness for dark mode legibility */
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    /* Slate 400 */
+    --muted-foreground: 215 20.2% 70%;
+    /* ↑ Was 65.1% (Slate 400) → now 70% — brighter on dark backgrounds */
 
     /* Accent */
     --accent: 217.2 32.6% 17.5%;
@@ -127,7 +127,8 @@
     --secondary-foreground: 60 5% 90%;
 
     --muted: 24 10% 15%;
-    --muted-foreground: 60 5% 65%;
+    --muted-foreground: 60 5% 72%;
+    /* ↑ Was 65% → now 72% for marujo dark theme legibility */
 
     --accent: 24 10% 15%;
     --accent-foreground: 60 5% 90%;

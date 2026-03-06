@@ -50,7 +50,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                 {/* Saldo Principal - Layout Compacto */}
                 <div className="flex items-center justify-between bg-minsk-50 dark:bg-minsk-900/30 rounded-lg p-3 border">
                     <div>
-                        <span className="text-xs text-muted-foreground block">Saldo Disponível</span>
+                        <span className="text-sm font-medium text-muted-foreground block">Saldo Disponível</span>
                         {isLoading ? (
                             <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
                         ) : (
@@ -59,7 +59,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                             </span>
                         )}
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${isPositive
+                    <div className={`px-2 py-1 rounded-full text-sm font-semibold ${isPositive
                         ? 'bg-vida-loca-100 text-vida-loca-700 dark:bg-vida-loca-900/30'
                         : 'bg-stiletto-100 text-stiletto-700 dark:bg-stiletto-900/30'
                         }`}>

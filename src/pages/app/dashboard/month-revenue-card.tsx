@@ -12,9 +12,9 @@ export function MonthRevenueCard() {
 
   // VARIÁVEL AUXILIAR PARA VERIFICAR SE EXISTE DADO DE COMPARAÇÃO
   // Assumindo que 'null' (ou outro valor que não seja um número) indica ausência de dado.
-  const hasValidDiff = monthIncomeAmount && 
-                       monthIncomeAmount.diffFromLastMonth !== null && 
-                       !isNaN(monthIncomeAmount.diffFromLastMonth);
+  const hasValidDiff = monthIncomeAmount &&
+    monthIncomeAmount.diffFromLastMonth !== null &&
+    !isNaN(monthIncomeAmount.diffFromLastMonth);
 
   return (
     <Card>
@@ -35,41 +35,41 @@ export function MonthRevenueCard() {
 
             {/* Este bloco p agora só será renderizado se houver dados válidos para comparação */}
             {hasValidDiff ? (
-                <p className="text-xs text-muted-foreground">
-                    {monthIncomeAmount.diffFromLastMonth > 0 ? (
-                        <>
-                            <span className="font-semibold text-vida-loca-600 dark:text-vida-loca-500">
-                                +{monthIncomeAmount.diffFromLastMonth}%
-                            </span>{' '}
-                            em relação ao mês passado
-                        </>
-                    ) : (
-                        // Aqui eu *tive* que alterar a linha para exibir apenas o span de porcentagem
-                        // e manter o texto "em relação ao mês passado" fora dele para aplicar a condição de ocultação.
-                        <span className="font-semibold text-stiletto-600 dark:text-stiletto-500">
-                            {monthIncomeAmount.diffFromLastMonth}% em relação ao mês
-                            passado
-                        </span>
-                    )}
-                </p>
+              <p className="text-sm text-muted-foreground">
+                {monthIncomeAmount.diffFromLastMonth > 0 ? (
+                  <>
+                    <span className="font-semibold text-vida-loca-600 dark:text-vida-loca-500">
+                      +{monthIncomeAmount.diffFromLastMonth}%
+                    </span>{' '}
+                    em relação ao mês passado
+                  </>
+                ) : (
+                  // Aqui eu *tive* que alterar a linha para exibir apenas o span de porcentagem
+                  // e manter o texto "em relação ao mês passado" fora dele para aplicar a condição de ocultação.
+                  <span className="font-semibold text-stiletto-600 dark:text-stiletto-500">
+                    {monthIncomeAmount.diffFromLastMonth}% em relação ao mês
+                    passado
+                  </span>
+                )}
+              </p>
             ) : monthIncomeAmount.monthIncomeAmount !== null && (
-                // Se não há dados de comparação, mas há receita neste mês, exibe uma mensagem alternativa
-                <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-blue-700 dark:text-blue-500">
-                        Primeira receita do período
-                    </span>
-                </p>
+              // Se não há dados de comparação, mas há receita neste mês, exibe uma mensagem alternativa
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-blue-700 dark:text-blue-500">
+                  Primeira receita do período
+                </span>
+              </p>
             )}
-            
+
             {/* O bloco original com o 'Este mês não possui entradas' só aparece se monthIncomeAmount.monthIncomeAmount for NULL */}
             {monthIncomeAmount.monthIncomeAmount === null && (
-                <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-blue-700 dark:text-blue-500">
-                        Este mês não possui entradas
-                    </span>
-                </p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-blue-700 dark:text-blue-500">
+                  Este mês não possui entradas
+                </span>
+              </p>
             )}
-            
+
           </>
         )}
       </CardContent>

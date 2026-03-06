@@ -3,8 +3,10 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
 } from "@/components/ui/dialog"
+import {
+    ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -37,7 +39,7 @@ interface TransactionGroupDetailsDialogProps {
 export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: TransactionGroupDetailsDialogProps) {
     const queryClient = useQueryClient()
     const [terminatingId, setTerminatingId] = useState<string | null>(null)
-    const [paymentAction, setPaymentAction] = useState<{ id: string, type: 'pay' | 'unpay', amount: number } | null>(null)
+    const [paymentAction, setPaymentAction] = useState<{ id: string, type: 'pay' | 'unpay', amount: number, data_vencimento: Date } | null>(null)
 
     const { data: groupDetails, isLoading } = useQuery({
         queryKey: ['transaction-group', groupId],
@@ -104,7 +106,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                 await payTransaction({
                     id: paymentAction.id,
                     amount: paymentAction.amount,
-                    date: new Date(),
+                    data_vencimento: paymentAction.data_vencimento,
                     // No accountId means keeping original
                 })
             } else {
@@ -121,11 +123,11 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                 <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Detalhes do Recorrente</DialogTitle>
-                        <DialogDescription>
+                        <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-1.5">
                             Gerencie ou encerre as parcelas deste contrato.
                             <br />
-                            <span className="text-xs text-muted-foreground">Clique no status (Pago/Pendente) para alterar rapidamente.</span>
-                        </DialogDescription>
+                            <span className="text-[11px] font-semibold text-slate-500/80 uppercase tracking-wider">Clique no status para alterar rapidamente.</span>
+                        </ResponsiveDialogDescription>
                     </DialogHeader>
 
                     {isLoading ? (
@@ -162,7 +164,8 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                                             onClick={() => setPaymentAction({
                                                                 id: tx.id,
                                                                 type: tx.confirmed ? 'unpay' : 'pay',
-                                                                amount: tx.amount
+                                                                amount: tx.amount,
+                                                                data_vencimento: new Date(tx.date)
                                                             })}
                                                             className={cn(
                                                                 "cursor-pointer select-none px-2 py-1 rounded transition-colors border border-transparent hover:border-border whitespace-nowrap",
@@ -186,9 +189,9 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                                                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
                                                             >
                                                                 {terminatingId === tx.id ? <Loader2 className="h-4 w-4 animate-spin" /> :
-                                                                    <div className="flex items-center gap-1">
-                                                                        <Scissors className="h-4 w-4" />
-                                                                        <span className="text-xs">Encerrar</span>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Scissors className="h-3.5 w-3.5" />
+                                                                        <span className="text-xs font-semibold">Encerrar</span>
                                                                     </div>
                                                                 }
                                                             </Button>
@@ -236,7 +239,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                 handleConfirmToggle()
                             }}
                             className={cn(
-                                actionTx => paymentAction?.type === 'pay' ? "bg-green-600 hover:bg-green-700 text-white" : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                                paymentAction?.type === 'pay' ? "bg-green-600 hover:bg-green-700 text-white" : "bg-yellow-600 hover:bg-yellow-700 text-white"
                             )}
                         >
                             {isActionPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

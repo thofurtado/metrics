@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod'
+﻿import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -214,23 +214,25 @@ export function TransactionIncome() {
 
   return (
     <ResponsiveDialogContent>
-      <ResponsiveDialogHeader className="p-6 pb-2 border-b-0">
+      {/* ─── HEADER ─── */}
+      <ResponsiveDialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
             <CircleCheckBig className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
           </div>
           <div>
-            <ResponsiveDialogTitle className="font-bold text-2xl text-foreground">
+            <ResponsiveDialogTitle className="font-bold text-xl text-foreground leading-tight">
               Nova Receita
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="text-muted-foreground/80 mt-1">
+            <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">
               Registre o recebimento de valores.
             </ResponsiveDialogDescription>
           </div>
         </div>
       </ResponsiveDialogHeader>
 
-      <div className="p-6 pt-2 flex-1 overflow-y-auto">
+      <div className="px-6 pb-2 pt-4 flex-1 overflow-y-auto">
+        {/* ─── TAB SELECTOR ─── */}
         <Tabs value={activeTab} onValueChange={(v) => {
           setActiveTab(v as any)
           if (v === 'installment') {
@@ -238,175 +240,82 @@ export function TransactionIncome() {
           } else if (v === 'single') {
             form.setValue('confirmed', true)
           }
-        }} className="w-full mb-8">
+        }} className="w-full mb-6">
           <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/40 rounded-xl h-auto">
-            <TabsTrigger value="single" className="text-sm font-semibold py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+            <TabsTrigger value="single" className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
               À Vista
             </TabsTrigger>
-            <TabsTrigger value="installment" className="text-sm font-semibold py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+            <TabsTrigger value="installment" className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
               Recorrente
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-            {/* Amount Hero Input */}
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem className="relative bg-emerald-50/50 dark:bg-emerald-950/10 rounded-3xl p-8 pb-10 transition-all duration-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/20 w-full">
-                  {activeTab === 'installment' && (
-                    <div className="absolute top-4 left-0 w-full text-center text-xs font-semibold text-emerald-600/60 uppercase tracking-widest">
-                      Valor Total do Contrato
-                    </div>
-                  )}
-                  <div className="flex justify-center items-end gap-1 mt-2">
-                    <span className="text-2xl font-medium text-muted-foreground/40 mb-3 pb-0.5">R$</span>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e)
-                          // When Total changes, update Installment Value View
-                          const val = parseFloat(e.target.value)
-                          const count = parseInt(form.getValues('installments_count') || '1')
-                          if (!isNaN(val) && !isNaN(count) && count > 0) {
-                            setInstallmentValue((val / count).toFixed(2))
-                          } else {
-                            setInstallmentValue('')
-                          }
-                        }}
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        placeholder="0,00"
-                        className="border-none text-6xl font-bold text-emerald-600 dark:text-emerald-500 placeholder:text-emerald-200/50 dark:placeholder:text-emerald-900/20 focus-visible:ring-0 p-0 h-auto w-full text-center bg-transparent tabular-nums tracking-tighter caret-emerald-500 shadow-none"
-                        autoFocus
-                      />
-                    </FormControl>
-                  </div>
-                  {installmentPreview && (
-                    <div className="absolute bottom-3 left-0 w-full text-center text-sm font-medium text-emerald-600/80 dark:text-emerald-400">
-                      <strong>{installmentPreview.count}x</strong> de <strong>{installmentPreview.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-                    </div>
-                  )}
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
 
-            {/* Confirmed (Inline Switch & Date) -> Row of two */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
-              {/* Data Emissão */}
+            {/* ─── GRUPO 1: VALOR E STATUS ─── */}
+            <div className={cn(
+              "grid gap-4 items-end",
+              activeTab === 'single' ? "grid-cols-1 sm:grid-cols-[1fr,200px]" : "grid-cols-1"
+            )}>
+              {/* VALOR */}
               <FormField
                 control={form.control}
-                name="data_emissao"
+                name="amount"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1 w-full">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Emissão</FormLabel>
-                    <Popover modal={false} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            type="button"
-                            className={cn(
-                              "w-full pl-4 text-left font-normal h-14 rounded-xl border-input/60 bg-background/50 hover:bg-background hover:border-input transition-colors",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              <span className="text-base text-foreground font-medium">{format(field.value, "PPP", { locale: ptBR })}</span>
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0 z-[9999]"
-                        align="start"
-                        onInteractOutside={(e) => e.preventDefault()}
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date)
-                              setIsEmissaoPopoverOpen(false)
+                  <FormItem className="space-y-1.5 flex-1">
+                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">
+                      {activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Receita'}
+                    </FormLabel>
+                    <div className={cn(
+                      "flex items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200",
+                      activeTab === 'single' ? "w-full" : "w-full justify-center"
+                    )}>
+                      <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
+                      <FormControl>
+                        <input
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            const val = parseFloat(e.target.value)
+                            const count = parseInt(form.getValues('installments_count') || '1')
+                            if (!isNaN(val) && !isNaN(count) && count > 0) {
+                              setInstallmentValue((val / count).toFixed(2))
+                            } else {
+                              setInstallmentValue('')
                             }
                           }}
-                          initialFocus
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          placeholder="0,00"
+                          className={cn(
+                            "text-4xl font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500",
+                            activeTab === 'single' ? "w-full" : "w-full text-center"
+                          )}
+                          autoFocus
                         />
-                      </PopoverContent>
-                    </Popover>
+                      </FormControl>
+                    </div>
+                    {installmentPreview && activeTab === 'installment' && (
+                      <p className="text-sm font-medium text-emerald-600/80 dark:text-emerald-400 ml-1">
+                        <strong>{installmentPreview.count}×</strong> de <strong>{installmentPreview.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                      </p>
+                    )}
                   </FormItem>
                 )}
               />
 
-              {/* Data Vencimento */}
-              <FormField
-                control={form.control}
-                name="data_vencimento"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-1 w-full">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Vencimento</FormLabel>
-                    <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            type="button"
-                            className={cn(
-                              "w-full pl-4 text-left font-normal h-14 rounded-xl border-input/60 bg-background/50 hover:bg-background hover:border-input transition-colors",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              <span className="text-base text-foreground font-medium">{format(field.value, "PPP", { locale: ptBR })}</span>
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0 z-[9999]"
-                        align="start"
-                        onInteractOutside={(e) => e.preventDefault()}
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date)
-                              setIsPopoverOpen(false)
-                            }
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </FormItem>
-                )}
-              />
-
-              {/* Status Box */}
+              {/* STATUS (Aparece na mesma linha do valor no Desktop se for 'single') */}
               {activeTab === 'single' && (
                 <FormField
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between p-4 h-14 rounded-xl border border-input/60 bg-background/50 space-y-0">
-                      <FormLabel className="text-sm font-medium text-muted-foreground cursor-pointer">
-                        {field.value ? 'Recebido' : 'A Receber'}
+                    <FormItem className="flex flex-row items-center justify-between px-4 h-[72px] rounded-xl border border-border/60 bg-muted/20 space-y-0 sm:mb-0">
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight cursor-pointer">
+                        {field.value ? '✓ Já Recebi' : 'A Receber'}
                       </FormLabel>
                       <FormControl>
                         <Switch
@@ -421,41 +330,119 @@ export function TransactionIncome() {
               )}
             </div>
 
-            {/* Descrição */}
+            {/* ─── GRUPO 2: DATAS ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Emissão */}
+              <FormField
+                control={form.control}
+                name="data_emissao"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Emissão</FormLabel>
+                    <Popover modal={false} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            className={cn(
+                              "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
+                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => { if (date) { field.onChange(date); setIsEmissaoPopoverOpen(false) } }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </FormItem>
+                )}
+              />
+
+              {/* Vencimento */}
+              <FormField
+                control={form.control}
+                name="data_vencimento"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Vencimento</FormLabel>
+                    <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            className={cn(
+                              "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
+                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => { if (date) { field.onChange(date); setIsPopoverOpen(false) } }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* ─── SEPARADOR ─── */}
+            <div className="border-t border-border/40 -mx-1" />
+
+            {/* ─── GRUPO 3: DESCRIÇÃO ─── */}
             <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Descrição</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Descrição</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       placeholder="Ex: Venda de serviço, Consultoria..."
-                      className="h-14 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/40"
+                      className="h-12 rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Categoria/Setor */}
+            {/* ─── GRUPO 4: CATEGORIA + CONTA ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <FormField
                 control={form.control}
                 name="sector"
                 render={({ field: { onChange, value, disabled } }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Categoria</FormLabel>
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Categoria</FormLabel>
                     <QuickAddSelect
                       value={value}
                       onValueChange={onChange}
                       disabled={disabled}
                       isLoading={!sectors}
-                      placeholder="Selecione"
+                      placeholder="Selecione..."
                       emptyMessage="Nenhuma categoria encontrada"
                       options={sectors?.data.sectors
-                        .filter((sector) => sector.type === 'in') // Income sectors only
+                        .filter((sector) => sector.type === 'in')
                         .map((sector) => ({
                           label: sector.name,
                           value: sector.id,
@@ -467,19 +454,18 @@ export function TransactionIncome() {
                 )}
               />
 
-              {/* Conta */}
               <FormField
                 control={form.control}
                 name="account"
                 render={({ field: { onChange, value, disabled } }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Conta</FormLabel>
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Conta</FormLabel>
                     <QuickAddSelect
                       value={value}
                       onValueChange={onChange}
                       disabled={disabled}
                       isLoading={!accounts}
-                      placeholder="Selecione"
+                      placeholder="Selecione..."
                       emptyMessage="Nenhuma conta encontrada"
                       options={accounts?.accounts.map((account) => ({
                         label: account.name,
@@ -494,30 +480,30 @@ export function TransactionIncome() {
               />
             </div>
 
-            {/* INSTALLMENT SPECIFIC - moved near the bottom before buttons */}
+            {/* ─── GRUPO 5: RECORRÊNCIA (só no tab recorrente) ─── */}
             {activeTab === 'installment' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-muted/30 p-6 rounded-2xl border border-dashed border-border/60 relative mt-2">
-                <div className="absolute -top-3 left-6 bg-background px-3 text-xs text-muted-foreground font-semibold uppercase tracking-wider border rounded-full shadow-sm">
-                  Configuração de Recorrência
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-xl border border-dashed border-emerald-200/50 dark:border-emerald-900/30 relative mt-2">
+                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-100 rounded-full">
+                  Recorrência
+                </span>
 
                 <FormField
                   control={form.control}
                   name="installments_count"
                   render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Repetições</FormLabel>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Repetições</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="number"
                           inputMode="numeric"
                           placeholder="12"
-                          className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
+                          className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
                           onChange={(e) => {
                             field.onChange(e)
-                            const count = parseInt(e.target.value)
-                            const total = parseFloat(form.getValues('amount') || '0')
+                            const count = parseInt(e.target.value) || 1
+                            const total = parseFloat(form.getValues('amount') || '0') || 0
                             if (!isNaN(total) && !isNaN(count) && count > 0) {
                               setInstallmentValue((total / count).toFixed(2))
                             }
@@ -528,8 +514,9 @@ export function TransactionIncome() {
                   )}
                 />
 
-                <FormItem className="sm:col-span-1 space-y-1">
-                  <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Valor Parcela</FormLabel>
+                {/* Visual Installment Value */}
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -537,15 +524,14 @@ export function TransactionIncome() {
                       inputMode="decimal"
                       placeholder="0,00"
                       value={installmentValue}
-                      className="h-12 rounded-xl border-input/60 bg-background/50 text-base font-medium placeholder:text-muted-foreground/30 text-center"
+                      className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
                       onChange={(e) => {
                         const val = e.target.value
                         setInstallmentValue(val)
-                        const instVal = parseFloat(val)
-                        const count = parseInt(form.getValues('installments_count') || '1')
+                        const instVal = parseFloat(val) || 0
+                        const count = parseInt(form.getValues('installments_count') || '1') || 1
                         if (!isNaN(instVal) && !isNaN(count) && count > 0) {
-                          const newTotal = instVal * count
-                          form.setValue('amount', newTotal.toFixed(2))
+                          form.setValue('amount', (instVal * count).toFixed(2))
                         }
                       }}
                     />
@@ -556,11 +542,11 @@ export function TransactionIncome() {
                   control={form.control}
                   name="interval_frequency"
                   render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Frequência</FormLabel>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Frequência</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-input/60 bg-background/50 font-medium text-base">
+                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -576,31 +562,37 @@ export function TransactionIncome() {
               </div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-8 mt-4 section-footer border-t border-border/40">
+            {/* ─── AÇÕES ─── */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
               <ResponsiveDialogClose asChild>
-                <Button variant="ghost" type="button" className="w-full sm:w-auto h-12 rounded-xl text-base font-medium text-muted-foreground hover:text-foreground">
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="w-full sm:w-auto h-11 rounded-xl text-sm font-semibold border-border/70 text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                >
                   Cancelar
                 </Button>
               </ResponsiveDialogClose>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto h-12 rounded-xl font-bold text-base shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] gap-2"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto h-11 rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
-                {isPending ? 'Salvando...' : (
+                {isPending ? 'Processando...' : (
                   activeTab === 'installment' ? (
                     <>
-                      <ListChecks className="w-5 h-5" />
+                      <ListChecks className="w-4 h-4 mr-2" />
                       Conferir Recorrência
                     </>
                   ) : 'Confirmar Receita'
                 )}
               </Button>
             </div>
+
           </form>
         </Form>
 
-        {/* PREVIEW DIALOG */}
+        {/* ─── DIALOGS AUXILIARES ─── */}
         <InstallmentPreviewDialog
           open={previewInstallmentsOpen}
           onOpenChange={setPreviewInstallmentsOpen}
@@ -612,7 +604,6 @@ export function TransactionIncome() {
           onConfirm={handleConfirmInstallments}
         />
 
-        {/* Dialogs at the end of component, relying on state */}
         <CreateSectorDialog
           open={createSectorOpen}
           onOpenChange={setCreateSectorOpen}
@@ -625,7 +616,6 @@ export function TransactionIncome() {
           open={createAccountOpen}
           onOpenChange={setCreateAccountOpen}
           onSuccess={(newAccount) => {
-            // API returns { id: ... } even if inside a wrapper
             if (newAccount.id) form.setValue('account', newAccount.id)
           }}
         />

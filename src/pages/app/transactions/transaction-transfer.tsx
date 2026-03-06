@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import {
     ArrowRightLeft,
     Calendar as CalendarIcon,
@@ -129,93 +128,92 @@ export function TransactionTransfer() {
 
     return (
         <ResponsiveDialogContent>
-            <ResponsiveDialogHeader className="p-6 pb-4 border-b">
-                <ResponsiveDialogTitle className="flex items-center gap-2 font-bold text-minsk-600 dark:text-minsk-500 text-xl">
-                    <ArrowRightLeft className="h-5 w-5" />
-                    Transferência
-                </ResponsiveDialogTitle>
-                <ResponsiveDialogDescription>
-                    Mover valor entre contas.
-                </ResponsiveDialogDescription>
+            {/* ─── HEADER ─── */}
+            <ResponsiveDialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                        <ArrowRightLeft className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                        <ResponsiveDialogTitle className="font-bold text-xl text-foreground leading-tight">
+                            Transferência
+                        </ResponsiveDialogTitle>
+                        <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">
+                            Mover valor entre suas contas bancárias.
+                        </ResponsiveDialogDescription>
+                    </div>
+                </div>
             </ResponsiveDialogHeader>
 
-            <div className="p-6 flex-1 overflow-y-auto">
-
+            <div className="px-6 pb-2 pt-6 flex-1 overflow-y-auto">
                 <Form {...form}>
-                    <form
-                        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-                        onSubmit={form.handleSubmit(onSubmit)}
-                    >
-                        {/* Valor (Destaque Indigo/Minsk) */}
-                        <div className="col-span-1 lg:col-span-2">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+
+                        {/* ─── GRUPO 1: VALOR ─── */}
+                        <FormField
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">
+                                        Valor da Transferência
+                                    </FormLabel>
+                                    <div className="flex items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-4 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all duration-200 w-full sm:w-3/4 mx-auto sm:mx-0">
+                                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
+                                        <FormControl>
+                                            <input
+                                                {...field}
+                                                type="number"
+                                                inputMode="decimal"
+                                                step="0.01"
+                                                placeholder="0,00"
+                                                className="text-4xl font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none w-full bg-transparent tabular-nums tracking-tight caret-indigo-500"
+                                                autoFocus
+                                            />
+                                        </FormControl>
+                                    </div>
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* ─── GRUPO 2: CONTAS (ORIGEM E DESTINO) ─── */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-muted/20 p-5 rounded-2xl border border-border/50 relative mt-2">
+                            <span className="absolute -top-3 left-4 bg-background px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border rounded-full">
+                                Contas Envolvidas
+                            </span>
+
+                            {/* Origin */}
                             <FormField
                                 control={form.control}
-                                name="amount"
-                                render={({ field }) => (
-                                    <FormItem className="relative bg-minsk-50/50 dark:bg-minsk-900/10 rounded-xl p-4 sm:p-6 border-2 border-minsk-100 dark:border-minsk-900">
-                                        <div className="flex justify-center items-center h-full">
-                                            <span className="text-3xl sm:text-4xl font-bold text-minsk-600 mr-2">R$</span>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    type="number"
-                                                    inputMode="decimal"
-                                                    step="0.01"
-                                                    placeholder="0,00"
-                                                    className="border-none text-4xl sm:text-5xl font-bold text-minsk-600 placeholder:text-minsk-200 focus-visible:ring-0 p-0 h-14 sm:h-16 w-full text-center bg-transparent"
-                                                    autoFocus
-                                                />
-                                            </FormControl>
-                                        </div>
+                                name="account_origin"
+                                render={({ field: { onChange, value, disabled } }) => (
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">De (Origem)</FormLabel>
+                                        <QuickAddSelect
+                                            value={value}
+                                            onValueChange={onChange}
+                                            disabled={disabled}
+                                            isLoading={!accounts}
+                                            placeholder="Conta de saída"
+                                            emptyMessage="Nenhuma conta encontrada"
+                                            options={accounts?.accounts.map((account) => ({
+                                                label: account.name,
+                                                value: account.id,
+                                            }))}
+                                            quickAddLabel="Nova Conta"
+                                            onQuickAddClick={() => setCreateAccountTarget('origin')}
+                                        />
                                     </FormItem>
                                 )}
                             />
-                        </div>
 
-                        <div className="col-span-1 lg:col-span-2 grid grid-cols-1 gap-4">
-                            <div className="flex flex-col sm:flex-row gap-4 items-center">
-                                {/* Conta Origem */}
-                                <FormField
-                                    control={form.control}
-                                    name="account_origin"
-                                    render={({ field: { onChange, value, disabled } }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel className="flex items-center gap-1">
-                                                De (Origem)
-                                            </FormLabel>
-                                            <QuickAddSelect
-                                                value={value}
-                                                onValueChange={onChange}
-                                                disabled={disabled}
-                                                isLoading={!accounts}
-                                                placeholder="Conta de saída"
-                                                emptyMessage="Nenhuma conta encontrada"
-                                                options={accounts?.accounts.map((account) => ({
-                                                    label: account.name,
-                                                    value: account.id,
-                                                }))}
-                                                quickAddLabel="Nova Conta"
-
-                                                onQuickAddClick={() => setCreateAccountTarget('origin')}
-                                            />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <div className="hidden sm:flex justify-center items-center pt-6">
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                            </div>
-
-                            {/* Conta Destino */}
+                            {/* Destination */}
                             <FormField
                                 control={form.control}
                                 name="account_destination"
                                 render={({ field: { onChange, value, disabled } }) => (
-                                    <FormItem>
-                                        <FormLabel className="flex items-center gap-1">
-                                            Para (Destino)
-                                        </FormLabel>
+                                    <FormItem className="space-y-1.5">
+                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Para (Destino)</FormLabel>
                                         <QuickAddSelect
                                             value={value}
                                             onValueChange={onChange}
@@ -224,7 +222,7 @@ export function TransactionTransfer() {
                                             placeholder="Conta de entrada"
                                             emptyMessage="Nenhuma conta encontrada"
                                             options={accounts?.accounts
-                                                .filter(acc => acc.id !== originAccount) // Filter out origin
+                                                .filter(acc => acc.id !== originAccount)
                                                 .map((account) => ({
                                                     label: account.name,
                                                     value: account.id,
@@ -235,51 +233,44 @@ export function TransactionTransfer() {
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 mt-3 pointer-events-none">
+                                <div className="h-8 w-8 rounded-full bg-background border flex items-center justify-center shadow-sm">
+                                    <ArrowRight className="h-3 w-3 text-indigo-500" />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="col-span-1 grid grid-cols-1 gap-4">
+                        {/* ─── GRUPO 3: DATA E DESCRIÇÃO ─── */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {/* Data */}
                             <FormField
                                 control={form.control}
                                 name="date"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Data</FormLabel>
-                                        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                    <FormItem className="flex flex-col gap-1.5">
+                                        <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Data</FormLabel>
+                                        <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
-                                                        variant={"outline"}
+                                                        variant="outline"
+                                                        type="button"
                                                         className={cn(
-                                                            "w-full pl-3 text-left font-normal h-11",
+                                                            "w-full justify-start text-left font-medium h-11 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-sm",
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {field.value ? (
-                                                            format(field.value, "PPP", { locale: ptBR })
-                                                        ) : (
-                                                            <span>Selecione</span>
-                                                        )}
-                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        <CalendarIcon className="mr-2 h-4 w-4 text-slate-400 flex-shrink-0" />
+                                                        {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
                                                     </Button>
                                                 </FormControl>
                                             </PopoverTrigger>
-                                            <PopoverContent
-                                                className="w-auto p-0 z-[9999]"
-                                                align="start"
-                                                onInteractOutside={(e) => e.preventDefault()}
-                                                onOpenAutoFocus={(e) => e.preventDefault()}
-                                                style={{ pointerEvents: 'auto' }}
-                                            >
+                                            <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
                                                 <Calendar
                                                     mode="single"
                                                     selected={field.value}
-                                                    onSelect={(date) => {
-                                                        if (date) {
-                                                            field.onChange(date)
-                                                            setIsPopoverOpen(false)
-                                                        }
-                                                    }}
+                                                    onSelect={(date) => { if (date) { field.onChange(date); setIsPopoverOpen(false) } }}
                                                     initialFocus
                                                 />
                                             </PopoverContent>
@@ -287,38 +278,43 @@ export function TransactionTransfer() {
                                     </FormItem>
                                 )}
                             />
+
+                            {/* Descrição */}
+                            <div className="sm:col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-1.5">
+                                            <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Descrição</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    placeholder="Ex: Reserva de emergência..."
+                                                    className="h-11 rounded-xl border-border/70 bg-background text-sm font-medium placeholder:text-muted-foreground/50 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500"
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
-                        {/* Descrição */}
-                        <div className="col-span-1">
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Descrição (Opcional)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                placeholder="Ex: Reserva de emergência..."
-                                                className="h-11"
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="col-span-1 lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 section-footer">
+                        {/* ─── AÇÕES ─── */}
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
                             <ResponsiveDialogClose asChild>
-                                <Button variant="ghost" type="button" className="w-full sm:w-auto h-11">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    className="w-full sm:w-auto h-11 rounded-xl text-sm font-semibold border-border/70 text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                                >
                                     Cancelar
                                 </Button>
                             </ResponsiveDialogClose>
                             <Button
                                 type="submit"
                                 disabled={isPending}
-                                className="bg-minsk-600 text-white hover:bg-minsk-700 w-full sm:w-auto h-11 font-bold text-base shadow-sm"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
                             >
                                 {isPending ? 'Processando...' : 'Confirmar Transferência'}
                             </Button>

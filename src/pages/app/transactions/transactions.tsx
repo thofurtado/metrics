@@ -370,18 +370,18 @@ export function Transactions() {
                       return (
                         <TableRow key={transfer.id}>
                           <TableCell className="font-mono text-xs font-medium">
-                            {new Date(transfer.transaction.date).toLocaleDateString()}
+                            {new Date(transfer.transaction.data_vencimento ?? transfer.transaction.date).toLocaleDateString()}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-foreground/80 font-medium">
                             {transfer.transaction.description || '-'}
                           </TableCell>
                           <TableCell>
-                            <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                            <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/10">
                               {transfer.transaction.accounts?.name || 'Origem'}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/10">
+                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-sm font-semibold text-green-700 ring-1 ring-inset ring-green-600/10">
                               {transfer.accounts?.name || 'Destino'}
                             </span>
                           </TableCell>
@@ -396,14 +396,14 @@ export function Transactions() {
                   {/* EMPTY STATES */}
                   {activeTab !== 'transfers' && transactionsResult && transactionsResult.data.transactions.transactions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground text-sm font-medium">
                         Nenhuma transação encontrada nesta categoria.
                       </TableCell>
                     </TableRow>
                   )}
                   {activeTab === 'transfers' && transfersResult && transfersResult.transferTransactions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground text-sm font-medium">
                         Nenhuma transferência realizada.
                       </TableCell>
                     </TableRow>

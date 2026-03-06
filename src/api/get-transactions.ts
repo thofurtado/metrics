@@ -62,8 +62,13 @@ export async function getTransactions({
     return {
       ...response,
       data: {
-        transactions: [],
-      }
+        transactions: {
+          transactions: [] as GetTransactionsResponse['transactions']['transactions'],
+          totalCount: 0,
+          pageIndex: 0,
+          perPage: 6,
+        },
+      } as GetTransactionsResponse
     }
   }
 

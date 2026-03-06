@@ -273,8 +273,8 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           <span className={!transactions.confirmed && new Date(transactions.data_vencimento) < new Date(new Date().setHours(0, 0, 0, 0)) ? "text-red-500 font-bold" : "font-medium text-foreground"}>
             {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
           </span>
-          <span className="text-[10px] text-muted-foreground mt-0.5" title="Data de Emissão">
-            E: {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
+          <span className="text-xs text-muted-foreground mt-0.5 leading-tight" title="Data de Emissão">
+            Emissão: {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
           </span>
         </div>
       </TableCell>
