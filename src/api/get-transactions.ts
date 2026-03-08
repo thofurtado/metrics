@@ -10,6 +10,7 @@ export interface GetTransactionsQuery {
   status?: string | null
   toDate?: string | null
   supplierId?: string | null
+  type?: string | null
 }
 
 export interface GetTransactionsResponse {
@@ -40,12 +41,13 @@ export async function getTransactions({
   accountId,
   status,
   toDate,
-  supplierId
+  supplierId,
+  type
 }: GetTransactionsQuery) {
 
   const response = await api.get<GetTransactionsResponse>('/transactions', {
     params: {
-      page,
+      page: page || 1,
       per_page: perPage,
       description,
       value,
@@ -53,7 +55,8 @@ export async function getTransactions({
       account_id: accountId,
       status,
       toDate,
-      supplier_id: supplierId
+      supplier_id: supplierId,
+      type
     },
   })
 

@@ -5,7 +5,6 @@ import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
@@ -101,50 +100,57 @@ export function ItemsTableFilters() {
   const hasFilters = watchedFields.name || watchedFields.display_id || watchedFields.below_min_stock
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 font-gaba">
-      <div className="flex items-center gap-2 w-full sm:w-auto">
-        <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <Input
-          placeholder="Nome da mercadoria..."
-          className="h-8 w-full sm:w-[250px] text-xs sm:text-sm"
-          {...register('name')}
-        />
+    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm">
+      <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[300px]">
+          <Search className="h-4 w-4 text-primary opacity-70" />
+          <input
+            {...register('name')}
+            placeholder="Nome da mercadoria..."
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all w-[100px]">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">ID</span>
+          <input
+            {...register('display_id')}
+            placeholder="ex: 001"
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full text-center"
+          />
+        </div>
       </div>
 
-      <Input
-        placeholder="ID"
-        className="h-8 w-[80px] text-xs sm:text-sm"
-        {...register('display_id')}
-      />
+      <div className="flex items-center justify-between gap-4 w-full lg:w-auto">
+        <div className="flex items-center gap-3 bg-muted/30 py-1.5 px-4 rounded-full border border-border/50">
+          <Controller
+            name="below_min_stock"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="critical_stock"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                className="scale-90 data-[state=checked]:bg-primary"
+              />
+            )}
+          />
+          <Label htmlFor="critical_stock" className="text-xs font-bold uppercase tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap">Estoque Crítico</Label>
+        </div>
 
-      <div className="flex items-center gap-2 px-2 border rounded h-8 border-dashed bg-muted/20">
-        <Controller
-          name="below_min_stock"
-          control={control}
-          render={({ field }) => (
-            <Switch
-              id="critical_stock"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              className="scale-75"
-            />
-          )}
-        />
-        <Label htmlFor="critical_stock" className="text-xs cursor-pointer whitespace-nowrap">Estoque Crítico</Label>
+        {hasFilters && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors"
+            onClick={handleClearFilters}
+            title="Limpar filtros"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
-
-      {hasFilters && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={handleClearFilters}
-          title="Limpar filtros"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
     </div>
   )
 }

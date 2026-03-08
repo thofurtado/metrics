@@ -3,11 +3,10 @@ import { getSuppliers } from '@/api/get-suppliers'
 import { deleteSupplier } from '@/api/delete-supplier'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X } from 'lucide-react'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { useState } from 'react'
 import { SupplierFormDialog } from './supplier-form-dialog'
-import { Input } from '@/components/ui/input'
 import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 
@@ -70,20 +69,43 @@ export function SuppliersList() {
         <div className="flex flex-col gap-4 p-8">
             <h1 className="text-3xl font-bold tracking-tight">Fornecedores</h1>
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 w-full max-w-sm">
-                    <Search className="w-4 h-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Buscar fornecedores..."
-                        value={query}
-                        onChange={handleSearch}
-                        className="h-8 w-[150px] lg:w-[250px]"
-                    />
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm flex-1">
+                    <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[350px]">
+                            <Search className="h-4 w-4 text-primary opacity-70" />
+                            <input
+                                placeholder="Buscar fornecedores..."
+                                value={query}
+                                onChange={handleSearch}
+                                className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full"
+                            />
+                        </div>
+
+                        {query && (
+                            <Button
+                                onClick={() => {
+                                    setSearchParams(state => {
+                                        state.delete('query')
+                                        state.set('page', '1')
+                                        return state
+                                    })
+                                }}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors flex-shrink-0"
+                                title="Limpar Busca"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button onClick={handleCreate}>
+                        <Button onClick={handleCreate} className="h-10 lg:h-12 px-6 rounded-2xl shadow-sm hover:translate-y-[-2px] transition-all">
                             <Plus className="w-4 h-4 mr-2" />
                             Novo Fornecedor
                         </Button>

@@ -10,7 +10,6 @@ import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
 import { getSuppliers } from '@/api/get-suppliers'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -31,6 +30,7 @@ export function TransactionTableFilters() {
   const sectorIdParam = searchParams.get('sectorId')
   const accountIdParam = searchParams.get('accountId')
   const supplierIdParam = searchParams.get('supplierId')
+  const typeParam = searchParams.get('type')
 
   const previousFilters = useRef({
     description: descriptionParam ?? '',
@@ -38,6 +38,7 @@ export function TransactionTableFilters() {
     sectorId: sectorIdParam ?? 'all',
     accountId: accountIdParam ?? 'all',
     supplierId: supplierIdParam ?? 'all',
+    type: typeParam ?? 'all',
   })
 
   const { register, control, watch, reset } =
@@ -49,6 +50,7 @@ export function TransactionTableFilters() {
         sectorId: sectorIdParam ?? 'all',
         accountId: accountIdParam ?? 'all',
         supplierId: supplierIdParam ?? 'all',
+        type: typeParam ?? 'all',
       },
     })
 
@@ -56,7 +58,7 @@ export function TransactionTableFilters() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const { description, value, sectorId, accountId, supplierId } = watchedFields
+      const { description, value, sectorId, accountId, supplierId, type } = watchedFields
 
       // Verifica se realmente houve mudança nos filtros
       const hasFiltersChanged =
@@ -64,7 +66,8 @@ export function TransactionTableFilters() {
         value !== previousFilters.current.value ||
         sectorId !== previousFilters.current.sectorId ||
         accountId !== previousFilters.current.accountId ||
-        supplierId !== previousFilters.current.supplierId
+        supplierId !== previousFilters.current.supplierId ||
+        type !== previousFilters.current.type
 
       if (hasFiltersChanged) {
         setSearchParams((state) => {
@@ -98,6 +101,12 @@ export function TransactionTableFilters() {
             state.delete('supplierId')
           }
 
+          if (type && type !== 'all') {
+            state.set('type', type)
+          } else {
+            state.delete('type')
+          }
+
           // Só reseta a página se os filtros mudaram
           state.set('page', '1')
 
@@ -110,7 +119,8 @@ export function TransactionTableFilters() {
           value: value ?? '',
           sectorId: sectorId ?? 'all',
           accountId: accountId ?? 'all',
-          supplierId: supplierId ?? 'all'
+          supplierId: supplierId ?? 'all',
+          type: type ?? 'all'
         }
       }
     }, 500)
@@ -138,6 +148,7 @@ export function TransactionTableFilters() {
       state.delete('sectorId')
       state.delete('accountId')
       state.delete('supplierId')
+      state.delete('type')
       state.set('page', '1')
       return state
     })
@@ -148,6 +159,7 @@ export function TransactionTableFilters() {
       sectorId: 'all',
       accountId: 'all',
       supplierId: 'all',
+      type: 'all',
     })
 
     // Atualiza a referência ao limpar filtros
@@ -157,136 +169,141 @@ export function TransactionTableFilters() {
       sectorId: 'all',
       accountId: 'all',
       supplierId: 'all',
+      type: 'all',
     }
   }
 
-  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all')
+  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all')
 
   return (
-    <div className="flex items-center gap-2 font-gaba">
-      <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm">
+      {/* Search and Value Group */}
+      <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[220px]">
+          <Search className="h-4 w-4 text-primary opacity-70" />
+          <input
+            {...register('description')}
+            placeholder="Descrição"
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full"
+          />
+        </div>
 
-      <Input
-        placeholder="Descrição"
-        className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm sm:placeholder:text-muted-foreground"
-        {...register('description')}
-      />
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all w-[100px] sm:w-[120px]">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Valor</span>
+          <input
+            {...register('value')}
+            placeholder="0,00"
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full text-center"
+          />
+        </div>
+      </div>
 
-      <Input
-        placeholder="Valor"
-        className="h-8 w-16 text-xs text-center sm:w-[160px] sm:text-sm sm:placeholder:text-muted-foreground"
-        {...register('value')}
-      />
+      {/* Selectors Group */}
+      <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-3 w-full lg:w-auto">
+        <Controller
+          name="type"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Tipo</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[100px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                  <SelectItem value="in" className="text-xs text-green-500">Entrada</SelectItem>
+                  <SelectItem value="out" className="text-xs text-red-500">Saída</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
 
-      <Controller
-        name="sectorId"
-        control={control}
-        render={({ field: { name, onChange, value, disabled } }) => {
-          return (
-            <Select
-              defaultValue="all"
-              name={name}
-              onValueChange={onChange}
-              value={value}
-              disabled={disabled}
+        <Controller
+          name="sectorId"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Setor</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[130px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder="Setores" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                  {sectors?.data?.sectors?.map((sector) => (
+                    <SelectItem key={sector.id} value={sector.id} className={`text-xs ${sector.type === 'in' ? 'text-green-500' : 'text-red-400'}`}>
+                      {sector.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
+
+        <Controller
+          name="accountId"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Conta</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled || isLoadingAccounts}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[130px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder={isLoadingAccounts ? "..." : "Contas"} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Todas</SelectItem>
+                  {accounts?.accounts?.map((account) => (
+                    <SelectItem key={account.id} value={account.id} className="text-xs">
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
+
+        <Controller
+          name="supplierId"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Fornec.</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[130px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder="Fornecedores" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                  {suppliers?.suppliers?.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id} className="text-xs">
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
+
+        {hasFilters && (
+          <div className="flex items-center justify-center sm:w-auto h-full">
+            <Button
+              onClick={handleClearFilter}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors flex-shrink-0"
+              title="Limpar Filtros"
             >
-              <SelectTrigger
-                className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm"
-                aria-label="Setores"
-              >
-                <SelectValue placeholder="Setores" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs sm:text-sm">Todos os Setores</SelectItem>
-                {sectors?.data?.sectors?.map((sector) => (
-                  <SelectItem
-                    value={sector.id}
-                    key={sector.id}
-                    className={`text-xs sm:text-sm ${sector.type === 'in' ? 'text-vida-loca-500' : 'text-stiletto-400'}`}
-                  >
-                    {sector.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )
-        }}
-      />
-
-      <Controller
-        name="accountId"
-        control={control}
-        render={({ field: { name, onChange, value, disabled } }) => {
-          return (
-            <Select
-              defaultValue="all"
-              name={name}
-              onValueChange={onChange}
-              value={value}
-              disabled={disabled || isLoadingAccounts}
-            >
-              <SelectTrigger
-                className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm"
-                aria-label="Contas"
-              >
-                <SelectValue placeholder={isLoadingAccounts ? "Carregando..." : "Contas"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs sm:text-sm">Todas as Contas</SelectItem>
-                {accounts?.accounts?.map((account) => (
-                  <SelectItem value={account.id} key={account.id} className="text-xs sm:text-sm">
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )
-        }}
-      />
-
-      <Controller
-        name="supplierId"
-        control={control}
-        render={({ field: { name, onChange, value, disabled } }) => {
-          return (
-            <Select
-              defaultValue="all"
-              name={name}
-              onValueChange={onChange}
-              value={value}
-              disabled={disabled}
-            >
-              <SelectTrigger
-                className="h-8 w-20 text-xs sm:w-[160px] sm:text-sm"
-                aria-label="Fornecedores"
-              >
-                <SelectValue placeholder="Fornecedores" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs sm:text-sm">Todos os Fornecedores</SelectItem>
-                {suppliers?.suppliers?.map((supplier) => (
-                  <SelectItem value={supplier.id} key={supplier.id} className="text-xs sm:text-sm">
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )
-        }}
-      />
-
-      {hasFilters && (
-        <Button
-          onClick={handleClearFilter}
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs flex-shrink-0"
-          aria-label="Limpar Filtros"
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      )}
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

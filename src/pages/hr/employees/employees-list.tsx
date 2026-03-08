@@ -5,12 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { formatCurrency } from "@/lib/utils"
 import { EmployeeFormDialog } from "./employee-form-dialog"
 import { DebtManagementDialog } from "./debt-management-dialog"
-import { Users, AlertCircle, CalendarDays, Pencil, Search, Check, X, Bus } from "lucide-react"
+import { Users, AlertCircle, CalendarDays, Pencil, Search, Check, X, Bus, Filter } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Label } from "@/components/ui/label"
 import { Pagination } from "@/components/pagination"
@@ -121,33 +120,54 @@ export function EmployeesList() {
                                 Gerencie sua equipe, cargos e benefícios.
                             </CardDescription>
                         </div>
-                        <div className="flex items-center gap-4 w-full md:w-auto">
-                            {/* Global Status Filter */}
-                            <div className="flex items-center gap-2 border p-2 rounded-md bg-muted/20">
-                                <Label htmlFor="status-filter" className="text-sm font-medium text-muted-foreground cursor-pointer">
-                                    {filterStatus ? "Exibindo Ativos" : "Exibindo Inativos"}
-                                </Label>
-                                <Switch
-                                    id="status-filter"
-                                    checked={filterStatus}
-                                    onCheckedChange={setFilterStatus}
-                                    className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-slate-400"
-                                />
-                            </div>
-
-                            <div className="relative w-full md:w-64">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Premium Filter Bar */}
+                    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-muted/20 border border-border/50 rounded-2xl">
+                        <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[300px]">
+                                <Search className="h-4 w-4 text-primary opacity-70" />
+                                <input
                                     placeholder="Buscar por nome..."
-                                    className="pl-8"
+                                    className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
+
+                        <div className="flex items-center gap-4 w-full lg:w-auto">
+                            <div className="flex items-center gap-3 bg-background py-1.5 px-4 rounded-full border border-border/50">
+                                <Filter className="h-4 w-4 text-primary opacity-70" />
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="status-filter" className="text-xs font-bold uppercase tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap">
+                                        {filterStatus ? "Ativos" : "Inativos"}
+                                    </Label>
+                                    <Switch
+                                        id="status-filter"
+                                        checked={filterStatus}
+                                        onCheckedChange={setFilterStatus}
+                                        className="scale-90 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-slate-400"
+                                    />
+                                </div>
+                            </div>
+
+                            {searchTerm && (
+                                <Button
+                                    onClick={() => setSearchTerm("")}
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors flex-shrink-0"
+                                    title="Limpar Busca"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                </CardHeader>
-                <CardContent>
+
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>

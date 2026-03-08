@@ -50,7 +50,7 @@ export function Treatments() {
     queryFn: async () => {
       try {
         const res = await getTreatments({
-          page: pageIndex,
+          page: pageIndex + 1,
           treatmentId,
           clientName,
           status: queryStatus,

@@ -63,6 +63,7 @@ export function Transactions() {
   const sectorId = searchParams.get('sectorId')
   const accountId = searchParams.get('accountId')
   const supplierId = searchParams.get('supplierId')
+  const type = searchParams.get('type')
   const perPage = searchParams.get('per_page') ? Number(searchParams.get('per_page')) : 6
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -149,17 +150,19 @@ export function Transactions() {
       timeHorizon,
       customDate,
       perPage,
-      supplierId
+      supplierId,
+      type
     ],
     queryFn: () =>
       getTransactions({
-        page: pageIndex,
+        page: pageIndex + 1,
         perPage,
         description,
         value: value ? Number(value) : null,
         sectorId: sectorId === 'all' ? null : sectorId,
         accountId,
         supplierId: supplierId === 'all' ? null : supplierId,
+        type: type === 'all' ? null : type,
         status: activeTab === 'payable' ? 'pending' : 'completed',
         toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined // Pass toDate only for payable
       }),
@@ -277,16 +280,16 @@ export function Transactions() {
 
               {/* HORIZON SELECTOR - Only visible in Payable Tab */}
               {activeTab === 'payable' && (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="hidden sm:inline text-sm text-muted-foreground whitespace-nowrap">Visão:</span>
+                <div className="flex items-center gap-3 bg-muted/40 py-1.5 pl-4 pr-1.5 rounded-full border border-border/30">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Visão:</span>
                   <Select value={timeHorizon} onValueChange={(val: any) => setTimeHorizon(val)}>
-                    <SelectTrigger className="w-full sm:w-[180px] h-9">
+                    <SelectTrigger className="h-8 w-full sm:w-[180px] bg-card border-border rounded-full text-foreground hover:bg-muted transition-colors text-xs font-bold">
                       <SelectValue placeholder="Selecione o período" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7">Próximos 7 dias</SelectItem>
-                      <SelectItem value="15">Próximos 15 dias</SelectItem>
-                      <SelectItem value="30">Próximos 30 dias</SelectItem>
+                    <SelectContent className="bg-popover border-border text-popover-foreground">
+                      <SelectItem value="7" className="text-xs">Próximos 7 dias</SelectItem>
+                      <SelectItem value="15" className="text-xs">Próximos 15 dias</SelectItem>
+                      <SelectItem value="30" className="text-xs">Próximos 30 dias</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
