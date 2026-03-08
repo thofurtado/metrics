@@ -129,15 +129,19 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     },
     onSuccess: () => {
       toast.warning('Transação deletada com sucesso.')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
     onError: (_error, _variables) => {
       toast.error('Ocorreu um erro ao deletar a transação.')
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
     },
     onSettled: () => {
       setLocalLoading(false)
       setOpenDeleteAlert(false)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 
