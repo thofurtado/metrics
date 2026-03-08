@@ -186,6 +186,13 @@ export function Treatments() {
 
           <Pagination
             onPageChange={handlePaginate}
+            onPerPageChange={(val) => {
+              setSearchParams(state => {
+                state.set('per_page', val)
+                state.set('page', '1')
+                return state
+              })
+            }}
             pageIndex={result.data.pageIndex}
             totalCount={result.data.totalCount}
             perPage={result.data.perPage}

@@ -215,9 +215,16 @@ export function Items() {
                         </div>
                     </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end mt-4">
                         <Pagination
                             onPageChange={handlePaginate}
+                            onPerPageChange={(val) => {
+                                setSearchParams(state => {
+                                    state.set('per_page', val)
+                                    state.set('page', '1')
+                                    return state
+                                })
+                            }}
                             pageIndex={pageIndex}
                             totalCount={result.meta.totalCount}
                             perPage={result.meta.perPage}

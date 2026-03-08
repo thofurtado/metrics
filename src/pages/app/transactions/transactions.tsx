@@ -415,6 +415,7 @@ export function Transactions() {
           <div className="flex justify-end">
             <Pagination
               onPageChange={handlePaginate}
+              onPerPageChange={handlePerPageChange}
               pageIndex={
                 activeTab === 'transfers'
                   ? pageIndex
@@ -441,20 +442,7 @@ export function Transactions() {
               />
             )}
 
-            <div className="flex items-center gap-2 ml-4">
-              <span className="text-sm text-muted-foreground">Itens por página:</span>
-              <Select value={String(perPage)} onValueChange={handlePerPageChange}>
-                <SelectTrigger className="h-8 w-[70px]">
-                  <SelectValue placeholder={String(perPage)} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6">6</SelectItem>
-                  <SelectItem value="15">15</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
           </div>
         </div>
       </div>
