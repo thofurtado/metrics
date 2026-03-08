@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRightLeft, Plus, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
@@ -57,7 +56,7 @@ export function Transactions() {
 
   // Time Horizon State
   const [timeHorizon, setTimeHorizon] = useState<'7' | '15' | '30' | 'custom'>('7')
-  const [customDate, setCustomDate] = useState<Date | undefined>(undefined)
+  const [customDate] = useState<Date | undefined>(undefined)
 
   const description = searchParams.get('description')
   const value = searchParams.get('value')
@@ -366,7 +365,7 @@ export function Transactions() {
 
                   {/* TRANSFERS LIST */}
                   {activeTab === 'transfers' && transfersResult &&
-                    transfersResult.transferTransactions.map((transfer: any) => {
+                    transfersResult.transferTransactions.slice(pageIndex * perPage, (pageIndex + 1) * perPage).map((transfer: any) => {
                       return (
                         <TableRow key={transfer.id}>
                           <TableCell className="font-mono text-xs font-medium">
@@ -413,41 +412,50 @@ export function Transactions() {
             </div>
           </div>
 
-          {activeTab !== 'transfers' && (
-            <div className="flex justify-end">
-              <Pagination
-                onPageChange={handlePaginate}
-                pageIndex={
-                  transactionsResult && transactionsResult.data.transactions.pageIndex
-                }
-                totalCount={
-                  transactionsResult && transactionsResult.data.transactions.totalCount
-                }
-                perPage={transactionsResult && transactionsResult.data.transactions.perPage}
-              />
+          <div className="flex justify-end">
+            <Pagination
+              onPageChange={handlePaginate}
+              pageIndex={
+                activeTab === 'transfers'
+                  ? pageIndex
+                  : (transactionsResult ? transactionsResult.data.transactions.pageIndex : 0)
+              }
+              totalCount={
+                activeTab === 'transfers'
+                  ? (transfersResult ? transfersResult.transferTransactions.length : 0)
+                  : (transactionsResult ? transactionsResult.data.transactions.totalCount : 0)
+              }
+              perPage={
+                activeTab === 'transfers'
+                  ? perPage
+                  : (transactionsResult ? transactionsResult.data.transactions.perPage : perPage)
+              }
+            />
+
+            {activeTab !== 'transfers' && (
               <TransactionTableBulkActions
                 selectedCount={selectedIds.length}
                 onBulkPay={handleBulkPay}
                 isPending={isBulkPaying}
                 onClearSelection={() => setSelectedIds([])}
               />
+            )}
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Itens por página:</span>
-                <Select value={String(perPage)} onValueChange={handlePerPageChange}>
-                  <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue placeholder={String(perPage)} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="6">6</SelectItem>
-                    <SelectItem value="15">15</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex items-center gap-2 ml-4">
+              <span className="text-sm text-muted-foreground">Itens por página:</span>
+              <Select value={String(perPage)} onValueChange={handlePerPageChange}>
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={String(perPage)} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </>

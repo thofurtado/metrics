@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query'
-import { Headset, Plus, LayoutList, History } from 'lucide-react'
+import { Plus, LayoutList, History } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -184,14 +184,12 @@ export function Treatments() {
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Pagination
-              onPageChange={handlePaginate}
-              pageIndex={result.data.pageIndex}
-              totalCount={result.data.totalCount}
-              perPage={result.data.perPage}
-            />
-          </div>
+          <Pagination
+            onPageChange={handlePaginate}
+            pageIndex={result.data.pageIndex}
+            totalCount={result.data.totalCount}
+            perPage={result.data.perPage}
+          />
         </div>
       </div>
     </ErrorBoundary>

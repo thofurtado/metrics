@@ -36,8 +36,8 @@ type ItemType = 'PRODUCT' | 'SERVICE' | 'SUPPLY'
 export function Items() {
     const [searchParams, setSearchParams] = useSearchParams()
 
-    // Parse filters from URL (1-based page)
-    const pageIndex = z.coerce.number().parse(searchParams.get('page') ?? '1')
+    // Parse filters from URL
+    const pageIndex = z.coerce.number().transform(page => page - 1).parse(searchParams.get('page') ?? '1')
     const nameFilter = searchParams.get('name') ?? ''
     // display_id only for Product/Service
     const displayIdFilter = searchParams.get('display_id') ?? ''
@@ -55,7 +55,7 @@ export function Items() {
             try {
                 if (activeTabType === 'PRODUCT') {
                     const res = await getProducts({
-                        signal, pageIndex, query: nameFilter,
+                        signal, pageIndex: pageIndex + 1, query: nameFilter,
                     })
                     return {
                         items: res.data?.products?.map((p: any) => ({
@@ -66,7 +66,7 @@ export function Items() {
                         meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
                     }
                 } else if (activeTabType === 'SERVICE') {
-                    const res = await getServices({ signal, pageIndex, query: nameFilter })
+                    const res = await getServices({ signal, pageIndex: pageIndex + 1, query: nameFilter })
                     return {
                         items: res.data?.services?.map((s: any) => ({
                             ...s,
@@ -76,7 +76,7 @@ export function Items() {
                         meta: res.data?.meta ?? { pageIndex: 1, perPage: 10, totalCount: 0 }
                     }
                 } else {
-                    const res = await getSupplies({ signal, pageIndex, query: nameFilter })
+                    const res = await getSupplies({ signal, pageIndex: pageIndex + 1, query: nameFilter })
                     return {
                         items: res.data?.supplies?.map((s: any) => ({
                             ...s,
@@ -96,7 +96,7 @@ export function Items() {
 
     function handlePaginate(newPageIndex: number) {
         setSearchParams((state) => {
-            state.set('page', newPageIndex.toString())
+            state.set('page', (newPageIndex + 1).toString())
             return state
         })
     }
@@ -218,7 +218,7 @@ export function Items() {
                     <div className="flex justify-end">
                         <Pagination
                             onPageChange={handlePaginate}
-                            pageIndex={result.meta.pageIndex}
+                            pageIndex={pageIndex}
                             totalCount={result.meta.totalCount}
                             perPage={result.meta.perPage}
                         />

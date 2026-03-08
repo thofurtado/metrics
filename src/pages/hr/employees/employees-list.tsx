@@ -10,9 +10,10 @@ import { Switch } from "@/components/ui/switch"
 import { formatCurrency } from "@/lib/utils"
 import { EmployeeFormDialog } from "./employee-form-dialog"
 import { DebtManagementDialog } from "./debt-management-dialog"
-import { Users, AlertCircle, CalendarDays, Pencil, Search, Check, X, Bus, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, AlertCircle, CalendarDays, Pencil, Search, Check, X, Bus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Label } from "@/components/ui/label"
+import { Pagination } from "@/components/pagination"
 
 export function EmployeesList() {
     const navigate = useNavigate()
@@ -236,29 +237,14 @@ export function EmployeesList() {
                         </Table>
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Pagination Control */}
                     {meta && (
-                        <div className="flex items-center justify-end space-x-2 py-4">
-                            <div className="text-sm text-muted-foreground">
-                                Página {meta.page} de {meta.totalPages} ({meta.total} registros)
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                                disabled={page === meta.totalPages}
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        <Pagination
+                            pageIndex={page - 1}
+                            totalCount={meta.total}
+                            perPage={10}
+                            onPageChange={(newIndex) => setPage(newIndex + 1)}
+                        />
                     )}
                 </CardContent>
             </Card>
