@@ -114,9 +114,8 @@ export function Transactions() {
     })
   }
 
-  const pageIndex = z.coerce
+  const currentPage = z.coerce
     .number()
-    .transform((page) => page - 1)
     .parse(searchParams.get('page') ?? '1')
 
   // Calculate toDate based on horizon
@@ -141,7 +140,7 @@ export function Transactions() {
   const { data: transactionsResult } = useQuery({
     queryKey: [
       'transactions',
-      pageIndex,
+      currentPage,
       description,
       value,
       sectorId,
@@ -155,7 +154,7 @@ export function Transactions() {
     ],
     queryFn: () =>
       getTransactions({
-        page: pageIndex + 1,
+        page: currentPage,
         perPage,
         description,
         value: value ? Number(value) : null,
@@ -177,9 +176,9 @@ export function Transactions() {
     enabled: activeTab === 'transfers'
   })
 
-  function handlePaginate(pageIndex: number) {
+  function handlePaginate(newPageIndex: number) {
     setSearchParams((state) => {
-      state.set('page', (pageIndex + 1).toString())
+      state.set('page', (newPageIndex + 1).toString())
       return state
     })
   }
@@ -368,7 +367,7 @@ export function Transactions() {
 
                   {/* TRANSFERS LIST */}
                   {activeTab === 'transfers' && transfersResult &&
-                    transfersResult.transferTransactions.slice(pageIndex * perPage, (pageIndex + 1) * perPage).map((transfer: any) => {
+                    transfersResult.transferTransactions.slice((currentPage - 1) * perPage, currentPage * perPage).map((transfer: any) => {
                       return (
                         <TableRow key={transfer.id}>
                           <TableCell className="font-mono text-xs font-medium">
@@ -419,11 +418,7 @@ export function Transactions() {
             <Pagination
               onPageChange={handlePaginate}
               onPerPageChange={handlePerPageChange}
-              pageIndex={
-                activeTab === 'transfers'
-                  ? pageIndex
-                  : (transactionsResult ? transactionsResult.data.transactions.pageIndex : 0)
-              }
+              pageIndex={currentPage - 1}
               totalCount={
                 activeTab === 'transfers'
                   ? (transfersResult ? transfersResult.transferTransactions.length : 0)

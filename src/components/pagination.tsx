@@ -17,7 +17,7 @@ export interface PaginationProps {
   pageIndex: number
   totalCount: number
   perPage: number
-  onPageChange: (pageIndex: number) => Promise<void> | void
+  onPageChange: (newPageIndex: number) => Promise<void> | void
   onPerPageChange?: (perPage: string) => void
 }
 
@@ -29,8 +29,9 @@ export function Pagination({
   onPerPageChange,
 }: PaginationProps) {
   const pages = Math.ceil(totalCount / perPage) || 1
-  const startItem = totalCount === 0 ? 0 : pageIndex * perPage + 1
-  const endItem = totalCount === 0 ? 0 : Math.min((pageIndex + 1) * perPage, totalCount)
+  const page = pageIndex + 1
+  const from = totalCount === 0 ? 0 : (page - 1) * perPage + 1
+  const to = totalCount === 0 ? 0 : Math.min(page * perPage, totalCount)
 
   const canNextPage = pages > pageIndex + 1
   const canPreviousPage = pageIndex > 0
@@ -41,9 +42,9 @@ export function Pagination({
       <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-muted-foreground font-medium order-2 lg:order-1 lg:w-[300px] justify-start">
         <div className="flex items-center gap-2 whitespace-nowrap bg-muted/40 px-4 py-2 rounded-full border border-border/30">
           <span>Mostrando</span>
-          <span className="text-primary font-bold">{startItem}</span>
+          <span className="text-primary font-bold">{from}</span>
           <span>-</span>
-          <span className="text-primary font-bold">{endItem}</span>
+          <span className="text-primary font-bold">{to}</span>
           <span>de</span>
           <span className="text-foreground font-bold">{totalCount}</span>
         </div>

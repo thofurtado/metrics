@@ -40,17 +40,16 @@ export function Treatments() {
   const filterStatus = searchParams.get('status')
   const queryStatus = filterStatus && filterStatus !== 'all' ? filterStatus : activeTab
 
-  const pageIndex = z.coerce
+  const currentPage = z.coerce
     .number()
-    .transform((page) => page - 1)
     .parse(searchParams.get('page') ?? '1')
 
   const { data: result = { data: { treatments: [], totalCount: 0, perPage: 10, pageIndex: 0 } }, isLoading, isFetching } = useQuery({
-    queryKey: ['treatments', pageIndex, treatmentId, clientName, queryStatus],
+    queryKey: ['treatments', currentPage, treatmentId, clientName, queryStatus],
     queryFn: async () => {
       try {
         const res = await getTreatments({
-          page: pageIndex + 1,
+          page: currentPage,
           treatmentId,
           clientName,
           status: queryStatus,
@@ -74,9 +73,9 @@ export function Treatments() {
     navigate('/treatment/new')
   }
 
-  function handlePaginate(pageIndex: number) {
+  function handlePaginate(newPageIndex: number) {
     setSearchParams((state) => {
-      state.set('page', (pageIndex + 1).toString())
+      state.set('page', (newPageIndex + 1).toString())
       return state
     })
   }
@@ -193,7 +192,7 @@ export function Treatments() {
                 return state
               })
             }}
-            pageIndex={result.data.pageIndex}
+            pageIndex={currentPage - 1}
             totalCount={result.data.totalCount}
             perPage={result.data.perPage}
           />
