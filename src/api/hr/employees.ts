@@ -62,11 +62,31 @@ export async function getEmployeeSummary() {
 }
 
 export async function createEmployee(data: CreateEmployeeInput) {
-    const response = await api.post<Employee>('/hr/employees', data)
-    return response.data
+    console.log('[createEmployee] Payload enviado:', data)
+    try {
+        const response = await api.post<Employee>('/hr/employees', data)
+        return response?.data
+    } catch (error: any) {
+        console.error('[createEmployee] Erro ao cadastrar:', error?.message)
+        if (error?.response) {
+            console.log('[createEmployee] Payload de Erro da API Completo:')
+            console.dir(error.response.data, { depth: null })
+        }
+        throw error
+    }
 }
 
 export async function updateEmployee({ id, ...data }: UpdateEmployeeInput) {
-    const response = await api.put<Employee>(`/hr/employees/${id}`, data)
-    return response.data
+    console.log('[updateEmployee] Payload enviado (Update):', data)
+    try {
+        const response = await api.put<Employee>(`/hr/employees/${id}`, data)
+        return response?.data
+    } catch (error: any) {
+        console.error('[updateEmployee] Erro ao atualizar:', error?.message)
+        if (error?.response) {
+            console.log('[updateEmployee] Payload de Erro da API Completo:')
+            console.dir(error.response.data, { depth: null })
+        }
+        throw error
+    }
 }

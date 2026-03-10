@@ -37,10 +37,10 @@ const employeeFormSchema = z.object({
     isRegistered: z.boolean().default(true),
     admissionDate: z.string().refine((date) => new Date(date).toString() !== 'Invalid Date', { message: "Data inválida." }),
     pin: z.string().length(4, { message: "PIN deve ter 4 dígitos." }),
-    salary: z.preprocess((val) => val === '' ? 0 : Number(val), z.number().default(0)),
-    dailyRate: z.preprocess((val) => val === '' ? 0 : Number(val), z.number().default(0)),
-    points: z.preprocess((val) => val === '' ? 0 : Number(val), z.number().int().min(0).default(0)),
-    transportAllowance: z.preprocess((val) => val === '' ? 0 : Number(val), z.number().min(0).default(0)),
+    salary: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().default(0)),
+    dailyRate: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().default(0)),
+    points: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().int().min(0).default(0)),
+    transportAllowance: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().min(0).default(0)),
     hasCestaBasica: z.boolean().default(false),
 })
 
@@ -72,6 +72,8 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             hasCestaBasica: false,
         },
     })
+
+    const currentRegistrationType = form.watch("registrationType")
 
     // Reset form when opening/changing employee
     useEffect(() => {
@@ -112,7 +114,11 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             }
 
             // Pre-process numeric types strictly
-            submissionData.salary = submissionData.salary ? Number(submissionData.salary) : null
+            if (submissionData.registrationType === 'DAILY') {
+                submissionData.salary = 0 // Diaristas carry 0 or null as salary
+            } else {
+                submissionData.salary = submissionData.salary ? Number(submissionData.salary) : null
+            }
             submissionData.dailyRate = submissionData.dailyRate ? Number(submissionData.dailyRate) : null
             submissionData.points = submissionData.points ? Number(submissionData.points) : 0
             submissionData.transportAllowance = submissionData.transportAllowance ? Number(submissionData.transportAllowance) : 0
@@ -294,7 +300,18 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                                 <FormLabel className="flex items-center gap-2">
                                                     <Banknote className="h-4 w-4 text-green-600" /> Salário Base (R$)
                                                 </FormLabel>
-                                                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value)} /></FormControl>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="0.00"
+                                                        {...field}
+                                                        value={currentRegistrationType === 'DAILY' ? '0' : (field.value ?? '')}
+                                                        disabled={currentRegistrationType === 'DAILY'}
+                                                        onChange={e => field.onChange(e.target.value)}
+                                                    />
+                                                </FormControl>
+                                                {currentRegistrationType === 'DAILY' && <FormDescription className="text-xs">Não aplicável para diaristas.</FormDescription>}
                                                 <FormMessage />
                                             </FormItem>
                                         )}
