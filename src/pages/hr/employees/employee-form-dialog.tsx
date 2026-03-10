@@ -105,6 +105,19 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                 submissionData.isRegistered = true // Active if not dismissed
             }
 
+            // Format admissionDate to full ISO string for backend Zod schema
+            if (submissionData.admissionDate) {
+                // adding T00:00:00.000Z or simply parse and toString
+                submissionData.admissionDate = new Date(submissionData.admissionDate).toISOString()
+            }
+
+            // Pre-process numeric types strictly
+            submissionData.salary = submissionData.salary ? Number(submissionData.salary) : null
+            submissionData.dailyRate = submissionData.dailyRate ? Number(submissionData.dailyRate) : null
+            submissionData.points = submissionData.points ? Number(submissionData.points) : 0
+            submissionData.transportAllowance = submissionData.transportAllowance ? Number(submissionData.transportAllowance) : 0
+
+
             if (isEditing && employee) {
                 return updateEmployee({ id: employee.id, ...submissionData })
             }
@@ -117,11 +130,19 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             toast.success(isEditing ? "Funcionário atualizado!" : "Funcionário cadastrado!")
         },
         onError: (error: any) => {
-            if (error.response?.data?.message === 'PIN_ALREADY_EXISTS') {
+            console.error("Erro completo ao salvar funcionário:", error)
+
+            const errorMessage = error?.response?.data?.message || error?.message
+            const errorData = error?.response?.data
+
+            if (errorMessage === 'PIN_ALREADY_EXISTS') {
                 toast.error("Este PIN já está em uso por outro colaborador.")
                 form.setError("pin", { message: "PIN já existe" })
             } else {
-                toast.error("Erro ao salvar funcionário. Verifique os dados.")
+                if (errorData) {
+                    console.log("Detalhes do erro do backend (ex. Zod):", errorData)
+                }
+                toast.error(`Erro ao salvar funcionário: ${errorMessage || 'Verifique os dados enviados.'}`)
             }
         }
     })
