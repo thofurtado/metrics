@@ -41,6 +41,7 @@
     "dayjs": "^1.11.10",
     "framer-motion": "^12.31.0",
     "html2canvas": "^1.4.1",
+    "i18next": "^25.8.17",
     "jsonwebtoken": "^9.0.2",
     "localforage": "^1.10.0",
     "lucide-react": "^0.358.0",
@@ -60,7 +61,8 @@
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.181.0",
-    "zod": "^3.22.5"
+    "zod": "^3.22.5",
+    "zod-i18n-map": "^2.27.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

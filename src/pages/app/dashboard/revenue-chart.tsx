@@ -54,7 +54,7 @@ function processChartData(data: { day: string; revenue: number }[] | undefined) 
 
 export function RevenueChart({ className }: { className?: string }) {
   const { data: monthIncomeByDays } = useQuery({
-    queryFn: getMonthIncomesByDay,
+    queryFn: () => getMonthIncomesByDay(),
     queryKey: ['metrics', 'month-income-by-day'],
   })
 
@@ -62,7 +62,7 @@ export function RevenueChart({ className }: { className?: string }) {
 
   return (
     <Card className={className}>
-      <CardHeader className="flex-row items-center justify-between pb-8">
+      <CardHeader className="flex flex-row items-center justify-between pb-6">
         <div className="space-y-1">
           <CardTitle className="text-base font-medium">
             Receita no período
@@ -75,7 +75,7 @@ export function RevenueChart({ className }: { className?: string }) {
           <>
             {/* ResponsiveContainer garante que o gráfico ocupe 100% da largura do pai */}
             <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={chartData} style={{ fontSize: 12 }}>
+              <LineChart data={chartData} style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
                 <XAxis
                   dataKey="formattedDay"
                   axisLine={false}
@@ -89,7 +89,7 @@ export function RevenueChart({ className }: { className?: string }) {
                   stroke="#888"
                   axisLine={false}
                   tickLine={false}
-                  width={80}
+                  width={88}
                   tickFormatter={(value: number) =>
                     value.toLocaleString('pt-BR', {
                       style: 'currency',

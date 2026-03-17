@@ -77,20 +77,20 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
                 ) : agendaData && agendaData.length > 0 ? (
                     <div className="h-[240px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={agendaData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                            <BarChart data={agendaData} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
                                 <XAxis
                                     dataKey="data"
                                     tickLine={false}
                                     axisLine={false}
                                     tick={{ fontSize: 12 }}
-                                    dy={10}
+                                    dy={16}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontSize: 12 }}
+                                    tick={{ fontSize: 12, fontFamily: 'monospace' }}
                                     tickFormatter={(value) => `R$ ${value}`}
-                                    dx={-10}
+                                    width={80} // Garante um espaço fixo para o eixo Y não sobrepor
                                 />
                                 <Tooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} />
                                 <Bar dataKey="total" radius={[4, 4, 0, 0]} onClick={handleBarClick}>
@@ -117,22 +117,22 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
                     <DialogHeader>
                         <DialogTitle>Pagamentos de {selectedData?.data}</DialogTitle>
                     </DialogHeader>
-                    <div className="mt-4 max-h-[60vh] overflow-y-auto">
+                    <div className="mt-4 max-h-[60vh] overflow-y-auto pr-2">
                         {selectedData?.detalhes.map((det, index) => (
-                            <div key={index} className="flex justify-between items-center py-3 border-b last:border-0 border-gray-100 dark:border-minsk-800">
-                                <div>
-                                    <p className="font-medium text-sm">{det.descricao}</p>
-                                    <p className="text-xs text-muted-foreground">{det.categoria}</p>
+                            <div key={index} className="flex justify-between items-center py-4 border-b last:border-0 border-minsk-100 dark:border-minsk-800/60 gap-4">
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-sm truncate" title={det.descricao}>{det.descricao}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{det.categoria}</p>
                                 </div>
-                                <span className="font-bold text-stiletto-600">
+                                <span className="font-bold text-stiletto-600 tabular-nums text-right min-w-[90px]">
                                     {det.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                 </span>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-minsk-800 flex justify-between items-center bg-gray-50 dark:bg-minsk-900/50 p-3 rounded-lg">
-                        <span className="font-semibold">Total do Dia</span>
-                        <span className="font-bold text-lg text-stiletto-700">
+                    <div className="mt-4 pt-4 border-t border-minsk-200 dark:border-minsk-800 flex justify-between items-center bg-minsk-50 dark:bg-minsk-900/40 p-4 rounded-lg">
+                        <span className="font-semibold text-minsk-900 dark:text-minsk-100">Total do Dia</span>
+                        <span className="font-bold text-lg text-stiletto-600 tabular-nums">
                             {selectedData?.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </span>
                     </div>

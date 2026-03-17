@@ -1,4 +1,4 @@
-﻿import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -111,7 +111,7 @@ export function TransactionExpense() {
   // Quick Add Dialogs
   const [createAccountOpen, setCreateAccountOpen] = useState(false)
   const [createSectorOpen, setCreateSectorOpen] = useState(false)
-  const [createSupplierOpen, setCreateSupplierOpen] = useState(false)
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState<{ open: boolean, id?: string }>({ open: false })
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -469,7 +469,8 @@ export function TransactionExpense() {
                       onSelect={onChange}
                       suppliers={suppliersResult?.suppliers}
                       isLoading={!suppliersResult}
-                      onQuickAdd={() => setCreateSupplierOpen(true)}
+                      onQuickAdd={() => setSupplierDialogOpen({ open: true })}
+                      onEditInfo={(id) => setSupplierDialogOpen({ open: true, id })}
                     />
                   </FormItem>
                 )}
@@ -490,8 +491,8 @@ export function TransactionExpense() {
                         isLoading={!sectors}
                         placeholder="Selecione..."
                         emptyMessage="Nenhuma categoria encontrada"
-                        options={sectors?.data.sectors
-                          .filter((sector) => sector.type === 'out')
+                        options={sectors?.data?.sectors
+                          ?.filter((sector) => sector.type === 'out')
                           .map((sector) => ({
                             label: sector.name,
                             value: sector.id,
@@ -517,7 +518,7 @@ export function TransactionExpense() {
                         isLoading={!accounts}
                         placeholder="Selecione..."
                         emptyMessage="Nenhuma conta encontrada"
-                        options={accounts?.accounts.map((account) => ({
+                        options={accounts?.accounts?.map((account) => ({
                           label: account.name,
                           value: account.id,
                         }))}
@@ -664,8 +665,11 @@ export function TransactionExpense() {
         onOpenChange={setCreateSectorOpen}
       />
 
-      <Dialog open={createSupplierOpen} onOpenChange={setCreateSupplierOpen}>
-        <SupplierFormDialog onOpenChange={setCreateSupplierOpen} />
+      <Dialog open={supplierDialogOpen.open} onOpenChange={(open) => setSupplierDialogOpen({ open, id: open ? supplierDialogOpen.id : undefined })}>
+        <SupplierFormDialog 
+          supplierToEdit={supplierDialogOpen.id ? suppliersResult?.suppliers?.find(s => s.id === supplierDialogOpen.id) : null}
+          onOpenChange={(open) => setSupplierDialogOpen({ open, id: open ? supplierDialogOpen.id : undefined })} 
+        />
       </Dialog>
     </ResponsiveDialogContent>
   )

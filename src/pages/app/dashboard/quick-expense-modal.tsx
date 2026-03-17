@@ -113,7 +113,7 @@ export function QuickExpenseModal({ open, onOpenChange }: QuickExpenseModalProps
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] rounded-2xl p-4 sm:p-6">
                 <DialogHeader>
                     {/* ... */}
                     <DialogTitle>Despesa Rápida</DialogTitle>

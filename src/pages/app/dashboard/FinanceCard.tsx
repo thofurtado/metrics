@@ -39,14 +39,14 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
 
     return (
         <Card className={cn("col-span-1", className)} {...props}>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 px-4 pt-4">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-minsk-600" />
                     Visão Financeira
                 </CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-3 px-4 pb-4">
+            <CardContent className="space-y-4">
                 {/* Saldo Principal - Layout Compacto */}
                 <div className="flex items-center justify-between bg-minsk-50 dark:bg-minsk-900/30 rounded-lg p-3 border">
                     <div>
@@ -54,7 +54,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                         {isLoading ? (
                             <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-xl font-bold text-minsk-700 dark:text-minsk-300">
+                            <span className="text-xl font-bold text-minsk-700 dark:text-minsk-300 tabular-nums">
                                 {formatCurrency(saldoDisponivel)}
                             </span>
                         )}
@@ -77,7 +77,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                         {isLoading ? (
                             <div className="h-4 w-16 bg-vida-loca-200 animate-pulse rounded mb-1"></div>
                         ) : (
-                            <span className="text-lg font-bold block mb-1">
+                            <span className="text-lg font-bold block mb-1 tabular-nums">
                                 {formatCurrency(receita)}
                             </span>
                         )}
@@ -90,7 +90,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                             {isLoading ? (
                                 <div className="h-3 w-10 bg-vida-loca-200 animate-pulse rounded"></div>
                             ) : (
-                                <span className="text-xs font-bold text-vida-loca-600">
+                                <span className="text-xs font-bold text-vida-loca-600 tabular-nums text-right">
                                     {formatCurrency(aReceber)}
                                 </span>
                             )}
@@ -104,7 +104,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                             {isLoading ? (
                                 <div className="h-3 w-10 bg-amber-200 animate-pulse rounded"></div>
                             ) : (
-                                <span className="text-xs font-bold text-amber-600">
+                                <span className="text-xs font-bold text-amber-600 tabular-nums text-right">
                                     {formatCurrency(receitaVencida)}
                                 </span>
                             )}
@@ -119,7 +119,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                         {isLoading ? (
                             <div className="h-4 w-16 bg-stiletto-200 animate-pulse rounded mb-1"></div>
                         ) : (
-                            <span className="text-lg font-bold block mb-1">
+                            <span className="text-lg font-bold block mb-1 tabular-nums">
                                 {formatCurrency(despesa)}
                             </span>
                         )}
@@ -132,7 +132,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                             {isLoading ? (
                                 <div className="h-3 w-10 bg-stiletto-200 animate-pulse rounded"></div>
                             ) : (
-                                <span className="text-xs font-bold text-stiletto-600">
+                                <span className="text-xs font-bold text-stiletto-600 tabular-nums text-right">
                                     {formatCurrency(aPagar)}
                                 </span>
                             )}
@@ -146,7 +146,7 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                             {isLoading ? (
                                 <div className="h-3 w-10 bg-rose-200 animate-pulse rounded"></div>
                             ) : (
-                                <span className="text-xs font-bold text-rose-600">
+                                <span className="text-xs font-bold text-rose-600 tabular-nums text-right">
                                     {formatCurrency(despesaVencida)}
                                 </span>
                             )}

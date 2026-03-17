@@ -31,12 +31,12 @@ import { PlusCircle, UserPlus, Info, Banknote, UserX, AlertTriangle, CalendarDay
 import { Badge } from "@/components/ui/badge"
 
 const employeeFormSchema = z.object({
-    name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }),
-    role: z.string().min(2, { message: "Cargo é obrigatório." }),
+    name: z.string().min(2),
+    role: z.string().min(2),
     registrationType: z.string(), // We handle logic manually
     isRegistered: z.boolean().default(true),
     admissionDate: z.string().refine((date) => new Date(date).toString() !== 'Invalid Date', { message: "Data inválida." }),
-    pin: z.string().length(4, { message: "PIN deve ter 4 dígitos." }),
+    pin: z.string().length(4),
     salary: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().default(0)),
     dailyRate: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().default(0)),
     points: z.preprocess((val) => (val === '' || val === undefined || val === null) ? 0 : Number(val), z.number().int().min(0).default(0)),

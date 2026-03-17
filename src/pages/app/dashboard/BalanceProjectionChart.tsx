@@ -103,7 +103,7 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
 
     return (
         <Card className={className}>
-            <CardHeader className="flex-row items-center justify-between pb-8">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
                 <div className="space-y-1">
                     <CardTitle className="text-base font-medium text-blue-500">
                         Previsão de Saldo (Próx. 30 Dias)
@@ -134,7 +134,7 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                 ) : chartData.length > 0 ? (
                     <>
                         <ResponsiveContainer width="100%" height={240}>
-                            <LineChart data={chartData} style={{ fontSize: 12 }}>
+                            <LineChart data={chartData} style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
                                 <CartesianGrid vertical={false} className="stroke-muted" />
 
                                 <XAxis
@@ -149,7 +149,7 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                     stroke="#888"
                                     axisLine={false}
                                     tickLine={false}
-                                    width={80}
+                                    width={88}
                                     tickFormatter={(value: number) =>
                                         value.toLocaleString('pt-BR', {
                                             style: 'currency',

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, Pencil } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,9 +11,10 @@ interface SupplierComboboxProps {
     suppliers?: Supplier[]
     isLoading?: boolean
     onQuickAdd?: () => void
+    onEditInfo?: (supplierId: string) => void
 }
 
-export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, onQuickAdd }: SupplierComboboxProps) {
+export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, onQuickAdd, onEditInfo }: SupplierComboboxProps) {
     const [open, setOpen] = React.useState(false)
     const [search, setSearch] = React.useState("")
     const wrapperRef = React.useRef<HTMLDivElement>(null)
@@ -123,6 +124,20 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                     </div>
                 )}
             </div>
+
+            {onEditInfo && selectedSupplier && (
+                <Button
+                    variant="outline"
+                    size="icon"
+                    type="button"
+                    className="shrink-0 h-10 w-10 mt-0"
+                    onClick={() => onEditInfo(selectedSupplier.id)}
+                    title="Editar Fornecedor"
+                    disabled={isLoading}
+                >
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            )}
 
             {onQuickAdd && (
                 <Button

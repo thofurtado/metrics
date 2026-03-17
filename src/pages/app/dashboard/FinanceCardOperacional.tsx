@@ -36,14 +36,14 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
 
     return (
         <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 px-4 pt-4">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-minsk-600" />
                     Fluxo e Saúde Financeira
                 </CardTitle>
             </CardHeader>
 
-            <CardContent className="flex-1 space-y-4 px-4 pb-4">
+            <CardContent className="flex-1 space-y-4">
                 {/* Topo: Receita e Ticket Médio */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="bg-vida-loca-50 dark:bg-vida-loca-900/20 rounded-lg p-3 border border-vida-loca-100 dark:border-vida-loca-800 col-span-2 sm:col-span-1">
@@ -54,7 +54,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-5 w-20 bg-vida-loca-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-vida-loca-600 block">
+                            <span className="text-lg font-bold text-vida-loca-600 block tabular-nums">
                                 {formatCurrency(receitaAcumulada)}
                             </span>
                         )}
@@ -68,7 +68,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-5 w-20 bg-blue-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-blue-600 block">
+                            <span className="text-lg font-bold text-blue-600 block tabular-nums">
                                 {formatCurrency(ticketMedio)}
                             </span>
                         )}
@@ -82,7 +82,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-4 w-12 bg-gray-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="font-bold">{progressPercentage.toFixed(0)}% Pago</span>
+                            <span className="font-bold tabular-nums">{progressPercentage.toFixed(0)}% Pago</span>
                         )}
                     </div>
 
@@ -97,7 +97,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-3 w-48 bg-gray-200 animate-pulse mx-auto rounded mt-1"></div>
                         ) : (
-                            <span className="mt-1 block">
+                            <span className="mt-1 block tabular-nums">
                                 <strong>{formatCurrency(despesasPagasMes)}</strong> de {formatCurrency(totalDespesasMes)} liquidadas
                             </span>
                         )}
@@ -115,7 +115,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-5 w-20 bg-stiletto-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-stiletto-600 block">
+                            <span className="text-lg font-bold text-stiletto-600 block tabular-nums">
                                 {formatCurrency(totalVencido)}
                             </span>
                         )}
@@ -130,7 +130,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {isLoading ? (
                             <div className="h-5 w-20 bg-amber-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-amber-600 block">
+                            <span className="text-lg font-bold text-amber-600 block tabular-nums">
                                 {formatCurrency(projecao14Dias)}
                             </span>
                         )}

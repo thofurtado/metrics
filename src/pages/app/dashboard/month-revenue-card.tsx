@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export function MonthRevenueCard() {
   const { data: monthIncomeAmount } = useQuery({
-    queryFn: getMonthIncomesAmount,
+    queryFn: () => getMonthIncomesAmount(),
     queryKey: ['metrics', 'month-incomes-amount'],
   })
 
@@ -18,7 +18,7 @@ export function MonthRevenueCard() {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold">
           Receitas mensais
         </CardTitle>
@@ -27,7 +27,7 @@ export function MonthRevenueCard() {
       <CardContent className="space-y-1">
         {monthIncomeAmount && (
           <>
-            <span className="text-2xl font-bold tracking-tight">
+            <span className="text-2xl font-bold tracking-tight tabular-nums">
               {monthIncomeAmount.monthIncomeAmount !== null
                 ? monthIncomeAmount.monthIncomeAmount.toLocaleString('pt-BR')
                 : '0'}

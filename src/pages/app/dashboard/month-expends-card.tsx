@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export function MonthExpendsCard() {
   const { data: monthExpenseAmount } = useQuery({
-    queryFn: getMonthExpensesAmount,
+    queryFn: () => getMonthExpensesAmount(),
     queryKey: ['metrics', 'month-expenses-amount'],
   })
 
@@ -27,7 +27,7 @@ export function MonthExpendsCard() {
     // Se não há dados do mês anterior para comparar, mostre a mensagem de primeiro período.
     if (!hasComparisonData) {
       // Se houver despesas, mas não mês anterior para comparar
-      if (monthExpenseAmount?.monthExpenseAmount > 0) {
+      if ((monthExpenseAmount?.monthExpenseAmount ?? 0) > 0) {
         return (
           <span className="font-semibold text-blue-700 dark:text-blue-500">
             Primeira despesa do período.
@@ -69,7 +69,7 @@ export function MonthExpendsCard() {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold">
           Despesas mensais
         </CardTitle>
@@ -78,7 +78,7 @@ export function MonthExpendsCard() {
       <CardContent className="space-y-1">
         {monthExpenseAmount && (
           <>
-            <span className="text-2xl font-bold tracking-tight">
+            <span className="text-2xl font-bold tracking-tight tabular-nums">
               {formattedAmount}
             </span>
 

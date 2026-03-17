@@ -1,4 +1,4 @@
-﻿import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -441,8 +441,8 @@ export function TransactionIncome() {
                       isLoading={!sectors}
                       placeholder="Selecione..."
                       emptyMessage="Nenhuma categoria encontrada"
-                      options={sectors?.data.sectors
-                        .filter((sector) => sector.type === 'in')
+                      options={sectors?.data?.sectors
+                        ?.filter((sector) => sector.type === 'in')
                         .map((sector) => ({
                           label: sector.name,
                           value: sector.id,
@@ -467,7 +467,7 @@ export function TransactionIncome() {
                       isLoading={!accounts}
                       placeholder="Selecione..."
                       emptyMessage="Nenhuma conta encontrada"
-                      options={accounts?.accounts.map((account) => ({
+                      options={accounts?.accounts?.map((account) => ({
                         label: account.name,
                         value: account.id,
                         balance: account.balance
