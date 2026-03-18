@@ -27,10 +27,10 @@ import { createTransaction } from '@/api/create-transaction'
 import { useEffect } from 'react'
 
 const quickExpenseSchema = z.object({
-    description: z.string().min(1, 'Informe a descrição'),
+    description: z.string().optional(),
     amount: z.string().min(1, 'Informe o valor'),
-    sectorId: z.string().min(1, 'Selecione a categoria'),
-    accountId: z.string().min(1, 'Selecione a conta'),
+    sectorId: z.string().optional(),
+    accountId: z.string().optional(),
 })
 
 type QuickExpenseForm = z.infer<typeof quickExpenseSchema>
@@ -106,7 +106,8 @@ export function QuickExpenseModal({ open, onOpenChange }: QuickExpenseModalProps
             amount: Number(data.amount.replace(',', '.')),
             sector: data.sectorId,
             account: data.accountId,
-            date: new Date(),
+            data_vencimento: new Date(),
+            data_emissao: new Date(),
             confirmed: true, // Quick expense implies it's paid NOW
         })
     }

@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { type ComponentProps } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Tag } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { getOperationalSummary } from '@/api/get-operational-summary'
+import { OverdueTransactionsModal } from './overdue-transactions-modal'
 
 interface FinanceCardOperacionalProps extends ComponentProps<'div'> {
     month: number
@@ -16,6 +17,8 @@ const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export function FinanceCardOperacional({ className, month, year, ...props }: FinanceCardOperacionalProps) {
+    const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
+
     const { data: opData, isLoading } = useQuery({
         queryFn: () => getOperationalSummary({ month, year }),
         queryKey: ['metrics', 'operational-summary', month, year],
@@ -107,15 +110,18 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                 {/* Base: Restante das métricas em Grid */}
                 <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                     {/* Bloco Compromissos Vencidos */}
-                    <div className="bg-stiletto-50 dark:bg-stiletto-900/20 rounded-lg p-3 border border-stiletto-100 dark:border-stiletto-800 col-span-2 sm:col-span-1">
-                        <div className="flex items-center gap-1.5 mb-1">
+                    <div 
+                        onClick={() => setIsOverdueModalOpen(true)}
+                        className="bg-stiletto-50 dark:bg-stiletto-900/20 rounded-lg p-3 border border-stiletto-100 dark:border-stiletto-800 col-span-2 sm:col-span-1 cursor-pointer hover:bg-stiletto-100 hover:border-stiletto-300 dark:hover:bg-stiletto-900/40 transition-all shadow-sm group"
+                    >
+                        <div className="flex items-center gap-1.5 mb-1 group-hover:scale-[1.02] transition-transform">
                             <AlertTriangle className="h-3.5 w-3.5 text-stiletto-600" />
                             <span className="text-xs font-semibold text-stiletto-700">Total Vencido</span>
                         </div>
                         {isLoading ? (
                             <div className="h-5 w-20 bg-stiletto-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-stiletto-600 block tabular-nums">
+                            <span className="text-lg font-bold text-stiletto-600 block tabular-nums group-hover:scale-[1.02] transition-transform origin-left">
                                 {formatCurrency(totalVencido)}
                             </span>
                         )}
@@ -137,6 +143,12 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     </div>
                 </div>
             </CardContent>
+
+            <OverdueTransactionsModal 
+                open={isOverdueModalOpen} 
+                onOpenChange={setIsOverdueModalOpen} 
+            />
         </Card>
     )
 }
+

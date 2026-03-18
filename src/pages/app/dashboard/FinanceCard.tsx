@@ -1,6 +1,6 @@
 // ARQUIVO: FinanceCard.tsx
 import { useQuery } from '@tanstack/react-query'
-import { type ComponentProps } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { Wallet } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import {
     getFinanceMetrics,
 } from '@/api/get-finance-metrics'
+import { OverdueTransactionsModal } from './overdue-transactions-modal'
 
 interface FinanceCardProps extends ComponentProps<'div'> {
     month: number
@@ -19,6 +20,8 @@ const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export function FinanceCard({ className, month, year, ...props }: FinanceCardProps) {
+    const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
+
     // Query para buscar todos os dados financeiros
     const { data: financeData, isLoading } = useQuery({
         queryFn: () => getFinanceMetrics({ month, year }),
@@ -139,14 +142,17 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                         </div>
 
                         {/* A Pagar Vencido - MESMO TAMANHO */}
-                        <div className="flex items-center justify-between pt-1 border-t border-stiletto-200 dark:border-stiletto-800">
-                            <span className="text-xs text-rose-800 dark:text-rose-300 font-medium">
+                        <div 
+                            onClick={() => setIsOverdueModalOpen(true)}
+                            className="flex items-center justify-between pt-1 border-t border-stiletto-200 dark:border-stiletto-800 cursor-pointer hover:bg-stiletto-100 hover:-mx-1 hover:px-1 dark:hover:bg-stiletto-900/40 rounded transition-all group"
+                        >
+                            <span className="text-xs text-rose-800 dark:text-rose-300 font-medium group-hover:font-semibold">
                                 Vencido:
                             </span>
                             {isLoading ? (
                                 <div className="h-3 w-10 bg-rose-200 animate-pulse rounded"></div>
                             ) : (
-                                <span className="text-xs font-bold text-rose-600 tabular-nums text-right">
+                                <span className="text-xs font-bold text-rose-600 tabular-nums text-right group-hover:scale-[1.05] transition-transform origin-right">
                                     {formatCurrency(despesaVencida)}
                                 </span>
                             )}
@@ -154,6 +160,11 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
                     </div>
                 </div>
             </CardContent>
+
+            <OverdueTransactionsModal 
+                open={isOverdueModalOpen} 
+                onOpenChange={setIsOverdueModalOpen} 
+            />
         </Card>
     )
 }

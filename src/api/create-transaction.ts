@@ -1,55 +1,54 @@
-import { z } from 'zod'
-
 import { api } from '@/lib/axios'
 
-const transactionForm = z.object({
-  operation: z.string(),
-  data_vencimento: z.date().nullish(),
-  data_emissao: z.date().nullish(),
-  description: z.string().nullish(),
-  account: z.string().nullish(),
-  destination_account: z.string().nullish(),
-  sector: z.string().nullish(),
-  amount: z.number().nullish(),
-  confirmed: z.boolean().nullish(),
-  supplier: z.string().nullish(),
-  installments_count: z.number().nullish(),
-  interval_frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']).nullish(),
-  custom_installments: z.array(z.object({
-    data_vencimento: z.date(),
-    data_emissao: z.date().optional(),
-    amount: z.number()
-  })).nullish(),
-})
-
-type TransactionForm = z.infer<typeof transactionForm>
+export interface CreateTransactionBody {
+  operation: 'income' | 'expense' | 'transfer'
+  amount: number
+  account?: string | null
+  destination_account_id?: string | null
+  supplier?: string | null
+  payment_method?: string | null
+  data_vencimento?: Date | null
+  data_emissao?: Date | null
+  sector?: string | null
+  description?: string | null
+  confirmed?: boolean | null
+  installments_count?: number | null
+  interval_frequency?: 'WEEKLY' | 'MONTHLY' | 'YEARLY' | null
+  custom_installments?: {
+    data_vencimento: Date
+    data_emissao?: Date
+    amount: number
+  }[] | null
+}
 
 export async function createTransaction({
+  operation,
+  amount,
+  account,
+  destination_account_id,
+  supplier,
+  payment_method,
   data_vencimento,
   data_emissao,
-  description,
-  account,
-  destination_account,
   sector,
-  amount,
+  description,
   confirmed,
-  operation,
-  supplier,
   installments_count,
   interval_frequency,
   custom_installments,
-}: TransactionForm) {
-  const response = await api.post(`/transaction`, {
+}: CreateTransactionBody) {
+  const response = await api.post('/transaction', {
     operation,
     amount,
-    account_id: account,
-    destination_account_id: destination_account,
+    account_id: account || null,
+    destination_account_id: destination_account_id || null,
     data_vencimento,
     data_emissao,
     description: description || null,
     sector_id: sector || null,
     confirmed,
     supplier_id: supplier || null,
+    payment_method: payment_method || null,
     installments_count,
     interval_frequency,
     custom_installments,

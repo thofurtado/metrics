@@ -56,14 +56,15 @@ import { Dialog } from '@/components/ui/dialog'
 const formSchema = z.object({
   data_vencimento: z.date({ required_error: "Vencimento é obrigatório" }),
   data_emissao: z.date({ required_error: "Emissão é obrigatória" }),
-  description: z.string().min(1, "Descrição é obrigatória"),
-  account: z.string().min(1, "Conta é obrigatória"),
-  sector: z.string().min(1, "Categoria é obrigatória"),
+  description: z.string().optional(),
+  account: z.string().optional(),
+  sector: z.string().optional(),
   amount: z.string().min(1, "Valor é obrigatório").refine(
     (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
     "Valor deve ser maior que zero"
   ),
   supplier: z.string().optional(),
+  payment_method: z.string().optional(),
   confirmed: z.boolean().default(true),
 
   // Installments
@@ -124,6 +125,7 @@ export function TransactionExpense() {
       sector: '',
       amount: '',
       confirmed: true,
+      payment_method: 'BOLETO',
       installments_count: '',
       interval_frequency: 'MONTHLY'
     }
@@ -216,6 +218,7 @@ export function TransactionExpense() {
         account: data.account, // mapped to account_id or account generic
         sector: data.sector, // mapped to sector_id
         supplier: data.supplier,
+        payment_method: data.payment_method,
         data_vencimento: data.data_vencimento,
         data_emissao: data.data_emissao,
       }
@@ -250,6 +253,7 @@ export function TransactionExpense() {
         sector: '',
         amount: '',
         confirmed: true,
+        payment_method: 'BOLETO',
         installments_count: '',
         interval_frequency: 'MONTHLY'
       })
@@ -480,6 +484,7 @@ export function TransactionExpense() {
 
             {/* ─── GRUPO 4: ENTIDADES (Fornecedor, Categoria, Conta) ─── */}
             <div className="grid grid-cols-1 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {/* Supplier */}
               <FormField
                 control={form.control}
@@ -500,6 +505,31 @@ export function TransactionExpense() {
                 )}
               />
 
+              {/* Payment Method */}
+              <FormField
+                  control={form.control}
+                  name="payment_method"
+                  render={({ field }) => (
+                      <FormItem className="space-y-1.5">
+                          <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Forma de Pagamento</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                              <FormControl>
+                                  <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
+                                      <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  <SelectItem value="BOLETO">Boleto</SelectItem>
+                                  <SelectItem value="PIX">Pix</SelectItem>
+                                  <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                                  <SelectItem value="CHECK">Cheque</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </FormItem>
+                  )}
+              />
+            </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* Sector */}
                 <FormField
@@ -509,7 +539,7 @@ export function TransactionExpense() {
                     <FormItem className="space-y-1.5">
                       <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Categoria</FormLabel>
                       <QuickAddSelect
-                        value={value}
+                        value={value || ''}
                         onValueChange={onChange}
                         disabled={disabled}
                         isLoading={!sectors}
@@ -536,7 +566,7 @@ export function TransactionExpense() {
                     <FormItem className="space-y-1.5">
                       <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Conta</FormLabel>
                       <QuickAddSelect
-                        value={value}
+                        value={value || ''}
                         onValueChange={onChange}
                         disabled={disabled}
                         isLoading={!accounts}

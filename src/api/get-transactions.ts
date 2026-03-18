@@ -25,6 +25,10 @@ export interface GetTransactionsResponse {
       sector_id: string | null
       description: string | null
       confirmed: boolean
+      supplier?: {
+        id: string
+        name: string
+      } | null
     }[]
     totalCount: number
     pageIndex: number

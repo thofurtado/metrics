@@ -55,10 +55,10 @@ const formSchema = z.object({
   data_emissao: z.date({
     required_error: "Emissão é obrigatória",
   }),
-  description: z.string().min(1, "Descrição é obrigatória"),
+  description: z.string().optional(),
   // account: z.string().min(1, "Conta é obrigatória"),
-  account: z.string().min(1, "Conta é obrigatória"),
-  sector: z.string().min(1, "Setor é obrigatório"),
+  account: z.string().optional(),
+  sector: z.string().optional(),
   amount: z.string().min(1, "Valor é obrigatório").refine(
     (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
     "Valor deve ser maior que zero"
@@ -435,7 +435,7 @@ export function TransactionIncome() {
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Categoria</FormLabel>
                     <QuickAddSelect
-                      value={value}
+                      value={value || ''}
                       onValueChange={onChange}
                       disabled={disabled}
                       isLoading={!sectors}
@@ -461,7 +461,7 @@ export function TransactionIncome() {
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Conta</FormLabel>
                     <QuickAddSelect
-                      value={value}
+                      value={value || ''}
                       onValueChange={onChange}
                       disabled={disabled}
                       isLoading={!accounts}
