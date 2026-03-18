@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRightLeft, Plus, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
@@ -263,10 +263,28 @@ export function Transactions() {
           }}
           className="w-full"
         >
-          <TabsList className="w-full">
-            <TabsTrigger value="payable" className="flex-1">A Pagar / Receber</TabsTrigger>
-            <TabsTrigger value="history" className="flex-1">Histórico</TabsTrigger>
-            <TabsTrigger value="transfers" className="flex-1">Transferências</TabsTrigger>
+          <TabsList className="w-full h-auto p-1 bg-muted/50 rounded-xl flex">
+            <TabsTrigger 
+              value="payable" 
+              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/40 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-md transition-all font-bold"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Pendentes
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history" 
+              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-md transition-all font-bold"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Pagos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="transfers" 
+              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all font-bold"
+            >
+              <ArrowRightLeft className="w-4 h-4 mr-2 hidden sm:block" />
+              Transferências
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 

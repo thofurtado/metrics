@@ -16,6 +16,7 @@ import { createTransaction } from '@/api/create-transaction'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
 import { getSuppliers } from '@/api/get-suppliers'
+import { deleteSupplier } from '@/api/delete-supplier'
 
 import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { CreateSectorDialog } from '@/components/create-sector-dialog'
@@ -176,6 +177,28 @@ export function TransactionExpense() {
     queryClient.invalidateQueries({ queryKey: ['transactions'] })
     queryClient.invalidateQueries({ queryKey: ['metrics'] })
     queryClient.invalidateQueries({ queryKey: ['payables'] })
+  }
+
+  const { mutateAsync: deleteSupplierFn } = useMutation({
+    mutationFn: deleteSupplier,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    }
+  })
+
+  const handleDeleteSupplier = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este fornecedor? As transações vinculadas perderão a referência, mas não serão apagadas.')) {
+      try {
+        await deleteSupplierFn(id)
+        if (form.getValues('supplier') === id) {
+          form.setValue('supplier', undefined)
+        }
+        toast.success('Fornecedor excluído com sucesso!')
+      } catch (error) {
+        toast.error('Erro ao excluir fornecedor.')
+      }
+    }
   }
 
   // Handle Submit
@@ -471,6 +494,7 @@ export function TransactionExpense() {
                       isLoading={!suppliersResult}
                       onQuickAdd={() => setSupplierDialogOpen({ open: true })}
                       onEditInfo={(id) => setSupplierDialogOpen({ open: true, id })}
+                      onDeleteInfo={handleDeleteSupplier}
                     />
                   </FormItem>
                 )}
