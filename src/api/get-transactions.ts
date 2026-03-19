@@ -25,6 +25,7 @@ export interface GetTransactionsResponse {
       sector_id: string | null
       description: string | null
       confirmed: boolean
+      payment_method?: string | null
       supplier?: {
         id: string
         name: string
