@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { getOperationalSummary } from '@/api/get-operational-summary'
 import { OverdueTransactionsModal } from './overdue-transactions-modal'
+import { UpcomingTransactionsModal } from './upcoming-transactions-modal'
 
 interface FinanceCardOperacionalProps extends ComponentProps<'div'> {
     month: number
@@ -18,6 +19,7 @@ const formatCurrency = (value: number) =>
 
 export function FinanceCardOperacional({ className, month, year, ...props }: FinanceCardOperacionalProps) {
     const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
+    const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false)
 
     const { data: opData, isLoading } = useQuery({
         queryFn: () => getOperationalSummary({ month, year }),
@@ -128,15 +130,18 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     </div>
 
                     {/* Bloco Projeção de 14 dias */}
-                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-100 dark:border-amber-800 col-span-2 sm:col-span-1">
-                        <div className="flex items-center gap-1.5 mb-1">
+                    <div 
+                        onClick={() => setIsUpcomingModalOpen(true)}
+                        className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-100 dark:border-amber-800 col-span-2 sm:col-span-1 cursor-pointer hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-900/40 transition-all shadow-sm group"
+                    >
+                        <div className="flex items-center gap-1.5 mb-1 group-hover:scale-[1.02] transition-transform">
                             <CalendarClock className="h-3.5 w-3.5 text-amber-600" />
                             <span className="text-xs font-semibold text-amber-700">A Vencer (14d)</span>
                         </div>
                         {isLoading ? (
                             <div className="h-5 w-20 bg-amber-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-amber-600 block tabular-nums">
+                            <span className="text-lg font-bold text-amber-600 block tabular-nums group-hover:scale-[1.02] transition-transform origin-left">
                                 {formatCurrency(projecao14Dias)}
                             </span>
                         )}
@@ -147,6 +152,10 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
             <OverdueTransactionsModal 
                 open={isOverdueModalOpen} 
                 onOpenChange={setIsOverdueModalOpen} 
+            />
+            <UpcomingTransactionsModal 
+                open={isUpcomingModalOpen} 
+                onOpenChange={setIsUpcomingModalOpen} 
             />
         </Card>
     )
