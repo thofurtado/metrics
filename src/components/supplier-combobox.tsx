@@ -45,8 +45,11 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    const hasActions = (onEditInfo && selectedSupplier) || (onDeleteInfo && selectedSupplier) || !!onQuickAdd
+
     return (
-        <div className="flex items-center gap-2 w-full" ref={wrapperRef}>
+        <div className="flex flex-col gap-1.5 w-full" ref={wrapperRef}>
+            {/* ── Combobox trigger ocupa sempre 100% da largura ── */}
             <div className="relative w-full">
                 <Button
                     type="button"
@@ -54,7 +57,7 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                     role="combobox"
                     aria-expanded={open}
                     className={cn(
-                        "w-full justify-between font-normal text-left h-10 px-4 py-2",
+                        "w-full justify-between font-normal text-left h-12 px-4 py-2 rounded-xl border-border/70 bg-background text-base",
                         !value && "text-muted-foreground",
                         isLoading && "opacity-50 cursor-not-allowed"
                     )}
@@ -126,46 +129,59 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                 )}
             </div>
 
-            {onEditInfo && selectedSupplier && (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    type="button"
-                    className="shrink-0 h-10 w-10 mt-0"
-                    onClick={() => onEditInfo(selectedSupplier.id)}
-                    title="Editar Fornecedor"
-                    disabled={isLoading}
-                >
-                    <Pencil className="h-4 w-4" />
-                </Button>
-            )}
+            {/* ── Botões de ação ficam numa linha separada abaixo do trigger ── */}
+            {hasActions && (
+                <div className="flex items-center gap-1.5">
+                    {onEditInfo && selectedSupplier && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-7 px-2.5 gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-foreground rounded-lg border-border/60"
+                            onClick={() => onEditInfo(selectedSupplier.id)}
+                            title="Editar Fornecedor"
+                            disabled={isLoading}
+                        >
+                            <Pencil className="h-3 w-3" />
+                            Editar
+                        </Button>
+                    )}
 
-            {onDeleteInfo && selectedSupplier && (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    type="button"
-                    className="shrink-0 h-10 w-10 mt-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => onDeleteInfo(selectedSupplier.id)}
-                    title="Deletar Fornecedor"
-                    disabled={isLoading}
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-            )}
+                    {onDeleteInfo && selectedSupplier && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-7 px-2.5 gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg border-border/60"
+                            onClick={() => onDeleteInfo(selectedSupplier.id)}
+                            title="Deletar Fornecedor"
+                            disabled={isLoading}
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            Excluir
+                        </Button>
+                    )}
 
-            {onQuickAdd && (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    type="button"
-                    className="shrink-0 h-10 w-10 mt-0"
-                    onClick={onQuickAdd}
-                    title="Novo Fornecedor"
-                    disabled={isLoading}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
+                    {/* Spacer empurra o botão de adicionar para a direita */}
+                    {((onEditInfo && selectedSupplier) || (onDeleteInfo && selectedSupplier)) && onQuickAdd && (
+                        <div className="flex-1" />
+                    )}
+
+                    {onQuickAdd && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-7 px-2.5 gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-foreground rounded-lg border-border/60 ml-auto"
+                            onClick={onQuickAdd}
+                            title="Novo Fornecedor"
+                            disabled={isLoading}
+                        >
+                            <Plus className="h-3 w-3" />
+                            Novo
+                        </Button>
+                    )}
+                </div>
             )}
         </div>
     )
