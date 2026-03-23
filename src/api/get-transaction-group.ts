@@ -2,7 +2,7 @@ import { api } from '@/lib/axios'
 
 export interface GroupTransaction {
     id: string
-    date: string
+    data_vencimento: string
     amount: number
     description: string
     confirmed: boolean

@@ -1,7 +1,7 @@
 // AlertDialogTrigger removed - not used directly in this component
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { CircleMinus, Loader2, Undo2 } from 'lucide-react'
+import { Loader2, Undo2, CheckCircle2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { deleteTransaction } from '@/api/delete-transaction'
@@ -85,7 +85,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     // Otimisticamente atualiza o status de confirmação
     onMutate: async ({ id }) => {
       setLocalLoading(true)
-      queryClient.setQueryData(['transaction'], (old: any) => {
+      queryClient.setQueryData(['transactions'], (old: any) => {
         if (!old) return old
         const transactionsArray = old.transactions || old || []
         return {
@@ -103,11 +103,11 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     },
     onError: (_error, _variables) => {
       toast.error('Ocorreu um erro ao alterar o status do pagamento.')
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
     onSettled: () => {
       setLocalLoading(false)
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 
@@ -116,7 +116,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     mutationFn: deleteTransaction,
     onMutate: async ({ id }) => {
       setLocalLoading(true)
-      queryClient.setQueryData(['transaction'], (old: any) => {
+      queryClient.setQueryData(['transactions'], (old: any) => {
         if (!old) return old
         const transactionsArray = old.transactions || old || []
         return {
@@ -130,7 +130,6 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onSuccess: () => {
       toast.warning('Transação deletada com sucesso.')
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
     onError: (_error, _variables) => {
@@ -140,7 +139,6 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       setLocalLoading(false)
       setOpenDeleteAlert(false)
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
   })
@@ -179,7 +177,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       throw error
     } finally {
       setLocalLoading(false)
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
     }
@@ -199,7 +197,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onMutate: () => setLocalLoading(true),
     onSuccess: () => {
       toast.success('Pagamento revertido com sucesso!')
-      queryClient.invalidateQueries({ queryKey: ['transaction'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
       setOpenRevertAlert(false)
     },
@@ -214,14 +212,19 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   }
 
   return (
-    <TableRow className="h-16 bg-white dark:bg-stone-900">
+    <TableRow className="h-[72px] bg-background group transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted/60">
       {customPrefix}
-      <TableCell className="w-16 text-center">
-        {/* Botão que abre o modal ou alerta */}
-        <Button
+      <TableCell className="w-[140px] text-center px-4 py-3">
+        {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
+        <button
           aria-label={transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
-          variant="ghost"
-          className="p-0 h-6 w-6 flex items-center justify-center mx-auto"
+          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 w-[110px] text-xs font-bold rounded-lg border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
+            transactions.confirmed
+              ? 'bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground focus:ring-muted-foreground/50' // Reverter
+              : transactions.operation === 'income'
+                ? 'bg-vida-loca-600 text-white border-transparent hover:bg-vida-loca-700 focus:ring-vida-loca-600' // Receber
+                : 'bg-stiletto-600 text-white border-transparent hover:bg-stiletto-700 focus:ring-stiletto-600' // Pagar
+          }`}
           onClick={() => {
             if (transactions.confirmed) {
               setOpenRevertAlert(true)
@@ -229,16 +232,30 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
               setOpenPaymentModal(true)
             }
           }}
-          disabled={localLoading} // Removed confirmed check
+          disabled={localLoading}
         >
           {localLoading ? (
-            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading
+            </>
           ) : transactions.confirmed ? (
-            <Undo2 className="h-6 w-6 text-yellow-500 hover:text-yellow-600" />
+            <>
+              <Undo2 className="h-4 w-4" />
+              Reverter
+            </>
+          ) : transactions.operation === 'income' ? (
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              Receber
+            </>
           ) : (
-            <CircleMinus className="h-6 w-6 text-stiletto-500" />
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              Pagar
+            </>
           )}
-        </Button>
+        </button>
 
         {/* MODAL DE PAGAMENTO */}
         <PaymentModal
@@ -272,44 +289,46 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
 
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="text-center min-w-[110px]">
+      <TableCell className="text-center min-w-[110px] px-4 py-3">
         <div className="flex flex-col items-center">
-          <span className={!transactions.confirmed && new Date(transactions.data_vencimento) < new Date(new Date().setHours(0, 0, 0, 0)) ? "text-red-500 font-bold" : "font-medium text-foreground"}>
+          <span className={!transactions.confirmed && dayjs(transactions.data_vencimento).isBefore(dayjs().startOf('day')) ? "text-red-600 dark:text-red-400 font-bold" : "font-semibold text-foreground"}>
             {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
           </span>
-          <span className="text-xs text-muted-foreground mt-0.5 leading-tight" title="Data de Emissão">
+          <span className="text-[11px] text-muted-foreground mt-0.5 leading-none" title="Data de Emissão">
             Emissão: {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
           </span>
         </div>
       </TableCell>
 
-      <TableCell>{transactions.description}</TableCell>
+      <TableCell className="px-4 py-3 font-medium text-foreground/90 max-w-[200px] truncate">{transactions.description}</TableCell>
 
-      <TableCell className="text-center hidden md:table-cell">
-        {(transactions.sectors && transactions.sectors.name) || ''}
+      <TableCell className="text-center hidden md:table-cell px-4 py-3 text-sm text-foreground/80">
+        {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell">
-        {transactions.accounts.name}
+      <TableCell className="text-center hidden md:table-cell px-4 py-3 text-sm text-foreground/80">
+        <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-muted/50">
+          {transactions.accounts.name}
+        </span>
       </TableCell>
 
       {/* Célula de Valor */}
       {transactions.operation === 'income' ? (
-        <TableCell className="text-right font-semibold text-vida-loca-500">
-          {`R$ ${transactions.amount.toFixed(2)}`}
+        <TableCell className="text-right font-bold text-vida-loca-600 dark:text-vida-loca-400 px-4 py-3">
+          {`R$ ${transactions.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </TableCell>
       ) : (
-        <TableCell className="text-right font-semibold text-stiletto-400">
-          {`R$ ${transactions.amount.toFixed(2)}`}
+        <TableCell className="text-right font-bold text-stiletto-600 dark:text-stiletto-400 px-4 py-3">
+          {`R$ ${transactions.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </TableCell>
       )}
 
-      <TableCell className="w-16 text-center">
+      <TableCell className="w-[80px] text-right px-4 py-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
+            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors">
+              <span className="sr-only">Opções</span>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

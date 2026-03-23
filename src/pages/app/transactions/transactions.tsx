@@ -330,7 +330,7 @@ export function Transactions() {
                       </>
                     ) : (
                       <>
-                        <TableHead className="w-[40px]">
+                        <TableHead className="w-[50px] px-4 text-center">
                           <Checkbox
                             checked={
                               transactionsResult?.data.transactions.transactions.length! > 0 &&
@@ -339,25 +339,25 @@ export function Transactions() {
                             onCheckedChange={(checked) => handleSelectAll(!!checked, transactionsResult?.data.transactions.transactions || [])}
                           />
                         </TableHead>
-                        <TableHead className="w-1/12 text-center text-muted-foreground font-semibold">
-                          Pago
+                        <TableHead className="w-[140px] px-4 text-center text-muted-foreground font-semibold">
+                          Ação
                         </TableHead>
-                        <TableHead className="w-1/12 text-center text-muted-foreground font-semibold">
+                        <TableHead className="w-[110px] px-4 text-center text-muted-foreground font-semibold">
                           Data
                         </TableHead>
-                        <TableHead className="w-4/12 text-muted-foreground font-semibold">
+                        <TableHead className="px-4 text-muted-foreground font-semibold max-w-[200px]">
                           Descrição
                         </TableHead>
-                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold hidden md:table-cell">
-                          Setor
+                        <TableHead className="w-[120px] px-4 text-center text-muted-foreground font-semibold hidden md:table-cell">
+                          Categoria
                         </TableHead>
-                        <TableHead className="w-2/12 text-center text-muted-foreground font-semibold hidden md:table-cell">
+                        <TableHead className="w-[120px] px-4 text-center text-muted-foreground font-semibold hidden md:table-cell">
                           Conta
                         </TableHead>
-                        <TableHead className="w-1/12 text-right text-muted-foreground font-semibold">
+                        <TableHead className="px-4 text-right text-muted-foreground font-semibold">
                           Valor
                         </TableHead>
-                        <TableHead className=" w-1/12"></TableHead>
+                        <TableHead className="w-[80px] px-4 text-right"></TableHead>
                       </>
                     )}
                   </TableRow>
@@ -371,7 +371,7 @@ export function Transactions() {
                             key={transaction.id}
                             transactions={transaction}
                             customPrefix={
-                              <TableCell>
+                              <TableCell className="text-center px-4 w-[50px]">
                                 <Checkbox
                                   checked={selectedIds.includes(transaction.id)}
                                   onCheckedChange={(checked) => handleSelectOne(!!checked, transaction.id)}

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { toast } from 'sonner'
 
 /**
  * Função para detectar dinamicamente a URL da API com base no domínio de acesso.
@@ -71,12 +72,17 @@ api.interceptors.response.use(
         })
       }
 
-      // 401 Unauthorized: Limpa sessão e redireciona para login
+      // 401 Unauthorized: token inválido ou expirado → logout
       if (status === 401) {
         localStorage.clear()
         if (typeof window !== 'undefined') {
           window.location.href = '/sign-in'
         }
+      }
+
+      // 403 Forbidden: autenticado mas sem permissão → só avisa, não faz logout
+      if (status === 403) {
+        toast.error('Você não tem permissão para realizar esta ação.')
       }
 
       return Promise.reject(error)

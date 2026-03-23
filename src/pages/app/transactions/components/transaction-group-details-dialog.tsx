@@ -20,12 +20,13 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getTransactionGroup } from "@/api/get-transaction-group"
 import { terminateTransactionGroup } from "@/api/terminate-transaction-group"
+import { deleteTransactionGroup } from "@/api/delete-transaction-group"
 import { updateStatusTransaction } from "@/api/update-transaction-status"
 import { revertTransactionStatus } from "@/api/revert-transaction-status"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import dayjs from "dayjs"
 import { Button } from "@/components/ui/button"
-import { Loader2, Scissors } from "lucide-react"
+import { Loader2, Scissors, Trash } from "lucide-react"
 import { toast } from "sonner"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -57,6 +58,19 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
         },
         onError: () => {
             toast.error("Erro ao encerrar contrato.")
+        }
+    })
+
+    const { mutateAsync: deleteFn, isPending: isDeleting } = useMutation({
+        mutationFn: deleteTransactionGroup,
+        onSuccess: () => {
+            toast.success("Parcelamento excluído com sucesso!")
+            queryClient.invalidateQueries({ queryKey: ['transactions'] })
+            queryClient.invalidateQueries({ queryKey: ['transaction-group', groupId] })
+            onOpenChange(false)
+        },
+        onError: () => {
+            toast.error("Erro ao excluir o parcelamento. Verifique se existem transações já baixadas que precisam ser revertidas primeiro.")
         }
     })
 
@@ -98,6 +112,17 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
         }
     }
 
+    async function handleDeleteGroup() {
+        if (!groupId) return
+        if (!confirm("Tem certeza que deseja EXCLUIR TODOS OS VÍNCULOS e TODAS AS TRANSAÇÕES deste parcelamento? Esta ação não pode ser desfeita.")) return;
+
+        try {
+            await deleteFn({ groupId })
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
     async function handleConfirmToggle() {
         if (!paymentAction) return
 
@@ -123,9 +148,8 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                 <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Detalhes do Recorrente</DialogTitle>
-                        <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-1.5">
-                            Gerencie ou encerre as parcelas deste contrato.
-                            <br />
+                        <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-1.5 flex flex-col gap-1">
+                            <span>Gerencie ou encerre as parcelas deste contrato.</span>
                             <span className="text-[11px] font-semibold text-slate-500/80 uppercase tracking-wider">Clique no status para alterar rapidamente.</span>
                         </ResponsiveDialogDescription>
                     </DialogHeader>
@@ -134,9 +158,21 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                         <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
                     ) : groupDetails ? (
                         <div className="space-y-4">
-                            <div className="flex gap-4 text-sm mb-4 bg-muted p-2 rounded justify-between sm:justify-start">
-                                <div><strong>Total Contrato:</strong> R$ {groupDetails.totalAmount.toFixed(2)}</div>
-                                <div><strong>Ocorrências:</strong> {groupDetails.installmentsCount}</div>
+                            <div className="flex flex-col sm:flex-row gap-4 text-sm mb-2 bg-muted p-2 rounded justify-between sm:items-center">
+                                <div className="flex gap-4">
+                                    <div><strong>Total Contrato:</strong> R$ {groupDetails.totalAmount.toFixed(2)}</div>
+                                    <div><strong>Ocorrências:</strong> {groupDetails.installmentsCount}</div>
+                                </div>
+                                <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    onClick={handleDeleteGroup}
+                                    disabled={isDeleting}
+                                    className="w-full sm:w-auto text-xs"
+                                >
+                                    {isDeleting ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Trash className="h-3 w-3 mr-2" />}
+                                    Excluir Todo o Parcelamento
+                                </Button>
                             </div>
 
                             <div className="overflow-x-auto">
@@ -156,7 +192,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
 
                                             return (
                                                 <TableRow key={tx.id}>
-                                                    <TableCell className="whitespace-nowrap">{dayjs(tx.date).format('DD/MM/YYYY')}</TableCell>
+                                                    <TableCell className="whitespace-nowrap">{dayjs(tx.data_vencimento).format('DD/MM/YYYY')}</TableCell>
                                                     <TableCell className="min-w-[150px]">{tx.description}</TableCell>
                                                     <TableCell className="whitespace-nowrap">R$ {tx.amount.toFixed(2)}</TableCell>
                                                     <TableCell>
@@ -165,7 +201,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                                                 id: tx.id,
                                                                 type: tx.confirmed ? 'unpay' : 'pay',
                                                                 amount: tx.amount,
-                                                                data_vencimento: new Date(tx.date)
+                                                                data_vencimento: new Date(tx.data_vencimento)
                                                             })}
                                                             className={cn(
                                                                 "cursor-pointer select-none px-2 py-1 rounded transition-colors border border-transparent hover:border-border whitespace-nowrap",
