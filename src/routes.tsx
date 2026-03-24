@@ -26,6 +26,7 @@ import { Accounts } from './pages/app/settings/accounts'
 import { Payments } from './pages/app/settings/payments'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
+import { Permissions } from './pages/app/settings/permissions'
 import { ModuleGuard } from './components/module-guard'
 
 import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
@@ -140,6 +141,7 @@ export const router = createBrowserRouter([
               { path: 'accounts', element: <Accounts /> },
               { path: 'payments', element: <Payments /> },
               { path: 'modules', element: <ModulesSettings /> },
+              { path: 'permissions', element: <Permissions /> },
             ]
           },
           {
