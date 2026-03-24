@@ -4,8 +4,9 @@ import { toast } from 'sonner'
 import { Shield, Save } from 'lucide-react'
 
 import { getUsersWithModules, UserWithModules } from '@/api/get-users-with-modules'
-import { getModules, ModuleData } from '@/api/get-modules'
+import { getModules } from '@/api/get-modules'
 import { updateUserModules } from '@/api/update-user-modules'
+import { useModules } from '@/context/module-context'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -26,15 +27,21 @@ export function Permissions() {
   const [selectedUser, setSelectedUser] = useState<UserWithModules | null>(null)
   const [editingModules, setEditingModules] = useState<string[]>([])
 
+  // Nível 1: slugs que a instância permite — filtra o que aparece no modal
+  const { availableForPermissions } = useModules()
+
   const { data: users, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['users-with-modules'],
     queryFn: getUsersWithModules,
   })
 
-  const { data: availableModules, isLoading: isLoadingModules } = useQuery({
+  const { data: allModules, isLoading: isLoadingModules } = useQuery({
     queryKey: ['available-modules'],
     queryFn: getModules,
   })
+
+  // INTERSEÇÃO NÍVEL 1: só mostra módulos que a instância habilitou em system_config
+  const availableModules = allModules?.filter(mod => availableForPermissions.includes(mod.slug))
 
   const { mutateAsync: saveModules, isPending } = useMutation({
     mutationFn: updateUserModules,
@@ -100,7 +107,7 @@ export function Permissions() {
                     ) : (
                         user.modules.map(slug => (
                             <Badge key={slug} variant="secondary" className="text-xs bg-minsk-100 text-minsk-800 hover:bg-minsk-200 border-none transition-colors">
-                                {availableModules?.find(m => m.slug === slug)?.name || slug}
+                                {allModules?.find(m => m.slug === slug)?.name || slug}
                             </Badge>
                         ))
                     )}
@@ -121,6 +128,11 @@ export function Permissions() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
+            {availableModules && availableModules.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum módulo habilitado na configuração do sistema.
+              </p>
+            )}
             {availableModules?.map((mod) => (
                <div key={mod.id} className="flex items-start space-x-3 rounded-md border p-4 hover:bg-muted/50 transition-colors">
                   <Checkbox 

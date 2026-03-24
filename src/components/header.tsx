@@ -9,7 +9,7 @@ import { Separator } from './ui/separator'
 import { useModules } from '@/context/module-context'
 
 export function Header() {
-  const { isModuleActive } = useModules()
+  const { hasAccess } = useModules()
   return (
     <div className="border-b">
       <div className="flex h-16 items-center gap-6 px-6">
@@ -23,28 +23,28 @@ export function Header() {
 
         <nav className="flex flex-1 items-center justify-between sm:justify-start sm:space-x-4 lg:space-x-6">
 
-          {isModuleActive('merchandise') && (
+          {hasAccess('items') && (
             <NavLink to="/items">
               <Blocks className="h-5 w-5" />
               <span className="hidden sm:inline">Mercadoria</span>
             </NavLink>
           )}
 
-          {isModuleActive('treatments') && (
+          {hasAccess('service') && (
             <NavLink to="/treatments">
               <Headset className="h-5 w-5" />
               <span className="hidden sm:inline">Atendimento</span>
             </NavLink>
           )}
 
-          {isModuleActive('financial') && (
+          {hasAccess('finance') && (
             <NavLink to="/transactions">
               <PiggyBank className="h-5 w-5" />
               <span className="hidden sm:inline">Financeiro</span>
             </NavLink>
           )}
 
-          {isModuleActive('hr_module') && (
+          {hasAccess('hr') && (
             <NavLink to="/hr">
               <Users className="h-5 w-5" />
               <span className="hidden sm:inline">RH</span>
