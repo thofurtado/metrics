@@ -1,9 +1,9 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createContext, ReactNode, useContext, useMemo } from 'react'
-import { jwtDecode } from 'jwt-decode'
 
 import { getSystemConfig, SystemConfig } from '@/api/get-system-config'
+import { getProfile } from '@/api/get-profile'
 
 // Mapeamento canônico: chave do system_config → slug da tabela modules
 export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasicaValue' | 'financial_management_profile'>, string> = {
@@ -13,46 +13,47 @@ export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasica
     hr_module:    'hr',
 }
 
-// Slugs habilitados no nível de instância (system_config = true)
 type ActiveSystemSlug = string
 
 interface ModuleContextType {
-    // Nível 1: o que a instância ativou (system_config)
     systemConfig: SystemConfig
-    // Slugs que a instância deixou ativos
     instanceSlugs: ActiveSystemSlug[]
-    // Slugs que o usuário logado tem permissão (do JWT)
+    // Slugs do usuário — agora buscados da API (fonte de verdade = banco)
     userSlugs: string[]
-    // INTERSEÇÃO: módulo acessível = instância ativa E usuário tem permissão
+    // INTERSEÇÃO: instância ativa E usuário tem permissão
     hasAccess: (slug: string) => boolean
-    // Para o Header (filtro de nível 1 apenas — igual ao comportamento atual)
+    // Para o Header (filtro de nível 1 apenas)
     isModuleActive: (moduleName: keyof SystemConfig) => boolean
-    // Para o modal de permissões: apenas slugs que a instância permite
+    // Para o modal de permissões
     availableForPermissions: ActiveSystemSlug[]
     isLoading: boolean
 }
 
 const ModuleContext = createContext({} as ModuleContextType)
 
-function getUserSlugsFromToken(): string[] {
-    try {
-        const token = localStorage.getItem('token')
-        if (!token) return []
-        const decoded = jwtDecode<{ modules?: string[] }>(token)
-        return decoded.modules ?? []
-    } catch {
-        return []
-    }
-}
-
 export function ModuleProvider({ children }: { children: ReactNode }) {
-    const { data: systemConfig, isLoading } = useQuery({
+    const isLoggedIn = !!localStorage.getItem('token')
+
+    // Nível 1: configuração da instância
+    const { data: systemConfig, isLoading: isLoadingConfig } = useQuery({
         queryKey: ['system-config'],
         queryFn: getSystemConfig,
         staleTime: 1000 * 60 * 5,
         retry: false,
-        enabled: !!localStorage.getItem('token')
+        enabled: isLoggedIn,
     })
+
+    // Nível 2: módulos do usuário logado — SEMPRE do banco via /me
+    // staleTime: 0 garante que ao re-focar a aba ou navegar, repesca imediatamente
+    const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+        queryKey: ['user-profile-modules'],
+        queryFn: getProfile,
+        staleTime: 0,
+        retry: false,
+        enabled: isLoggedIn,
+    })
+
+    const isLoading = isLoadingConfig || isLoadingProfile
 
     const safeConfig: SystemConfig = systemConfig || {
         merchandise: true,
@@ -70,22 +71,20 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
             .map(([, slug]) => slug)
     }, [safeConfig])
 
-    // Slugs do usuário logado (do JWT, nível 2)
-    const userSlugs = useMemo(() => getUserSlugsFromToken(), [])
+    // Slugs do usuário (nível 2) — vindos do banco via /me, sempre frescos
+    const userSlugs: string[] = profileData?.modules ?? []
 
-    // INTERSEÇÃO: ambas as camadas devem liberar o slug
+    // INTERSEÇÃO: ambas as camadas devem liberar
     function hasAccess(slug: string): boolean {
         if (isLoading) return false
         return instanceSlugs.includes(slug) && userSlugs.includes(slug)
     }
 
-    // Compatibilidade com o Header atual (filtra apenas por system_config)
     function isModuleActive(moduleName: keyof SystemConfig): boolean {
-        if (isLoading) return true
+        if (isLoadingConfig) return true
         return !!(safeConfig[moduleName])
     }
 
-    // Para o modal de permissões: apenas o que a instância permite
     const availableForPermissions = instanceSlugs
 
     return (
@@ -97,7 +96,6 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
             isModuleActive,
             availableForPermissions,
             isLoading,
-            // backward-compat alias
             modules: safeConfig,
         } as any}>
             {children}

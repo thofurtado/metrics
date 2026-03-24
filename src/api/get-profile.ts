@@ -6,10 +6,10 @@ export interface GetUserProfileResponse {
   role: string
   email: string
   introduction: string | null
+  modules: string[] // slugs: ["finance", "hr", ...]
 }
 
 export async function getProfile(): Promise<GetUserProfileResponse> {
   const response = await api.get('/me')
-
   return response.data.user
 }
