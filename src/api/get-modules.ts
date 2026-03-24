@@ -3,6 +3,7 @@ import { api } from '@/lib/axios'
 export interface ModuleData {
   id: string
   name: string
+  slug: string
   description?: string
 }
 

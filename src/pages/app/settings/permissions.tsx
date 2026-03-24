@@ -44,7 +44,7 @@ export function Permissions() {
       setSelectedUser(null)
     },
     onError: (err: any) => {
-      const message = err?.response?.data?.message || 'Erro ao atualizar permissões.'
+      const message = err?.message || 'Erro ao atualizar permissões. Verifique o console.'
       toast.error(message)
     }
   })
@@ -98,9 +98,9 @@ export function Permissions() {
                     {user.modules.length === 0 ? (
                         <span className="text-xs text-muted-foreground italic">Sem acessos configurados</span>
                     ) : (
-                        user.modules.map(mod => (
-                            <Badge key={mod} variant="secondary" className="text-xs bg-minsk-100 text-minsk-800 hover:bg-minsk-200 border-none transition-colors">
-                                {mod}
+                        user.modules.map(slug => (
+                            <Badge key={slug} variant="secondary" className="text-xs bg-minsk-100 text-minsk-800 hover:bg-minsk-200 border-none transition-colors">
+                                {availableModules?.find(m => m.slug === slug)?.name || slug}
                             </Badge>
                         ))
                     )}
@@ -125,8 +125,8 @@ export function Permissions() {
                <div key={mod.id} className="flex items-start space-x-3 rounded-md border p-4 hover:bg-muted/50 transition-colors">
                   <Checkbox 
                      id={`mod-${mod.id}`} 
-                     checked={editingModules.includes(mod.name)}
-                     onCheckedChange={(checked) => toggleModule(mod.name, checked as boolean)}
+                     checked={editingModules.includes(mod.slug)}
+                     onCheckedChange={(checked) => toggleModule(mod.slug, checked as boolean)}
                   />
                   <div className="space-y-1 leading-none">
                      <Label htmlFor={`mod-${mod.id}`} className="font-medium cursor-pointer">
