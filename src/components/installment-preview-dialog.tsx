@@ -15,7 +15,6 @@ import {
     ResponsiveDialogClose,
     ResponsiveDialogDescription
 } from "@/components/ui/responsive-dialog"
-import { useMediaQuery } from "@/hooks/use-media-query"
 
 export interface InstallmentItem {
     installmentNumber: number
@@ -44,8 +43,8 @@ export function InstallmentPreviewDialog({
     variant = 'expense',
     onConfirm
 }: InstallmentPreviewDialogProps) {
-    const isDesktop = useMediaQuery("(min-width: 768px)")
     const [installments, setInstallments] = useState<InstallmentItem[]>([])
+    const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null)
 
     // Theme Colors based on variant
     const theme = variant === 'expense' ? {
@@ -134,6 +133,7 @@ export function InstallmentPreviewDialog({
         const updated = [...installments]
         updated[index].date = newDate
         setInstallments(updated)
+        setOpenPopoverIndex(null)
     }
 
     const currentTotal = installments.reduce((acc, curr) => acc + curr.amount, 0)
@@ -182,7 +182,11 @@ export function InstallmentPreviewDialog({
                                         {inst.installmentNumber.toString().padStart(2, '0')}
                                     </div>
                                     <div className="flex flex-col">
-                                        <Popover modal={true}>
+                                        <Popover
+                                            modal={true}
+                                            open={openPopoverIndex === idx}
+                                            onOpenChange={(open) => setOpenPopoverIndex(open ? idx : null)}
+                                        >
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="ghost"
@@ -192,7 +196,7 @@ export function InstallmentPreviewDialog({
                                                     {inst.date ? format(inst.date, "dd 'de' MMMM", { locale: ptBR }) : "Definir data"}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 z-[10000]" align="start" onInteractOutside={(e) => e.preventDefault()}>
+                                            <PopoverContent className="w-auto p-0 z-[10000]" align="start">
                                                 <Calendar
                                                     mode="single"
                                                     selected={inst.date}
