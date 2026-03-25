@@ -146,6 +146,8 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   async function handlePayment(payload: {
     id: string;
     amount: number;
+    interest?: number;
+    discount?: number;
     data_vencimento: Date;
     data_emissao?: Date;
     remainingDate?: Date;
@@ -160,7 +162,9 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       await switchTransactionStatus({
         id: transactions.id,
         amount: amount,
-        data_vencimento: data_vencimento, // Backend endpoint logic might still expect date for generic status OR needs update too... Let's pass what API expects 
+        interest: payload.interest,
+        discount: payload.discount,
+        data_vencimento: data_vencimento,
         remainingDate: remainingDate,
         accountId: accountId
       })

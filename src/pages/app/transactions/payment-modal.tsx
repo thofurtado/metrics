@@ -133,6 +133,12 @@ export function PaymentModal({
         }
     }, [isPartialActive, form])
 
+    // Sincronização Reativa: Atualiza o Valor Pago quando o Total Calculado muda
+    // O usuário ainda pode editar manualmente depois, mas o default segue o total.
+    useEffect(() => {
+        form.setValue('paidAmount', calculatedTotal.toFixed(2))
+    }, [calculatedTotal, form])
+
     // Auto-update Paid Amount when default Adjustments change (optional behavior, but helpful)
     // Actually, usually adjustments directly affect what NEEDS to be paid.
     // So if I add interest, the "Paid Amount" should probably default to the NEW total?
@@ -183,11 +189,12 @@ export function PaymentModal({
         try {
             const confirmationPayload = {
                 id: transaction.id,
-                amount: paidAmountNum, // We send the FINAL paid amount (which includes interest/discount implicit)
+                amount: paidAmountNum, // Valor líquido pago
+                interest: additionsNum, // Juros/Multa enviados separadamente
+                discount: discountsNum, // Descontos enviados separadamente
                 data_vencimento: data.paymentDate,
-                data_emissao: transaction.data_emissao, // Or can keep it
                 remainingDate: isPartialActive ? data.remainingDueDate : undefined,
-                accountId: data.accountId // Send selected account
+                accountId: data.accountId
             }
 
             console.log({ "Payload: ": confirmationPayload })
@@ -199,7 +206,7 @@ export function PaymentModal({
             onOpenChange(false)
         } catch (error: any) {
             console.error('🔴 ERRO AO PROCESSAR:', error)
-            const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido.'
+            const errorMessage = error?.response?.data?.message || error?.message || 'Erro desconhecido.'
             setApiError(errorMessage)
         } finally {
             setIsLoading(false)

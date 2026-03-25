@@ -44,7 +44,7 @@ export function InstallmentPreviewDialog({
     onConfirm
 }: InstallmentPreviewDialogProps) {
     const [installments, setInstallments] = useState<InstallmentItem[]>([])
-    const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null)
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
 
     // Theme Colors based on variant
     const theme = variant === 'expense' ? {
@@ -133,7 +133,7 @@ export function InstallmentPreviewDialog({
         const updated = [...installments]
         updated[index].date = newDate
         setInstallments(updated)
-        setOpenPopoverIndex(null)
+        setOpenPopoverId(null)
     }
 
     const currentTotal = installments.reduce((acc, curr) => acc + curr.amount, 0)
@@ -184,8 +184,8 @@ export function InstallmentPreviewDialog({
                                     <div className="flex flex-col">
                                         <Popover
                                             modal={true}
-                                            open={openPopoverIndex === idx}
-                                            onOpenChange={(open) => setOpenPopoverIndex(open ? idx : null)}
+                                            open={openPopoverId === inst.installmentNumber.toString()}
+                                            onOpenChange={(open) => setOpenPopoverId(open ? inst.installmentNumber.toString() : null)}
                                         >
                                             <PopoverTrigger asChild>
                                                 <Button
