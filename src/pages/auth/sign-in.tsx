@@ -133,29 +133,32 @@ export function SignIn() {
   }
 
   async function handleSignIn(data: SignInForm) {
-    if (!data.userId) {
-        toast.error('Por favor, selecione seu nome na lista.')
-        return
+    // Resolve o usuário AGORA, no momento do clique, sem depender de estado para o ID
+    const matchedUser = userList.find(
+      (u) => u.name.trim().toLowerCase() === inputValue.trim().toLowerCase()
+    )
+
+    if (!matchedUser) {
+      toast.error('Usuário não reconhecido. Verifique o nome digitado.')
+      return
     }
 
     try {
       const response = await authenticate({
-        userId: data.userId,
+        userId: matchedUser.id,  // sempre extraído do match atual
         password: data.password,
       })
       if (response.data.token) {
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('refreshToken', response.data.refreshToken)
-        
-        // Persistência de UX
-        localStorage.setItem('metrics.lastUserId', data.userId)
+        localStorage.setItem('metrics.lastUserId', matchedUser.id)
       }
 
       toast.success('Parabéns, você será redirecionado')
       await new Promise((resolve) => setTimeout(resolve, 1500))
       navigate('/dashboard')
     } catch (err) {
-      toast.error('Credenciais inválidas', { closeButton: true })
+      toast.error('Credenciais inválidas. Verifique sua senha.', { closeButton: true })
     }
   }
 
@@ -256,7 +259,7 @@ export function SignIn() {
             </div>
           </div>
           <Button
-            disabled={isSubmitting || isLoading || isError}
+            disabled={isSubmitting || isLoading || isError || !userList.some(u => u.name.trim().toLowerCase() === inputValue.trim().toLowerCase())}
             className="bg-minsk-600 hover:bg-minsk-700 w-full text-white transition-colors"
           >
             Entrar
