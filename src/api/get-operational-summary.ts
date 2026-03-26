@@ -6,8 +6,10 @@ export interface OperationalSummary {
     projecao14Dias: number
     receitaAcumulada: number
     ticketMedio: number
+    numEntradas: number
     totalDespesasMes: number
     despesasPagasMes: number
+    totalJurosPagos: number
 }
 
 interface GetOperationalSummaryParams {
