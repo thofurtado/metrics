@@ -319,11 +319,11 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       {/* Célula de Valor */}
       {transactions.operation === 'income' ? (
         <TableCell className="text-right font-bold text-vida-loca-600 dark:text-vida-loca-400 px-4 py-3">
-          {`R$ ${transactions.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          {`R$ ${(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </TableCell>
       ) : (
         <TableCell className="text-right font-bold text-stiletto-600 dark:text-stiletto-400 px-4 py-3">
-          {`R$ ${transactions.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          {`R$ ${(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
         </TableCell>
       )}
 
