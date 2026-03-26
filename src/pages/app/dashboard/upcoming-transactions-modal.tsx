@@ -22,22 +22,23 @@ interface UpcomingTransactionsModalProps {
 }
 
 export function UpcomingTransactionsModal({ open, onOpenChange }: UpcomingTransactionsModalProps) {
-    // Pegar as datas de hoje até os próximos 14 dias
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
+    // Calculo de hoje (meia-noite local) para evitar trazer vencidos
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+    
+    // Fim da janela (14 dias à frente)
     const fourteenDays = new Date(today)
     fourteenDays.setDate(today.getDate() + 14)
     fourteenDays.setHours(23, 59, 59, 999)
 
     const { data: transactionsData, isLoading } = useQuery({
-        queryKey: ['upcoming-transactions-14d'],
+        queryKey: ['upcoming-transactions-14d', today.getTime()],
         queryFn: () => getTransactions({
             status: 'pending',
-            type: 'expense',
+            type: 'out', // 'out' vira 'expense' no use-case
             fromDate: today.toISOString(),
             toDate: fourteenDays.toISOString(),
-            perPage: 100 // Limite maior para resumo
+            perPage: 100 
         }),
         enabled: open,
         refetchOnWindowFocus: false
@@ -54,7 +55,7 @@ export function UpcomingTransactionsModal({ open, onOpenChange }: UpcomingTransa
                         Despesas a Vencer (Próx. 14 dias)
                     </DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Listagem de todas as contas a pagar previstas para as próximas duas semanas.
+                        Listagem de todas as contas a pagar previstas de hoje até as próximas duas semanas.
                     </p>
                 </DialogHeader>
 

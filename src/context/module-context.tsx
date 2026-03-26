@@ -6,7 +6,7 @@ import { getSystemConfig, SystemConfig } from '@/api/get-system-config'
 import { getProfile } from '@/api/get-profile'
 
 // Mapeamento canônico: chave do system_config → slug da tabela modules
-export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasicaValue' | 'financial_management_profile'>, string> = {
+export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasicaValue' | 'financial_management_profile' | 'dashboard_cards'>, string> = {
     merchandise:  'items',
     financial:    'finance',
     treatments:   'service',
@@ -24,9 +24,12 @@ interface ModuleContextType {
     hasAccess: (slug: string) => boolean
     // Para o Header (filtro de nível 1 apenas)
     isModuleActive: (moduleName: keyof SystemConfig) => boolean
+    // Para Cards da Dashboard (Cascata: Módulo Pai Ativo -> Card Filho Ativo)
+    isCardVisible: (moduleName: keyof SystemConfig, cardSlug: string) => boolean
     // Para o modal de permissões
     availableForPermissions: ActiveSystemSlug[]
     isLoading: boolean
+    modules: SystemConfig // Alias para compatibilidade
 }
 
 const ModuleContext = createContext({} as ModuleContextType)
@@ -85,6 +88,19 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
         return !!(safeConfig[moduleName])
     }
 
+    function isCardVisible(moduleName: keyof SystemConfig, cardSlug: string): boolean {
+        // Regra de Cascata: Se o módulo pai está desativado, o filho nunca aparece
+        if (!isModuleActive(moduleName)) return false
+
+        // Se estiver ativo, verifica o status granular no JSON
+        const cardsConfig = safeConfig.dashboard_cards?.[moduleName as string]
+        
+        // Se não houver config específica no JSON, assume "true" por padrão (legado)
+        if (!cardsConfig || cardsConfig[cardSlug] === undefined) return true
+
+        return cardsConfig[cardSlug] === true
+    }
+
     const availableForPermissions = instanceSlugs
 
     return (
@@ -94,6 +110,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
             userSlugs,
             hasAccess,
             isModuleActive,
+            isCardVisible,
             availableForPermissions,
             isLoading,
             modules: safeConfig,

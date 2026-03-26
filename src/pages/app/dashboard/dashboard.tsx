@@ -17,7 +17,7 @@ import { useModules } from '@/context/module-context'
 import { MonthPicker } from '@/components/MonthPicker'
 
 export function Dashboard() {
-  const { isModuleActive, modules } = useModules()
+  const { isCardVisible, isModuleActive, modules } = useModules()
   const [date, setDate] = useState<Date>(new Date())
 
   const month = date.getMonth() + 1
@@ -42,12 +42,12 @@ export function Dashboard() {
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4 font-gaba lg:grid-cols-3">
 
           {/* PRIMEIRO CARD: Gestão de Serviços */}
-          {isModuleActive('treatments') && (
+          {isCardVisible('treatments', 'treatment_summary') && (
             <MonthTreatmentAmountCard month={month} year={year} className="lg:col-span-1" />
           )}
 
           {/* SEGUNDO CARD: Visão Financeira (Condicionado ao Perfil) */}
-          {isModuleActive('financial') && (
+          {isCardVisible('financial', 'financial_summary') && (
             modules.financial_management_profile === 'OPERATIONAL' ? (
               <FinanceCardOperacional month={month} year={year} className="lg:col-span-1" />
             ) : (
@@ -56,7 +56,7 @@ export function Dashboard() {
           )}
 
           {/* TERCEIRO CARD: Inventário e Vendas */}
-          {isModuleActive('merchandise') && (
+          {isCardVisible('merchandise', 'inventory_summary') && (
             <InventoryCard month={month} year={year} className="lg:col-span-1" />
           )}
 

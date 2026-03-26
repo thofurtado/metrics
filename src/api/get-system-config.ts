@@ -8,6 +8,7 @@ export interface SystemConfig {
     hr_module: boolean
     cestaBasicaValue: number
     financial_management_profile: 'ANALYTICAL' | 'OPERATIONAL'
+    dashboard_cards?: Record<string, Record<string, boolean>>
 }
 
 export async function getSystemConfig() {

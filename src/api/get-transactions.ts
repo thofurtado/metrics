@@ -9,6 +9,7 @@ export interface GetTransactionsQuery {
   accountId?: string | null
   status?: string | null
   toDate?: string | null
+  fromDate?: string | null
   supplierId?: string | null
   type?: string | null
 }
@@ -46,6 +47,7 @@ export async function getTransactions({
   accountId,
   status,
   toDate,
+  fromDate,
   supplierId,
   type
 }: GetTransactionsQuery) {
@@ -60,6 +62,7 @@ export async function getTransactions({
       account_id: accountId,
       status,
       toDate,
+      fromDate,
       supplier_id: supplierId,
       type
     },
