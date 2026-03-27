@@ -15,72 +15,106 @@ import { BalanceProjectionChart } from './BalanceProjectionChart'
 
 import { useModules } from '@/context/module-context'
 import { MonthPicker } from '@/components/MonthPicker'
+import { cn } from '@/lib/utils'
 
 export function Dashboard() {
-  const { isCardVisible, isModuleActive, modules } = useModules()
+  const { isCardVisible, modules } = useModules()
   const [date, setDate] = useState<Date>(new Date())
 
   const month = date.getMonth() + 1
   const year = date.getFullYear()
 
+  const showTreatment = isCardVisible('treatments', 'treatment_summary')
+  const showInventory = isCardVisible('merchandise', 'inventory_summary')
+  const showFinanceSummary = isCardVisible('financial', 'financial_summary')
+  const showPaymentAgenda = isCardVisible('financial', 'payment_agenda')
+  const showExpensesBySector = isCardVisible('financial', 'expenses_by_sector')
+  const showBalanceProjection = isCardVisible('financial', 'balance_projection')
+
+  // Lógica de agrupamento dos 3 cards financeiros (se alinham de 4 em 4 ou de 6 em 6)
+  const financeGroupCount = [showFinanceSummary, showPaymentAgenda, showExpensesBySector].filter(Boolean).length
+  const financeSpan = financeGroupCount === 3 ? "lg:col-span-4" : financeGroupCount === 2 ? "lg:col-span-6" : "lg:col-span-12"
+
+  // Lógica para OS e Inventário (topo) - Se ambos existirem, dividem a linha. Se apenas um, ocupa o topo.
+  const topGroupCount = [showTreatment, showInventory].filter(Boolean).length
+  const topSpan = topGroupCount === 2 ? "lg:col-span-6" : "lg:col-span-12"
+
   return (
     <>
       <Helmet title="Dashboard" />
 
-      {/* CONTAINER PRINCIPAL: Redução de padding e gap para subir o conteúdo. */}
-      <div className="flex flex-col gap-3 p-3 md:p-5">
+      {/* CONTAINER PRINCIPAL */}
+      <div className="flex flex-col gap-4 p-3 md:p-6 text-minsk-950 dark:text-minsk-50">
 
-        <div className="flex items-center justify-between">
-          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight text-minsk-900 dark:text-minsk-50">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight">
             Centro de Comando
           </h1>
 
           <MonthPicker date={date} setDate={setDate} />
         </div>
 
-        {/* LINHA DE CARDS: Reordenada para priorizar Serviços */}
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4 font-gaba lg:grid-cols-3">
-
-          {/* PRIMEIRO CARD: Gestão de Serviços */}
-          {isCardVisible('treatments', 'treatment_summary') && (
-            <MonthTreatmentAmountCard month={month} year={year} className="lg:col-span-1" />
+        {/* CONTAINER GRID UNIFICADO */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-12 grid-flow-row-dense font-gaba">
+          
+          {/* CARDS TOPO (OS e Inventário) */}
+          {showTreatment && (
+            <MonthTreatmentAmountCard 
+              month={month} 
+              year={year} 
+              className={cn("md:col-span-6", topSpan)} 
+            />
           )}
 
-          {/* SEGUNDO CARD: Visão Financeira (Condicionado ao Perfil) */}
-          {isCardVisible('financial', 'financial_summary') && (
+          {showInventory && (
+            <InventoryCard 
+              month={month} 
+              year={year} 
+              className={cn("md:col-span-6", topSpan)} 
+            />
+          )}
+
+          {/* GRUPO FINANCEIRO (Fluxo, Agenda e Despesas por Setor) */}
+          {showFinanceSummary && (
             modules.financial_management_profile === 'OPERATIONAL' ? (
-              <FinanceCardOperacional month={month} year={year} className="lg:col-span-1" />
+              <FinanceCardOperacional 
+                month={month} 
+                year={year} 
+                className={cn("md:col-span-6", financeSpan)} 
+              />
             ) : (
-              <FinanceCard month={month} year={year} className="lg:col-span-1" />
+              <FinanceCard 
+                month={month} 
+                year={year} 
+                className={cn("md:col-span-6", financeSpan)} 
+              />
             )
           )}
 
-          {/* TERCEIRO CARD: Inventário e Vendas */}
-          {isCardVisible('merchandise', 'inventory_summary') && (
-            <InventoryCard month={month} year={year} className="lg:col-span-1" />
+          {showPaymentAgenda && (
+            <AgendaPagamentosCard 
+              className={cn("md:col-span-6", financeSpan)} 
+            />
           )}
 
-          {/* QUARTO CARD: Agenda de Pagamentos */}
-          {isCardVisible('financial', 'payment_agenda') && (
-            <AgendaPagamentosCard className="lg:col-span-1" />
+          {showExpensesBySector && (
+            <ExpensesBySectorChart 
+              month={month} 
+              year={year} 
+              className={cn("md:col-span-6", financeSpan)} 
+            />
           )}
 
-        </div>
-
-        {/* GRID DE GRÁFICOS */}
-        <div className="grid grid-cols-1 gap-4 font-gaba lg:grid-cols-9">
-          {isModuleActive('financial') && (
-            <>
-              {isCardVisible('financial', 'balance_projection') && (
-                <BalanceProjectionChart className={isCardVisible('financial', 'expenses_by_sector') ? "lg:col-span-6" : "lg:col-span-9"} />
-              )}
-              {isCardVisible('financial', 'expenses_by_sector') && (
-                <ExpensesBySectorChart month={month} year={year} className={isCardVisible('financial', 'balance_projection') ? "lg:col-span-3" : "lg:col-span-9"} />
-              )}
-            </>
+          {/* BASE (Gráfico de Previsão de Saldo) */}
+          {showBalanceProjection && (
+            <BalanceProjectionChart 
+              className="md:col-span-12 lg:col-span-12" 
+            />
           )}
+
         </div>
       </div>
     </>
   )
-}
+}
