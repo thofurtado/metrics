@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { type ComponentProps } from 'react'
-import { Package, AlertTriangle, TrendingUp } from 'lucide-react'
+import { AlertTriangle, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -12,108 +12,122 @@ import {
     type GetInventoryMetricsResponse
 } from '@/api/get-inventory-metrics'
 
-
 interface InventoryCardProps extends ComponentProps<'div'> {
     month: number
     year: number
 }
 
-// Função auxiliar para formatar em Reais
-const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+// Componente auxiliar para formatar valores com a tipografia solicitada
+const CurrencyValue = ({ value, className, size = "large" }: { value: number; className?: string; size?: "small" | "large" }) => {
+    const formatted = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    const parts = formatted.split(/\s+/)
+    const symbol = parts[0]
+    const amount = parts[1]
+
+    return (
+        <span className={cn("tabular-nums font-manrope", className)}>
+            <span className={cn("font-medium opacity-70 mr-0.5", size === "large" ? "text-sm" : "text-xs")}>
+                {symbol}
+            </span>
+            <span className={cn("font-black tracking-tight", size === "large" ? "text-3xl" : "text-lg")}>
+                {amount}
+            </span>
+        </span>
+    )
+}
 
 export function InventoryCard({ className, month, year, ...props }: InventoryCardProps) {
-    // 1. Query para buscar todos os dados de inventário
     const { data: metrics, isLoading } = useQuery<GetInventoryMetricsResponse>({
         queryFn: () => getInventoryMetrics({ month, year }),
         queryKey: ['metrics', 'inventory-metrics', month, year],
     })
 
-    // Mapeamento dos dados da API
     const patrimonioAmount = metrics?.patrimonioEstoque ?? 0
     const criticalItemsCount = metrics?.itensCriticos ?? 0
     const productRevenue = metrics?.receitaProdutos ?? 0
     const serviceRevenue = metrics?.receitaServicos ?? 0
 
     const isCritical = criticalItemsCount > 5
-    const alertColorClass = isCritical
-        ? 'bg-stiletto-100 text-stiletto-700 dark:bg-stiletto-900/30'
-        : 'bg-vida-loca-100 text-vida-loca-700 dark:bg-vida-loca-900/30'
 
     return (
-        <Card className={cn("col-span-1", className)} {...props}>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 px-4 pt-4">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Package className="h-4 w-4 text-minsk-600" />
+        <Card className={cn("col-span-1 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm", className)} {...props}>
+            <CardHeader className="p-8 pb-4 sm:p-10 sm:pb-6">
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2.5">
+                    <div className="h-2 w-2 rounded-full bg-indigo-500" />
                     Inventário e Vendas
                 </CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-3 px-4 pb-4">
+            <CardContent className="p-8 pt-0 sm:p-10 sm:pt-0 space-y-10">
 
-                {/* 1. Saldo Principal (Patrimônio) - Layout Compacto Grande */}
-                <div className="flex items-center justify-between bg-minsk-50 dark:bg-minsk-900/30 rounded-lg p-3 border">
-                    <div>
-                        <span className="text-xs text-muted-foreground block">Patrimônio em Estoque</span>
-                        {isLoading ? (
-                            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
-                        ) : (
-                            <span className="text-xl font-bold text-minsk-700 dark:text-minsk-300">
-                                {formatCurrency(patrimonioAmount)}
-                            </span>
-                        )}
+                {/* Patrimônio Principal */}
+                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">Patrimônio em Estoque</span>
+                        <div className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5",
+                            isCritical
+                                ? 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30'
+                        )}>
+                            <AlertTriangle className="h-3 w-3" />
+                            {criticalItemsCount} {criticalItemsCount === 1 ? 'Item Crítico' : 'Itens Críticos'}
+                        </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${alertColorClass}`}>
-                        <AlertTriangle className="h-3 w-3" />
-                        {criticalItemsCount} {criticalItemsCount === 1 ? 'Item' : 'Itens'}
-                    </div>
+                    {isLoading ? (
+                        <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-xl mt-2"></div>
+                    ) : (
+                        <CurrencyValue value={patrimonioAmount} className="text-slate-900 dark:text-slate-50" />
+                    )}
                 </div>
 
-                {/* 2. Grid Compacto (Vendas: Produtos e Serviços) */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* Vendas - Produtos */}
-                    <div className="bg-vida-loca-50 dark:bg-vida-loca-900/20 rounded-lg p-3 border border-vida-loca-100 dark:border-vida-loca-800">
-                        <div className="flex items-center gap-1 mb-1">
-                            <TrendingUp className="h-3 w-3 text-vida-loca-600" />
-                            <span className="text-xs font-semibold text-vida-loca-700">Produtos</span>
+                {/* Grid de Receitas: Produtos e Serviços */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Produtos */}
+                    <div className="space-y-6">
+                        <div>
+                             <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <TrendingUp className="h-3 w-3" />
+                                Produtos
+                             </span>
+                            {isLoading ? (
+                                <div className="h-8 w-32 bg-slate-100 animate-pulse rounded-lg"></div>
+                            ) : (
+                                <CurrencyValue value={productRevenue} size="large" className="text-emerald-600" />
+                            )}
                         </div>
-                        {isLoading ? (
-                            <div className="h-4 w-16 bg-vida-loca-200 animate-pulse rounded mb-1"></div>
-                        ) : (
-                            <span className="text-lg font-bold block mb-1">
-                                {formatCurrency(productRevenue)}
-                            </span>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Receita do Mês
-                        </p>
-                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium mt-0.5" title="Valores em atendimentos abertos">
-                            Orçamento: {formatCurrency(metrics?.orcamentoProdutos ?? 0)}
-                        </p>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-400">Orçamento aberto:</span>
+                                <CurrencyValue value={metrics?.orcamentoProdutos ?? 0} size="small" className="text-amber-600" />
+                             </div>
+                        </div>
                     </div>
 
-                    {/* Vendas - Serviços */}
-                    <div className="bg-vida-loca-50 dark:bg-vida-loca-900/20 rounded-lg p-3 border border-vida-loca-100 dark:border-vida-loca-800">
-                        <div className="flex items-center gap-1 mb-1">
-                            <TrendingUp className="h-3 w-3 text-vida-loca-600" />
-                            <span className="text-xs font-semibold text-vida-loca-700">Serviços</span>
+                    {/* Serviços */}
+                    <div className="space-y-6">
+                        <div>
+                             <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <TrendingUp className="h-3 w-3" />
+                                Serviços
+                             </span>
+                            {isLoading ? (
+                                <div className="h-8 w-32 bg-slate-100 animate-pulse rounded-lg"></div>
+                            ) : (
+                                <CurrencyValue value={serviceRevenue} size="large" className="text-emerald-600" />
+                            )}
                         </div>
-                        {isLoading ? (
-                            <div className="h-4 w-16 bg-vida-loca-200 animate-pulse rounded mb-1"></div>
-                        ) : (
-                            <span className="text-lg font-bold block mb-1">
-                                {formatCurrency(serviceRevenue)}
-                            </span>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Receita do Mês
-                        </p>
-                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium mt-0.5" title="Valores em atendimentos abertos">
-                            Orçamento: {formatCurrency(metrics?.orcamentoServicos ?? 0)}
-                        </p>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-400">Orçamento aberto:</span>
+                                <CurrencyValue value={metrics?.orcamentoServicos ?? 0} size="small" className="text-amber-600" />
+                             </div>
+                        </div>
                     </div>
                 </div>
             </CardContent>
         </Card>
     )
-}
+}

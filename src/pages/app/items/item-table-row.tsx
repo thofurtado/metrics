@@ -17,6 +17,7 @@ import { DeleteItemDialog } from './delete-item-dialog'
 import { StockAdjustmentDialog } from './stock-adjustment-dialog'
 import { GetItemsResponse } from '@/api/get-items'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 // Use the type from the API response
 type Item = GetItemsResponse['items'][0]
@@ -45,39 +46,30 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
   }
 
   return (
-    <TableRow>
+    <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
       {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
-        <TableCell className="font-mono text-xs font-bold text-muted-foreground hidden sm:table-cell w-[80px]">
+        <TableCell className="font-medium text-[11px] text-slate-400 font-mono hidden sm:table-cell pl-8 py-5">
           #{displayId ?? '-'}
         </TableCell>
       )}
 
-      <TableCell className="font-medium">
-        <div className="flex flex-col max-w-[150px] sm:max-w-[300px]">
+      <TableCell className="py-5 pl-6">
+        <div className="flex flex-col max-w-[150px] sm:max-w-[300px] gap-1">
           <div className="flex items-center gap-2">
-            <span className="truncate" title={item.name}>{item.name}</span>
+            <span className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight truncate" title={item.name}>
+              {item.name}
+            </span>
             {/* Visual Indicator for Composite Products */}
             {activeTabType === 'PRODUCT' && item.product?.is_composite && (
-              <Badge variant="outline" className="text-[10px] h-5 px-1 bg-amber-50 text-amber-600 border-amber-200">
+              <Badge variant="outline" className="text-[9px] h-4.5 font-bold uppercase tracking-tighter bg-indigo-50 text-indigo-600 border-indigo-100 rounded-lg">
                 Composto
               </Badge>
             )}
           </div>
           {item.category && (
-            <span className="text-[10px] text-muted-foreground uppercase truncate">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
               {typeof item.category === 'string' ? item.category : item.category.name}
             </span>
-          )}
-          {/* Mobile Only ID */}
-          {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
-            <span className="text-[10px] text-zinc-400 sm:hidden">#{displayId}</span>
-          )}
-
-          {/* USER REQUESTED DEBUG */}
-          {activeTabType === 'PRODUCT' && (
-            <div className="text-[10px] text-red-500 font-mono hidden">
-              DEBUG: Cost={String(item.product?.cost)} | Comp={String(item.product?.is_composite)}
-            </div>
           )}
         </div>
       </TableCell>
@@ -85,9 +77,9 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
       {/* Tab Specific Columns */}
       {activeTabType === 'PRODUCT' && (
         <>
-          <TableCell className="text-center w-[100px]">
+          <TableCell className="text-center py-5">
             {item.product?.is_composite ? (
-              <Badge className="whitespace-nowrap bg-blue-600 hover:bg-blue-700">
+              <Badge className="font-black tabular-nums bg-indigo-600 hover:bg-indigo-700 text-white border-none rounded-lg shadow-sm px-2.5">
                 {(() => {
                   const comps = item.product?.compositions || []
                   if (comps.length === 0) return 0
@@ -103,19 +95,25 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
                 })()}
               </Badge>
             ) : (
-              <Badge variant={isLowStock ? "destructive" : "secondary"} className="whitespace-nowrap">
+              <Badge 
+                variant={isLowStock ? "destructive" : "secondary"} 
+                className={cn(
+                  "font-black tabular-nums rounded-lg px-2.5",
+                  isLowStock ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-slate-100 text-slate-700 border-none shadow-sm"
+                )}
+              >
                 {stock ?? 0}
               </Badge>
             )}
           </TableCell>
-          <TableCell className="w-[120px]">
-            {/* Explicit check for cost, defaulting to 0 only if strictly null/undefined */}
+          <TableCell className="py-5 font-medium text-slate-500 tabular-nums">
             {(item.product?.cost ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </TableCell>
-          <TableCell className="w-[120px]">
-            {(price ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          <TableCell className="py-5 font-black text-slate-900 dark:text-slate-50 tabular-nums text-base">
+            <span className="text-[10px] font-bold text-slate-400 mr-0.5">R$</span>
+            {(price ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </TableCell>
-          <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
+          <TableCell className="hidden md:table-cell text-slate-400 text-[11px] font-mono py-5">
             {item.product?.barcode || '-'}
           </TableCell>
         </>
@@ -123,25 +121,28 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
 
       {activeTabType === 'SERVICE' && (
         <>
-          <TableCell className="hidden sm:table-cell">
+          <TableCell className="hidden sm:table-cell py-5 text-slate-500 font-medium tracking-tight">
             {item.service?.estimated_time || '-'}
           </TableCell>
-          <TableCell>
-            {(price ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          <TableCell className="py-5 font-black text-slate-900 dark:text-slate-50 tabular-nums text-base">
+            <span className="text-[10px] font-bold text-slate-400 mr-0.5">R$</span>
+            {(price ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </TableCell>
         </>
       )}
 
       {activeTabType === 'SUPPLY' && (
         <>
-          <TableCell className="text-center w-[100px]">
-            <span className="font-medium">{stock ?? 0}</span>
-            <span className="text-xs text-muted-foreground ml-1 sm:hidden">{item.supply?.unit}</span>
+          <TableCell className="text-center py-5">
+             <Badge className="font-black tabular-nums bg-slate-100 text-slate-700 border-none rounded-lg px-2.5 shadow-sm">
+                {stock ?? 0}
+             </Badge>
           </TableCell>
-          <TableCell>
-            {(item.supply?.cost ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          <TableCell className="py-5 font-black text-slate-900 dark:text-slate-50 tabular-nums text-base">
+            <span className="text-[10px] font-bold text-slate-400 mr-0.5">R$</span>
+            {(item.supply?.cost ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </TableCell>
-          <TableCell className="hidden sm:table-cell">
+          <TableCell className="hidden sm:table-cell py-5 text-slate-400 font-bold uppercase tracking-widest text-[10px]">
             {item.supply?.unit || '-'}
           </TableCell>
         </>

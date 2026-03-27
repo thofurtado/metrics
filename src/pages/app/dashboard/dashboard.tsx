@@ -44,11 +44,11 @@ export function Dashboard() {
       <Helmet title="Dashboard" />
 
       {/* CONTAINER PRINCIPAL */}
-      <div className="flex flex-col gap-4 p-3 md:p-6 text-minsk-950 dark:text-minsk-50">
+      <div className="flex flex-col gap-8 p-0">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="font-merienda text-2xl sm:text-4xl font-bold tracking-tight">
+        <div className="flex items-center justify-between">
+          <h1 className="font-manrope text-3xl sm:text-5xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100">
             Centro de Comando
           </h1>
 
@@ -56,7 +56,7 @@ export function Dashboard() {
         </div>
 
         {/* CONTAINER GRID UNIFICADO */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-12 grid-flow-row-dense font-gaba">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-12 grid-flow-row-dense">
           
           {/* CARDS TOPO (OS e Inventário) */}
           {showTreatment && (
@@ -117,4 +117,5 @@ export function Dashboard() {
       </div>
     </>
   )
-}
+}
+

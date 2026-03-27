@@ -10,6 +10,7 @@ import { queryClient } from './lib/react-query'
 import { router } from './routes'
 
 import { ModuleProvider } from './context/module-context'
+import { SidebarProvider } from './context/sidebar-context'
 
 export function App() {
   return (
@@ -18,8 +19,10 @@ export function App() {
         <Helmet titleTemplate="%s | metrics" />
         <QueryClientProvider client={queryClient}>
           <ModuleProvider>
-            <RouterProvider router={router} />
-            <Toaster richColors closeButton />
+            <SidebarProvider>
+              <RouterProvider router={router} />
+              <Toaster richColors closeButton />
+            </SidebarProvider>
           </ModuleProvider>
         </QueryClientProvider>
       </ThemeProvider>

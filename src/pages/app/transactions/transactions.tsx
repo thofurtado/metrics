@@ -186,53 +186,53 @@ export function Transactions() {
   return (
     <>
       <Helmet title="Transações" />
-      <div className="flex flex-col gap-6 font-gaba">
+      <div className="flex flex-col gap-6 font-manrope">
         <PageHeader title="Transações" description="Gerencie suas receitas, despesas e transferências.">
           <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <PopoverTrigger asChild>
               <Button
                 aria-label="Adicionar"
-                className="w-full sm:w-auto h-10 px-4 py-2 rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+                className="w-full sm:w-auto h-10 px-6 py-2 rounded-xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all font-bold"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 <span>Nova Transação</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80" side="bottom" align="end">
+            <PopoverContent className="w-80 p-2 rounded-2xl shadow-2xl border-none bg-white/95 backdrop-blur-md" side="bottom" align="end">
               <Button
                 aria-label="Adicionar Despesa"
                 variant="ghost"
-                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-rose-50 hover:text-rose-600 font-bold"
                 onClick={() => {
                   setIsMenuOpen(false)
                   setIsExpenseOpen(true)
                 }}
               >
-                <TrendingDown className="mr-3 h-4 w-4 text-red-500" />
+                <TrendingDown className="mr-3 h-5 w-5 text-rose-500" />
                 Despesa
               </Button>
               <Button
                 aria-label="Adicionar Receita"
                 variant="ghost"
-                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-emerald-50 hover:text-emerald-600 font-bold"
                 onClick={() => {
                   setIsMenuOpen(false)
                   setIsIncomeOpen(true)
                 }}
               >
-                <TrendingUp className="mr-3 h-4 w-4 text-green-500" />
+                <TrendingUp className="mr-3 h-5 w-5 text-emerald-500" />
                 Receita
               </Button>
               <Button
                 variant="ghost"
-                className="flex w-full items-center justify-start p-2 rounded-md transition-colors"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-blue-50 hover:text-blue-600 font-bold"
                 aria-label="Adicionar Transação"
                 onClick={() => {
                   setIsMenuOpen(false)
                   setIsTransferOpen(true)
                 }}
               >
-                <ArrowRightLeft className="mr-3 h-4 w-4 text-blue-500" />
+                <ArrowRightLeft className="mr-3 h-5 w-5 text-blue-500" />
                 Transferência
               </Button>
             </PopoverContent>
@@ -263,50 +263,50 @@ export function Transactions() {
           }}
           className="w-full"
         >
-          <TabsList className="w-full h-auto p-1 bg-muted/50 rounded-xl flex">
+          <TabsList className="w-full h-auto p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl flex border border-slate-200/50 dark:border-slate-700/50">
             <TabsTrigger 
               value="payable" 
-              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/40 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-md transition-all font-bold"
+              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <Clock className="w-4 h-4 mr-2" />
-              Pendentes
+              Manifesto de Pendências
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
-              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-md transition-all font-bold"
+              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
-              Pagos
+              Histórico Consolidado
             </TabsTrigger>
             <TabsTrigger 
               value="transfers" 
-              className="flex-1 py-3 text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-md transition-all font-bold"
+              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <ArrowRightLeft className="w-4 h-4 mr-2 hidden sm:block" />
-              Transferências
+              Transferências Internas
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <div className="space-y-4">
           {activeTab !== 'transfers' && (
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
               <div className="flex-1">
                 <TransactionTableFilters />
               </div>
 
               {/* HORIZON SELECTOR - Only visible in Payable Tab */}
               {activeTab === 'payable' && (
-                <div className="flex items-center gap-3 bg-muted/40 py-1.5 pl-4 pr-1.5 rounded-full border border-border/30">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Visão:</span>
+                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 py-1.5 pl-4 pr-1.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Ciclo:</span>
                   <Select value={timeHorizon} onValueChange={(val: any) => setTimeHorizon(val)}>
-                    <SelectTrigger className="h-8 w-full sm:w-[180px] bg-card border-border rounded-full text-foreground hover:bg-muted transition-colors text-xs font-bold">
+                    <SelectTrigger className="h-8 w-full sm:w-[180px] border-none shadow-none rounded-full text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs font-black uppercase tracking-tight">
                       <SelectValue placeholder="Selecione o período" />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border-border text-popover-foreground">
-                      <SelectItem value="7" className="text-xs">Próximos 7 dias</SelectItem>
-                      <SelectItem value="15" className="text-xs">Próximos 15 dias</SelectItem>
-                      <SelectItem value="30" className="text-xs">Próximos 30 dias</SelectItem>
+                    <SelectContent className="rounded-xl border-none shadow-2xl">
+                      <SelectItem value="7" className="text-xs font-bold">Próximos 7 dias</SelectItem>
+                      <SelectItem value="15" className="text-xs font-bold">Próximos 15 dias</SelectItem>
+                      <SelectItem value="30" className="text-xs font-bold">Próximos 30 dias</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -314,50 +314,51 @@ export function Transactions() {
             </div>
           )}
 
-          <div className="rounded-md border bg-card overflow-hidden shadow-sm">
+          <div className="rounded-3xl border-none bg-white dark:bg-slate-900 overflow-hidden shadow-sm px-2">
             <div className="overflow-x-auto">
               <Table className="w-full">
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 border-none hover:bg-slate-50/50">
                     {/* Different Headers for Transfers */}
                     {activeTab === 'transfers' ? (
                       <>
-                        <TableHead className="w-1/6 text-muted-foreground font-semibold">Data</TableHead>
-                        <TableHead className="w-2/6 text-muted-foreground font-semibold">Descrição (Opcional)</TableHead>
-                        <TableHead className="w-1/6 text-muted-foreground font-semibold">Origem</TableHead>
-                        <TableHead className="w-1/6 text-muted-foreground font-semibold">Destino</TableHead>
-                        <TableHead className="w-1/6 text-right text-muted-foreground font-semibold">Valor</TableHead>
+                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest pl-8 py-5">Data</TableHead>
+                        <TableHead className="w-2/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Descrição</TableHead>
+                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Origem</TableHead>
+                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Destino</TableHead>
+                        <TableHead className="w-1/6 text-right text-[11px] text-slate-500 font-bold uppercase tracking-widest pr-8">Valor</TableHead>
                       </>
                     ) : (
                       <>
-                        <TableHead className="w-[50px] px-4 text-center">
+                        <TableHead className="w-[60px] pl-8 py-5">
                           <Checkbox
                             checked={
                               transactionsResult?.data.transactions.transactions.length! > 0 &&
                               selectedIds.length === transactionsResult?.data.transactions.transactions.length
                             }
                             onCheckedChange={(checked) => handleSelectAll(!!checked, transactionsResult?.data.transactions.transactions || [])}
+                            className="rounded-md border-slate-300"
                           />
                         </TableHead>
-                        <TableHead className="w-[140px] px-4 text-center text-muted-foreground font-semibold">
-                          Ação
+                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                          Controle
                         </TableHead>
-                        <TableHead className="w-[110px] px-4 text-center text-muted-foreground font-semibold">
-                          Data
+                        <TableHead className="w-[120px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                          Vencimento
                         </TableHead>
-                        <TableHead className="px-4 text-muted-foreground font-semibold max-w-[200px]">
-                          Descrição
+                        <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest px-6">
+                          Descrição da Transação
                         </TableHead>
-                        <TableHead className="w-[120px] px-4 text-center text-muted-foreground font-semibold hidden md:table-cell">
-                          Categoria
+                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden md:table-cell">
+                          Setor
                         </TableHead>
-                        <TableHead className="w-[120px] px-4 text-center text-muted-foreground font-semibold hidden md:table-cell">
-                          Conta
+                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden md:table-cell">
+                          Conta Fluxo
                         </TableHead>
-                        <TableHead className="px-4 text-right text-muted-foreground font-semibold">
-                          Valor
+                        <TableHead className="text-right text-[12px] text-slate-700 font-black uppercase tracking-widest pr-8">
+                          Montante
                         </TableHead>
-                        <TableHead className="w-[80px] px-4 text-right"></TableHead>
+                        <TableHead className="w-[60px] pr-8"></TableHead>
                       </>
                     )}
                   </TableRow>

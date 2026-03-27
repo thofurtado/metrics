@@ -92,11 +92,11 @@ export function Treatments() {
   return (
     <ErrorBoundary>
       <Helmet title="Atendimentos" />
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 font-manrope">
         <PageHeader title="Atendimentos" description="Gerencie seus atendimentos e suporte ao cliente.">
           <Button
             onClick={handleCreateTreatment}
-            className="h-10 w-auto px-4 py-2 rounded-md bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
+            className="h-10 w-auto px-6 py-2 rounded-xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all font-bold"
           >
             <Plus className="h-5 w-5 mr-2" />
             <span className="hidden sm:inline">Novo Atendimento</span>
@@ -105,47 +105,53 @@ export function Treatments() {
         </PageHeader>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="open" className="flex-1">
+          <TabsList className="w-full h-auto p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl flex border border-slate-200/50 dark:border-slate-700/50">
+            <TabsTrigger 
+              value="open" 
+              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+            >
               <LayoutList className="mr-2 h-4 w-4" />
-              Em Aberto
+              Ordens em Aberto
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex-1">
+            <TabsTrigger 
+              value="history" 
+              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+            >
               <History className="mr-2 h-4 w-4" />
-              Histórico
+              Histórico de OS
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <TreatmentTableFilters activeTab={activeTab} />
 
-        <div className={`space-y-4 transition-opacity duration-200 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
-          <div className="rounded-md border bg-card shadow-sm overflow-hidden">
+        <div className={`space-y-4 px-2 transition-opacity duration-200 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
+          <div className="rounded-3xl border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <Table className="w-full">
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50 text-base">
-                    <TableHead className="w-[48px]"></TableHead>
-                    <TableHead className="w-[80px] text-muted-foreground">
-                      Aberto há
+                  <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 border-none hover:bg-slate-50/50">
+                    <TableHead className="w-[60px] pl-8 py-5"></TableHead>
+                    <TableHead className="w-[120px] text-[11px] text-slate-500 font-bold uppercase tracking-widest py-5">
+                      Tempo de OS
                     </TableHead>
-                    <TableHead className="hidden w-[100px] text-muted-foreground sm:table-cell">
-                      Status
+                    <TableHead className="hidden w-[120px] text-[11px] text-slate-500 font-bold uppercase tracking-widest sm:table-cell py-5">
+                      Status Atual
                     </TableHead>
-                    <TableHead className="hidden text-muted-foreground sm:table-cell">
+                    <TableHead className="hidden text-[11px] text-slate-500 font-bold uppercase tracking-widest sm:table-cell py-5">
                       Contato
                     </TableHead>
-                    <TableHead className="text-center text-muted-foreground">
-                      Cliente
+                    <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest py-5">
+                      Solicitante (Cliente)
                     </TableHead>
-                    <TableHead className="text-muted-foreground">
-                      Requisição
+                    <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest py-5 px-6">
+                      Requisição / Problema
                     </TableHead>
-                    <TableHead className="hidden w-[100px] text-muted-foreground sm:table-cell">
-                      Valor
+                    <TableHead className="hidden w-[140px] text-right text-[12px] text-slate-700 font-black uppercase tracking-widest sm:table-cell py-5 pr-8">
+                      Orçamento
                     </TableHead>
-                    <TableHead className="w-[60px] text-muted-foreground sm:w-[100px]"></TableHead>
-                    <TableHead className="w-[60px] text-muted-foreground sm:w-[100px]"></TableHead>
+                    <TableHead className="w-[100px] py-5"></TableHead>
+                    <TableHead className="w-[100px] py-5 pr-8"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

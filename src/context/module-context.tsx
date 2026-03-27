@@ -70,7 +70,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
     // Slugs que a INSTÂNCIA permite (nível 1)
     const instanceSlugs = useMemo<string[]>(() => {
         return (Object.entries(SYSTEM_CONFIG_TO_SLUG) as [keyof typeof SYSTEM_CONFIG_TO_SLUG, string][])
-            .filter(([key]) => safeConfig[key] === true)
+            .filter(([key]) => !!safeConfig[key])
             .map(([, slug]) => slug)
     }, [safeConfig])
 

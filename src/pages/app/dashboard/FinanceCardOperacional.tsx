@@ -43,7 +43,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     return (
         <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
             <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
-                <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 font-merienda">
+                <CardTitle className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 font-manrope tracking-tight">
                     <Wallet className="h-4 w-4 text-indigo-600" />
                     Fluxo e Saúde Financeira
                 </CardTitle>

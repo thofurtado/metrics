@@ -155,39 +155,39 @@ export function Items() {
 
                 <ItemsTableFilters />
 
-                <div className={`space-y-4 transition-opacity duration-200 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
-                    <div className="rounded-md border bg-card shadow-sm overflow-hidden">
+                <div className={`space-y-4 px-2 transition-opacity duration-200 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'} `}>
+                    <div className="rounded-3xl border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <Table className="w-full">
                                 <TableHeader>
-                                    <TableRow className="bg-muted/50 hover:bg-muted/50 text-base">
+                                    <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 border-none hover:bg-slate-50/50">
                                         {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
-                                            <TableHead className="w-[80px] hidden sm:table-cell text-muted-foreground font-semibold">ID</TableHead>
+                                            <TableHead className="w-[80px] hidden sm:table-cell text-[11px] text-slate-500 font-bold uppercase tracking-widest pl-8">ID</TableHead>
                                         )}
-                                        <TableHead className="text-muted-foreground font-semibold">Nome</TableHead>
+                                        <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest pl-6">Nome</TableHead>
 
                                         {activeTabType === 'PRODUCT' && (
                                             <>
-                                                <TableHead className="text-muted-foreground font-semibold text-center w-[100px]">Estoque</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold w-[120px]">Custo</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold w-[120px]">Preço</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold hidden md:table-cell">Barras</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest text-center w-[120px]">Estoque</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest w-[140px]">Custo</TableHead>
+                                                <TableHead className="text-[12px] text-slate-700 font-black uppercase tracking-widest w-[140px]">Preço Sugerido</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden md:table-cell">Código de Barras</TableHead>
                                             </>
                                         )}
                                         {activeTabType === 'SERVICE' && (
                                             <>
-                                                <TableHead className="text-muted-foreground font-semibold hidden sm:table-cell">Tempo Est.</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold w-[120px]">Preço</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden sm:table-cell">Tempo Estimado</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest w-[140px]">Preço</TableHead>
                                             </>
                                         )}
                                         {activeTabType === 'SUPPLY' && (
                                             <>
-                                                <TableHead className="text-muted-foreground font-semibold text-center w-[100px]">Estoque</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold w-[120px]">Custo</TableHead>
-                                                <TableHead className="text-muted-foreground font-semibold hidden sm:table-cell">Unidade</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest text-center w-[120px]">Estoque Dispo.</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest w-[140px]">Custo Médio</TableHead>
+                                                <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden sm:table-cell">Unidade</TableHead>
                                             </>
                                         )}
-                                        <TableHead className="w-[50px]"></TableHead>
+                                        <TableHead className="w-[80px] pr-8"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>

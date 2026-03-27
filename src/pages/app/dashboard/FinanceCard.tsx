@@ -1,7 +1,6 @@
 // ARQUIVO: FinanceCard.tsx
 import { useQuery } from '@tanstack/react-query'
 import { useState, type ComponentProps } from 'react'
-import { Wallet } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -15,9 +14,25 @@ interface FinanceCardProps extends ComponentProps<'div'> {
     year: number
 }
 
-// Função auxiliar para formatar em Reais
-const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+// Componente auxiliar para formatar valores com a tipografia solicitada
+const CurrencyValue = ({ value, className, size = "large" }: { value: number; className?: string; size?: "small" | "large" }) => {
+    const formatted = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    // Extrai o símbolo (R$) e o valor
+    const parts = formatted.split(/\s+/)
+    const symbol = parts[0]
+    const amount = parts[1]
+
+    return (
+        <span className={cn("tabular-nums font-manrope", className)}>
+            <span className={cn("font-medium opacity-70 mr-0.5", size === "large" ? "text-sm" : "text-xs")}>
+                {symbol}
+            </span>
+            <span className={cn("font-black tracking-tight", size === "large" ? "text-3xl" : "text-lg")}>
+                {amount}
+            </span>
+        </span>
+    )
+}
 
 export function FinanceCard({ className, month, year, ...props }: FinanceCardProps) {
     const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
@@ -28,7 +43,6 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
         queryKey: ['metrics', 'finance-metrics', month, year],
     })
 
-    // Mapeamento dos dados da API
     const saldoDisponivel = financeData?.saldoDisponivel ?? 0
     const receita = financeData?.receita ?? 0
     const despesa = financeData?.despesa ?? 0
@@ -37,125 +51,89 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
     const receitaVencida = financeData?.receitaVencida ?? 0
     const despesaVencida = financeData?.despesaVencida ?? 0
 
-    // O saldo é positivo/negativo com base no 'saldoDisponivel'
     const isPositive = saldoDisponivel >= 0
 
     return (
-        <Card className={cn("col-span-1", className)} {...props}>
-            <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-minsk-600" />
-                    Visão Financeira
+        <Card className={cn("col-span-1 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm", className)} {...props}>
+            <CardHeader className="p-8 pb-4 sm:p-10 sm:pb-6">
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2.5">
+                    <div className="h-2 w-2 rounded-full bg-indigo-500" />
+                    Fluxo e Saúde Financeira
                 </CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-4">
-                {/* Saldo Principal - Layout Compacto */}
-                <div className="flex items-center justify-between bg-minsk-50 dark:bg-minsk-900/30 rounded-lg p-3 border">
-                    <div>
-                        <span className="text-sm font-medium text-muted-foreground block">Saldo Disponível</span>
-                        {isLoading ? (
-                            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
-                        ) : (
-                            <span className="text-xl font-bold text-minsk-700 dark:text-minsk-300 tabular-nums">
-                                {formatCurrency(saldoDisponivel)}
-                            </span>
-                        )}
+            <CardContent className="p-8 pt-0 sm:p-10 sm:pt-0 space-y-10">
+                {/* Saldo Principal - Layout Premium */}
+                <div className="bg-slate-50 dark:bg-slate-800/40 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">Saldo em Conta</span>
+                        <div className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                            isPositive
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30'
+                                : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30'
+                        )}>
+                            {isPositive ? 'Estável' : 'Alerta'}
+                        </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-sm font-semibold ${isPositive
-                        ? 'bg-vida-loca-100 text-vida-loca-700 dark:bg-vida-loca-900/30'
-                        : 'bg-stiletto-100 text-stiletto-700 dark:bg-stiletto-900/30'
-                        }`}>
-                        {isPositive ? 'Positivo' : 'Negativo'}
-                    </div>
+                    {isLoading ? (
+                        <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-xl mt-2"></div>
+                    ) : (
+                        <CurrencyValue 
+                            value={saldoDisponivel} 
+                            className={isPositive ? 'text-slate-900 dark:text-slate-50' : 'text-rose-600'} 
+                        />
+                    )}
                 </div>
 
-                {/* Grid Compacto (Receita e Despesa) */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* Receita + A Receber */}
-                    <div className="bg-vida-loca-50 dark:bg-vida-loca-900/20 rounded-lg p-3 border border-vida-loca-100 dark:border-vida-loca-800">
-                        <div className="flex items-center gap-1 mb-1">
-                            <span className="text-xs font-semibold text-vida-loca-700">Receita</span>
-                        </div>
-                        {isLoading ? (
-                            <div className="h-4 w-16 bg-vida-loca-200 animate-pulse rounded mb-1"></div>
-                        ) : (
-                            <span className="text-lg font-bold block mb-1 tabular-nums">
-                                {formatCurrency(receita)}
-                            </span>
-                        )}
-
-                        {/* A Receber */}
-                        <div className="flex items-center justify-between pt-1 border-t border-vida-loca-200 dark:border-vida-loca-800">
-                            <span className="text-xs text-vida-loca-800 dark:text-vida-loca-300 font-medium">
-                                A Receber:
-                            </span>
+                {/* Grid de Receitas e Despesas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                    {/* Coluna de Receitas */}
+                    <div className="space-y-6">
+                        <div>
+                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-3">Receitas</span>
                             {isLoading ? (
-                                <div className="h-3 w-10 bg-vida-loca-200 animate-pulse rounded"></div>
+                                <div className="h-8 w-32 bg-slate-100 animate-pulse rounded-lg"></div>
                             ) : (
-                                <span className="text-xs font-bold text-vida-loca-600 tabular-nums text-right">
-                                    {formatCurrency(aReceber)}
-                                </span>
+                                <CurrencyValue value={receita} size="large" className="text-emerald-600" />
                             )}
                         </div>
 
-                        {/* A Receber Vencido - MESMO TAMANHO */}
-                        <div className="flex items-center justify-between pt-1 border-t border-vida-loca-200 dark:border-vida-loca-800">
-                            <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                                Vencido:
-                            </span>
-                            {isLoading ? (
-                                <div className="h-3 w-10 bg-amber-200 animate-pulse rounded"></div>
-                            ) : (
-                                <span className="text-xs font-bold text-amber-600 tabular-nums text-right">
-                                    {formatCurrency(receitaVencida)}
-                                </span>
-                            )}
+                        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-400">Previsão:</span>
+                                <CurrencyValue value={aReceber} size="small" className="text-emerald-500" />
+                             </div>
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-400">Vencido:</span>
+                                <CurrencyValue value={receitaVencida} size="small" className="text-amber-600" />
+                             </div>
                         </div>
                     </div>
 
-                    {/* Despesa + A Pagar */}
-                    <div className="bg-stiletto-50 dark:bg-stiletto-900/20 rounded-lg p-3 border border-stiletto-100 dark:border-stiletto-800">
-                        <div className="flex items-center gap-1 mb-1">
-                            <span className="text-xs font-semibold text-stiletto-700">Despesa</span>
-                        </div>
-                        {isLoading ? (
-                            <div className="h-4 w-16 bg-stiletto-200 animate-pulse rounded mb-1"></div>
-                        ) : (
-                            <span className="text-lg font-bold block mb-1 tabular-nums">
-                                {formatCurrency(despesa)}
-                            </span>
-                        )}
-
-                        {/* A Pagar */}
-                        <div className="flex items-center justify-between pt-1 border-t border-stiletto-200 dark:border-stiletto-800">
-                            <span className="text-xs text-stiletto-800 dark:text-stiletto-300 font-medium">
-                                A Pagar:
-                            </span>
+                    {/* Coluna de Despesas */}
+                    <div className="space-y-6">
+                        <div>
+                            <span className="text-xs font-bold text-rose-600 uppercase tracking-widest block mb-3">Despesas</span>
                             {isLoading ? (
-                                <div className="h-3 w-10 bg-stiletto-200 animate-pulse rounded"></div>
+                                <div className="h-8 w-32 bg-slate-100 animate-pulse rounded-lg"></div>
                             ) : (
-                                <span className="text-xs font-bold text-stiletto-600 tabular-nums text-right">
-                                    {formatCurrency(aPagar)}
-                                </span>
+                                <CurrencyValue value={despesa} size="large" className="text-rose-600" />
                             )}
                         </div>
 
-                        {/* A Pagar Vencido - MESMO TAMANHO */}
-                        <div 
-                            onClick={() => setIsOverdueModalOpen(true)}
-                            className="flex items-center justify-between pt-1 border-t border-stiletto-200 dark:border-stiletto-800 cursor-pointer hover:bg-stiletto-100 hover:-mx-1 hover:px-1 dark:hover:bg-stiletto-900/40 rounded transition-all group"
-                        >
-                            <span className="text-xs text-rose-800 dark:text-rose-300 font-medium group-hover:font-semibold">
-                                Vencido:
-                            </span>
-                            {isLoading ? (
-                                <div className="h-3 w-10 bg-rose-200 animate-pulse rounded"></div>
-                            ) : (
-                                <span className="text-xs font-bold text-rose-600 tabular-nums text-right group-hover:scale-[1.05] transition-transform origin-right">
-                                    {formatCurrency(despesaVencida)}
-                                </span>
-                            )}
+                        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-400">A Pagar:</span>
+                                <CurrencyValue value={aPagar} size="small" className="text-rose-500" />
+                             </div>
+                             <div 
+                                onClick={() => setIsOverdueModalOpen(true)}
+                                className="flex items-center justify-between cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-900/10 p-1.5 -mx-1.5 rounded-xl transition-all group"
+                             >
+                                <span className="text-xs font-bold text-rose-700 underline decoration-rose-200 underline-offset-4">Vencidos:</span>
+                                <CurrencyValue value={despesaVencida} size="small" className="text-rose-600 group-hover:scale-110 transition-transform origin-right" />
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -167,4 +145,4 @@ export function FinanceCard({ className, month, year, ...props }: FinanceCardPro
             />
         </Card>
     )
-}
+}

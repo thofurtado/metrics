@@ -1,6 +1,6 @@
 // ARQUIVO: TreatmentCard.tsx
 import { useQuery } from '@tanstack/react-query'
-import { Handshake, Wrench, Bus, CheckCircle2, TrendingUp, Clock } from 'lucide-react'
+import { Wrench, Bus, CheckCircle2, TrendingUp, Clock } from 'lucide-react'
 import { type ComponentProps } from 'react'
 
 import {
@@ -37,111 +37,112 @@ export function MonthTreatmentAmountCard({ className, month, year, ...props }: M
   const ativosTotais = serviceData?.ativosTotais ?? 0
 
   return (
-    <Card className={cn('col-span-1', className)} {...props}>
-      <CardHeader className="flex-row items-center justify-between space-y-0 !pb-2 px-4 pt-4">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Handshake className="h-4 w-4 text-minsk-600" />
+    <Card className={cn("col-span-1 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm", className)} {...props}>
+      <CardHeader className="p-8 pb-4 sm:p-10 sm:pb-6">
+        <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2.5">
+          <div className="h-2 w-2 rounded-full bg-indigo-500" />
           Gestão de Serviços
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-2 px-4 pb-4">
+      <CardContent className="p-8 pt-0 sm:p-10 sm:pt-0 space-y-10">
         {/* 1. Grid de Métricas Chave (3 Colunas) */}
-        <div className="grid grid-cols-3 gap-x-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {/* A. Atendimentos Totais Mês */}
-          <div className='p-2 bg-minsk-50/50 dark:bg-minsk-900/30 rounded-lg'>
-            <span className="flex items-center text-xs font-semibold text-minsk-700 dark:text-minsk-300 mb-1">
-              <TrendingUp className="mr-1 h-3 w-3" />
+          <div className='p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-2'>
+            <span className="flex items-center text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <TrendingUp className="mr-2 h-3.5 w-3.5 text-indigo-500" />
               Total Mês
             </span>
             {isLoading ? (
-              <div className="h-6 w-10 bg-gray-200 animate-pulse rounded block"></div>
+              <div className="h-10 w-16 bg-slate-200 animate-pulse rounded-lg"></div>
             ) : (
-              <span className="text-2xl font-bold tracking-tight block">
+              <span className="text-4xl font-black font-manrope tracking-tighter block text-slate-900 dark:text-slate-50 tabular-nums">
                 {totalMes.toLocaleString('pt-BR')}
               </span>
             )}
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Atend. Registrados
+            <p className="text-[10px] font-medium text-slate-400">
+              Atendimentos Registrados
             </p>
           </div>
 
           {/* B. Atendimentos Concluídos */}
-          <div className='p-2 bg-vida-loca-50/50 dark:bg-vida-loca-900/20 rounded-lg'>
-            <span className="flex items-center text-xs font-semibold text-vida-loca-700 dark:text-vida-loca-400 mb-1">
-              <CheckCircle2 className="mr-1 h-3 w-3" />
+          <div className='p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl border border-emerald-100 dark:border-emerald-800 space-y-2'>
+            <span className="flex items-center text-[10px] font-black uppercase tracking-widest text-emerald-600">
+              <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
               Concluídos
             </span>
             {isLoading ? (
-              <div className="h-6 w-10 bg-vida-loca-200 animate-pulse rounded block"></div>
+              <div className="h-10 w-16 bg-emerald-100 animate-pulse rounded-lg"></div>
             ) : (
-              <span className="text-2xl font-bold tracking-tight block">
+              <span className="text-4xl font-black font-manrope tracking-tighter block text-emerald-600 tabular-nums">
                 {concluidos.toLocaleString('pt-BR')}
               </span>
             )}
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Este mês
+            <p className="text-[10px] font-medium text-emerald-700/60">
+              Finalizados no Período
             </p>
           </div>
 
           {/* C. Tempo Médio de Atendimento (TMA) */}
-          <div className='p-2 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg'>
-            <span className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-400 mb-1">
-              <Clock className="mr-1 h-3 w-3" />
+          <div className='p-6 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-2'>
+            <span className="flex items-center text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <Clock className="mr-2 h-3.5 w-3.5 text-amber-500" />
               TMA (Média)
             </span>
             {isLoading ? (
-              <div className="h-6 w-14 bg-gray-200 animate-pulse rounded block"></div>
+              <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-lg"></div>
             ) : (
-              <span className="text-2xl font-bold tracking-tight block">
+              <span className="text-2xl font-black font-manrope tracking-tight block text-slate-900 dark:text-slate-50 tabular-nums uppercase">
                 {formatTime(tmaSegundos)}
               </span>
             )}
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Tempo médio
+            <p className="text-[10px] font-medium text-slate-400">
+              Tempo Médio Global
             </p>
           </div>
         </div>
 
         {/* 2. Grid de Atendimentos Ativos (2 Colunas) */}
-        <div className="grid grid-cols-2 gap-x-4 pt-2 border-t border-dashed">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-slate-100 dark:border-slate-800">
           {/* A. Máquinas na Bancada */}
-          <div className='text-center border-r dark:border-gray-700'>
-            <span className="flex items-center justify-center text-sm font-semibold text-minsk-700 dark:text-minsk-400 mb-1">
-              <Wrench className="mr-1 h-4 w-4" />
-              Na Bancada
-            </span>
-            {isLoading ? (
-              <div className="h-8 w-10 mx-auto bg-gray-200 animate-pulse rounded block"></div>
-            ) : (
-              <span className="text-3xl font-extrabold tracking-tight block">
-                {naBancada.toLocaleString('pt-BR')}
-              </span>
-            )}
-            <p className="text-xs text-muted-foreground mt-0.5">
-              &nbsp;
-            </p>
+          <div className='flex items-center gap-6'>
+            <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 flex-shrink-0">
+               <Wrench className="h-8 w-8" />
+            </div>
+            <div className="space-y-1">
+               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Na Bancada</span>
+               {isLoading ? (
+                 <div className="h-10 w-12 bg-slate-100 animate-pulse rounded-lg"></div>
+               ) : (
+                 <span className="text-4xl font-black font-manrope tracking-tighter block text-slate-900 dark:text-slate-50 tabular-nums">
+                   {naBancada.toLocaleString('pt-BR')}
+                 </span>
+               )}
+            </div>
           </div>
 
           {/* B. Atendimentos Externos */}
-          <div className='text-center'>
-            <span className="flex items-center justify-center text-sm font-semibold text-minsk-700 dark:text-minsk-400 mb-1">
-              <Bus className="mr-1 h-4 w-4" />
-              Externos
-            </span>
-            {isLoading ? (
-              <div className="h-8 w-10 mx-auto bg-gray-200 animate-pulse rounded block"></div>
-            ) : (
-              <span className="text-3xl font-extrabold tracking-tight block">
-                {externos.toLocaleString('pt-BR')}
-              </span>
-            )}
-            <p className="text-xs text-muted-foreground mt-0.5">
-              ({ativosTotais} Ativos Totais)
-            </p>
+          <div className='flex items-center gap-6'>
+            <div className="h-16 w-16 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-600 flex-shrink-0">
+               <Bus className="h-8 w-8" />
+            </div>
+            <div className="space-y-1">
+               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Externos</span>
+               {isLoading ? (
+                 <div className="h-10 w-12 bg-slate-100 animate-pulse rounded-lg"></div>
+               ) : (
+                 <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black font-manrope tracking-tighter block text-slate-900 dark:text-slate-50 tabular-nums text-emerald-600">
+                        {externos.toLocaleString('pt-BR')}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 tabular-nums">/ {ativosTotais} Ativos</span>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
   )
-}
+}

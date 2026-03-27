@@ -57,44 +57,47 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
   const [isItemsOpen, setIsItemsOpen] = useState(false)
 
   return (
-    <TableRow className="font-gaba">
-      <TableCell>
+    <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
+      <TableCell className="pl-8 py-5">
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-              <Eye className="h-3 w-3" />
+            <Button variant="outline" size="sm" className="h-9 w-9 p-0 rounded-xl border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
+              <Eye className="h-4 w-4" />
               <span className="sr-only">Detalhes do Atendimento</span>
             </Button>
           </DialogTrigger>
           <TreatmentDetails open={isDetailsOpen} treatmentId={treatments.id} />
         </Dialog>
       </TableCell>
-      <TableCell className="text-base text-muted-foreground">
+      <TableCell className="py-5 text-[11px] font-bold uppercase tracking-widest text-slate-400 leading-none">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
       </TableCell>
-      <TableCell className="text-sm sm:text-base">
+      <TableCell className="py-5">
         <TreatmentStatus status={treatments.status} />
       </TableCell>
       {/* Contato - Oculto apenas no mobile */}
-      <TableCell className="hidden text-center text-base font-medium sm:table-cell">
+      <TableCell className="hidden py-5 text-[11px] font-bold uppercase tracking-widest text-slate-400 sm:table-cell">
         {treatments.contact}
       </TableCell>
-      <TableCell className="text-center text-base font-medium">
-        {treatments.clients.name}
+      <TableCell className="py-5">
+        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight truncate max-w-[150px]">
+           {treatments.clients.name}
+        </div>
       </TableCell>
-      <TableCell className="text-base">
-        <div className="line-clamp-1 max-w-[120px] sm:max-w-none" title={treatments.request}>
+      <TableCell className="py-5 px-6">
+        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-tight line-clamp-1 max-w-[120px] sm:max-w-none" title={treatments.request}>
           {treatments.request}
         </div>
       </TableCell>
       {/* Valor - Oculto apenas no mobile */}
-      <TableCell className="text-sm font-medium sm:text-base">
+      <TableCell className="hidden sm:table-cell py-5 text-right font-black text-slate-900 dark:text-slate-50 tabular-nums text-base pr-8">
+        <span className="text-[10px] font-bold text-slate-400 mr-0.5">R$</span>
         {treatments.amount.toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         })}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-5">
         {isModuleActive('merchandise') && isModuleActive('financial') ? (
           <Dialog open={isItemsOpen} onOpenChange={setIsItemsOpen}>
             <DialogTrigger asChild>
@@ -102,6 +105,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
                 disabled={['canceled', 'resolved'].includes(treatments.status)}
                 variant="outline"
                 size="sm"
+                className="h-9 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
               >
                 <Shapes className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Itens</span>
@@ -116,20 +120,19 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
             size="sm"
             disabled
             title="Módulo de Mercadorias ou Financeiro desativado"
-            className="opacity-50"
+            className="opacity-50 h-9 rounded-xl"
           >
             <Shapes className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Itens</span>
           </Button>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-5 pr-8">
         <Dialog open={isInteractionsOpen} onOpenChange={setIsInteractionsOpen}>
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="h-8 w-8 px-0 sm:px-3 sm:w-auto"
-              // Using default variant (primary) instead of custom minsk color
+              className="h-9 px-4 rounded-xl bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] shadow-sm hover:bg-slate-800 transition-all w-full sm:w-auto"
               size="sm"
             >
               <NotebookPen className="h-4 w-4 sm:mr-2" />

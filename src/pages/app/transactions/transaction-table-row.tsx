@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from '@/lib/utils'
 import { MoreHorizontal, Scissors, Trash } from "lucide-react"
 import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
 
@@ -39,6 +40,7 @@ interface Transaction {
   confirmed: boolean
   operation: 'income' | 'expense'
   amount: number
+  totalValue?: number
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
   transaction_group_id?: string | null
@@ -216,18 +218,18 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   }
 
   return (
-    <TableRow className="h-[72px] bg-background group transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted/60">
+    <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
       {customPrefix}
-      <TableCell className="w-[140px] text-center px-4 py-3">
+      <TableCell className="w-[140px] text-center px-4 py-5">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
           aria-label={transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 w-[110px] text-xs font-bold rounded-lg border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
+          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 w-[110px] text-[10px] font-black uppercase tracking-widest rounded-xl border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
             transactions.confirmed
-              ? 'bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground focus:ring-muted-foreground/50' // Reverter
+              ? 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
               : transactions.operation === 'income'
-                ? 'bg-vida-loca-600 text-white border-transparent hover:bg-vida-loca-700 focus:ring-vida-loca-600' // Receber
-                : 'bg-stiletto-600 text-white border-transparent hover:bg-stiletto-700 focus:ring-stiletto-600' // Pagar
+                ? 'bg-emerald-600 text-white border-transparent hover:bg-emerald-700 focus:ring-emerald-600' // Receber
+                : 'bg-rose-600 text-white border-transparent hover:bg-rose-700 focus:ring-rose-600' // Pagar
           }`}
           onClick={() => {
             if (transactions.confirmed) {
@@ -240,22 +242,22 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         >
           {localLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+              ...
             </>
           ) : transactions.confirmed ? (
             <>
-              <Undo2 className="h-4 w-4" />
+              <Undo2 className="h-3 w-3" />
               Reverter
             </>
           ) : transactions.operation === 'income' ? (
             <>
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className="h-3 w-3" />
               Receber
             </>
           ) : (
             <>
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className="h-3 w-3" />
               Pagar
             </>
           )}
@@ -271,16 +273,16 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
 
         {/* ALERT DE REVERSÃO */}
         <AlertDialog open={openRevertAlert} onOpenChange={setOpenRevertAlert}>
-          <AlertDialogContent>
+          <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>Reverter Pagamento?</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-extrabold tracking-tight">Reverter Pagamento?</AlertDialogTitle>
               <AlertDialogDescription>
                 Deseja marcar esta transação como não paga? Isso afetará o saldo atual.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={localLoading}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRevert} disabled={localLoading}>
+              <AlertDialogCancel disabled={localLoading} className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRevert} disabled={localLoading} className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
                 Sim, Reverter
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -293,46 +295,51 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
 
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="text-center min-w-[110px] px-4 py-3">
-        <div className="flex flex-col items-center">
-          <span className={!transactions.confirmed && dayjs(transactions.data_vencimento).isBefore(dayjs().startOf('day')) ? "text-red-600 dark:text-red-400 font-bold" : "font-semibold text-foreground"}>
+      <TableCell className="text-center min-w-[120px] px-4 py-5">
+        <div className="flex flex-col items-center gap-1">
+          <span className={cn(
+            "text-sm tracking-tight",
+            !transactions.confirmed && dayjs(transactions.data_vencimento).isBefore(dayjs().startOf('day')) 
+              ? "text-rose-600 font-black" 
+              : "font-bold text-slate-700 dark:text-slate-200"
+          )}>
             {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
           </span>
-          <span className="text-[11px] text-muted-foreground mt-0.5 leading-none" title="Data de Emissão">
-            Emissão: {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">
+            {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
           </span>
         </div>
       </TableCell>
 
-      <TableCell className="px-4 py-3 font-medium text-foreground/90 max-w-[200px] truncate">{transactions.description}</TableCell>
+      <TableCell className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 max-w-[200px] truncate tracking-tight">
+        {transactions.description}
+      </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell px-4 py-3 text-sm text-foreground/80">
+      <TableCell className="text-center hidden md:table-cell px-4 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell px-4 py-3 text-sm text-foreground/80">
-        <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-muted/50">
+      <TableCell className="text-center hidden md:table-cell px-4 py-5">
+        <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-slate-200/50 dark:border-slate-700/50">
           {transactions.accounts.name}
         </span>
       </TableCell>
 
       {/* Célula de Valor */}
-      {transactions.operation === 'income' ? (
-        <TableCell className="text-right font-bold text-vida-loca-600 dark:text-vida-loca-400 px-4 py-3">
-          {`R$ ${(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-        </TableCell>
-      ) : (
-        <TableCell className="text-right font-bold text-stiletto-600 dark:text-stiletto-400 px-4 py-3">
-          {`R$ ${(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-        </TableCell>
-      )}
+      <TableCell className={cn(
+        "text-right font-black tabular-nums px-8 py-5 text-base",
+        transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
+      )}>
+        <span className="text-[11px] font-bold opacity-60 mr-0.5">R$</span>
+        {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </TableCell>
 
-      <TableCell className="w-[80px] text-right px-4 py-3">
+      <TableCell className="w-[80px] text-right px-8 py-5">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors">
+            <Button variant="ghost" className="h-9 w-9 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               <span className="sr-only">Opções</span>
-              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              <MoreHorizontal className="h-4 w-4 text-slate-400" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
