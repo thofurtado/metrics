@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Angry, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -20,6 +20,7 @@ import { StoreProfileDialog } from './store-profile-dialog'
 
 export function AccountMenu() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['profile'],
@@ -29,6 +30,7 @@ export function AccountMenu() {
   const { mutateAsync: signOutFn, isPending: isSigningOut } = useMutation({
     mutationFn: signOut,
     onSuccess: () => {
+      queryClient.clear()
       navigate('/sign-in', { replace: true })
     },
   })
