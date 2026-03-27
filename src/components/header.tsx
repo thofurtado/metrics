@@ -1,71 +1,88 @@
-import { Link } from 'react-router-dom'
-import { Blocks, Headset, PiggyBank, Pyramid, Users } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { 
+  Pyramid, 
+  LayoutDashboard, 
+  Archive, 
+  FileText 
+} from 'lucide-react'
 
-import { NavLink } from './nav-link'
 import { ModeToggle } from './theme/theme-toogle'
 import { AccountMenu } from './ui/account-menu'
-import { MobileAccountMenu } from './ui/mobile-account-menu' // Importe o novo componente
+import { MobileAccountMenu } from './ui/mobile-account-menu'
 import { Separator } from './ui/separator'
 import { useModules } from '@/context/module-context'
+import { cn } from '@/lib/utils'
+
+function TopNavLink({ to, label, icon: Icon, active }: { to: string, label: string, icon: any, active: boolean }) {
+  return (
+    <Link 
+      to={to} 
+      className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200",
+        active 
+          ? "bg-primary text-primary-foreground shadow-md scale-[1.02]" 
+          : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
+    </Link>
+  )
+}
 
 export function Header() {
   const { hasAccess } = useModules()
+  const { pathname } = useLocation()
+
   return (
-    <div className="border-b">
-      <div className="flex h-16 items-center gap-6 px-6">
-        {/* Logo - sempre visível em todas as telas */}
-        <Link to="/" aria-label="Início" className="flex items-center gap-2 text-foreground font-semibold">
-          <Pyramid className="h-6 w-6" />
-          <span className="hidden lg:inline-block">metrics</span>
+    <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b z-50 px-6 flex items-center justify-between font-manrope">
+      <div className="flex items-center gap-8">
+        {/* Logo - Financial Architect */}
+        <Link to="/dashboard" aria-label="Início" className="flex items-center gap-2 text-primary font-black uppercase tracking-tighter text-xl group">
+          <div className="p-1.5 bg-primary rounded-lg text-white group-hover:rotate-12 transition-transform duration-300">
+            <Pyramid className="h-5 w-5" />
+          </div>
+          <span>Financial <span className="text-slate-400 font-medium lowercase">Architect</span></span>
         </Link>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6 hidden lg:block" />
 
-        <nav className="flex flex-1 items-center justify-between sm:justify-start sm:space-x-4 lg:space-x-6">
-
+        {/* Global Navigation - Dashboard, Inventory, Reports */}
+        <nav className="hidden md:flex items-center gap-1">
+          <TopNavLink 
+            to="/dashboard" 
+            label="Dashboard" 
+            icon={LayoutDashboard} 
+            active={pathname === '/dashboard'} 
+          />
           {hasAccess('items') && (
-            <NavLink to="/items">
-              <Blocks className="h-5 w-5" />
-              <span className="hidden sm:inline">Mercadoria</span>
-            </NavLink>
+            <TopNavLink 
+              to="/items" 
+              label="Inventory" 
+              icon={Archive} 
+              active={pathname === '/items'} 
+            />
           )}
-
-          {hasAccess('service') && (
-            <NavLink to="/treatments">
-              <Headset className="h-5 w-5" />
-              <span className="hidden sm:inline">Atendimento</span>
-            </NavLink>
-          )}
-
-          {hasAccess('finance') && (
-            <NavLink to="/transactions">
-              <PiggyBank className="h-5 w-5" />
-              <span className="hidden sm:inline">Financeiro</span>
-            </NavLink>
-          )}
-
-          {hasAccess('hr') && (
-            <NavLink to="/hr">
-              <Users className="h-5 w-5" />
-              <span className="hidden sm:inline">RH</span>
-            </NavLink>
-          )}
+          <TopNavLink 
+            to="/dashboard" 
+            label="Reports" 
+            icon={FileText} 
+            active={pathname === '/reports'} 
+          />
         </nav>
+      </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <ModeToggle />
+      <div className="flex items-center gap-3">
+        <ModeToggle />
+        
+        <div className="sm:hidden">
+          <MobileAccountMenu />
+        </div>
 
-          {/* No mobile: MobileAccountMenu com iniciais */}
-          <div className="sm:hidden">
-            <MobileAccountMenu />
-          </div>
-
-          {/* No desktop: AccountMenu normal */}
-          <div className="hidden sm:block">
-            <AccountMenu />
-          </div>
+        <div className="hidden sm:block">
+          <AccountMenu />
         </div>
       </div>
-    </div>
+    </header>
   )
 }

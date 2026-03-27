@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
 import { Header } from '@/components/header'
+import { Sidebar } from '@/components/sidebar'
 import { api } from '@/lib/axios'
 
 export function AppLayout() {
@@ -27,10 +28,15 @@ export function AppLayout() {
   }, [navigate])
 
   return (
-    <div className="flex min-h-screen flex-col antialiased">
+    <div className="flex min-h-screen flex-col antialiased bg-background selection:bg-primary/20">
       <Header />
-      <div className="flex flex-1 flex-col gap-3 p-3 pt-4 sm:gap-4 sm:p-4 sm:pt-5 lg:gap-6 lg:p-6 lg:pt-6 w-full mx-auto">
-        <Outlet />
+      <div className="flex flex-1 pt-16">
+        <Sidebar />
+        <main className="flex-1 md:ml-24">
+          <div className="p-6 md:p-10 max-w-[1600px] mx-auto w-full">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   )
