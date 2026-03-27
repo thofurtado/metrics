@@ -103,7 +103,6 @@ module.exports = {
         },
       },
       fontFamily: {
-        manrope: ['Manrope', 'sans-serif'],
         gaba: ['Gabarito', 'sans-serif'],
         titi: ['Titillium Web', 'sans-serif'],
         martian: ['Martian Mono', 'monospace'],

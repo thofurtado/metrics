@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Pirata+One&family=Cinzel:wght@400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cinzel:wght@400..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,68 +8,140 @@
   :root {
     /* Base Neutral: Slate (Modern Blue-Grey) */
     --background: 210 40% 98%;
+    /* Slate 50 (#F8FAFC) */
     --foreground: 224 71% 4%;
+    /* Slate 950 */
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    /* Primary: Vibrant Purple (#6200EE) */
-    --primary: 264 100% 47%;
+    /* Primary: Accent Indigo (#4F46E5) */
+    --primary: 243 75% 59%;
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary: Lavender Suave (#B388FF) */
-    --secondary: 261 100% 76%;
-    --secondary-foreground: 224 71% 4%;
+    /* Secondary: Light Gray/Slate */
+    --secondary: 210 40% 96.1%;
+    /* Slate 100 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Slate 900 */
 
+    /* Muted: Subtle Gray — raised to Slate 600 level for WCAG AA compliance */
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 34%;
+    /* ↑ Was 46.9% (Slate 500) → now 34% (Slate 600) — +AA contrast on white */
 
-    --accent: 264 100% 95%;
-    --accent-foreground: 264 100% 47%;
+    /* Accent: Interactive Gray */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
+    /* Destructive: Stiletto (Rose/Red) */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
+    /* Slate 200 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 264 100% 47%;
+    --ring: 249 72% 60%;
+    /* Match Primary */
 
-    --radius: 0.5rem; /* 8px rounded as requested */
+    --radius: 1rem;
+    /* 16px soft corners */
+
+    /* Semantic Colors Custom Variables if needed */
+    --success: 151 55% 41.5%;
+    /* Emerald */
+    --warning: 38 92% 50%;
+    /* Amber */
   }
 
   .dark {
-    /* Base Neutral: Deep Bluish-Gray for Dark Mode */
-    --background: 224 71% 4%;
+    /* Base Neutral: Deep Slate (Not Pure Black) */
+    --background: 222.2 47.4% 11.2%;
+    /* Slate 950 */
     --foreground: 210 40% 98%;
+    /* Slate 50 */
 
-    --card: 222 47% 11%;
+    --card: 222.2 47.4% 13%;
+    /* Slightly lighter than bg */
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 11%;
+    --popover: 222.2 47.4% 11.2%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary in Dark Mode */
-    --primary: 264 100% 65%;
-    --primary-foreground: 224 71% 4%;
+    /* Primary: Minsk in Dark Mode (Lighter/Brighter) */
+    --primary: 249 72% 65%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 261 100% 30%;
+    /* Secondary */
+    --secondary: 217.2 32.6% 17.5%;
+    /* Slate 800 */
     --secondary-foreground: 210 40% 98%;
 
+    /* Muted — raised to 70% lightness for dark mode legibility */
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 20.2% 70%;
+    /* ↑ Was 65.1% (Slate 400) → now 70% — brighter on dark backgrounds */
 
+    /* Accent */
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
+    /* Destructive */
     --destructive: 0 62.8% 30.6%;
+    /* Darker Red bg */
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
+    /* Slate 800 */
     --input: 217.2 32.6% 17.5%;
-    --ring: 264 100% 65%;
+    --ring: 249 72% 65%;
+
+    --success: 151 55% 41.5%;
+    --warning: 48 96% 53%;
+    /* Lighter Amber for dark mode */
+  }
+
+  .theme-marujo {
+    /* Tema: Dark Tavern Premium */
+    --background: transparent;
+
+    /* Texto principal: stone-200 (60 5% 90%) para leitura suave */
+    --foreground: 60 5% 90%;
+
+    /* Fundos de card/modais: stone-900 (24 10% 10%) or white/5 */
+    --card: 24 10% 10%;
+    --card-foreground: 60 5% 90%;
+
+    --popover: 24 10% 10%;
+    --popover-foreground: 60 5% 90%;
+
+    /* Primary: Amber 600 elegante (38 92% 43%) */
+    --primary: 38 92% 43%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Tons atenuados para elementos secundários */
+    --secondary: 24 10% 15%;
+    --secondary-foreground: 60 5% 90%;
+
+    --muted: 24 10% 15%;
+    --muted-foreground: 60 5% 72%;
+    /* ↑ Was 65% → now 72% for marujo dark theme legibility */
+
+    --accent: 24 10% 15%;
+    --accent-foreground: 60 5% 90%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 0 0% 15%;
+    /* white/10ish */
+    --input: 0 0% 15%;
+    --ring: 38 92% 43%;
+
+    --radius: 0.2rem;
   }
 }
 
@@ -79,20 +151,6 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased font-manrope;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
-  }
-
-  .label-uppercase {
-    @apply uppercase tracking-widest text-[10px] font-black opacity-60;
-  }
-}
-
-@layer components {
-  .premium-blur-header {
-    @apply sticky top-0 z-50 w-full border-b bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/40;
+    @apply bg-background text-foreground antialiased;
   }
 }

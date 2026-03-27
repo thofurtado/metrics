@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type ComponentProps } from 'react'
-import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target, PiggyBank } from 'lucide-react'
+import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ interface FinanceCardOperacionalProps extends ComponentProps<'div'> {
     year: number
 }
 
+// Função auxiliar para formatar em Reais
 const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -34,141 +35,170 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     const numEntradas = opData?.numEntradas ?? 0
     const totalJurosPagos = opData?.totalJurosPagos ?? 0
 
+    // Cálculo da porcentagem para a barra de progresso (evitando NaN/Infinity)
     const progressPercentage = totalDespesasMes > 0
         ? Math.min((despesasPagasMes / totalDespesasMes) * 100, 100)
         : 0
 
     return (
-        <Card className={cn("col-span-1 flex flex-col p-2", className)} {...props}>
-            <CardHeader className="flex flex-row items-center justify-between pb-8">
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    Fluxo Financeiro
+        <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
+            <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
+                <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 font-merienda">
+                    <Wallet className="h-4 w-4 text-indigo-600" />
+                    Fluxo e Saúde Financeira
                 </CardTitle>
-                <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-full">
-                    <TrendingUp className="h-3 w-3" />
-                    <span>+12.5%</span>
-                </div>
             </CardHeader>
 
-            <CardContent className="flex-1 space-y-8 px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative group overflow-hidden bg-white dark:bg-slate-900 rounded-2xl p-6 border shadow-sm transition-all duration-300 hover:shadow-md">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40">
-                                <TrendingUp className="h-5 w-5 text-emerald-600" />
+            <CardContent className="flex-1 space-y-4">
+                {/* Topo: Receita e Despesa Mensal */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/50 col-span-2 sm:col-span-1 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="h-4 w-4 text-emerald-600" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Receita Mensal</span>
                             </div>
-                            <span className="label-uppercase">Receita Total</span>
+                            {isLoading ? (
+                                <div className="h-8 w-24 bg-emerald-200 animate-pulse rounded mt-1"></div>
+                            ) : (
+                                <span className="text-2xl font-black text-emerald-600 block tabular-nums tracking-tighter">
+                                    {formatCurrency(receitaAcumulada)}
+                                </span>
+                            )}
                         </div>
-                        {isLoading ? (
-                            <div className="h-10 w-40 bg-slate-100 animate-pulse rounded" />
-                        ) : (
-                            <h2 className="text-4xl font-extrabold text-emerald-600 tracking-tighter">
-                                {formatCurrency(receitaAcumulada)}
-                            </h2>
+                        {/* Sub-indicadores da Receita */}
+                        {!isLoading && (
+                            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-emerald-200/50 dark:border-emerald-800/30">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-emerald-800/60 uppercase">Ticket Médio</span>
+                                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">{formatCurrency(ticketMedio)}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-emerald-800/60 uppercase">Vendas</span>
+                                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">{numEntradas}</span>
+                                </div>
+                            </div>
                         )}
-                        <div className="mt-6 flex items-center gap-4 border-t pt-4">
-                           <div className="flex flex-col">
-                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Ticket</span>
-                               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatCurrency(ticketMedio)}</span>
-                           </div>
-                           <div className="flex flex-col border-l pl-4">
-                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Orders</span>
-                               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{numEntradas}</span>
-                           </div>
-                        </div>
                     </div>
 
-                    <div className="relative group overflow-hidden bg-white dark:bg-slate-900 rounded-2xl p-6 border shadow-sm transition-all duration-300 hover:shadow-md">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-primary/10">
-                                <PiggyBank className="h-5 w-5 text-primary" />
+                    <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Wallet className="h-4 w-4 text-slate-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Despesa Mensal</span>
                             </div>
-                            <span className="label-uppercase">Despesa Mensal</span>
+                            {isLoading ? (
+                                <div className="h-8 w-24 bg-slate-200 animate-pulse rounded mt-1"></div>
+                            ) : (
+                                <span className="text-2xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter">
+                                    {formatCurrency(totalDespesasMes)}
+                                </span>
+                            )}
                         </div>
-                        {isLoading ? (
-                            <div className="h-10 w-40 bg-slate-100 animate-pulse rounded" />
-                        ) : (
-                            <h2 className="text-4xl font-extrabold text-primary tracking-tighter">
-                                {formatCurrency(totalDespesasMes)}
-                            </h2>
+                        {/* Sub-indicadores da Despesa */}
+                        {!isLoading && (
+                            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-1.5 focus-within:ring-2">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase">Juros Pagos:</span>
+                                    <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(totalJurosPagos)}</span>
+                                </div>
+                            </div>
                         )}
-                        <div className="mt-6 flex items-center gap-2 border-t pt-4">
-                            <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Juros Acumulados:</span>
-                            <span className="text-sm font-bold text-rose-600">{formatCurrency(totalJurosPagos)}</span>
-                        </div>
                     </div>
                 </div>
 
-                <div className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary text-white rounded-lg shadow-lg shadow-primary/20">
-                                <Target className="h-4 w-4" />
-                            </div>
-                            <span className="text-sm font-black uppercase tracking-widest text-slate-500">Break-even Progress</span>
+                {/* Corpo: Barra de Progresso (Ponto de Equilíbrio) */}
+                <div className="space-y-4 py-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-indigo-600" />
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Equilíbrio do Mês</span>
                         </div>
-                        <span className="px-4 py-1 bg-white dark:bg-slate-800 rounded-full text-xs font-black text-primary shadow-sm border">
-                            {progressPercentage.toFixed(1)}% Completed
-                        </span>
+                        {isLoading ? (
+                            <div className="h-5 w-16 bg-slate-200 animate-pulse rounded-full" />
+                        ) : (
+                            <span className={cn(
+                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                progressPercentage >= 100 
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
+                                    : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                            )}>
+                                {progressPercentage.toFixed(0)}% Pago
+                            </span>
+                        )}
                     </div>
-
-                    <div className="relative h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                        <div 
-                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-indigo-500 to-cyan-400 transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(98,0,238,0.3)]"
+                    
+                    <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                        <div
+                            className="bg-indigo-600 h-full transition-all duration-1000 ease-in-out"
                             style={{ width: `${isLoading ? 0 : progressPercentage}%` }}
                         />
                     </div>
-
-                    <div className="flex items-center justify-between mt-4">
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Liquidated</span>
-                            <span className="text-base font-extrabold text-primary">{formatCurrency(despesasPagasMes)}</span>
+                    
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center gap-2">
+                            <span>Liquidado:</span>
+                            <span className="text-indigo-600 tabular-nums">
+                                {isLoading ? "---" : formatCurrency(despesasPagasMes)}
+                            </span>
                         </div>
-                        <div className="flex flex-col items-end">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Total</span>
-                            <span className="text-base font-extrabold text-slate-700 dark:text-slate-300">{formatCurrency(totalDespesasMes)}</span>
+                        <div className="flex items-center gap-2">
+                            <span>Total:</span>
+                            <span className="text-slate-800 dark:text-slate-200 tabular-nums">
+                                {isLoading ? "---" : formatCurrency(totalDespesasMes)}
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pb-4">
-                    <button 
+                {/* Base: Restante das métricas em Grid */}
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    {/* Bloco Compromissos Vencidos */}
+                    <div 
                         onClick={() => setIsOverdueModalOpen(true)}
-                        className="bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl p-5 border border-rose-100 dark:border-rose-900/50 transition-all group flex flex-col gap-2"
+                        className="bg-rose-50 dark:bg-rose-950/20 rounded-xl p-4 border border-rose-100 dark:border-rose-900/50 cursor-pointer hover:bg-rose-100 transition-all shadow-sm group"
                     >
-                        <div className="flex items-center gap-2">
-                             <div className="p-1.5 bg-rose-500 text-white rounded-md">
-                                <AlertTriangle className="h-3 w-3" />
-                             </div>
-                             <span className="text-[10px] font-black uppercase tracking-widest text-rose-800 dark:text-rose-400">Overdue Liabilities</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-rose-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-rose-800 dark:text-rose-400">Total Vencido</span>
                         </div>
-                        <span className="text-2xl font-black text-rose-600 tabular-nums tracking-tight">
-                            {isLoading ? "---" : formatCurrency(totalVencido)}
-                        </span>
-                    </button>
+                        {isLoading ? (
+                            <div className="h-6 w-20 bg-rose-200 animate-pulse rounded"></div>
+                        ) : (
+                            <span className="text-xl font-black text-rose-600 block tabular-nums">
+                                {formatCurrency(totalVencido)}
+                            </span>
+                        )}
+                    </div>
 
-                    <button 
+                    {/* Bloco Projeção de 14 dias */}
+                    <div 
                         onClick={() => setIsUpcomingModalOpen(true)}
-                        className="bg-primary/5 hover:bg-primary/10 rounded-xl p-5 border border-primary/20 transition-all group flex flex-col gap-2"
+                        className="bg-indigo-50 dark:bg-indigo-950/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-900/50 cursor-pointer hover:bg-indigo-100 transition-all shadow-sm group"
                     >
-                        <div className="flex items-center gap-2">
-                             <div className="p-1.5 bg-primary text-white rounded-md">
-                                <CalendarClock className="h-3 w-3" />
-                             </div>
-                             <span className="text-[10px] font-black uppercase tracking-widest text-primary">Next 14 Days</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CalendarClock className="h-4 w-4 text-indigo-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-800 dark:text-indigo-400">A Vencer (14d)</span>
                         </div>
-                        <span className="text-2xl font-black text-primary tabular-nums tracking-tight">
-                            {isLoading ? "---" : formatCurrency(projecao14Dias)}
-                        </span>
-                    </button>
+                        {isLoading ? (
+                            <div className="h-6 w-20 bg-indigo-200 animate-pulse rounded"></div>
+                        ) : (
+                            <span className="text-xl font-black text-indigo-600 block tabular-nums">
+                                {formatCurrency(projecao14Dias)}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </CardContent>
 
-            <OverdueTransactionsModal open={isOverdueModalOpen} onOpenChange={setIsOverdueModalOpen} />
-            <UpcomingTransactionsModal open={isUpcomingModalOpen} onOpenChange={setIsUpcomingModalOpen} />
+            <OverdueTransactionsModal 
+                open={isOverdueModalOpen} 
+                onOpenChange={setIsOverdueModalOpen} 
+            />
+            <UpcomingTransactionsModal 
+                open={isUpcomingModalOpen} 
+                onOpenChange={setIsUpcomingModalOpen} 
+            />
         </Card>
     )
 }
