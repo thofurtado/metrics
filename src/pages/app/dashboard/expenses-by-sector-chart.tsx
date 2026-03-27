@@ -11,15 +11,25 @@ import { getMonthExpenseBySector } from '@/api/get-month-expenses-by-sector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const COLORS = [
-  '#4338CA', // Indigo 700
-  '#4F46E5', // Indigo 600
-  '#6366F1', // Indigo 500
-  '#818CF8', // Indigo 400
-  '#A5B4FC', // Indigo 300
+  '#1E40AF', // Blue 800 - Vibrante/Forte para maiores despesas
+  '#2563EB', // Blue 600
+  '#10B981', // Emerald 500 - Verde suave para itens estáveis
+  '#3B82F6', // Blue 500
+  '#64748B', // Slate 500 - Cinza azulado para categorias menores
   '#94A3B8', // Slate 400
-  '#64748B', // Slate 500
-  '#475569', // Slate 600
+  '#CBD5E1', // Slate 300
+  '#E2E8F0', // Slate 200
 ]
+
+// Função auxiliar para determinar a cor do texto baseada na cor de fundo
+const getContrastColor = (hexColor: string) => {
+  // Cores mais claras que devem ter texto escuro
+  const lightColors = ['#CBD5E1', '#E2E8F0', '#94A3B8']
+  if (lightColors.includes(hexColor.toUpperCase())) {
+    return '#1E293B' // Slate 800
+  }
+  return '#FFFFFF'
+}
 
 const CustomizedContent: React.FC<any> = (props) => {
   const { x, y, width, height, index, sector_name, amount, COLORS } = props
@@ -29,6 +39,7 @@ const CustomizedContent: React.FC<any> = (props) => {
   }
 
   const color = COLORS[index % COLORS.length]
+  const textColor = getContrastColor(color)
 
   const formattedValue = amount.toLocaleString('pt-BR', {
     style: 'currency',
@@ -36,12 +47,10 @@ const CustomizedContent: React.FC<any> = (props) => {
   })
 
   // Cálculo responsivo do tamanho da fonte
-  const currentFontSize = Math.max(9, Math.min(12, width / 7, height / 5));
-
-  const textColor = '#fff';
+  const currentFontSize = Math.max(9, Math.min(13, width / 7, height / 5));
 
   const canShowLabel = width > 50 && height > 30;
-  const canShowValue = width > 75 && height > 55;
+  const canShowValue = width > 80 && height > 55;
 
   const maxCharsPerLine = Math.floor(width / (currentFontSize * 0.6));
   const displayedSectorName =
@@ -56,14 +65,14 @@ const CustomizedContent: React.FC<any> = (props) => {
         y={y}
         width={width}
         height={height}
-        rx={8}
-        ry={8}
+        rx={10}
+        ry={10}
         style={{
           fill: color,
           stroke: '#fff',
           strokeWidth: 2,
         }}
-        className="transition-all duration-300 hover:brightness-110 cursor-pointer"
+        className="transition-all duration-300 hover:brightness-105 cursor-pointer"
       />
       {canShowLabel && (
         <g style={{ pointerEvents: 'none' }}>
@@ -73,7 +82,7 @@ const CustomizedContent: React.FC<any> = (props) => {
             textAnchor="middle"
             fill={textColor}
             fontSize={currentFontSize}
-            fontWeight="bold"
+            fontWeight="700"
             className="tracking-tight"
           >
             {displayedSectorName}
@@ -81,12 +90,12 @@ const CustomizedContent: React.FC<any> = (props) => {
           {canShowValue && (
             <text
               x={x + width / 2}
-              y={y + height / 2 + 12}
+              y={y + height / 2 + 14}
               textAnchor="middle"
               fill={textColor}
-              fillOpacity={0.8}
+              fillOpacity={0.9}
               fontSize={currentFontSize - 1}
-              fontWeight="medium"
+              fontWeight="500"
             >
               {formattedValue}
             </text>
@@ -110,7 +119,7 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <BarChartIcon className="h-4 w-4 text-indigo-600" />
+            <BarChartIcon className="h-4 w-4 text-blue-600" />
             Despesas por Setor
           </CardTitle>
         </div>
@@ -118,7 +127,7 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
       <CardContent>
         {isLoading ? (
           <div className="h-[350px] w-full flex items-center justify-center">
-            <div className="h-8 w-8 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin" />
           </div>
         ) : hasData ? (
           <div className="h-[350px] w-full">
@@ -128,7 +137,7 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
                 dataKey="amount"
                 aspectRatio={4 / 3}
                 stroke="#fff"
-                fill="#8884d8"
+                fill="#3B82F6"
                 content={<CustomizedContent COLORS={COLORS} />}      >
                 <Tooltip
                   content={({ active, payload }) => {
@@ -140,7 +149,7 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
                           <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">{data.sector_name}</p>
                           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-baseline gap-1">
                              <span className="text-sm font-medium text-slate-500">Total:</span>
-                             <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums tracking-tighter">
+                             <p className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tighter">
                                {data.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                              </p>
                           </div>
@@ -162,4 +171,4 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
       </CardContent>
     </Card>
   )
-}
+}
