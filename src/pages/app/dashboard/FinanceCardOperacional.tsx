@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type ComponentProps } from 'react'
-import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Tag, Target } from 'lucide-react'
+import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -43,8 +43,8 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     return (
         <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
             <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-minsk-600" />
+                <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 font-merienda">
+                    <Wallet className="h-4 w-4 text-indigo-600" />
                     Fluxo e Saúde Financeira
                 </CardTitle>
             </CardHeader>
@@ -52,54 +52,55 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
             <CardContent className="flex-1 space-y-4">
                 {/* Topo: Receita e Despesa Mensal */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-vida-loca-50 dark:bg-vida-loca-900/20 rounded-lg p-3 border border-vida-loca-100 dark:border-vida-loca-800 col-span-2 sm:col-span-1 flex flex-col justify-between">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/50 col-span-2 sm:col-span-1 flex flex-col justify-between shadow-sm">
                         <div>
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <TrendingUp className="h-3.5 w-3.5 text-vida-loca-600" />
-                                <span className="text-xs font-semibold text-vida-loca-700">Receita Mensal</span>
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="h-4 w-4 text-emerald-600" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Receita Mensal</span>
                             </div>
                             {isLoading ? (
-                                <div className="h-6 w-24 bg-vida-loca-200 animate-pulse rounded mt-1"></div>
+                                <div className="h-8 w-24 bg-emerald-200 animate-pulse rounded mt-1"></div>
                             ) : (
-                                <span className="text-xl font-bold text-vida-loca-600 block tabular-nums">
+                                <span className="text-2xl font-black text-emerald-600 block tabular-nums tracking-tighter">
                                     {formatCurrency(receitaAcumulada)}
                                 </span>
                             )}
                         </div>
                         {/* Sub-indicadores da Receita */}
                         {!isLoading && (
-                            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-vida-loca-200 dark:border-vida-loca-800/50">
-                                <div className="flex items-center gap-1.5">
-                                    <Tag className="h-3.5 w-3.5 text-vida-loca-600/70" />
-                                    <span className="text-xs font-medium text-vida-loca-700/80">Ticket Médio: <span className="font-bold text-vida-loca-800 dark:text-vida-loca-300">{formatCurrency(ticketMedio)}</span></span>
+                            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-emerald-200/50 dark:border-emerald-800/30">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-emerald-800/60 uppercase">Ticket Médio</span>
+                                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">{formatCurrency(ticketMedio)}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-medium text-vida-loca-700/80 underline decoration-vida-loca-300 underline-offset-2">Qtd: <span className="font-bold text-vida-loca-800 dark:text-vida-loca-300">{numEntradas}</span></span>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-emerald-800/60 uppercase">Vendas</span>
+                                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">{numEntradas}</span>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-900/40 rounded-lg p-3 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1 flex flex-col justify-between">
+                    <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1 flex flex-col justify-between shadow-sm">
                         <div>
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <Wallet className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
-                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Despesa Mensal</span>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Wallet className="h-4 w-4 text-slate-500" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Despesa Mensal</span>
                             </div>
                             {isLoading ? (
-                                <div className="h-6 w-24 bg-slate-200 animate-pulse rounded mt-1"></div>
+                                <div className="h-8 w-24 bg-slate-200 animate-pulse rounded mt-1"></div>
                             ) : (
-                                <span className="text-xl font-bold text-slate-700 dark:text-slate-200 block tabular-nums">
+                                <span className="text-2xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter">
                                     {formatCurrency(totalDespesasMes)}
                                 </span>
                             )}
                         </div>
                         {/* Sub-indicadores da Despesa */}
                         {!isLoading && (
-                            <div className="flex items-center mt-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-                                <div className="flex items-center gap-1.5">
-                                    <AlertTriangle className="h-3.5 w-3.5 text-stiletto-500/70" />
-                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Total Juros: <span className="font-bold text-stiletto-600 dark:text-stiletto-400">{formatCurrency(totalJurosPagos)}</span></span>
+                            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-1.5 focus-within:ring-2">
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase">Juros Pagos:</span>
+                                    <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(totalJurosPagos)}</span>
                                 </div>
                             </div>
                         )}
@@ -107,45 +108,43 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                 </div>
 
                 {/* Corpo: Barra de Progresso (Ponto de Equilíbrio) */}
-                <div className="space-y-3 py-2 bg-muted/20 dark:bg-muted/5 rounded-xl p-3 border border-dashed border-muted-foreground/20">
+                <div className="space-y-4 py-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-vida-loca-100 dark:bg-vida-loca-900/30 rounded-lg">
-                                <Target className="h-4 w-4 text-vida-loca-600" />
-                            </div>
-                            <span className="text-sm font-semibold text-foreground">Equilíbrio do Mês</span>
+                            <Target className="h-4 w-4 text-indigo-600" />
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Equilíbrio do Mês</span>
                         </div>
                         {isLoading ? (
-                            <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
+                            <div className="h-5 w-16 bg-slate-200 animate-pulse rounded-full" />
                         ) : (
                             <span className={cn(
-                                "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border",
+                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
                                 progressPercentage >= 100 
-                                    ? "bg-vida-loca-100 text-vida-loca-700 border-vida-loca-200" 
-                                    : "bg-muted text-muted-foreground border-muted-foreground/20"
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
+                                    : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                             )}>
-                                {progressPercentage.toFixed(0)}% Concluído
+                                {progressPercentage.toFixed(0)}% Pago
                             </span>
                         )}
                     </div>
                     
-                    <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 relative shadow-inner">
+                    <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
                         <div
-                            className="bg-gradient-to-r from-vida-loca-400 to-vida-loca-600 h-full transition-all duration-1000 ease-in-out shadow-[0_0_8px_rgba(22,163,74,0.4)]"
+                            className="bg-indigo-600 h-full transition-all duration-1000 ease-in-out"
                             style={{ width: `${isLoading ? 0 : progressPercentage}%` }}
                         />
                     </div>
                     
-                    <div className="flex items-center justify-between text-[11px] font-medium px-0.5">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                            <span>Pago:</span>
-                            <span className="text-vida-loca-600 dark:text-vida-loca-400 font-bold tabular-nums">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center gap-2">
+                            <span>Liquidado:</span>
+                            <span className="text-indigo-600 tabular-nums">
                                 {isLoading ? "---" : formatCurrency(despesasPagasMes)}
                             </span>
                         </div>
-                        <div className="flex items-center gap-1 text-muted-foreground">
+                        <div className="flex items-center gap-2">
                             <span>Total:</span>
-                            <span className="text-foreground dark:text-slate-200 font-bold tabular-nums">
+                            <span className="text-slate-800 dark:text-slate-200 tabular-nums">
                                 {isLoading ? "---" : formatCurrency(totalDespesasMes)}
                             </span>
                         </div>
@@ -153,20 +152,20 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                 </div>
 
                 {/* Base: Restante das métricas em Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                     {/* Bloco Compromissos Vencidos */}
                     <div 
                         onClick={() => setIsOverdueModalOpen(true)}
-                        className="bg-stiletto-50 dark:bg-stiletto-900/20 rounded-lg p-3 border border-stiletto-100 dark:border-stiletto-800 col-span-2 sm:col-span-1 cursor-pointer hover:bg-stiletto-100 hover:border-stiletto-300 dark:hover:bg-stiletto-900/40 transition-all shadow-sm group"
+                        className="bg-rose-50 dark:bg-rose-950/20 rounded-xl p-4 border border-rose-100 dark:border-rose-900/50 cursor-pointer hover:bg-rose-100 transition-all shadow-sm group"
                     >
-                        <div className="flex items-center gap-1.5 mb-1 group-hover:scale-[1.02] transition-transform">
-                            <AlertTriangle className="h-3.5 w-3.5 text-stiletto-600" />
-                            <span className="text-xs font-semibold text-stiletto-700">Total Vencido</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-rose-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-rose-800 dark:text-rose-400">Total Vencido</span>
                         </div>
                         {isLoading ? (
-                            <div className="h-5 w-20 bg-stiletto-200 animate-pulse rounded"></div>
+                            <div className="h-6 w-20 bg-rose-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-stiletto-600 block tabular-nums group-hover:scale-[1.02] transition-transform origin-left">
+                            <span className="text-xl font-black text-rose-600 block tabular-nums">
                                 {formatCurrency(totalVencido)}
                             </span>
                         )}
@@ -175,16 +174,16 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     {/* Bloco Projeção de 14 dias */}
                     <div 
                         onClick={() => setIsUpcomingModalOpen(true)}
-                        className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-100 dark:border-amber-800 col-span-2 sm:col-span-1 cursor-pointer hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-900/40 transition-all shadow-sm group"
+                        className="bg-indigo-50 dark:bg-indigo-950/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-900/50 cursor-pointer hover:bg-indigo-100 transition-all shadow-sm group"
                     >
-                        <div className="flex items-center gap-1.5 mb-1 group-hover:scale-[1.02] transition-transform">
-                            <CalendarClock className="h-3.5 w-3.5 text-amber-600" />
-                            <span className="text-xs font-semibold text-amber-700">A Vencer (14d)</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CalendarClock className="h-4 w-4 text-indigo-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-800 dark:text-indigo-400">A Vencer (14d)</span>
                         </div>
                         {isLoading ? (
-                            <div className="h-5 w-20 bg-amber-200 animate-pulse rounded"></div>
+                            <div className="h-6 w-20 bg-indigo-200 animate-pulse rounded"></div>
                         ) : (
-                            <span className="text-lg font-bold text-amber-600 block tabular-nums group-hover:scale-[1.02] transition-transform origin-left">
+                            <span className="text-xl font-black text-indigo-600 block tabular-nums">
                                 {formatCurrency(projecao14Dias)}
                             </span>
                         )}
@@ -203,4 +202,3 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
         </Card>
     )
 }
-

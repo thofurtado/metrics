@@ -9,7 +9,7 @@ import {
     YAxis,
     Tooltip,
 } from 'recharts'
-import colors from 'tailwindcss/colors'
+import { cn } from '@/lib/utils'
 
 import { getBalanceProjectionData } from '@/api/get-balance-projection' // Substitua pela sua API real
 import {
@@ -62,36 +62,6 @@ function processChartData(data: { projection: BalanceProjectionData } | undefine
 // --------------------------------------------------------
 
 // Componente customizado para o ponto do gráfico
-const CustomDot = (props: any) => {
-    const { cx, cy, payload } = props
-
-    if (payload.isProjection) {
-        // Ponto para Projeção: menor e vazado (tracejado)
-        return (
-            <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="none"
-                stroke={colors.blue['400']}
-                strokeDasharray="4 4"
-                strokeWidth={2}
-                className="opacity-70"
-            />
-        )
-    }
-    // Ponto para Saldo Real (hoje): maior e preenchido
-    return (
-        <circle
-            cx={cx}
-            cy={cy}
-            r={5}
-            fill={colors.green['500']}
-            stroke={colors.green['500']}
-            strokeWidth={2}
-        />
-    )
-}
 
 export function BalanceProjectionChart({ className }: { className?: string }) {
     const { data: balanceProjectionData, isLoading } = useQuery({
@@ -105,82 +75,106 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
         <Card className={className}>
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
                 <div className="space-y-1">
-                    <CardTitle className="text-base font-medium text-blue-500">
+                    <CardTitle className="text-base font-bold text-slate-800">
                         Previsão de Saldo (Próx. 30 Dias)
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-slate-500">
                         Saldo projetado dia a dia, baseado em transações futuras.
                     </CardDescription>
                 </div>
 
                 {/* Legenda personalizada */}
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-green-500 mr-1" />
-                        Saldo Atual/Real
+                <div className="flex items-center space-x-6 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span>Saldo Real</span>
                     </div>
-                    <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full border border-blue-400 mr-1" />
-                        Projeção
+                    <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-500" />
+                        <span>Projeção</span>
                     </div>
                 </div>
             </CardHeader>
 
             <CardContent>
                 {isLoading ? (
-                    <div className="flex h-[240px] w-full items-center justify-center text-gray-500">
-                        Carregando projeção...
+                    <div className="flex h-[240px] w-full items-center justify-center">
+                        <div className="h-10 w-10 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin" />
                     </div>
                 ) : chartData.length > 0 ? (
                     <>
-                        <ResponsiveContainer width="100%" height={240}>
-                            <LineChart data={chartData} style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
-                                <CartesianGrid vertical={false} className="stroke-muted" />
+                        <ResponsiveContainer width="100%" height={260}>
+                            <LineChart data={chartData} style={{ fontSize: 11, fontWeight: "bold" }} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-100 dark:stroke-slate-800" />
 
                                 <XAxis
                                     dataKey="formattedDate"
                                     axisLine={false}
                                     tickLine={false}
+                                    tick={{ fill: '#94a3b8' }}
                                     dy={16}
                                     interval={4}
                                 />
 
                                 <YAxis
-                                    stroke="#888"
                                     axisLine={false}
                                     tickLine={false}
-                                    width={88}
+                                    tick={{ fill: '#94a3b8' }}
+                                    width={70}
                                     tickFormatter={(value: number) =>
-                                        value.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL',
-                                        })
+                                        value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
                                     }
                                 />
 
                                 <Tooltip
-                                    cursor={{ stroke: colors.blue['400'], strokeDasharray: 4 }}
-                                    formatter={(value: number) =>
-                                        value.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL',
-                                        })
-                                    }
-                                    labelFormatter={(label: string) => `Data: ${label}`}
-                                    contentStyle={{
-                                        backgroundColor: 'hsl(var(--card))',
-                                        border: '1px solid hsl(var(--border))',
-                                        borderRadius: '0.5rem'
+                                    cursor={{ stroke: '#4f46e5', strokeWidth: 2, strokeDasharray: '4 4' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length > 0) {
+                                            const data = payload[0].payload
+                                            if (!data) return null
+                                            return (
+                                                <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 ring-1 ring-black/5">
+                                                    <div className="flex items-center gap-2 mb-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                                                        <span className={cn(
+                                                            "h-2 w-2 rounded-full",
+                                                            data.isProjection ? "bg-indigo-500" : "bg-emerald-500"
+                                                        )} />
+                                                        <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100 uppercase tracking-widest">{label}</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Saldo Projetado</p>
+                                                        <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums tracking-tighter">
+                                                            {payload[0].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                        </p>
+                                                        {data.isProjection && (
+                                                            <p className="text-[9px] font-bold text-slate-400 italic">Estimativa com base em transações pendentes</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                        return null
                                     }}
                                 />
 
                                 <Line
                                     type="monotone"
-                                    strokeWidth={2}
+                                    strokeWidth={3}
                                     dataKey="balance"
-                                    stroke={colors.blue['400']}
-                                    dot={<CustomDot />}
-                                    activeDot={{ r: 6 }}
+                                    stroke="#4f46e5"
+                                    strokeOpacity={0.8}
+                                    dot={(props) => {
+                                        const { cx, cy, payload } = props
+                                        if (payload.isProjection) {
+                                            return (
+                                                <circle cx={cx} cy={cy} r={4} fill="white" stroke="#6366f1" strokeWidth={2} />
+                                            )
+                                        }
+                                        return (
+                                            <circle cx={cx} cy={cy} r={5} fill="#10b981" stroke="white" strokeWidth={2} />
+                                        )
+                                    }}
+                                    activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
                                 />
                             </LineChart>
                         </ResponsiveContainer>

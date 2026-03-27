@@ -7,9 +7,9 @@
 @layer base {
   :root {
     /* Base Neutral: Slate (Modern Blue-Grey) */
-    --background: 0 0% 100%;
-    /* White */
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 40% 98%;
+    /* Slate 50 (#F8FAFC) */
+    --foreground: 224 71% 4%;
     /* Slate 950 */
 
     --card: 0 0% 100%;
@@ -18,9 +18,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Primary: Minsk (Vibrant Indigo/Purple) */
-    --primary: 249 72% 60%;
-    /* #7c3aed-ish */
+    /* Primary: Accent Indigo (#4F46E5) */
+    --primary: 243 75% 59%;
     --primary-foreground: 210 40% 98%;
 
     /* Secondary: Light Gray/Slate */
@@ -48,7 +47,8 @@
     --ring: 249 72% 60%;
     /* Match Primary */
 
-    --radius: 0.75rem;
+    --radius: 1rem;
+    /* 16px soft corners */
 
     /* Semantic Colors Custom Variables if needed */
     --success: 151 55% 41.5%;

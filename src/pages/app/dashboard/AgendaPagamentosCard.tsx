@@ -41,30 +41,25 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
         if (active && payload && payload.length) {
             const data: PaymentAgendaItem = payload[0].payload
             return (
-                <div className="bg-white/80 dark:bg-minsk-950/80 backdrop-blur-md border border-gray-200 dark:border-minsk-800 p-3 rounded-xl shadow-xl animate-in fade-in zoom-in duration-200">
-                    <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-minsk-800 pb-1.5">
-                        <CalendarDays className="h-3.5 w-3.5 text-minsk-500" />
-                        <p className="font-bold text-xs">{label}</p>
+                <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 ring-1 ring-black/5">
+                    <div className="flex items-center gap-2 mb-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                        <CalendarDays className="h-4 w-4 text-indigo-500" />
+                        <p className="font-extrabold text-sm text-slate-900 dark:text-slate-100">{label}</p>
                     </div>
-                    <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total</span>
-                            <span className="text-sm font-black text-stiletto-600 dark:text-rose-400">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Total</span>
+                            <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
                                 {payload[0].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </span>
                         </div>
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Títulos</span>
-                            <span className="text-xs font-bold">
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Compromissos</span>
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
                                 {data.detalhes.length}
                             </span>
                         </div>
                     </div>
-                    {data.detalhes.length > 0 && (
-                        <div className="mt-2 pt-1 border-t border-gray-100 dark:border-minsk-800 flex items-center gap-1 justify-center">
-                           <span className="text-[9px] text-minsk-500 font-bold uppercase animate-pulse">Clique para detalhar</span>
-                        </div>
-                    )}
                 </div>
             )
         }
@@ -73,62 +68,60 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
 
     return (
         <Card className={cn("flex flex-col overflow-hidden", className)} {...props}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-minsk-600" />
-                    Agenda de Pagamentos (10 Dias)
+            <CardHeader className="flex flex-row items-center justify-between pb-4 space-y-0">
+                <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 font-merienda">
+                    <CalendarDays className="h-4 w-4 text-indigo-600" />
+                    Agenda de Pagamentos
                 </CardTitle>
                 {!isLoading && !isError && totalPeriodo > 0 && (
                     <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Previsão 10d</span>
-                        <span className="text-sm font-black text-stiletto-600 dark:text-rose-500 tabular-nums">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total 10d</span>
+                        <span className="text-base font-black text-indigo-600 dark:text-indigo-400 tabular-nums tracking-tighter">
                             {totalPeriodo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </span>
                     </div>
                 )}
             </CardHeader>
-            <CardContent className="flex-1 pb-4">
+            <CardContent className="flex-1 pb-6 pt-0">
                 {isLoading ? (
                     <div className="h-[240px] w-full flex items-center justify-center">
-                        <div className="relative">
-                            <div className="h-12 w-12 rounded-full border-4 border-minsk-100 dark:border-minsk-900 border-t-minsk-600 animate-spin" />
-                        </div>
+                        <div className="h-10 w-10 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin" />
                     </div>
                 ) : isError ? (
-                    <div className="h-[240px] w-full flex flex-col items-center justify-center text-muted-foreground">
-                        <AlertCircle className="h-8 w-8 text-stiletto-500 mb-2" />
-                        <p className="font-medium">Erro ao carregar a agenda.</p>
+                    <div className="h-[240px] w-full flex flex-col items-center justify-center text-slate-400 gap-3 border-2 border-dashed border-slate-100 rounded-2xl">
+                        <AlertCircle className="h-10 w-10 text-slate-200" />
+                        <p className="text-sm font-medium">Erro ao carregar os dados</p>
                     </div>
                 ) : agendaData && agendaData.length > 0 ? (
-                    <div className="h-[240px] w-full mt-4">
+                    <div className="h-[250px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={agendaData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#e11d48" stopOpacity={1} />
-                                        <stop offset="100%" stopColor="#9f1239" stopOpacity={1} />
+                                        <stop offset="0%" stopColor="#4F46E5" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#4338CA" stopOpacity={1} />
                                     </linearGradient>
                                     <linearGradient id="emptyBarGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#f3f4f6" stopOpacity={1} />
-                                        <stop offset="100%" stopColor="#e5e7eb" stopOpacity={1} />
+                                        <stop offset="0%" stopColor="#F1F5F9" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#E2E8F0" stopOpacity={1} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
                                     dataKey="data"
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                                    tick={{ fontSize: 10, fontWeight: "bold", fill: '#94a3b8' }}
                                     dy={10}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                                    tick={{ fontSize: 10, fontWeight: "bold", fill: '#94a3b8' }}
                                     tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
                                     width={40}
                                 />
                                 <Tooltip 
-                                    cursor={{ fill: 'currentColor', opacity: 0.05, radius: 8 }} 
+                                    cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 8 }} 
                                     content={<CustomTooltip />} 
                                 />
                                 <Bar 
@@ -141,7 +134,7 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
                                         <Cell
                                             key={`cell-${index}`}
                                             fill={entry.total > 0 ? 'url(#barGradient)' : 'url(#emptyBarGradient)'}
-                                            className={entry.total > 0 ? "cursor-pointer hover:filter hover:brightness-110 transition-all duration-300" : "opacity-30 dark:opacity-10"}
+                                            className={entry.total > 0 ? "cursor-pointer hover:filter hover:brightness-110 transition-all duration-300" : "opacity-20"}
                                         />
                                     ))}
                                 </Bar>
