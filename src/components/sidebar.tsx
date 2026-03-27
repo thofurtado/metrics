@@ -1,8 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard,
   Boxes,
-  Headset,
   PiggyBank,
   Users,
   Pyramid,
@@ -28,10 +26,8 @@ export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar()
 
   const menuItems = [
-    { name: 'Metrics', path: '/dashboard', icon: LayoutDashboard, access: true },
     { name: 'Mercadoria', path: '/items', icon: Boxes, access: hasAccess('items') || isModuleActive('merchandise') },
-    { name: 'Ordens de Serviço', path: '/treatments', icon: Headset, access: hasAccess('service') || isModuleActive('treatments') },
-    { name: 'Financeiro', path: '/transactions', icon: PiggyBank, access: hasAccess('finance') || isModuleActive('financial') },
+    { name: 'Financeiro', path: '/transactions', icon: PiggyBank, subtext: 'Fluxo e Saúde Financeira', access: hasAccess('finance') || isModuleActive('financial') },
     { name: 'RH', path: '/hr', icon: Users, access: hasAccess('hr') || isModuleActive('hr_module') },
   ].filter((item) => item.access)
 
@@ -40,7 +36,8 @@ export function Sidebar() {
 
     return (
       <div className={cn(
-        "flex flex-col h-full bg-card/60 dark:bg-slate-950/80 backdrop-blur-2xl transition-all duration-500 ease-in-out border-r border-border/40",
+        "flex flex-col h-full transition-all duration-500 ease-in-out border-r border-border/40",
+        mobile ? "bg-slate-50 dark:bg-slate-950 shadow-2xl" : "bg-card/60 dark:bg-slate-950/80 backdrop-blur-2xl",
         collapsed ? "w-[82px]" : "w-full"
       )}>
         <div className={cn("p-6 flex flex-col h-full", collapsed ? "items-center px-3" : "px-6")}>
@@ -52,7 +49,7 @@ export function Sidebar() {
               </div>
               {!collapsed && (
                 <span className="text-2xl font-manrope font-black tracking-tighter text-foreground uppercase truncate animate-in fade-in slide-in-from-left-4 duration-500">
-                  metrics
+                  METRICS
                 </span>
               )}
             </Link>
@@ -89,7 +86,7 @@ export function Sidebar() {
                           collapsed ? "p-3 justify-center" : "px-4 py-4",
                           isActive
                             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                            : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                            : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
                         )}
                       >
                         <item.icon className={cn(
@@ -99,12 +96,22 @@ export function Sidebar() {
                         )} />
                         
                         {!collapsed && (
-                          <span className={cn(
-                            "font-manrope text-[15px] tracking-tight truncate animate-in fade-in slide-in-from-left-2",
-                            isActive ? "font-bold" : "font-medium"
-                          )}>
-                            {item.name}
-                          </span>
+                          <div className="flex flex-col truncate">
+                            <span className={cn(
+                              "font-manrope text-[15px] tracking-tight animate-in fade-in slide-in-from-left-2",
+                              isActive ? "font-bold" : "font-medium"
+                            )}>
+                              {item.name}
+                            </span>
+                            {'subtext' in item && item.subtext && (
+                                <span className={cn(
+                                    "text-[10px] font-manrope font-medium opacity-70 truncate uppercase tracking-wider",
+                                    isActive ? "text-primary-foreground/90" : "text-muted-foreground"
+                                )}>
+                                    {item.subtext}
+                                </span>
+                            )}
+                          </div>
                         )}
 
                         {isActive && !collapsed && (
@@ -156,7 +163,7 @@ export function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b bg-background/90 backdrop-blur-lg flex items-center justify-between px-6 z-40">
         <Link to="/" className="flex items-center gap-2 pr-4">
           <Pyramid className="h-6 w-6 text-primary" />
-          <span className="text-xl font-manrope font-black tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">metrics</span>
+          <span className="text-xl font-manrope font-black tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">METRICS</span>
         </Link>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
@@ -164,7 +171,7 @@ export function Sidebar() {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[280px] bg-transparent backdrop-blur-none shadow-none">
+          <SheetContent side="left" className="p-0 border-none w-[280px] bg-white dark:bg-slate-950 shadow-none">
             <NavContent mobile />
           </SheetContent>
         </Sheet>

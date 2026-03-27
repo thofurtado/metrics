@@ -16,7 +16,7 @@ export function Header() {
         {/* Logo - sempre visível em todas as telas */}
         <Link to="/" aria-label="Início" className="flex items-center gap-2 text-foreground font-semibold">
           <Pyramid className="h-6 w-6" />
-          <span className="hidden lg:inline-block">metrics</span>
+          <span className="hidden lg:inline-block">METRICS</span>
         </Link>
 
         <Separator orientation="vertical" className="h-6" />
