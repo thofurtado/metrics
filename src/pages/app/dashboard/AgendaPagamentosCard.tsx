@@ -28,6 +28,8 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
         queryKey: ['metrics', 'payment-agenda'],
     })
 
+    const totalPeriodo = agendaData?.reduce((acc, item) => acc + item.total, 0) ?? 0
+
     const handleBarClick = (data: PaymentAgendaItem) => {
         if (data.detalhes.length > 0) {
             setSelectedData(data)
@@ -39,16 +41,29 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
         if (active && payload && payload.length) {
             const data: PaymentAgendaItem = payload[0].payload
             return (
-                <div className="bg-white dark:bg-minsk-900 border border-gray-200 dark:border-minsk-800 p-3 rounded-md shadow-md">
-                    <p className="font-semibold text-sm mb-1">{`Data: ${label}`}</p>
-                    <p className="text-sm font-bold text-stiletto-600">
-                        {`Total: ${payload[0].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {data.detalhes.length} {data.detalhes.length === 1 ? 'pagamento' : 'pagamentos'} pendente(s)
-                    </p>
+                <div className="bg-white/80 dark:bg-minsk-950/80 backdrop-blur-md border border-gray-200 dark:border-minsk-800 p-3 rounded-xl shadow-xl animate-in fade-in zoom-in duration-200">
+                    <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-minsk-800 pb-1.5">
+                        <CalendarDays className="h-3.5 w-3.5 text-minsk-500" />
+                        <p className="font-bold text-xs">{label}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total</span>
+                            <span className="text-sm font-black text-stiletto-600 dark:text-rose-400">
+                                {payload[0].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Títulos</span>
+                            <span className="text-xs font-bold">
+                                {data.detalhes.length}
+                            </span>
+                        </div>
+                    </div>
                     {data.detalhes.length > 0 && (
-                        <p className="text-xs text-minsk-500 mt-1 italic">Clique para ver os detalhes</p>
+                        <div className="mt-2 pt-1 border-t border-gray-100 dark:border-minsk-800 flex items-center gap-1 justify-center">
+                           <span className="text-[9px] text-minsk-500 font-bold uppercase animate-pulse">Clique para detalhar</span>
+                        </div>
                     )}
                 </div>
             )
@@ -57,48 +72,76 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
     }
 
     return (
-        <Card className={cn("flex flex-col", className)} {...props}>
-            <CardHeader className="flex-row items-center justify-between pb-2">
+        <Card className={cn("flex flex-col overflow-hidden", className)} {...props}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-minsk-600" />
                     Agenda de Pagamentos (10 Dias)
                 </CardTitle>
+                {!isLoading && !isError && totalPeriodo > 0 && (
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Previsão 10d</span>
+                        <span className="text-sm font-black text-stiletto-600 dark:text-rose-500 tabular-nums">
+                            {totalPeriodo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                    </div>
+                )}
             </CardHeader>
             <CardContent className="flex-1 pb-4">
                 {isLoading ? (
                     <div className="h-[240px] w-full flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-minsk-600"></div>
+                        <div className="relative">
+                            <div className="h-12 w-12 rounded-full border-4 border-minsk-100 dark:border-minsk-900 border-t-minsk-600 animate-spin" />
+                        </div>
                     </div>
                 ) : isError ? (
                     <div className="h-[240px] w-full flex flex-col items-center justify-center text-muted-foreground">
                         <AlertCircle className="h-8 w-8 text-stiletto-500 mb-2" />
-                        <p>Erro ao carregar a agenda.</p>
+                        <p className="font-medium">Erro ao carregar a agenda.</p>
                     </div>
                 ) : agendaData && agendaData.length > 0 ? (
                     <div className="h-[240px] w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={agendaData} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
+                            <BarChart data={agendaData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                <defs>
+                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#e11d48" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#9f1239" stopOpacity={1} />
+                                    </linearGradient>
+                                    <linearGradient id="emptyBarGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#f3f4f6" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#e5e7eb" stopOpacity={1} />
+                                    </linearGradient>
+                                </defs>
                                 <XAxis
                                     dataKey="data"
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontSize: 12 }}
-                                    dy={16}
+                                    tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
+                                    dy={10}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontSize: 12, fontFamily: 'monospace' }}
-                                    tickFormatter={(value) => `R$ ${value}`}
-                                    width={80} // Garante um espaço fixo para o eixo Y não sobrepor
+                                    tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+                                    width={40}
                                 />
-                                <Tooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} />
-                                <Bar dataKey="total" radius={[4, 4, 0, 0]} onClick={handleBarClick}>
+                                <Tooltip 
+                                    cursor={{ fill: 'currentColor', opacity: 0.05, radius: 8 }} 
+                                    content={<CustomTooltip />} 
+                                />
+                                <Bar 
+                                    dataKey="total" 
+                                    radius={[6, 6, 2, 2]} 
+                                    onClick={handleBarClick}
+                                    animationDuration={1500}
+                                >
                                     {agendaData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
-                                            fill={entry.total > 0 ? '#b91c1c' : '#e5e7eb'}
-                                            className={entry.total > 0 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                                            fill={entry.total > 0 ? 'url(#barGradient)' : 'url(#emptyBarGradient)'}
+                                            className={entry.total > 0 ? "cursor-pointer hover:filter hover:brightness-110 transition-all duration-300" : "opacity-30 dark:opacity-10"}
                                         />
                                     ))}
                                 </Bar>
