@@ -163,5 +163,3 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
     </Card>
   )
 }
-
-}
