@@ -22,17 +22,12 @@ interface OverdueTransactionsModalProps {
 }
 
 export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransactionsModalProps) {
-    // Calculamos o dia de ontem, garantindo que pegue tudo que venceu até 23:59 de ontem
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    yesterday.setHours(23, 59, 59, 999)
 
     const { data: transactionsData, isLoading } = useQuery({
         queryKey: ['overdue-transactions'],
         queryFn: () => getTransactions({
-            status: 'pending',
-            type: 'expense',
-            toDate: yesterday.toISOString(),
+            status: 'overdue',
+            type: 'out', // despesas
             perPage: 100 // Trazemos um limite maior já que é um resumo de pendências
         }),
         enabled: open,

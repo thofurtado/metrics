@@ -28,6 +28,7 @@ import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { Permissions } from './pages/app/settings/permissions'
 import { ModuleGuard } from './components/module-guard'
+import { AdminGuard } from './components/admin-guard'
 
 import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
 import { HRDashboard } from './pages/hr/dashboard'
@@ -135,7 +136,11 @@ export const router = createBrowserRouter([
           { path: 'suppliers', element: <SuppliersList /> },
           {
             path: 'settings',
-            element: <SettingsLayout />,
+            element: (
+              <AdminGuard>
+                <SettingsLayout />
+              </AdminGuard>
+            ),
             children: [
               { index: true, element: <Navigate to="modules" replace /> }, // Default to modules or accounts? Modules seems appropriate for admin.
               { path: 'accounts', element: <Accounts /> },

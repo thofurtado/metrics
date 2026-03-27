@@ -77,9 +77,11 @@ export function AccountMenu() {
             </DropdownMenuItem>
           </DialogTrigger>
 
-          <DropdownMenuItem onClick={() => navigate('/settings/accounts')}>
-            <Settings className="ml-5 h-4" /> <span>Configurações</span>
-          </DropdownMenuItem>
+          {profile?.role === 'ADMIN' && (
+            <DropdownMenuItem onClick={() => navigate('/settings/accounts')}>
+              <Settings className="ml-5 h-4" /> <span>Configurações</span>
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem
             asChild
