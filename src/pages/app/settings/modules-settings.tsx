@@ -28,6 +28,7 @@ const formSchema = z.object({
     hr_module: z.boolean(),
     cestaBasicaValue: z.coerce.number().min(0),
     financial_management_profile: z.enum(['ANALYTICAL', 'OPERATIONAL']),
+    dashboard_cards: z.record(z.record(z.boolean())).optional()
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -44,7 +45,8 @@ export function ModulesSettings() {
             treatments: true,
             hr_module: false,
             cestaBasicaValue: 0,
-            financial_management_profile: 'ANALYTICAL'
+            financial_management_profile: 'ANALYTICAL',
+            dashboard_cards: {}
         },
     })
 
@@ -57,7 +59,8 @@ export function ModulesSettings() {
                 treatments: modules.treatments,
                 hr_module: modules.hr_module ?? false,
                 cestaBasicaValue: modules.cestaBasicaValue ?? 0,
-                financial_management_profile: modules.financial_management_profile ?? 'ANALYTICAL'
+                financial_management_profile: modules.financial_management_profile ?? 'ANALYTICAL',
+                dashboard_cards: modules.dashboard_cards ?? {}
             })
         }
     }, [modules, form])
@@ -75,9 +78,6 @@ export function ModulesSettings() {
         },
     })
 
-    // Auto-save on switch toggle (Optional, but demanded "modern SaaS feel" often implies auto-save or quick save)
-    // For now, keeping the button to be safe, but making the UI feel responsive.
-
     async function onSubmit(data: FormSchema) {
         await updateConfig(data)
     }
@@ -86,8 +86,21 @@ export function ModulesSettings() {
     const financial = form.watch('financial')
     const treatments = form.watch('treatments')
     const hr_module = form.watch('hr_module')
+    const dashboardCards = form.watch('dashboard_cards') || {}
 
     const isDependenciesMet = merchandise && financial
+
+    const handleCardToggle = (moduleName: string, cardSlug: string, value: boolean) => {
+        const currentCards = { ...dashboardCards }
+        if (!currentCards[moduleName]) currentCards[moduleName] = {}
+        currentCards[moduleName][cardSlug] = value
+        
+        form.setValue('dashboard_cards', currentCards, { shouldDirty: true })
+    }
+
+    const isCardChecked = (moduleName: string, cardSlug: string) => {
+        return dashboardCards[moduleName]?.[cardSlug] ?? true
+    }
 
     if (isLoading) {
         return (
@@ -102,7 +115,7 @@ export function ModulesSettings() {
 
     return (
         <div className="space-y-8 max-w-5xl mx-auto pb-10">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 px-4 md:px-0">
                 <h1 className="text-3xl font-bold tracking-tight text-minsk-950 dark:text-minsk-50">
                     Módulos do Sistema
                 </h1>
@@ -111,7 +124,7 @@ export function ModulesSettings() {
                 </p>
             </div>
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 px-4 md:px-0">
 
                 {/* GRUPO: MÓDULOS CORE */}
                 <section className="space-y-4">
@@ -136,7 +149,22 @@ export function ModulesSettings() {
                                     onCheckedChange={(val) => form.setValue('merchandise', val, { shouldDirty: true })}
                                 />
                             }
-                        />
+                        >
+                            <div className="mt-4 pt-4 border-t space-y-3">
+                                <h4 className={cn("text-xs font-bold uppercase text-muted-foreground", !merchandise && "opacity-50")}>Dashboard (Opções)</h4>
+                                <div className="flex items-center justify-between opacity-90">
+                                    <div className="flex flex-col">
+                                        <span className={cn("text-sm font-medium", !merchandise && "text-muted-foreground")}>Inventário e Vendas</span>
+                                        <span className="text-[10px] text-muted-foreground">Resumo de estoque e movimentações</span>
+                                    </div>
+                                    <Switch
+                                        disabled={!merchandise}
+                                        checked={isCardChecked('merchandise', 'inventory_summary')}
+                                        onCheckedChange={(val) => handleCardToggle('merchandise', 'inventory_summary', val)}
+                                    />
+                                </div>
+                            </div>
+                        </ModuleCard>
 
                         {/* Card: Financeiro */}
                         <ModuleCard
@@ -151,14 +179,50 @@ export function ModulesSettings() {
                                     onCheckedChange={(val) => form.setValue('financial', val, { shouldDirty: true })}
                                 />
                             }
-                        />
+                        >
+                            <div className="mt-4 pt-4 border-t space-y-4">
+                                <h4 className={cn("text-xs font-bold uppercase text-muted-foreground", !financial && "opacity-50")}>Dashboard (Opções)</h4>
+                                
+                                <CardToggleItem 
+                                    label="Fluxo de Saúde Financeira"
+                                    description="Card principal de faturamento e entradas"
+                                    isActive={financial}
+                                    checked={isCardChecked('financial', 'financial_summary')}
+                                    onChange={(val) => handleCardToggle('financial', 'financial_summary', val)}
+                                />
+
+                                <CardToggleItem 
+                                    label="Agenda de Pagamentos"
+                                    description="Controle de vencimentos e compromissos"
+                                    isActive={financial}
+                                    checked={isCardChecked('financial', 'payment_agenda')}
+                                    onChange={(val) => handleCardToggle('financial', 'payment_agenda', val)}
+                                />
+
+                                <CardToggleItem 
+                                    label="Previsão de Saldo"
+                                    description="Gráfico de projeção bancária"
+                                    isActive={financial}
+                                    checked={isCardChecked('financial', 'balance_projection')}
+                                    onChange={(val) => handleCardToggle('financial', 'balance_projection', val)}
+                                />
+
+                                <CardToggleItem 
+                                    label="Despesas por Setor"
+                                    description="Gráfico de distribuição de gastos"
+                                    isActive={financial}
+                                    checked={isCardChecked('financial', 'expenses_by_sector')}
+                                    onChange={(val) => handleCardToggle('financial', 'expenses_by_sector', val)}
+                                />
+                            </div>
+                        </ModuleCard>
 
                         {/* Card: Recursos Humanos */}
                         <ModuleCard
                             icon={<Users className="h-6 w-6 text-white" />}
                             color="bg-pink-600"
                             title="Recursos Humanos"
-                            description="Gestão de funcionários, registro de ponto e processamento de folha/rateio."
+                            description="Gestão de funcionários, registro de ponto e processamento de folha."
                             isActive={hr_module}
                             control={
                                 <Switch
@@ -166,7 +230,11 @@ export function ModulesSettings() {
                                     onCheckedChange={(val) => form.setValue('hr_module', val, { shouldDirty: true })}
                                 />
                             }
-                        />
+                        >
+                            <div className="mt-4 pt-4 border-t border-dashed">
+                                <p className="text-[10px] text-muted-foreground italic">Em breve: Cards de dashboard para gestão de pessoal.</p>
+                            </div>
+                        </ModuleCard>
                     </div>
                 </section>
 
@@ -250,14 +318,14 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="rounded-lg border bg-card p-6 shadow-sm">
+                    <div className="rounded-xl border bg-card p-6 shadow-sm">
                         <div className="flex flex-col md:flex-row md:items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400">
                                 <DollarSign className="h-6 w-6" />
                             </div>
                             <div className="flex flex-col gap-1">
                                 <h3 className="font-semibold text-lg leading-none tracking-tight">Valor da Cesta Básica</h3>
-                                <p className="text-sm text-muted-foreground">Valor utilizado nos cálculos automáticos de folha (Dia 05 e 20) do módulo RH.</p>
+                                <p className="text-xs text-muted-foreground">Valor utilizado nos cálculos automáticos de folha do módulo RH.</p>
                             </div>
                             <div className="ml-auto w-full md:w-48">
                                 <div className="relative">
@@ -265,7 +333,7 @@ export function ModulesSettings() {
                                     <input
                                         type="number"
                                         step="0.01"
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         placeholder="0.00"
                                         {...form.register('cestaBasicaValue')}
                                     />
@@ -284,77 +352,62 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                         {/* Card: Atendimentos */}
-                        <div className={cn(
-                            "relative group overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md",
-                            treatments ? "border-minsk-200 dark:border-minsk-800" : "border-transparent opacity-90 grayscale-[0.3]"
-                        )}>
-                            <div className="p-6">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-colors", treatments ? "bg-blue-600" : "bg-muted")}>
-                                            <ClipboardList className={cn("h-6 w-6", treatments ? "text-white" : "text-muted-foreground")} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg leading-none tracking-tight">Ordens de Serviço</h3>
-                                            <div className="flex items-center gap-2 mt-1.5">
-                                                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
-                                                    treatments
-                                                        ? "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/10 dark:text-green-400"
-                                                        : "bg-gray-50 text-gray-600 ring-gray-500/10 dark:bg-gray-400/10 dark:text-gray-400"
-                                                )}>
-                                                    {treatments ? "Ativo" : "Inativo"}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        checked={treatments}
-                                        onCheckedChange={(val) => form.setValue('treatments', val, { shouldDirty: true })}
-                                    />
-                                </div>
+                        <ModuleCard
+                            icon={<ClipboardList className="h-6 w-6 text-white" />}
+                            color="bg-blue-600"
+                            title="Ordens de Serviço"
+                            description="Controle de chamados, ordens de serviço e acompanhamento técnico."
+                            isActive={treatments}
+                            control={
+                                <Switch
+                                    checked={treatments}
+                                    onCheckedChange={(val) => form.setValue('treatments', val, { shouldDirty: true })}
+                                />
+                            }
+                        >
+                            <div className="mt-4 pt-4 border-t space-y-4">
+                                <h4 className={cn("text-xs font-bold uppercase text-muted-foreground", !treatments && "opacity-50")}>Dashboard (Opções)</h4>
+                                
+                                <CardToggleItem 
+                                    label="Gestão de Serviços"
+                                    description="Resumo de atendimentos e produtividade"
+                                    isActive={treatments}
+                                    checked={isCardChecked('treatments', 'treatment_summary')}
+                                    onChange={(val) => handleCardToggle('treatments', 'treatment_summary', val)}
+                                />
 
-                                <div className="mt-4">
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        Controle completo de chamados, ordens de serviço e acompanhamento técnico.
-                                    </p>
-                                </div>
-
-                                {/* Dependency Info Area */}
                                 <motion.div
                                     initial={false}
                                     animate={{ height: 'auto', opacity: 1 }}
-                                    className="mt-6"
+                                    className="pt-2"
                                 >
                                     {!isDependenciesMet && treatments ? (
-                                        <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
+                                        <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900 border-none shadow-none p-3">
                                             <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                                            <AlertTitle className="text-amber-800 dark:text-amber-500 font-medium">Modo Simplificado</AlertTitle>
-                                            <AlertDescription className="text-amber-700 dark:text-amber-400 text-xs mt-1">
-                                                Como <strong>Estoque</strong> ou <strong>Financeiro</strong> estão desativados, a gestão de peças e vendas dentro das OSs ficará oculta.
+                                            <AlertTitle className="text-amber-800 dark:text-amber-500 font-medium text-xs">Modo Simplificado</AlertTitle>
+                                            <AlertDescription className="text-amber-700 dark:text-amber-400 text-[10px] mt-0.5 leading-tight">
+                                                Como <strong>Estoque</strong> ou <strong>Financeiro</strong> estão desativados, as vendas internas nas OSs ficarão ocultas.
                                             </AlertDescription>
                                         </Alert>
                                     ) : (
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-dashed">
-                                            <Info className="h-4 w-4 text-blue-500" />
-                                            <span>Este módulo se integra automaticamente com Estoque e Financeiro quando disponíveis.</span>
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/20 p-2 rounded-lg border border-dashed">
+                                            <Info className="h-3.5 w-3.5 text-blue-500" />
+                                            <span>Integração automática com Estoque e Financeiro ativa.</span>
                                         </div>
                                     )}
                                 </motion.div>
                             </div>
-                            {/* Decorative background element */}
-                            {/* Decorative background element */}
-                            <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-blue-500/5 blur-2xl transition-all group-hover:bg-blue-500/10" />
-                        </div>
+                        </ModuleCard>
                     </div>
                 </section>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-4 pt-4 border-t">
+                <div className="sticky bottom-0 z-10 -mx-4 md:-mx-0 flex items-center justify-end gap-4 p-4 border-t bg-background/80 backdrop-blur-sm">
                     {form.formState.isDirty && (
-                        <span className="text-sm text-muted-foreground animate-pulse">
-                            Você tem alterações não salvas...
+                        <span className="text-sm text-muted-foreground animate-pulse font-medium">
+                            Alterações não salvas...
                         </span>
                     )}
                     <Button
@@ -379,21 +432,45 @@ export function ModulesSettings() {
     )
 }
 
+// Item reutilizável para o toggle de cards
+function CardToggleItem({ label, description, isActive, checked, onChange }: { 
+    label: string, 
+    description: string, 
+    isActive: boolean, 
+    checked: boolean, 
+    onChange: (val: boolean) => void 
+}) {
+    return (
+        <div className="flex items-center justify-between opacity-90">
+            <div className="flex flex-col">
+                <span className={cn("text-sm font-medium", !isActive && "text-muted-foreground")}>{label}</span>
+                <span className="text-[10px] text-muted-foreground">{description}</span>
+            </div>
+            <Switch
+                disabled={!isActive}
+                checked={checked}
+                onCheckedChange={onChange}
+            />
+        </div>
+    )
+}
+
 // Sub-component for standard module cards
-function ModuleCard({ icon, color, title, description, isActive, control }: {
+function ModuleCard({ icon, color, title, description, isActive, control, children }: {
     icon: React.ReactNode
     color: string
     title: string
     description: string
     isActive: boolean
     control: React.ReactNode
+    children?: React.ReactNode
 }) {
     return (
         <div className={cn(
-            "relative group overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md",
+            "relative group overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md h-fit",
             isActive ? "border-muted-foreground/20" : "border-transparent opacity-80"
         )}>
-            <div className="p-6">
+            <div className="p-6 pb-4">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                         <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-colors", isActive ? color : "bg-muted")}>
@@ -421,7 +498,13 @@ function ModuleCard({ icon, color, title, description, isActive, control }: {
                     </p>
                 </div>
             </div>
-            {/* Decorative background element */}
+
+            {children && (
+                <div className="px-6 pb-6 pt-0">
+                    {children}
+                </div>
+            )}
+
             {/* Decorative background element */}
             <div className={cn("pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl transition-all opacity-0 group-hover:opacity-100", color.replace('bg-', 'bg-') + '/10')} />
         </div>

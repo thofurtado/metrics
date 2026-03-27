@@ -60,8 +60,8 @@ export function Dashboard() {
             <InventoryCard month={month} year={year} className="lg:col-span-1" />
           )}
 
-          {/* QUARTO CARD: Agenda de Pagamentos (Fallback fallback se algum módulo for desativado) */}
-          {(!isModuleActive('treatments') || !isModuleActive('merchandise')) && (
+          {/* QUARTO CARD: Agenda de Pagamentos */}
+          {isCardVisible('financial', 'payment_agenda') && (
             <AgendaPagamentosCard className="lg:col-span-1" />
           )}
 
@@ -71,8 +71,12 @@ export function Dashboard() {
         <div className="grid grid-cols-1 gap-4 font-gaba lg:grid-cols-9">
           {isModuleActive('financial') && (
             <>
-              <BalanceProjectionChart className="lg:col-span-6" />
-              <ExpensesBySectorChart month={month} year={year} className="lg:col-span-3" />
+              {isCardVisible('financial', 'balance_projection') && (
+                <BalanceProjectionChart className={isCardVisible('financial', 'expenses_by_sector') ? "lg:col-span-6" : "lg:col-span-9"} />
+              )}
+              {isCardVisible('financial', 'expenses_by_sector') && (
+                <ExpensesBySectorChart month={month} year={year} className={isCardVisible('financial', 'balance_projection') ? "lg:col-span-3" : "lg:col-span-9"} />
+              )}
             </>
           )}
         </div>
