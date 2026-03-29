@@ -28,8 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from '@/lib/utils'
-import { MoreHorizontal, Scissors, Trash } from "lucide-react"
+import { MoreHorizontal, Scissors, Trash, Eye, Pencil } from "lucide-react"
 import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
+import { TransactionDetailsModal } from "./components/transaction-details-modal"
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -72,6 +73,8 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
   const [openGroupDialog, setOpenGroupDialog] = useState(false)
+  const [openDetailsModal, setOpenDetailsModal] = useState(false)
+  const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [localLoading, setLocalLoading] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
@@ -343,6 +346,26 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                setDetailsMode('view')
+                setOpenDetailsModal(true)
+              }}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Visualizar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                setDetailsMode('edit')
+                setOpenDetailsModal(true)
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
             {transactions.transaction_group_id && (
               <DropdownMenuItem
                 onSelect={(e) => {
@@ -394,6 +417,13 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           open={openGroupDialog}
           onOpenChange={setOpenGroupDialog}
           groupId={transactions.transaction_group_id || null}
+        />
+
+        <TransactionDetailsModal
+          open={openDetailsModal}
+          onOpenChange={setOpenDetailsModal}
+          transaction={transactions}
+          initialMode={detailsMode}
         />
       </TableCell>
     </TableRow>
