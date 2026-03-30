@@ -105,7 +105,7 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
     const handleOrientationChange = () => {
       if (open && scanning) {
         stopScanner().then(() => {
-          setTimeout(() => { if (open) startScanner() }, 600)
+          setTimeout(() => { if (open) startScanner() }, 150)
         })
       }
     }
@@ -188,11 +188,11 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
           </div>
         </ResponsiveDialogHeader>
 
-        <div className="relative flex-1 w-full bg-slate-950 flex items-center justify-center overflow-hidden">
+        <div className="relative flex-1 w-full bg-slate-950 flex items-center justify-center overflow-hidden z-10">
           {/* CSS Fix: Force Full Occupation */}
           <div 
             id={scannerId} 
-            className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full [&>video]:absolute [&>video]:inset-0 [&>canvas]:hidden" 
+            className="relative overflow-hidden w-full h-full z-0 [&>video]:!w-full [&>video]:!h-full [&>video]:!object-cover [&>video]:!absolute [&>video]:!inset-0 [&>video]:!z-0 [&>canvas]:hidden" 
           />
           
           <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
