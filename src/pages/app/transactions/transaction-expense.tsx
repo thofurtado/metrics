@@ -11,8 +11,10 @@ import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { Camera } from 'lucide-react'
 
 import { createTransaction } from '@/api/create-transaction'
+import { extractTransaction } from '@/api/extract-transaction'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
 import { getSuppliers } from '@/api/get-suppliers'
@@ -51,6 +53,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog } from '@/components/ui/dialog'
+import { CameraScanner } from '@/components/camera-scanner'
+import { ScannerConfirmationModal, ExtractedData } from '@/components/scanner-confirmation-modal'
+import { ExtractionOverlay } from '@/components/extraction-overlay'
 
 // Schema
 const formSchema = z.object({
@@ -91,6 +96,10 @@ export function TransactionExpense() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
 
   // Bidirectional Calculator State
   const [installmentValue, setInstallmentValue] = useState<string>('')
@@ -266,6 +275,60 @@ export function TransactionExpense() {
     }
   }
 
+  const handleOpenScanner = () => {
+    setExtractedData(null)
+    setIsExtracting(false)
+    setConfirmationOpen(false)
+    setScannerOpen(true)
+  }
+
+  const handleScanSuccess = async (code: string) => {
+    setIsExtracting(true)
+    try {
+      const result = await extractTransaction({ code })
+      if (result.success) {
+        setExtractedData(result.payload)
+        setConfirmationOpen(true)
+      } else {
+        toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
+          duration: 4000
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
+        duration: 4000
+      })
+    } finally {
+      setIsExtracting(false)
+    }
+  }
+
+  const applyExtractedData = (data: ExtractedData) => {
+    if (data.amount > 0) {
+      form.setValue('amount', data.amount.toString())
+      const count = parseInt(form.getValues('installments_count') || '1')
+      setInstallmentValue((data.amount / count).toFixed(2))
+    }
+    
+    if (data.dueDate) {
+      form.setValue('data_vencimento', new Date(data.dueDate))
+    }
+    
+    if (data.description) {
+      form.setValue('description', data.description)
+    }
+    
+    if (data.type === 'PIX') {
+      form.setValue('payment_method', 'PIX')
+    } else if (data.type === 'BOLETO') {
+      form.setValue('payment_method', 'BOLETO')
+    }
+    
+    setConfirmationOpen(false)
+    toast.success(`Dados de ${data.type} aplicados ao formulário!`)
+  }
+
   const isPending = isTransactionPending
 
   return (
@@ -286,8 +349,11 @@ export function TransactionExpense() {
           </div>
         </div>
       </ResponsiveDialogHeader>
+      
+      {/* ─── OVERLAY DE LOADING ─── */}
+      <ExtractionOverlay isLoading={isExtracting} />
 
-      <div className="px-6 pb-2 pt-4 flex-1 overflow-y-auto">
+      <div className="px-6 pb-40 pt-4 flex-1 overflow-y-auto scroll-smooth">
         {/* ─── TAB SELECTOR ─── */}
         <Tabs value={activeTab} onValueChange={(v) => {
           setActiveTab(v as any)
@@ -353,6 +419,17 @@ export function TransactionExpense() {
                           autoFocus
                         />
                       </FormControl>
+                      
+                      {/* BOTAO CAMERA - MOBILE ONLY */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="sm:hidden h-12 w-12 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/50"
+                        onClick={handleOpenScanner}
+                      >
+                        <Camera className="h-6 w-6" />
+                      </Button>
                     </div>
                     {installmentPreview && activeTab === 'installment' && (
                       <p className="text-sm font-medium text-red-600/80 dark:text-red-400 ml-1">
@@ -725,6 +802,23 @@ export function TransactionExpense() {
           onOpenChange={(open) => setSupplierDialogOpen({ open, id: open ? supplierDialogOpen.id : undefined })} 
         />
       </Dialog>
+
+      {scannerOpen && (
+        <CameraScanner 
+          open={scannerOpen}
+          onOpenChange={setScannerOpen}
+          onScanSuccess={handleScanSuccess}
+        />
+      )}
+
+      {confirmationOpen && extractedData && (
+        <ScannerConfirmationModal
+          open={confirmationOpen}
+          onOpenChange={setConfirmationOpen}
+          data={extractedData}
+          onConfirm={applyExtractedData}
+        />
+      )}
     </ResponsiveDialogContent>
   )
 }

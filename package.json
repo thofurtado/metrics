@@ -41,6 +41,7 @@
     "dayjs": "^1.11.10",
     "framer-motion": "^12.31.0",
     "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
     "i18next": "^25.8.17",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",

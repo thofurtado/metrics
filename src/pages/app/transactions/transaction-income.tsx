@@ -11,8 +11,10 @@ import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { Camera } from 'lucide-react'
 
 import { createTransaction } from '@/api/create-transaction'
+import { extractTransaction } from '@/api/extract-transaction'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
 
@@ -46,6 +48,9 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CameraScanner } from '@/components/camera-scanner'
+import { ScannerConfirmationModal, ExtractedData } from '@/components/scanner-confirmation-modal'
+import { ExtractionOverlay } from '@/components/extraction-overlay'
 
 // Schema para Receitas (income)
 const formSchema = z.object({
@@ -56,7 +61,6 @@ const formSchema = z.object({
     required_error: "Emissão é obrigatória",
   }),
   description: z.string().optional(),
-  // account: z.string().min(1, "Conta é obrigatória"),
   account: z.string().optional(),
   sector: z.string().optional(),
   amount: z.string().min(1, "Valor é obrigatório").refine(
@@ -85,6 +89,10 @@ export function TransactionIncome() {
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
   const [installmentValue, setInstallmentValue] = useState<string>('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
 
   const [createAccountOpen, setCreateAccountOpen] = useState(false)
   const [createSectorOpen, setCreateSectorOpen] = useState(false)
@@ -98,19 +106,17 @@ export function TransactionIncome() {
       account: '',
       sector: '',
       amount: '',
-      confirmed: true, // Smart default: Receitas geralmente são lançadas quando recebidas
+      confirmed: true,
       installments_count: '',
       interval_frequency: 'MONTHLY'
     }
   })
 
-  // getSectors retorna { data: { sectors: [...] } } (Axios Response)
   const { data: sectors } = useQuery({
     queryKey: ['sectors'],
     queryFn: () => getSectors(),
   })
 
-  // getAccounts retorna { accounts: [...] } (Data Object)
   const { data: accounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => getAccounts(),
@@ -126,7 +132,6 @@ export function TransactionIncome() {
     }
   })
 
-  // Watching Amount and Count for Preview
   const watchedAmount = useWatch({ control: form.control, name: 'amount' })
   const watchedCount = useWatch({ control: form.control, name: 'installments_count' })
 
@@ -143,7 +148,6 @@ export function TransactionIncome() {
   })()
 
   function handleConfirmInstallments(installments: InstallmentItem[]) {
-    // Sanitization: Remove visual/unique IDs from component, send only clean data
     const cleanInstallments = installments.map(i => ({
       data_vencimento: i.date,
       data_emissao: new Date(),
@@ -151,9 +155,7 @@ export function TransactionIncome() {
     }))
 
     form.setValue('custom_installments', cleanInstallments)
-
     setPreviewInstallmentsOpen(false)
-    // Trigger submit again with the data
     form.handleSubmit(onSubmit)()
   }
 
@@ -165,8 +167,6 @@ export function TransactionIncome() {
 
     try {
       const isInstallment = activeTab === 'installment'
-
-      // Final Sanitization before sending to API
       const cleanInstallments = isInstallment && data.custom_installments
         ? data.custom_installments.map(i => ({
           data_vencimento: i.data_vencimento,
@@ -205,16 +205,62 @@ export function TransactionIncome() {
       })
       setActiveTab('single')
       setInstallmentValue('')
-
     } catch (error) {
       console.error('Erro ao cadastrar receita:', error)
       toast.error('Erro ao cadastrar receita')
     }
   }
 
+  const handleOpenScanner = () => {
+    setExtractedData(null)
+    setIsExtracting(false)
+    setConfirmationOpen(false)
+    setScannerOpen(true)
+  }
+
+  const handleScanSuccess = async (code: string) => {
+    setIsExtracting(true)
+    try {
+      const result = await extractTransaction({ code })
+      if (result.success) {
+        setExtractedData(result.payload)
+        setConfirmationOpen(true)
+      } else {
+        toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
+          duration: 4000
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
+        duration: 4000
+      })
+    } finally {
+      setIsExtracting(false)
+    }
+  }
+
+  const applyExtractedData = (data: ExtractedData) => {
+    if (data.amount > 0) {
+      form.setValue('amount', data.amount.toString())
+      const count = parseInt(form.getValues('installments_count') || '1')
+      setInstallmentValue((data.amount / count).toFixed(2))
+    }
+    
+    if (data.dueDate) {
+      form.setValue('data_vencimento', new Date(data.dueDate))
+    }
+    
+    if (data.description) {
+      form.setValue('description', data.description)
+    }
+    
+    setConfirmationOpen(false)
+    toast.success(`Dados de ${data.type} aplicados ao formulário!`)
+  }
+
   return (
     <ResponsiveDialogContent>
-      {/* ─── HEADER ─── */}
       <ResponsiveDialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
@@ -231,8 +277,9 @@ export function TransactionIncome() {
         </div>
       </ResponsiveDialogHeader>
 
-      <div className="px-6 pb-2 pt-4 flex-1 overflow-y-auto">
-        {/* ─── TAB SELECTOR ─── */}
+      <ExtractionOverlay isLoading={isExtracting} />
+
+      <div className="px-6 pb-40 pt-4 flex-1 overflow-y-auto scroll-smooth">
         <Tabs value={activeTab} onValueChange={(v) => {
           setActiveTab(v as any)
           if (v === 'installment') {
@@ -253,13 +300,10 @@ export function TransactionIncome() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
-
-            {/* ─── GRUPO 1: VALOR E STATUS ─── */}
             <div className={cn(
               "grid gap-4 items-end",
               activeTab === 'single' ? "grid-cols-1 sm:grid-cols-[1fr,200px]" : "grid-cols-1"
             )}>
-              {/* VALOR */}
               <FormField
                 control={form.control}
                 name="amount"
@@ -297,6 +341,16 @@ export function TransactionIncome() {
                           autoFocus
                         />
                       </FormControl>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="sm:hidden h-12 w-12 rounded-xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
+                        onClick={handleOpenScanner}
+                      >
+                        <Camera className="h-6 w-6" />
+                      </Button>
                     </div>
                     {installmentPreview && activeTab === 'installment' && (
                       <p className="text-sm font-medium text-emerald-600/80 dark:text-emerald-400 ml-1">
@@ -307,7 +361,6 @@ export function TransactionIncome() {
                 )}
               />
 
-              {/* STATUS (Aparece na mesma linha do valor no Desktop se for 'single') */}
               {activeTab === 'single' && (
                 <FormField
                   control={form.control}
@@ -330,9 +383,7 @@ export function TransactionIncome() {
               )}
             </div>
 
-            {/* ─── GRUPO 2: DATAS ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Emissão */}
               <FormField
                 control={form.control}
                 name="data_emissao"
@@ -368,7 +419,6 @@ export function TransactionIncome() {
                 )}
               />
 
-              {/* Vencimento */}
               <FormField
                 control={form.control}
                 name="data_vencimento"
@@ -405,10 +455,8 @@ export function TransactionIncome() {
               />
             </div>
 
-            {/* ─── SEPARADOR ─── */}
             <div className="border-t border-border/40 -mx-1" />
 
-            {/* ─── GRUPO 3: DESCRIÇÃO ─── */}
             <FormField
               control={form.control}
               name="description"
@@ -426,7 +474,6 @@ export function TransactionIncome() {
               )}
             />
 
-            {/* ─── GRUPO 4: CATEGORIA + CONTA ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <FormField
                 control={form.control}
@@ -480,7 +527,6 @@ export function TransactionIncome() {
               />
             </div>
 
-            {/* ─── GRUPO 5: RECORRÊNCIA (só no tab recorrente) ─── */}
             {activeTab === 'installment' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-xl border border-dashed border-emerald-200/50 dark:border-emerald-900/30 relative mt-2">
                 <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-100 rounded-full">
@@ -514,7 +560,6 @@ export function TransactionIncome() {
                   )}
                 />
 
-                {/* Visual Installment Value */}
                 <FormItem className="space-y-1.5">
                   <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
                   <FormControl>
@@ -562,7 +607,6 @@ export function TransactionIncome() {
               </div>
             )}
 
-            {/* ─── AÇÕES ─── */}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
               <ResponsiveDialogClose asChild>
                 <Button
@@ -588,11 +632,9 @@ export function TransactionIncome() {
                 )}
               </Button>
             </div>
-
           </form>
         </Form>
 
-        {/* ─── DIALOGS AUXILIARES ─── */}
         <InstallmentPreviewDialog
           open={previewInstallmentsOpen}
           onOpenChange={setPreviewInstallmentsOpen}
@@ -619,6 +661,23 @@ export function TransactionIncome() {
             if (newAccount.id) form.setValue('account', newAccount.id)
           }}
         />
+
+        {scannerOpen && (
+          <CameraScanner 
+            open={scannerOpen}
+            onOpenChange={setScannerOpen}
+            onScanSuccess={handleScanSuccess}
+          />
+        )}
+
+        {confirmationOpen && extractedData && (
+          <ScannerConfirmationModal
+            open={confirmationOpen}
+            onOpenChange={setConfirmationOpen}
+            data={extractedData}
+            onConfirm={applyExtractedData}
+          />
+        )}
       </div>
     </ResponsiveDialogContent>
   )
