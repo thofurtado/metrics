@@ -121,14 +121,87 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
     }
   }
 
+  const lastResult = useRef<string | null>(null)
+  const resultCount = useRef(0)
+
+  const validateChecksum = (code: string): boolean => {
+    const digits = code.replace(/\D/g, '')
+    if (digits.length === 47) {
+      const blocks = [
+        { data: digits.substring(0, 9), cd: digits.substring(9, 10) },
+        { data: digits.substring(10, 20), cd: digits.substring(20, 21) },
+        { data: digits.substring(21, 31), cd: digits.substring(31, 32) }
+      ]
+      return blocks.every(b => mod10(b.data) === parseInt(b.cd))
+    }
+    if (digits.length === 48) {
+      const isMod10 = ['6', '7'].includes(digits[2])
+      const blocks = [
+        { data: digits.substring(0, 11), cd: digits.substring(11, 12) },
+        { data: digits.substring(12, 23), cd: digits.substring(23, 24) },
+        { data: digits.substring(24, 35), cd: digits.substring(35, 36) },
+        { data: digits.substring(36, 47), cd: digits.substring(47, 48) }
+      ]
+      const validator = isMod10 ? mod10 : mod11
+      return blocks.every(b => validator(b.data) === parseInt(b.cd))
+    }
+    return code.startsWith('000201') || code.startsWith('http') || digits.length === 44
+  }
+
+  const mod10 = (data: string): number => {
+    let sum = 0; let weight = 2
+    for (let i = data.length - 1; i >= 0; i--) {
+      let res = parseInt(data[i]) * weight
+      if (res > 9) res = Math.floor(res / 10) + (res % 10)
+      sum += res; weight = weight === 2 ? 1 : 2
+    }
+    const digit = 10 - (sum % 10)
+    return digit === 10 ? 0 : digit
+  }
+
+  const mod11 = (data: string): number => {
+    let sum = 0; let weight = 2
+    for (let i = data.length - 1; i >= 0; i--) {
+      sum += parseInt(data[i]) * weight
+      weight = weight === 9 ? 2 : weight + 1
+    }
+    const rem = sum % 11
+    if (rem === 0 || rem === 1) return 0
+    if (rem === 10) return 1
+    return 11 - rem
+  }
+
   const handleScanSuccess = async (decodedText: string) => {
     if (loading) return
+
+    // 1. Validação Visual / Checksum
+    if (!validateChecksum(decodedText)) return
+
+    // 2. Estabilização (Quiet Zone / Repetição)
+    if (decodedText === lastResult.current) {
+      resultCount.current += 1
+    } else {
+      lastResult.current = decodedText
+      resultCount.current = 1
+      return // Espera a próxima leitura igual
+    }
+
+    if (resultCount.current < 3) return // Exige 3 leituras idênticas para confirmar
+
     setLoading(true)
     await stopScanner()
-    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Pequeno feedback tátil (se disponível) ou visual antes de fechar
+    if ('vibrate' in navigator) navigator.vibrate(50)
+    
+    await new Promise(resolve => setTimeout(resolve, 300))
     onScanSuccess(decodedText)
     setLoading(false)
     onOpenChange(false)
+    
+    // Reset para próxima vez
+    lastResult.current = null
+    resultCount.current = 0
   }
 
   return (
