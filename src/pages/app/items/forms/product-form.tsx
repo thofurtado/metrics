@@ -91,8 +91,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             setIsNewCategoryOpen(false)
             setNewCategoryName('')
             toast.success('Categoria criada!')
-            if (data?.category?.id) {
-                form.setValue('category', data.category.id)
+            if (data?.category?.name) {
+                form.setValue('category', data.category.name)
             }
         },
         onError: () => {
@@ -110,7 +110,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
         defaultValues: {
             name: initialData?.name ?? '',
             description: initialData?.description ?? '',
-            category: initialData?.category ?? '',
+            category: typeof initialData?.category === 'string' ? initialData.category : (initialData?.category?.name ?? ''),
 
             cost: (initialData?.product && typeof initialData.product.cost === 'number') ? initialData.product.cost : 0,
             price: initialData?.product?.price ?? 0,
@@ -167,7 +167,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             form.reset({
                 name: initialData.name,
                 description: initialData.description ?? '',
-                category: initialData.category?.id ?? '',
+                category: typeof initialData.category === 'string' ? initialData.category : (initialData.category?.name ?? ''),
                 cost: initialData.product?.cost ?? 0,
                 price: initialData.product?.price ?? 0,
                 stock: initialData.product?.stock ?? 0,
@@ -345,7 +345,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                 </FormControl>
                                                 <SelectContent withPortal={false} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.stopPropagation()}>
                                                     {(categoriesData?.categories || []).map((cat: any) => (
-                                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
