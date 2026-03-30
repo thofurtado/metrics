@@ -346,7 +346,7 @@ export function TransactionIncome() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="sm:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
+                        className="lg:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
                         onClick={handleOpenScanner}
                       >
                         <Camera className="h-7 w-7" />

@@ -425,7 +425,7 @@ export function TransactionExpense() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="sm:hidden h-14 w-14 rounded-2xl text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/50"
+                        className="lg:hidden h-14 w-14 rounded-2xl text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/50"
                         onClick={handleOpenScanner}
                       >
                         <Camera className="h-7 w-7" />
