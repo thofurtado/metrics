@@ -261,7 +261,7 @@ export function TransactionIncome() {
 
   return (
     <ResponsiveDialogContent>
-      <ResponsiveDialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+      <ResponsiveDialogHeader className="px-6 pt-4 md:pt-6 pb-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
             <CircleCheckBig className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />

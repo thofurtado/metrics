@@ -266,24 +266,24 @@ export function Transactions() {
           <TabsList className="w-full h-auto p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl flex border border-slate-200/50 dark:border-slate-700/50">
             <TabsTrigger 
               value="payable" 
-              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
-              <Clock className="w-4 h-4 mr-2" />
-              Manifesto de Pendências
+              <Clock className="w-4 h-4 mr-1 md:mr-2" />
+              Pendência
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
-              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Histórico Consolidado
+              <CheckCircle2 className="w-4 h-4 mr-1 md:mr-2" />
+              Histórico
             </TabsTrigger>
             <TabsTrigger 
               value="transfers" 
-              className="flex-1 py-3 text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
-              <ArrowRightLeft className="w-4 h-4 mr-2 hidden sm:block" />
-              Transferências Internas
+              <ArrowRightLeft className="w-4 h-4 mr-1 md:mr-2 hidden sm:block" />
+              Transferência
             </TabsTrigger>
           </TabsList>
         </Tabs>
