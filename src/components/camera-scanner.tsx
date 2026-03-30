@@ -34,19 +34,19 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
           qrCodeRef.current = new Html5Qrcode(scannerId)
 
           const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
-            const minEdgePercentage = 0.8; 
-            const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-            const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+            // Ocupa quase toda a largura para capturar boletos longos (Code 128 / ITF)
+            const width = Math.floor(viewfinderWidth * 0.9);
+            const height = Math.floor(viewfinderHeight * 0.3);
+            
             return {
-              width: Math.max(qrboxSize, 280),
-              height: Math.max(qrboxSize / 1.6, 180) // Retangular para boletos
+              width: Math.max(width, 280),
+              height: Math.max(height, 160)
             };
           }
 
           const config = {
-            fps: 20,
+            fps: 25, // Maior sensibilidade
             qrbox: qrboxFunction,
-            // Removendo resolução fixa para evitar distorção no foco macro
             videoConstraints: {
               facingMode: "environment",
             }
@@ -58,14 +58,12 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
             (decodedText) => {
               handleScanSuccess(decodedText)
             },
-            () => {
-              // Ignore failure cases
-            }
+            () => {}
           )
           setScanning(true)
         } catch (err) {
           console.error("Erro ao iniciar câmera:", err)
-          toast.error("Não foi possível acessar a câmera. Verifique as permissões.")
+          toast.error("Erro ao acessar câmera. Verifique as permissões.")
           onOpenChange(false)
         }
       }
@@ -146,8 +144,9 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
           )}
           
           <div className="absolute bottom-12 left-0 right-0 flex justify-center z-50">
-            <div className="px-4 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/20 text-white text-xs font-medium uppercase tracking-widest">
-              Aponte para o QR Code ou Código de Barras
+            <div className="px-4 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest text-center leading-relaxed">
+              Enquadre o QR Code ou Boleto <br/>
+              <span className="text-[9px] text-emerald-400 font-medium">(Posicione o código na área central)</span>
             </div>
           </div>
         </div>
