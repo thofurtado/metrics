@@ -1,4 +1,109 @@
-// AlertDialogTrigger removed - not used directly in this component
+export function TransactionMobileCard({ transactions }: TransactionTableRowProps) {
+  const [openPaymentModal, setOpenPaymentModal] = useState(false)
+  const [openDetailsModal, setOpenDetailsModal] = useState(false)
+  const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
+
+  const paymentTransaction: PaymentTransaction = {
+    ...transactions,
+    sectorId: transactions.sectors?.id || null,
+    accountId: transactions.accounts.id,
+  }
+
+  return (
+    <div 
+      className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all"
+      onClick={() => {
+        setDetailsMode('view')
+        setOpenDetailsModal(true)
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "h-2 w-2 rounded-full",
+            transactions.confirmed ? "bg-emerald-500" : (transactions.operation === 'income' ? "bg-emerald-500/30" : "bg-rose-500")
+          )} />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            {dayjs(transactions.data_vencimento).format('DD MMM')}
+          </span>
+        </div>
+        <div className={cn(
+          "text-base font-black tabular-nums",
+          transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
+        )}>
+          <span className="text-[11px] font-bold opacity-60 mr-0.5">R$</span>
+          {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-0.5">
+        <span className="font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight">
+          {transactions.description}
+        </span>
+        <div className="flex items-center gap-2">
+           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            {transactions.accounts.name}
+          </span>
+          {transactions.sectors && (
+            <>
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                {transactions.sectors.name}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mt-1">
+        {!transactions.confirmed && (
+          <Button 
+            size="sm"
+            className={cn(
+              "h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
+              transactions.operation === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpenPaymentModal(true)
+            }}
+          >
+            {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
+          </Button>
+        )}
+        <Button 
+          variant="outline"
+          size="sm"
+          className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest border-slate-200"
+          onClick={(e) => {
+            e.stopPropagation()
+            setDetailsMode('edit')
+            setOpenDetailsModal(true)
+          }}
+        >
+          Editar
+        </Button>
+      </div>
+
+       <PaymentModal
+        open={openPaymentModal}
+        onOpenChange={setOpenPaymentModal}
+        transaction={paymentTransaction}
+        // No card mobile, simplificamos o callback de confirmação para apenas fechar e toast
+        onConfirm={async () => {
+          setOpenPaymentModal(false)
+        }}
+      />
+
+      <TransactionDetailsModal
+        open={openDetailsModal}
+        onOpenChange={setOpenDetailsModal}
+        transaction={transactions}
+        initialMode={detailsMode}
+      />
+    </div>
+  )
+}
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Loader2, Undo2, CheckCircle2 } from 'lucide-react'

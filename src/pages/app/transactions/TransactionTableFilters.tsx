@@ -176,24 +176,24 @@ export function TransactionTableFilters() {
   const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all')
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-card border border-border rounded-2xl shadow-sm">
-      {/* Search and Value Group */}
+    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-5 md:p-4 bg-card border border-border rounded-2xl shadow-sm">
+      {/* Search and Value Group - MOBILE FLEX ROW */}
       <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[220px]">
+        <div className="flex items-center gap-2 px-3 py-2.5 md:py-1.5 bg-muted/30 rounded-2xl border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[220px]">
           <Search className="h-4 w-4 text-primary opacity-70" />
           <input
             {...register('description')}
             placeholder="Descrição"
-            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full"
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full font-medium"
           />
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all w-[100px] sm:w-[120px]">
-          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Valor</span>
+        <div className="flex items-center gap-2 px-3 py-2.5 md:py-1.5 bg-muted/30 rounded-2xl border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all w-[110px] sm:w-[120px]">
+          <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tight">Vlr</span>
           <input
             {...register('value')}
             placeholder="0,00"
-            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full text-center"
+            className="bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground w-full text-center font-bold"
           />
         </div>
       </div>

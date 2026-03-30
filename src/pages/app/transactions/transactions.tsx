@@ -34,7 +34,7 @@ import {
 import { TransactionExpense } from './transaction-expense'
 import { TransactionIncome } from './transaction-income'
 import { TransactionTransfer } from './transaction-transfer'
-import { TransactionTableRow } from './transaction-table-row'
+import { TransactionTableRow, TransactionMobileCard } from './transaction-table-row'
 import { TransactionTableFilters } from './TransactionTableFilters'
 import { PageHeader } from '@/components/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
@@ -186,13 +186,13 @@ export function Transactions() {
   return (
     <>
       <Helmet title="Transações" />
-      <div className="flex flex-col gap-6 font-manrope">
+      <div className="flex flex-col gap-6 font-manrope px-5 md:px-0">
         <PageHeader title="Transações" description="Gerencie suas receitas, despesas e transferências.">
           <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <PopoverTrigger asChild>
               <Button
                 aria-label="Adicionar"
-                className="w-full sm:w-auto h-10 px-6 py-2 rounded-xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all font-bold"
+                className="w-full md:w-auto h-12 md:h-10 px-6 py-2 rounded-2xl md:rounded-xl bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all font-bold mb-8 md:mb-0"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 <span>Nova Transação</span>
@@ -314,8 +314,9 @@ export function Transactions() {
             </div>
           )}
 
-          <div className="rounded-3xl border-none bg-white dark:bg-slate-900 overflow-hidden shadow-sm px-2">
-            <div className="overflow-x-auto">
+          <div className="md:rounded-3xl border-none bg-transparent md:bg-white dark:md:bg-slate-900 overflow-hidden md:shadow-sm md:px-2">
+            {/* DESKTOP TABLE */}
+            <div className="hidden md:block overflow-x-auto">
               <Table className="w-full">
                 <TableHeader>
                   <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 border-none hover:bg-slate-50/50">
@@ -430,6 +431,15 @@ export function Transactions() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* MOBILE CARD LIST */}
+            <div className="md:hidden flex flex-col gap-4">
+              {activeTab !== 'transfers' && transactionsResult &&
+                transactionsResult.data.transactions.transactions.map((transaction: any) => (
+                  <TransactionMobileCard key={transaction.id} transactions={transaction} />
+                ))
+              }
             </div>
           </div>
 

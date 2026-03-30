@@ -288,11 +288,11 @@ export function TransactionIncome() {
             form.setValue('confirmed', true)
           }
         }} className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/40 rounded-xl h-auto">
-            <TabsTrigger value="single" className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+          <TabsList className="grid w-full grid-cols-2 p-1.5 bg-muted/40 rounded-2xl h-auto">
+            <TabsTrigger value="single" className="text-sm font-bold py-3 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
               À Vista
             </TabsTrigger>
-            <TabsTrigger value="installment" className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+            <TabsTrigger value="installment" className="text-sm font-bold py-3 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
               Recorrente
             </TabsTrigger>
           </TabsList>
@@ -313,7 +313,7 @@ export function TransactionIncome() {
                       {activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Receita'}
                     </FormLabel>
                     <div className={cn(
-                      "flex items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200",
+                      "flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200",
                       activeTab === 'single' ? "w-full" : "w-full justify-center"
                     )}>
                       <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
@@ -335,7 +335,7 @@ export function TransactionIncome() {
                           step="0.01"
                           placeholder="0,00"
                           className={cn(
-                            "text-4xl font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500",
+                            "text-4xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500",
                             activeTab === 'single' ? "w-full" : "w-full text-center"
                           )}
                           autoFocus
@@ -346,10 +346,10 @@ export function TransactionIncome() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="sm:hidden h-12 w-12 rounded-xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
+                        className="sm:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
                         onClick={handleOpenScanner}
                       >
-                        <Camera className="h-6 w-6" />
+                        <Camera className="h-7 w-7" />
                       </Button>
                     </div>
                     {installmentPreview && activeTab === 'installment' && (
@@ -397,7 +397,7 @@ export function TransactionIncome() {
                             variant="outline"
                             type="button"
                             className={cn(
-                              "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
+                              "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -432,7 +432,7 @@ export function TransactionIncome() {
                             variant="outline"
                             type="button"
                             className={cn(
-                              "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
+                              "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -467,7 +467,7 @@ export function TransactionIncome() {
                     <Input
                       {...field}
                       placeholder="Ex: Venda de serviço, Consultoria..."
-                      className="h-12 rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
+                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
                     />
                   </FormControl>
                 </FormItem>
