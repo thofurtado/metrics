@@ -61,18 +61,18 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
       const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
         if (isBoletoMode) {
           return {
-            width: Math.floor(viewfinderWidth * 0.9),
+            width: Math.floor(viewfinderWidth * 0.95),
             height: Math.floor(viewfinderHeight * 0.3)
           }
         }
-        const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7)
+        const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.75)
         return { width: size, height: size }
       }
 
       await qrCodeRef.current.start(
         { facingMode: "environment" },
         {
-          fps: 30,
+          fps: 60, // Aumentado para maior fluidez
           qrbox: qrboxFunction,
           aspectRatio: isBoletoMode ? 1.77 : 1.0,
           videoConstraints: {
@@ -92,7 +92,6 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
     }
   }
 
-  // Effect for Initialization and Mode Change
   useEffect(() => {
     if (open) {
       startScanner()
@@ -102,17 +101,22 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
     return () => { stopScanner() }
   }, [open, isBoletoMode])
 
-  // Effect for Orientation/Resize
   useEffect(() => {
-    const handleResize = () => {
+    const handleOrientationChange = () => {
       if (open && scanning) {
         stopScanner().then(() => {
-          setTimeout(() => { if (open) startScanner() }, 500)
+          setTimeout(() => { if (open) startScanner() }, 600)
         })
       }
     }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    
+    window.addEventListener('resize', handleOrientationChange)
+    window.addEventListener('orientationchange', handleOrientationChange)
+    
+    return () => {
+      window.removeEventListener('resize', handleOrientationChange)
+      window.removeEventListener('orientationchange', handleOrientationChange)
+    }
   }, [open, scanning])
 
   function handleScanSuccess(decodedText: string) {
@@ -121,8 +125,9 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
     // Checksum Validation
     const digits = decodedText.replace(/\D/g, '')
     let isValid = false
-    if (digits.length === 47 || digits.length === 48) isValid = true // Simplified for brevity in component
+    if (digits.length === 47 || digits.length === 48) isValid = true
     if (decodedText.startsWith('000201') || decodedText.startsWith('http')) isValid = true
+    if (digits.length === 44) isValid = true
     if (!isValid) return
 
     // Stability Buffer
@@ -164,19 +169,19 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="max-w-[100dvw] p-0 overflow-hidden border-none bg-black h-[100dvh] flex flex-col">
-        <ResponsiveDialogHeader className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/60 to-transparent">
+        <ResponsiveDialogHeader className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <Camera className="w-5 h-5 text-red-500" />
-              <ResponsiveDialogTitle className="text-white font-bold text-sm">Metrics Scanner</ResponsiveDialogTitle>
+              <ResponsiveDialogTitle className="text-white font-bold text-sm">Metrics Scanner Professional</ResponsiveDialogTitle>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="ghost" className={cn("text-white rounded-full bg-white/10", torchOn && "text-amber-500 bg-amber-500/20")} onClick={toggleTorch}>
+              <Button size="icon" variant="ghost" className={cn("text-white rounded-full bg-white/10 h-10 w-10", torchOn && "text-amber-500 bg-amber-500/20")} onClick={toggleTorch}>
                 {torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5 opacity-60" />}
               </Button>
               <ResponsiveDialogClose asChild>
-                <Button size="icon" variant="ghost" className="text-white bg-white/10 rounded-full">
-                  <X className="w-5 h-5" />
+                <Button size="icon" variant="ghost" className="text-white bg-white/20 rounded-full h-10 w-10">
+                  <X className="w-6 h-6" />
                 </Button>
               </ResponsiveDialogClose>
             </div>
@@ -184,35 +189,53 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
         </ResponsiveDialogHeader>
 
         <div className="relative flex-1 w-full bg-slate-950 flex items-center justify-center overflow-hidden">
-          <div id={scannerId} className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" />
+          {/* CSS Fix: Force Full Occupation */}
+          <div 
+            id={scannerId} 
+            className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full [&>video]:absolute [&>video]:inset-0 [&>canvas]:hidden" 
+          />
           
           <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
             <div className={cn(
-              "border-2 border-dashed transition-all duration-300",
-              isBoletoMode ? "w-[90%] h-[30%] border-red-500/50 bg-red-500/5" : "w-[70%] aspect-square border-red-500/50 bg-red-500/5"
+              "border-2 border-dashed transition-all duration-300 relative",
+              isBoletoMode 
+                ? "w-[90%] h-[30%] border-red-500/50 bg-red-500/5 rounded-xl shadow-[0_0_100px_rgba(239,68,68,0.1)]" 
+                : "w-[75%] aspect-square border-red-500/50 bg-red-500/5 rounded-3xl"
             )}>
-              <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-red-500"></div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-red-500"></div>
-              <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-red-500"></div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-red-500"></div>
-              {scanning && <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_10px_red] animate-scan-fast top-1/2" />}
+              <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-red-500 rounded-tl-xl" />
+              <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-red-500 rounded-tr-xl" />
+              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-red-500 rounded-bl-xl" />
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-red-500 rounded-br-xl" />
+              
+              {scanning && <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_20px_red] animate-scan-fast top-1/2" />}
+              
+              <div className="absolute bottom-[-40px] left-0 right-0 text-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500/80 drop-shadow-md">
+                   {isBoletoMode ? "Enquadre Boletos" : "Enquadre QR Code"}
+                </span>
+              </div>
             </div>
           </div>
 
           {loading && (
-            <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90">
-              <Loader2 className="w-10 h-10 animate-spin text-red-500 mb-2" />
-              <p className="text-white text-xs font-bold uppercase tracking-widest">Processando...</p>
+            <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/95">
+              <div className="relative">
+                 <Loader2 className="w-16 h-16 animate-spin text-red-500" />
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-4 w-4 bg-red-500 rounded-full animate-pulse" />
+                 </div>
+              </div>
+              <p className="text-white text-md font-black uppercase tracking-[0.3em] mt-6 italic">Validando Code...</p>
             </div>
           )}
 
-          <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-3 z-40">
-            <div className="flex bg-black/60 backdrop-blur-md p-1 rounded-2xl border border-white/5">
-              <Button onClick={() => setIsBoletoMode(false)} className={cn("h-9 px-4 rounded-xl text-[10px] font-bold uppercase", !isBoletoMode ? "bg-red-600 text-white" : "bg-transparent text-white/40")}>
+          <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-4 z-40">
+            <div className="flex bg-black/50 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/10 shadow-2xl">
+              <Button onClick={() => setIsBoletoMode(false)} className={cn("h-10 px-6 rounded-xl text-[11px] font-black uppercase transition-all tracking-wider", !isBoletoMode ? "bg-red-600 text-white shadow-lg shadow-red-600/30" : "bg-transparent text-white/40 hover:text-white/70")}>
                 QR Code
               </Button>
-              <Button onClick={() => setIsBoletoMode(true)} className={cn("h-9 px-4 rounded-xl text-[10px] font-bold uppercase", isBoletoMode ? "bg-red-600 text-white" : "bg-transparent text-white/40")}>
-                Boleto
+              <Button onClick={() => setIsBoletoMode(true)} className={cn("h-10 px-6 rounded-xl text-[11px] font-black uppercase transition-all tracking-wider", isBoletoMode ? "bg-red-600 text-white shadow-lg shadow-red-600/30" : "bg-transparent text-white/40 hover:text-white/70")}>
+                Boleto / Barras
               </Button>
             </div>
           </div>
