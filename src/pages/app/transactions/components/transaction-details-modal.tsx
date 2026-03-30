@@ -16,6 +16,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Form,
@@ -111,7 +112,7 @@ export function TransactionDetailsModal({
       amount: '',
       data_vencimento: new Date(),
       accountId: '',
-      sectorId: '',
+      sectorId: 'none',
       updateAllInGroup: false,
     },
   })
@@ -124,7 +125,7 @@ export function TransactionDetailsModal({
         amount: (transaction.totalValue ?? transaction.amount).toFixed(2),
         data_vencimento: new Date(transaction.data_vencimento),
         accountId: transaction.accounts.id,
-        sectorId: transaction.sectors?.id || '',
+        sectorId: transaction.sectors?.id || 'none',
         updateAllInGroup: false,
       })
     }
@@ -155,7 +156,7 @@ export function TransactionDetailsModal({
         amount: parseFloat(data.amount.replace(',', '.')),
         data_vencimento: data.data_vencimento,
         account_id: data.accountId,
-        sector_id: data.sectorId || null,
+        sector_id: data.sectorId === 'none' ? null : (data.sectorId || null),
         updateAllInGroup: data.updateAllInGroup,
       })
     } catch (e) {
@@ -183,6 +184,9 @@ export function TransactionDetailsModal({
               <DialogTitle className="text-xl font-bold tracking-tight">
                 {isReadOnly ? 'Detalhes da Transação' : 'Editar Transação'}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Modal para visualizar ou editar os detalhes da transação selecionada.
+              </DialogDescription>
               <p className="text-sm text-muted-foreground mt-0.5 font-medium">
                 {isReadOnly ? 'Visualize as informações detalhadas.' : 'Altere os campos permitidos e confirme.'}
               </p>
@@ -386,7 +390,7 @@ export function TransactionDetailsModal({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">(Limpar Categoria)</SelectItem>
+                            <SelectItem value="none">(Limpar Categoria)</SelectItem>
                             {sectorsData?.data?.sectors?.map((sec) => (
                               <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>
                             ))}
@@ -417,7 +421,10 @@ export function TransactionDetailsModal({
                 <Button
                   type="button"
                   className="h-12 px-6 rounded-xl font-bold bg-slate-900 hover:bg-slate-800 text-white"
-                  onClick={() => setMode('edit')}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setMode('edit')
+                  }}
                 >
                   <Edit2 className="w-4 h-4 mr-2" />
                   Habilitar Edição
