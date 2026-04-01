@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
+import { MonthPicker } from '@/components/MonthPicker'
 
 import { getTransactions } from '@/api/get-transactions'
 import { Pagination } from '@/components/pagination'
@@ -53,6 +54,9 @@ export function Transactions() {
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
+
+  // History Month Navigation
+  const [historyDate, setHistoryDate] = useState<Date>(new Date())
 
   // Time Horizon State
   const [timeHorizon, setTimeHorizon] = useState<'7' | '15' | '30' | 'custom'>('7')
@@ -150,7 +154,8 @@ export function Transactions() {
       customDate,
       perPage,
       supplierId,
-      type
+      type,
+      historyDate // Re-fetch when history month changes
     ],
     queryFn: () =>
       getTransactions({
@@ -163,7 +168,8 @@ export function Transactions() {
         supplierId: supplierId === 'all' ? null : supplierId,
         type: type === 'all' ? null : type,
         status: activeTab === 'payable' ? 'pending' : 'completed',
-        toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined // Pass toDate only for payable
+        toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined, // Pass toDate only for payable
+        month: activeTab === 'history' ? historyDate.toISOString() : undefined // Pass month only for history
       }),
     refetchOnWindowFocus: 'always',
     enabled: activeTab !== 'transfers'
@@ -310,6 +316,11 @@ export function Transactions() {
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+
+              {/* MONTH PICKER - Only visible in History Tab */}
+              {activeTab === 'history' && (
+                <MonthPicker date={historyDate} setDate={setHistoryDate} />
               )}
             </div>
           )}
