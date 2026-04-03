@@ -218,7 +218,7 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess, defaultMode =
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="max-w-[100dvw] p-0 overflow-hidden border-none bg-black h-[100dvh] flex flex-col">
+      <ResponsiveDialogContent className="max-w-[100dvw] p-0 overflow-hidden border-none bg-black h-[100dvh] flex flex-col !z-[10050] [&>div]:!z-[10049] !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 md:!inset-0 md:!left-0 md:!top-0 md:!translate-x-0 md:!translate-y-0">
         <ResponsiveDialogHeader className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
