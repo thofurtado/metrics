@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Save, ArrowLeft, GripVertical } from "lucide-react";
+import { Loader2, Save, ArrowLeft, GripVertical, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
@@ -362,6 +362,13 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
         }
     };
 
+    const openPicker = (id: string) => {
+        const el = document.getElementById(id) as HTMLInputElement;
+        if (el && el.showPicker) {
+            el.showPicker();
+        }
+    };
+
     const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string, xcin?: string, xcout?: string) => {
         let total = 0;
         const setTime = (t: string) => {
@@ -407,11 +414,11 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
 
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'clockIn' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('clockIn'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('clockIn'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'clockIn')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'clockIn')} 
@@ -422,20 +429,28 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.clockIn`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`clockIn-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`clockIn-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'breakStart' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('breakStart'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('breakStart'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'breakStart')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'breakStart')} 
@@ -446,19 +461,28 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.breakStart`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
+                        id={`breakStart-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`breakStart-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'breakEnd' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('breakEnd'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('breakEnd'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'breakEnd')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'breakEnd')} 
@@ -469,19 +493,28 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.breakEnd`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
+                        id={`breakEnd-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`breakEnd-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'clockOut' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('clockOut'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('clockOut'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'clockOut')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'clockOut')} 
@@ -492,19 +525,28 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.clockOut`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
+                        id={`clockOut-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`clockOut-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'extraClockIn' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('extraClockIn'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('extraClockIn'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'extraClockIn')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'extraClockIn')} 
@@ -515,19 +557,28 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.extraClockIn`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
+                        id={`extraClockIn-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`extraClockIn-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
             <TableCell 
                 className={cn("p-0 border-r relative group", isDraggingOver === 'extraClockOut' && "bg-primary/10")}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('extraClockOut'); }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setIsDraggingOver('extraClockOut'); }}
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'extraClockOut')}
             >
-                <div className="flex items-center px-1">
+                <div className="flex items-center gap-0.5 px-0.5">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'extraClockOut')} 
@@ -538,10 +589,19 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <Input
                         type="time"
                         {...register(`rows.${index}.extraClockOut`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
+                        id={`extraClockOut-${index}`}
                     />
+                    <button 
+                        type="button"
+                        onClick={() => openPicker(`extraClockOut-${index}`)}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        disabled={!worked}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </TableCell>
 
