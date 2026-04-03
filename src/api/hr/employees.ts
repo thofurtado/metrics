@@ -5,7 +5,7 @@ export interface Employee {
     id: string
     name: string
     role: string
-    registrationType: 'REGISTERED' | 'UNREGISTERED' | 'DAILY'
+    registrationType: 'REGISTERED' | 'UNREGISTERED' | 'DAILY' | 'HOURLY'
     isRegistered: boolean
     admissionDate: string
     pin: string
@@ -19,7 +19,7 @@ export interface Employee {
 export interface CreateEmployeeInput {
     name: string
     role: string
-    registrationType: 'REGISTERED' | 'UNREGISTERED' | 'DAILY'
+    registrationType: 'REGISTERED' | 'UNREGISTERED' | 'DAILY' | 'HOURLY'
     isRegistered: boolean
     admissionDate: string
     pin: string
@@ -39,6 +39,7 @@ export interface EmployeeSummary {
     registered: number
     unregistered: number
     daily: number
+    hourly: number
 }
 
 export interface PaginatedResponse<T> {

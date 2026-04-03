@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Save, ArrowLeft } from "lucide-react";
+import { Loader2, Save, ArrowLeft, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
@@ -161,74 +161,92 @@ export function TimeSheetPage() {
 
                 {/* Summary Logic */}
                 <div className="hidden md:flex items-center gap-4">
-                    <div className="flex items-center gap-6 px-4 py-2 bg-muted/30 rounded-lg border border-border/50 shadow-sm">
-                        {/* Saldo de Horas */}
-                        <div className="flex flex-col items-center">
-                            <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Horas Trabalhadas</span>
-                            <span className={cn("font-mono font-bold text-xl", "text-primary")}>
-                                {timeClocks?.summary?.totalHours || (() => {
-                                    const rows = watch('rows') || [];
-                                    let totalMinutes = 0;
-                                    rows.forEach((row: any) => {
-                                        if (!row?.worked) return;
+                    {(() => {
+                        const rows = watch('rows') || [];
+                        let totalMinutes = 0;
+                        rows.forEach((row: any) => {
+                            if (!row?.worked) return;
 
-                                        const setTime = (t: string) => {
-                                            if (!t) return null;
-                                            const [h, m] = t.split(':').map(Number);
-                                            return h * 60 + m;
-                                        };
+                            const setTime = (t: string) => {
+                                if (!t) return null;
+                                const [h, m] = t.split(':').map(Number);
+                                return h * 60 + m;
+                            };
 
-                                        const cin = setTime(row.clockIn);
-                                        const bin = setTime(row.breakStart);
-                                        const bout = setTime(row.breakEnd);
-                                        const cout = setTime(row.clockOut);
-                                        const xcin = setTime(row.extraClockIn);
-                                        const xcout = setTime(row.extraClockOut);
+                            const cin = setTime(row.clockIn);
+                            const bin = setTime(row.breakStart);
+                            const bout = setTime(row.breakEnd);
+                            const cout = setTime(row.clockOut);
+                            const xcin = setTime(row.extraClockIn);
+                            const xcout = setTime(row.extraClockOut);
 
-                                        if (cin !== null && bin !== null && bout !== null && cout !== null) {
-                                            totalMinutes += (bin - cin) + (cout - bout);
-                                        } else if (cin !== null && cout !== null) {
-                                            if (bin === null && bout === null) {
-                                                totalMinutes += (cout - cin);
-                                            }
-                                        }
+                            if (cin !== null && bin !== null && bout !== null && cout !== null) {
+                                totalMinutes += (bin - cin) + (cout - bout);
+                            } else if (cin !== null && cout !== null) {
+                                if (bin === null && bout === null) {
+                                    totalMinutes += (cout - cin);
+                                }
+                            }
 
-                                        if (xcin !== null && xcout !== null) {
-                                            totalMinutes += (xcout - xcin);
-                                        }
-                                    });
+                            if (xcin !== null && xcout !== null) {
+                                totalMinutes += (xcout - xcin);
+                            }
+                        });
 
-                                    const h = Math.floor(Math.abs(totalMinutes) / 60);
-                                    const m = Math.abs(totalMinutes) % 60;
-                                    return `${h}h ${m.toString().padStart(2, '0')}m`;
-                                })()}
-                            </span>
-                        </div>
+                        const h = Math.floor(Math.abs(totalMinutes) / 60);
+                        const m = Math.abs(totalMinutes) % 60;
+                        const formattedHours = `${h}h ${m.toString().padStart(2, '0')}m`;
 
-                        <div className="w-px h-8 bg-border" />
+                        return (
+                            <>
+                                <div className="flex items-center gap-6 px-4 py-2 bg-muted/30 rounded-lg border border-border/50 shadow-sm">
+                                    {/* Saldo de Horas */}
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Horas Trabalhadas</span>
+                                        <span className={cn("font-mono font-bold text-xl", "text-primary")}>
+                                            {timeClocks?.summary?.totalHours || formattedHours}
+                                        </span>
+                                    </div>
 
-                        {/* Dias Extras */}
-                        <div className="flex flex-col items-center text-green-600">
-                            <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Dias Extras</span>
-                            <span className="font-mono font-bold text-xl">
-                                {timeClocks?.summary?.extraDays ?? (watch('rows')?.filter((r: any) => r.isExtraDay).length || 0)}
-                            </span>
-                        </div>
-                    </div>
+                                    <div className="w-px h-8 bg-border" />
 
-                    {employee?.registrationType === 'DAILY' && (
-                        <div className="flex flex-col items-end px-4 py-2 bg-green-50/50 rounded-lg border border-green-100">
-                            <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Valor Estimado</span>
-                            <span className="font-mono font-bold text-xl text-green-700">
-                                {/* Simple estimation: worked days * dailyRate */}
-                                {(() => {
-                                    const workedCount = watch('rows')?.filter((r: any) => r.worked).length || 0;
-                                    const rate = employee.dailyRate || 0;
-                                    return (workedCount * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                })()}
-                            </span>
-                        </div>
-                    )}
+                                    {/* Dias Extras */}
+                                    <div className="flex flex-col items-center text-green-600">
+                                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Dias Extras</span>
+                                        <span className="font-mono font-bold text-xl">
+                                            {timeClocks?.summary?.extraDays ?? rows.filter((r: any) => r.isExtraDay).length}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {employee?.registrationType === 'DAILY' && (
+                                    <div className="flex flex-col items-end px-4 py-2 bg-green-50/50 rounded-lg border border-green-100">
+                                        <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Valor Estimado</span>
+                                        <span className="font-mono font-bold text-xl text-green-700">
+                                            {(() => {
+                                                const workedCount = rows.filter((r: any) => r.worked).length;
+                                                const rate = employee.dailyRate || 0;
+                                                return (workedCount * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {employee?.registrationType === 'HOURLY' && (
+                                    <div className="flex flex-col items-end px-4 py-2 bg-blue-50/50 rounded-lg border border-blue-100">
+                                        <span className="text-blue-700 text-[10px] uppercase tracking-wider font-semibold">Ganhos Estimados</span>
+                                        <span className="font-mono font-bold text-xl text-blue-700">
+                                            {(() => {
+                                                const rate = Number(employee.salary) || 0;
+                                                const totalValue = (totalMinutes / 60) * rate;
+                                                return totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -305,6 +323,26 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
     const extraClockIn = watch(`rows.${index}.extraClockIn`);
     const extraClockOut = watch(`rows.${index}.extraClockOut`);
 
+    const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
+
+    const handleDragStart = (e: React.DragEvent, fieldName: string) => {
+        e.dataTransfer.setData("fieldName", fieldName);
+    };
+
+    const handleDrop = (e: React.DragEvent, targetField: string) => {
+        e.preventDefault();
+        setIsDraggingOver(null);
+        const sourceField = e.dataTransfer.getData("fieldName");
+        if (sourceField && sourceField !== targetField) {
+            const sourceVal = watch(`rows.${index}.${sourceField}`);
+            const targetVal = watch(`rows.${index}.${targetField}`);
+
+            setValue(`rows.${index}.${sourceField}`, targetVal);
+            setValue(`rows.${index}.${targetField}`, sourceVal);
+            toast.info("Horários trocados com sucesso!");
+        }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -367,60 +405,144 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 <input type="hidden" {...register(`rows.${index}.date`)} />
             </TableCell>
 
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.clockIn`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                    id={`clockIn-${index}`}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'clockIn' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('clockIn'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'clockIn')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'clockIn')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.clockIn`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                        id={`clockIn-${index}`}
+                    />
+                </div>
             </TableCell>
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.breakStart`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'breakStart' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('breakStart'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'breakStart')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'breakStart')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.breakStart`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                    />
+                </div>
             </TableCell>
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.breakEnd`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'breakEnd' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('breakEnd'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'breakEnd')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'breakEnd')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.breakEnd`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                    />
+                </div>
             </TableCell>
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.clockOut`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'clockOut' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('clockOut'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'clockOut')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'clockOut')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.clockOut`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                    />
+                </div>
             </TableCell>
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.extraClockIn`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'extraClockIn' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('extraClockIn'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'extraClockIn')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'extraClockIn')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.extraClockIn`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                    />
+                </div>
             </TableCell>
-            <TableCell className="p-1 border-r">
-                <Input
-                    type="time"
-                    {...register(`rows.${index}.extraClockOut`)}
-                    className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1"
-                    disabled={!worked}
-                    onKeyDown={(e) => handleKeyDown(e)}
-                />
+            <TableCell 
+                className={cn("p-0 border-r relative group", isDraggingOver === 'extraClockOut' && "bg-primary/10")}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver('extraClockOut'); }}
+                onDragLeave={() => setIsDraggingOver(null)}
+                onDrop={(e) => handleDrop(e, 'extraClockOut')}
+            >
+                <div className="flex items-center px-1">
+                    <div 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'extraClockOut')} 
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30" />
+                    </div>
+                    <Input
+                        type="time"
+                        {...register(`rows.${index}.extraClockOut`)}
+                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-1 flex-1"
+                        disabled={!worked}
+                        onKeyDown={(e) => handleKeyDown(e)}
+                    />
+                </div>
             </TableCell>
 
             <TableCell className="text-center border-r p-0">

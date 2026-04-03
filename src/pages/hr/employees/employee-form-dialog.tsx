@@ -116,6 +116,8 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             // Pre-process numeric types strictly
             if (submissionData.registrationType === 'DAILY') {
                 submissionData.salary = 0 // Diaristas carry 0 or null as salary
+            } else if (submissionData.registrationType === 'HOURLY') {
+                submissionData.salary = submissionData.salary ? Number(submissionData.salary) : null
             } else {
                 submissionData.salary = submissionData.salary ? Number(submissionData.salary) : null
             }
@@ -263,6 +265,7 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                                     <SelectContent withPortal={false}>
                                                         <SelectItem value="REGISTERED">Registrado (CLT)</SelectItem>
                                                         <SelectItem value="UNREGISTERED">Sem Registro (Estágio/Outro)</SelectItem>
+                                                        <SelectItem value="HOURLY">Horista (Produção)</SelectItem>
                                                         <SelectItem value="DAILY">Diarista (Freelance)</SelectItem>
                                                         {isEditing && (
                                                             <>
@@ -298,7 +301,8 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="flex items-center gap-2">
-                                                    <Banknote className="h-4 w-4 text-green-600" /> Salário Base (R$)
+                                                    <Banknote className="h-4 w-4 text-green-600" /> 
+                                                    {currentRegistrationType === 'HOURLY' ? "Valor da Hora (R$)" : "Salário Base (R$)"}
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input
@@ -312,6 +316,7 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                                     />
                                                 </FormControl>
                                                 {currentRegistrationType === 'DAILY' && <FormDescription className="text-xs">Não aplicável para diaristas.</FormDescription>}
+                                                {currentRegistrationType === 'HOURLY' && <FormDescription className="text-xs">Valor pago por cada hora trabalhada.</FormDescription>}
                                                 <FormMessage />
                                             </FormItem>
                                         )}

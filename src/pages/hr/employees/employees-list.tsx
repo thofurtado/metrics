@@ -83,7 +83,7 @@ export function EmployeesList() {
                         <p className="text-xs opacity-70 mt-1">Colaboradores na base</p>
                     </CardContent>
                 </Card>
-                <div className="col-span-4 md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="col-span-4 md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Registrados (CLT)</CardTitle>
@@ -98,6 +98,14 @@ export function EmployeesList() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-orange-600">{summary?.unregistered || 0}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Horistas</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-slate-600">{summary?.hourly || 0}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -205,13 +213,16 @@ export function EmployeesList() {
                                             <TableCell>
                                                 <Badge variant="secondary" className="text-xs font-normal">
                                                     {employee.registrationType === 'DAILY' ? 'Diarista' :
+                                                        employee.registrationType === 'HOURLY' ? 'Horista' :
                                                         employee.registrationType === 'UNREGISTERED' ? 'Sem Registro' : 'CLT'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 {employee.registrationType === 'DAILY'
                                                     ? `${formatCurrency(Number(employee.dailyRate || 0))}/dia`
-                                                    : formatCurrency(Number(employee.salary || 0))}
+                                                    : employee.registrationType === 'HOURLY'
+                                                        ? `${formatCurrency(Number(employee.salary || 0))}/hora`
+                                                        : formatCurrency(Number(employee.salary || 0))}
                                             </TableCell>
                                             <TableCell className="text-center text-muted-foreground">
                                                 {Number(employee.transportAllowance) > 0 ? (
