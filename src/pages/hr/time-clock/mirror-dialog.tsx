@@ -85,6 +85,7 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     extraClockIn: formatTime(dayClock?.extraClockIn),
                     extraClockOut: formatTime(dayClock?.extraClockOut),
                     isExtraDay: dayClock?.isExtraDay ?? false,
+                    isVerified: dayClock?.isVerified ?? true,
                     negotiatedValue: dayClock?.negotiatedValue ?? undefined,
                 };
             });
@@ -96,12 +97,7 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
     const onSubmit = async (data: any) => {
         setIsSaving(true);
         try {
-            const entries = data.rows
-                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut || r.extraClockIn || r.extraClockOut) // Only send relevant rows? Or all? User said "batch complete". Sending all is safer for "upsert". Wait, if I send empty rows, backend might create empty records?
-                // Actually, if "worked" is false and everything is empty, we probably shouldn't send unless we want to clear existing?
-                // Current backend upsert logic: if existing, update. If fields are null, it updates to null.
-                // So sending all is correct to clear data if needed.
-                .map((r: any) => {
+            const entries = data.rows.map((r: any) => {
                     const buildDateTime = (timeStr?: string) => {
                         if (!timeStr) return null;
                         const [h, m] = timeStr.split(':').map(Number);
@@ -109,6 +105,24 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                         const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
                         return d.toISOString();
                     };
+
+                    // When worked is false, clear all time fields and set isExtraDay to false
+                    if (!r.worked) {
+                        return {
+                            employee_id: employeeId,
+                            date: r.date,
+                            clockIn: null,
+                            breakStart: null,
+                            breakEnd: null,
+                            clockOut: null,
+                            extraClockIn: null,
+                            extraClockOut: null,
+                            isExtraDay: false,
+                            negotiatedValue: null,
+                            isVerified: r.isVerified ?? false,
+                            notes: "Edição em lote via Espelho"
+                        };
+                    }
 
                     return {
                         employee_id: employeeId,
@@ -121,17 +135,27 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                         extraClockOut: buildDateTime(r.extraClockOut),
                         isExtraDay: r.isExtraDay,
                         negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
-                        isVerified: true,
+                        isVerified: r.isVerified ?? true,
                         notes: "Edição em lote via Espelho"
                     };
                 });
 
-            await bulkUpsertTimeClock(entries);
-            toast.success("Mês salvo com sucesso!");
-            queryClient.invalidateQueries({ queryKey: ['time-clocks-mirror'] });
+            // Log para debug
+            console.log("Payload enviado para /hr/time-clocks/bulk:", entries);
+            console.log("Número de entradas:", entries.length);
+
+            // Garantir que enviamos a requisição mesmo se todas as entradas estiverem com worked = false
+            if (entries.length === 0) {
+                console.log("Nenhuma entrada para enviar - isso não deveria acontecer pois enviamos todas as linhas");
+                toast.success("Nenhuma alteração detectada.");
+            } else {
+                await bulkUpsertTimeClock(entries);
+                toast.success("Mês salvo com sucesso!");
+                queryClient.invalidateQueries({ queryKey: ['time-clocks-mirror'] });
+            }
             // onClose(); // Keep open? User said "Excel Grid", arguably keep open to continue editing.
         } catch (err) {
-            console.error(err)
+            console.error("Erro ao salvar mês:", err)
             toast.error("Erro ao salvar mês.");
         } finally {
             setIsSaving(false);
@@ -169,10 +193,11 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 2</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 3</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 3</TableHead>
-                                    <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
-                                    <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
-                                    <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
-                                    <TableHead className="w-[90px] text-right text-xs pr-2">Saldo</TableHead>
+                                <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
+                                <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
+                                <TableHead className="w-[60px] text-center text-xs">Verif.?</TableHead>
+                                <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
+                                <TableHead className="w-[90px] text-right text-xs pr-2">Saldo</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -202,6 +227,7 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
     // Watch fields for this row
     const worked = watch(`rows.${index}.worked`);
     const isExtraDay = watch(`rows.${index}.isExtraDay`);
+    const isVerified = watch(`rows.${index}.isVerified`);
     const clockIn = watch(`rows.${index}.clockIn`);
     const breakStart = watch(`rows.${index}.breakStart`);
     const breakEnd = watch(`rows.${index}.breakEnd`);
@@ -279,6 +305,10 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
 
             <TableCell className="text-center">
                 <input type="checkbox" className="h-4 w-4" {...register(`rows.${index}.isExtraDay`)} disabled={!worked} />
+            </TableCell>
+
+            <TableCell className="text-center">
+                <input type="checkbox" className="h-4 w-4" {...register(`rows.${index}.isVerified`)} />
             </TableCell>
 
             <TableCell>
