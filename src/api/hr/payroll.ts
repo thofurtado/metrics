@@ -99,3 +99,8 @@ export async function getPayrollHistory(params?: { month?: number, year?: number
     const response = await api.get('/hr/payroll/history', { params })
     return response.data
 }
+
+export async function cancelPayrollEntry(id: string) {
+    const response = await api.delete(`/hr/payroll/entries/${id}`)
+    return response.data
+}

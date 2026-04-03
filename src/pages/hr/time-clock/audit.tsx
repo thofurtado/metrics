@@ -19,6 +19,13 @@ import { differenceInMinutes, parseISO, format, isWeekend, startOfMonth, endOfMo
 import { ptBR } from "date-fns/locale"
 import { cn, formatCurrency } from "@/lib/utils"
 
+/** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
+function parseDateOnly(dateStr: string): Date {
+    const str = dateStr.substring(0, 10);
+    const [yyyy, mm, dd] = str.split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+}
+
 // --- Helpers ---
 const formatTime = (dateStr: string | null) => {
     if (!dateStr) return "--:--"
@@ -81,7 +88,7 @@ function EditTimeClockDialog({ timeClock, onSuccess }: { timeClock: TimeClock, o
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Editar Ponto: {new Date(timeClock.date).toLocaleDateString()}</DialogTitle>
+                    <DialogTitle>Editar Ponto: {parseDateOnly(timeClock.date).toLocaleDateString()}</DialogTitle>
                     <DialogDescription>
                         Ajuste os horários e marque diárias extras.
                     </DialogDescription>
@@ -167,7 +174,7 @@ function ClosingConferenceDialog({
                 totals[empId].extraDays++
             } else if (tc.clockIn && tc.clockOut) {
                 const worked = calculateWorkedMinutes(tc)
-                const isWeekendDay = isWeekend(parseISO(tc.date))
+                const isWeekendDay = isWeekend(parseDateOnly(tc.date))
                 const balance = worked - ((!isWeekendDay) ? EXPECTED_MINUTES_PER_DAY : 0) // If weekend, all worked is positive balance? Or standard 0? 
 
                 totals[empId].balance += balance
@@ -340,8 +347,8 @@ export function TimeClockAudit() {
 
         timeClocks.forEach(tc => {
             const worked = calculateWorkedMinutes(tc)
-            const isWeekendDay = isWeekend(parseISO(tc.date))
-            const isFuture = parseISO(tc.date) > new Date()
+            const isWeekendDay = isWeekend(parseDateOnly(tc.date))
+            const isFuture = parseDateOnly(tc.date) > new Date()
 
             // Check Inconsistency
             if (!isFuture) {
@@ -380,7 +387,7 @@ export function TimeClockAudit() {
         return timeClocks.filter(tc => {
             const worked = calculateWorkedMinutes(tc)
             const EXPECTED = 8 * 60 + 48
-            const date = parseISO(tc.date)
+            const date = parseDateOnly(tc.date)
             const isWeekendDay = isWeekend(date)
             const isFuture = date > new Date()
 
@@ -598,17 +605,17 @@ export function TimeClockAudit() {
                                 filteredClocks.map(tc => {
                                     const workedMinutes = calculateWorkedMinutes(tc)
                                     const balance = workedMinutes - (8 * 60 + 48) // Using 8:48 as standard
-                                    const isWeekendDay = isWeekend(parseISO(tc.date))
+                                    const isWeekendDay = isWeekend(parseDateOnly(tc.date))
 
                                     return (
                                         <TableRow key={tc.id} className={cn(
                                             "transition-colors",
-                                            !tc.clockIn && !isWeekendDay && !tc.isExtraDay && parseISO(tc.date) < new Date() ? "bg-red-50/40 hover:bg-red-50/60 dark:bg-red-900/10 dark:hover:bg-red-900/20" : "hover:bg-muted/50"
+                                            !tc.clockIn && !isWeekendDay && !tc.isExtraDay && parseDateOnly(tc.date) < new Date() ? "bg-red-50/40 hover:bg-red-50/60 dark:bg-red-900/10 dark:hover:bg-red-900/20" : "hover:bg-muted/50"
                                         )}>
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col">
-                                                    <span>{format(parseISO(tc.date), 'dd/MM')}</span>
-                                                    <span className="text-[10px] text-muted-foreground uppercase">{format(parseISO(tc.date), 'EEE', { locale: ptBR })}</span>
+                                                    <span>{format(parseDateOnly(tc.date), 'dd/MM')}</span>
+                                                    <span className="text-[10px] text-muted-foreground uppercase">{format(parseDateOnly(tc.date), 'EEE', { locale: ptBR })}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -630,7 +637,7 @@ export function TimeClockAudit() {
                                                     <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-700 hover:bg-blue-200 border-transparent">Diária Extra</Badge>
                                                 ) : isWeekendDay ? (
                                                     <Badge variant="outline" className="text-[10px] text-muted-foreground">Fim de Semana</Badge>
-                                                ) : !tc.clockIn && parseISO(tc.date) < new Date() ? (
+                                                ) : !tc.clockIn && parseDateOnly(tc.date) < new Date() ? (
                                                     <Badge variant="destructive" className="text-[10px]">Falta</Badge>
                                                 ) : balance > 0 ? (
                                                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-transparent text-[10px]">Extra</Badge>

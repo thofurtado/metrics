@@ -14,6 +14,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { MonthPicker } from "@/components/MonthPicker";
 
+/** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
+function parseDateOnly(dateStr: string): Date {
+    const str = dateStr.substring(0, 10);
+    const [yyyy, mm, dd] = str.split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+}
+
 interface TimeClockMirrorProps {
     employeeId: string;
     employeeName: string;
@@ -33,8 +40,8 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
         queryKey: ['time-clocks-mirror', employeeId, month.toISOString()],
         queryFn: () => listTimeClocks({
             employee_id: employeeId,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
+            startDate: format(startDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd'),
             per_page: 32
         }),
         enabled: isOpen,
@@ -175,7 +182,7 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                                         index={index}
                                         register={register}
                                         watch={watch}
-                                        day={new Date(field.date)}
+                                        day={parseDateOnly(field.date)}
                                     />
                                 ))}
                             </TableBody>

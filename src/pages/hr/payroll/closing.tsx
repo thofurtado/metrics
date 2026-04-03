@@ -20,6 +20,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
+/** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
+function parseDateOnly(dateStr: string): Date {
+    const str = dateStr.substring(0, 10);
+    const [yyyy, mm, dd] = str.split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+}
+
 // --- Dialogs ---
 
 function CalculateRateioDialog({ onSuccess }: { onSuccess: () => void }) {
@@ -456,7 +463,7 @@ function GroupDetailsModal({ group, onSuccess }: { group: any, onSuccess: () => 
                 <DialogHeader>
                     <DialogTitle>Detalhes: {getPayrollLabel(group?.type || '')}</DialogTitle>
                     <DialogDescription>
-                        Data de Referência: {new Date(group.date).toLocaleDateString()}
+                        Data de Referência: {parseDateOnly(group.date).toLocaleDateString()}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -550,7 +557,7 @@ export function PayrollClosing() {
     })
 
     const confirmDelete = (group: any) => {
-        if (confirm(`Tem certeza que deseja excluir o lote ${group.type} de ${new Date(group.date).toLocaleDateString()}?`)) {
+        if (confirm(`Tem certeza que deseja excluir o lote ${group.type} de ${parseDateOnly(group.date).toLocaleDateString()}?`)) {
             deleteBatch({ type: group.type, date: group.date })
         }
     }
@@ -563,7 +570,7 @@ export function PayrollClosing() {
     // Grouping
     const groups: Record<string, any> = {}
     entries.forEach((entry: any) => {
-        const dateKey = new Date(entry.referenceDate).toISOString().split('T')[0]
+        const dateKey = parseDateOnly(entry.referenceDate).toISOString().split('T')[0]
         const key = `${entry.type}-${dateKey}`
 
         if (!groups[key]) {
@@ -660,7 +667,7 @@ export function PayrollClosing() {
                                     <TableCell>
                                         <Badge variant="outline">{getPayrollLabel(group.type)}</Badge>
                                     </TableCell>
-                                    <TableCell>{new Date(group.date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{parseDateOnly(group.date).toLocaleDateString()}</TableCell>
                                     <TableCell>{group.entries.length}</TableCell>
                                     <TableCell className="text-right font-bold">{formatCurrency(group.totalAmount)}</TableCell>
                                     <TableCell className="text-right">

@@ -15,6 +15,13 @@ import { cn } from "@/lib/utils";
 import { getEmployees } from "@/api/hr/employees";
 import { MonthPicker } from "@/components/MonthPicker";
 
+/** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
+function parseDateOnly(dateStr: string): Date {
+    const str = dateStr.substring(0, 10);
+    const [yyyy, mm, dd] = str.split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+}
+
 // Page Component
 export function TimeSheetPage() {
     const { employeeId } = useParams<{ employeeId: string }>();
@@ -40,8 +47,8 @@ export function TimeSheetPage() {
         queryKey: ['time-clocks-mirror', employeeId, month.toISOString()],
         queryFn: () => listTimeClocks({
             employee_id: employeeId!,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
+            startDate: format(startDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd'),
             per_page: 32
         }),
         enabled: !!employeeId,
@@ -269,7 +276,7 @@ export function TimeSheetPage() {
                                         register={register}
                                         watch={watch}
                                         setValue={setValue}
-                                        day={new Date(field.date)}
+                                        day={parseDateOnly(field.date)}
                                         dailyRate={employee?.dailyRate || 0}
                                     />
                                 ))

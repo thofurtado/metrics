@@ -1,12 +1,11 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { createPayrollEntry, listPendingDebts } from "@/api/hr/payroll"
+import { createPayrollEntry, listPendingDebts, cancelPayrollEntry } from "@/api/hr/payroll"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -53,15 +52,10 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
     // 3. Create Mutation
     const { mutate: createDebt, isPending } = useMutation({
         mutationFn: async (data: z.infer<typeof formSchema>) => {
-            // Logic for Amount:
-            // VALE -> Positive (Advance)
-            // ERRO/CONSUMACAO -> Negative (Debt/Expense)
-            let finalAmount = data.amount
-            if (data.type === "ERRO" || data.type === "CONSUMACAO") {
-                finalAmount = -Math.abs(data.amount)
-            } else {
-                finalAmount = Math.abs(data.amount)
-            }
+            // All amounts are stored as POSITIVE values.
+            // The type (ERRO/CONSUMACAO vs VALE) determines if it's a deduction or advance.
+            // This avoids double-inversion bugs when the backend subtracts debts.
+            const finalAmount = Math.abs(data.amount)
 
             return createPayrollEntry({
                 employee_id: employeeId,
@@ -82,6 +76,16 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
             })
         },
         onError: () => toast.error("Erro ao registrar lançamento.")
+    })
+
+    // 4. Cancel Mutation
+    const { mutate: cancelEntry } = useMutation({
+        mutationFn: (id: string) => cancelPayrollEntry(id),
+        onSuccess: () => {
+            toast.success("Lançamento cancelado!")
+            queryClient.invalidateQueries({ queryKey: ['pending-debts', employeeId] })
+        },
+        onError: () => toast.error("Erro ao cancelar lançamento.")
     })
 
     return (
@@ -218,26 +222,41 @@ export function DebtManagementDialog({ employeeId, employeeName }: DebtDialogPro
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {debts?.map((debt) => (
+                                    {debts?.map((debt) => {
+                                        const isDeduction = debt.type === 'ERRO' || debt.type === 'CONSUMACAO'
+                                        return (
                                         <div key={debt.id} className="flex items-start justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group">
                                             <div className="flex gap-3">
-                                                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${debt.type === 'VALE' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${isDeduction ? 'bg-red-500' : 'bg-emerald-500'}`} />
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium leading-none">{debt.description}</p>
                                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                        <span>{new Date(debt.referenceDate || debt.created_at).toLocaleDateString()}</span>
+                                                        <span>{new Date(debt.referenceDate || debt.created_at || new Date()).toLocaleDateString()}</span>
                                                         <span>•</span>
-                                                        <span className="uppercase">{debt.type}</span>
+                                                        <span className="uppercase">{debt.type === 'ERRO' ? 'Erro/Quebra' : debt.type === 'CONSUMACAO' ? 'Consumo' : 'Vale'}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className={`font-mono text-sm font-semibold ${Number(debt.amount) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                    {formatCurrency(Number(debt.amount))}
+                                            <div className="flex items-center gap-2">
+                                                <p className={`font-mono text-sm font-semibold ${isDeduction ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                    {isDeduction ? '-' : ''}{formatCurrency(Math.abs(Number(debt.amount)))}
                                                 </p>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50"
+                                                    onClick={() => {
+                                                        if (confirm('Cancelar este lançamento?')) {
+                                                            cancelEntry(debt.id)
+                                                        }
+                                                    }}
+                                                    title="Cancelar lançamento"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             )}
                         </ScrollArea>

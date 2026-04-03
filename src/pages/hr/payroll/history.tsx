@@ -12,6 +12,13 @@ import { CheckCircle2, Clock, ArrowLeft, Filter } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Label } from "@/components/ui/label"
 
+/** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
+function parseDateOnly(dateStr: string): Date {
+    const str = dateStr.substring(0, 10);
+    const [yyyy, mm, dd] = str.split('-').map(Number);
+    return new Date(yyyy, mm - 1, dd);
+}
+
 function getPayrollLabel(type: string) {
     if (!type) return ''
     switch (type) {
@@ -146,7 +153,7 @@ export function PayrollHistory() {
                             ) : (
                                 entries.map((entry: any) => (
                                     <TableRow key={entry.id}>
-                                        <TableCell>{new Date(entry.referenceDate).toLocaleDateString()}</TableCell>
+                                        <TableCell>{parseDateOnly(entry.referenceDate).toLocaleDateString()}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
                                                 <span className="font-medium">{entry.employee?.name}</span>
