@@ -667,6 +667,8 @@ export function TransactionIncome() {
             open={scannerOpen}
             onOpenChange={setScannerOpen}
             onScanSuccess={handleScanSuccess}
+            defaultMode="qrcode"
+            forceLandscape={false}
           />
         )}
 

@@ -808,6 +808,8 @@ export function TransactionExpense() {
           open={scannerOpen}
           onOpenChange={setScannerOpen}
           onScanSuccess={handleScanSuccess}
+          defaultMode="boleto"
+          forceLandscape={true}
         />
       )}
 

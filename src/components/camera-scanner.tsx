@@ -10,13 +10,16 @@ interface CameraScannerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onScanSuccess: (decodedText: string) => void
+  defaultMode?: 'boleto' | 'qrcode'
+  forceLandscape?: boolean
 }
 
-export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScannerProps) {
+export function CameraScanner({ open, onOpenChange, onScanSuccess, defaultMode = 'boleto', forceLandscape = false }: CameraScannerProps) {
   const [scanning, setScanning] = useState(false)
   const [loading, setLoading] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
-  const [isBoletoMode, setIsBoletoMode] = useState(true)
+  const [isBoletoMode, setIsBoletoMode] = useState(defaultMode === 'boleto')
+  const [isLandscape, setIsLandscape] = useState(false)
   
   const qrCodeRef = useRef<Html5Qrcode | null>(null)
   const scannerId = useRef(`scanner-${Math.random().toString(36).substring(2, 9)}`).current
@@ -69,17 +72,28 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
         return { width: size, height: size }
       }
 
+      // Configurações de vídeo otimizadas para landscape quando necessário
+      const videoConstraints: MediaTrackConstraints = {
+        facingMode: "environment",
+      }
+      
+      if (forceLandscape || isBoletoMode) {
+        // Priorizar resolução landscape para melhor leitura de boletos
+        videoConstraints.width = { ideal: 1920 }
+        videoConstraints.height = { ideal: 1080 }
+        videoConstraints.aspectRatio = { ideal: 16/9 }
+      } else {
+        videoConstraints.width = { ideal: 1280 }
+        videoConstraints.height = { ideal: 720 }
+      }
+
       await qrCodeRef.current.start(
         { facingMode: "environment" },
         {
           fps: 60, // Aumentado para maior fluidez
           qrbox: qrboxFunction,
           aspectRatio: isBoletoMode ? 1.77 : 1.0,
-          videoConstraints: {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
+          videoConstraints
         },
         handleScanSuccess,
         () => {}
@@ -93,12 +107,48 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
   }
 
   useEffect(() => {
+    // Verificar orientação inicial
+    const checkOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth
+      setIsLandscape(!isPortrait)
+    }
+    
+    checkOrientation()
+    
     if (open) {
+      // Tentar forçar landscape se necessário
+      if (forceLandscape && 'screen' in window && 'orientation' in window.screen) {
+        try {
+          // @ts-ignore
+          window.screen.orientation.lock('landscape').catch(() => {
+            console.log('Não foi possível travar orientação landscape')
+          })
+        } catch (e) {
+          console.log('API de orientação não suportada')
+        }
+      }
+      
       startScanner()
     } else {
+      // Liberar orientação ao fechar
+      if ('screen' in window && 'orientation' in window.screen) {
+        try {
+          // @ts-ignore
+          window.screen.orientation.unlock()
+        } catch (e) {}
+      }
       stopScanner()
     }
-    return () => { stopScanner() }
+    
+    return () => { 
+      if ('screen' in window && 'orientation' in window.screen) {
+        try {
+          // @ts-ignore
+          window.screen.orientation.unlock()
+        } catch (e) {}
+      }
+      stopScanner() 
+    }
   }, [open, isBoletoMode])
 
   useEffect(() => {
@@ -173,9 +223,22 @@ export function CameraScanner({ open, onOpenChange, onScanSuccess }: CameraScann
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <Camera className="w-5 h-5 text-red-500" />
-              <ResponsiveDialogTitle className="text-white font-bold text-sm">Metrics Scanner Professional</ResponsiveDialogTitle>
+              <div>
+                <ResponsiveDialogTitle className="text-white font-bold text-sm">Metrics Scanner Professional</ResponsiveDialogTitle>
+                {forceLandscape && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] text-green-400 font-medium">Modo Landscape Ativo</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              {forceLandscape && !isLandscape && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-amber-500/20 rounded-full border border-amber-500/30">
+                  <span className="text-[10px] text-amber-400 font-bold">GIRE O DISPOSITIVO</span>
+                </div>
+              )}
               <Button size="icon" variant="ghost" className={cn("text-white rounded-full bg-white/10 h-10 w-10", torchOn && "text-amber-500 bg-amber-500/20")} onClick={toggleTorch}>
                 {torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5 opacity-60" />}
               </Button>
