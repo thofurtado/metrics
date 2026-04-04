@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -73,6 +73,13 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     return tcDateStr === dayStr;
                 });
                 const formatTime = (iso?: string | null) => iso ? format(parseISO(iso), 'HH:mm') : '';
+                
+                const isNextDay = (iso?: string | null) => {
+                    if (!iso) return false;
+                    // Força a interpretação da string ISO em horário local para comparar corretamente com a data da linha (dayStr)
+                    const normalizedIsoDate = format(parseISO(iso), 'yyyy-MM-dd');
+                    return normalizedIsoDate !== dayStr;
+                };
 
                 return {
                     date: dayStr,
@@ -82,8 +89,10 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
                     clockOut: formatTime(dayClock?.clockOut),
+                    clockOutNextDay: isNextDay(dayClock?.clockOut),
                     extraClockIn: formatTime(dayClock?.extraClockIn),
                     extraClockOut: formatTime(dayClock?.extraClockOut),
+                    extraClockOutNextDay: isNextDay(dayClock?.extraClockOut),
                     isExtraDay: dayClock?.isExtraDay ?? false,
                     isVerified: dayClock?.isVerified ?? true,
                     negotiatedValue: dayClock?.negotiatedValue ?? undefined,
@@ -98,47 +107,48 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
         setIsSaving(true);
         try {
             const entries = data.rows.map((r: any) => {
-                    const buildDateTime = (timeStr?: string) => {
-                        if (!timeStr) return null;
-                        const [h, m] = timeStr.split(':').map(Number);
-                        const [yyyy, mm, dd] = r.date.split('-').map(Number);
-                        const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
-                        return d.toISOString();
-                    };
+                const buildDateTime = (timeStr?: string, isNextDay?: boolean) => {
+                    if (!timeStr) return null;
+                    const [h, m] = timeStr.split(':').map(Number);
+                    const [yyyy, mm, dd] = r.date.split('-').map(Number);
+                    let d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
+                    if (isNextDay) d = addDays(d, 1);
+                    return d.toISOString();
+                };
 
-                    // When worked is false, clear all time fields and set isExtraDay to false
-                    if (!r.worked) {
-                        return {
-                            employee_id: employeeId,
-                            date: r.date,
-                            clockIn: null,
-                            breakStart: null,
-                            breakEnd: null,
-                            clockOut: null,
-                            extraClockIn: null,
-                            extraClockOut: null,
-                            isExtraDay: false,
-                            negotiatedValue: null,
-                            isVerified: r.isVerified ?? false,
-                            notes: "Edição em lote via Espelho"
-                        };
-                    }
-
+                // When worked is false, clear all time fields and set isExtraDay to false
+                if (!r.worked) {
                     return {
                         employee_id: employeeId,
                         date: r.date,
-                        clockIn: buildDateTime(r.clockIn),
-                        breakStart: buildDateTime(r.breakStart),
-                        breakEnd: buildDateTime(r.breakEnd),
-                        clockOut: buildDateTime(r.clockOut),
-                        extraClockIn: buildDateTime(r.extraClockIn),
-                        extraClockOut: buildDateTime(r.extraClockOut),
-                        isExtraDay: r.isExtraDay,
-                        negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
-                        isVerified: r.isVerified ?? true,
+                        clockIn: null,
+                        breakStart: null,
+                        breakEnd: null,
+                        clockOut: null,
+                        extraClockIn: null,
+                        extraClockOut: null,
+                        isExtraDay: false,
+                        negotiatedValue: null,
+                        isVerified: r.isVerified ?? false,
                         notes: "Edição em lote via Espelho"
                     };
-                });
+                }
+
+                return {
+                    employee_id: employeeId,
+                    date: r.date,
+                    clockIn: buildDateTime(r.clockIn),
+                    breakStart: buildDateTime(r.breakStart),
+                    breakEnd: buildDateTime(r.breakEnd),
+                    clockOut: buildDateTime(r.clockOut, r.clockOutNextDay),
+                    extraClockIn: buildDateTime(r.extraClockIn),
+                    extraClockOut: buildDateTime(r.extraClockOut, r.extraClockOutNextDay),
+                    isExtraDay: r.isExtraDay,
+                    negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
+                    isVerified: r.isVerified ?? true,
+                    notes: "Edição em lote via Espelho"
+                };
+            });
 
             // Log para debug
             console.log("Payload enviado para /hr/time-clocks/bulk:", entries);
@@ -193,11 +203,11 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 2</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 3</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 3</TableHead>
-                                <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
-                                <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
-                                <TableHead className="w-[60px] text-center text-xs">Verif.?</TableHead>
-                                <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
-                                <TableHead className="w-[90px] text-right text-xs pr-2">Saldo</TableHead>
+                                    <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
+                                    <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
+                                    <TableHead className="w-[60px] text-center text-xs">Verif.?</TableHead>
+                                    <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
+                                    <TableHead className="w-[90px] text-right text-xs pr-2">Saldo</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -234,30 +244,33 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
     const clockOut = watch(`rows.${index}.clockOut`);
     const extraClockIn = watch(`rows.${index}.extraClockIn`);
     const extraClockOut = watch(`rows.${index}.extraClockOut`);
+    const clockOutNextDay = watch(`rows.${index}.clockOutNextDay`);
+    const extraClockOutNextDay = watch(`rows.${index}.extraClockOutNextDay`);
 
     // Calculate hours helper
     const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string, xcin?: string, xcout?: string) => {
         let total = 0;
-        const setTime = (t: string) => {
+        const setTime = (t: string, isNext?: boolean) => {
             if (!t) return new Date();
             const [h, m] = t.split(':').map(Number);
-            const d = new Date(day);
+            let d = new Date(day);
             d.setHours(h, m, 0, 0);
+            if (isNext) d = addDays(d, 1);
             return d;
         };
 
         if (cin && bout) {
             total += differenceInMinutes(setTime(bout), setTime(cin));
         } else if (cin && cout && !bout && !bin) {
-            total += differenceInMinutes(setTime(cout), setTime(cin));
+            total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(cin));
         }
 
         if (bin && cout) {
-            total += differenceInMinutes(setTime(cout), setTime(bin));
+            total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(bin));
         }
 
         if (xcin && xcout) {
-            total += differenceInMinutes(setTime(xcout), setTime(xcin));
+            total += differenceInMinutes(setTime(xcout, extraClockOutNextDay), setTime(xcin));
         }
 
         if (total <= 0) return "--";
@@ -290,13 +303,40 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                 <Input type="time" {...register(`rows.${index}.breakEnd`)} className="h-8 px-1 text-center" disabled={!worked} />
             </TableCell>
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.clockOut`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <div className="flex flex-col items-center gap-0.5">
+                    <Input 
+                        type="time" 
+                        {...register(`rows.${index}.clockOut`)} 
+                        className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
+                        disabled={!worked} 
+                    />
+                    <label className="flex items-center gap-1 cursor-pointer select-none">
+                        <input type="checkbox" {...register(`rows.${index}.clockOutNextDay`)} className="h-3 w-3" disabled={!worked} />
+                        <span className="text-[9px] font-bold text-orange-600 leading-none">1d+</span>
+                    </label>
+                </div>
             </TableCell>
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.extraClockIn`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <Input 
+                    type="time" 
+                    {...register(`rows.${index}.extraClockIn`)} 
+                    className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
+                    disabled={!worked} 
+                />
             </TableCell>
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.extraClockOut`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <div className="flex flex-col items-center gap-0.5">
+                    <Input 
+                        type="time" 
+                        {...register(`rows.${index}.extraClockOut`)} 
+                        className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
+                        disabled={!worked} 
+                    />
+                    <label className="flex items-center gap-1 cursor-pointer select-none">
+                        <input type="checkbox" {...register(`rows.${index}.extraClockOutNextDay`)} className="h-3 w-3" disabled={!worked} />
+                        <span className="text-[9px] font-bold text-orange-600 leading-none">1d+</span>
+                    </label>
+                </div>
             </TableCell>
 
             <TableCell className="text-center">

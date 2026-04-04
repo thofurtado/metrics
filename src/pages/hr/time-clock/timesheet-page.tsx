@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Loader2, Save, ArrowLeft, GripVertical, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -78,6 +78,12 @@ export function TimeSheetPage() {
                     return tcDateStr === dayStr;
                 });
                 const formatTime = (iso?: string | null) => iso ? format(parseISO(iso), 'HH:mm') : '';
+                
+                const isNextDay = (iso?: string | null) => {
+                    if (!iso) return false;
+                    const normalizedIsoDate = format(parseISO(iso), 'yyyy-MM-dd');
+                    return normalizedIsoDate !== dayStr;
+                };
 
                 return {
                     date: dayStr,
@@ -87,8 +93,10 @@ export function TimeSheetPage() {
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
                     clockOut: formatTime(dayClock?.clockOut),
+                    clockOutNextDay: isNextDay(dayClock?.clockOut),
                     extraClockIn: formatTime(dayClock?.extraClockIn),
                     extraClockOut: formatTime(dayClock?.extraClockOut),
+                    extraClockOutNextDay: isNextDay(dayClock?.extraClockOut),
                     isExtraDay: dayClock?.isExtraDay ?? false,
                     negotiatedValue: dayClock?.negotiatedValue ?? undefined,
                 };
@@ -104,11 +112,12 @@ export function TimeSheetPage() {
             const entries = data.rows
                 .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut || r.extraClockIn || r.extraClockOut)
                 .map((r: any) => {
-                    const buildDateTime = (timeStr?: string) => {
+                    const buildDateTime = (timeStr?: string, isNextDay?: boolean) => {
                         if (!timeStr) return null;
                         const [h, m] = timeStr.split(':').map(Number);
                         const [yyyy, mm, dd] = r.date.split('-').map(Number);
-                        const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
+                        let d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
+                        if (isNextDay) d = addDays(d, 1);
                         return d.toISOString();
                     };
 
@@ -118,9 +127,9 @@ export function TimeSheetPage() {
                         clockIn: buildDateTime(r.clockIn),
                         breakStart: buildDateTime(r.breakStart),
                         breakEnd: buildDateTime(r.breakEnd),
-                        clockOut: buildDateTime(r.clockOut),
+                        clockOut: buildDateTime(r.clockOut, r.clockOutNextDay),
                         extraClockIn: buildDateTime(r.extraClockIn),
-                        extraClockOut: buildDateTime(r.extraClockOut),
+                        extraClockOut: buildDateTime(r.extraClockOut, r.extraClockOutNextDay),
                         isExtraDay: r.isExtraDay,
                         negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
                         isVerified: true,
@@ -322,6 +331,8 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
     const clockOut = watch(`rows.${index}.clockOut`);
     const extraClockIn = watch(`rows.${index}.extraClockIn`);
     const extraClockOut = watch(`rows.${index}.extraClockOut`);
+    const clockOutNextDay = watch(`rows.${index}.clockOutNextDay`);
+    const extraClockOutNextDay = watch(`rows.${index}.extraClockOutNextDay`);
 
     const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
 
@@ -371,26 +382,27 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
 
     const calculateHours = (cin?: string, bout?: string, bin?: string, cout?: string, xcin?: string, xcout?: string) => {
         let total = 0;
-        const setTime = (t: string) => {
+        const setTime = (t: string, isNext?: boolean) => {
             if (!t) return new Date();
             const [h, m] = t.split(':').map(Number);
-            const d = new Date(day);
+            let d = new Date(day);
             d.setHours(h, m, 0, 0);
+            if (isNext) d = addDays(d, 1);
             return d;
         };
 
         if (cin && bout) {
             total += differenceInMinutes(setTime(bout), setTime(cin));
         } else if (cin && cout && !bout && !bin) {
-            total += differenceInMinutes(setTime(cout), setTime(cin));
+            total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(cin));
         }
 
         if (bin && cout) {
-            total += differenceInMinutes(setTime(cout), setTime(bin));
+            total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(bin));
         }
 
         if (xcin && xcout) {
-            total += differenceInMinutes(setTime(xcout), setTime(xcin));
+            total += differenceInMinutes(setTime(xcout, extraClockOutNextDay), setTime(xcin));
         }
 
         if (total <= 0) return "--";
@@ -418,18 +430,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'clockIn')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'clockIn')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.clockIn`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`clockIn-${index}`}
@@ -437,7 +449,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`clockIn-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
@@ -450,18 +462,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'breakStart')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'breakStart')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.breakStart`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`breakStart-${index}`}
@@ -469,7 +481,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`breakStart-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
@@ -482,18 +494,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'breakEnd')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'breakEnd')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.breakEnd`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`breakEnd-${index}`}
@@ -501,7 +513,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`breakEnd-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
@@ -514,18 +526,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'clockOut')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'clockOut')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.clockOut`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`clockOut-${index}`}
@@ -533,10 +545,21 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`clockOut-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setValue(`rows.${index}.clockOutNextDay`, !clockOutNextDay)}
+                        className={cn(
+                            "text-[10px] font-bold px-1 py-0.5 rounded transition-colors whitespace-nowrap",
+                            clockOutNextDay ? "text-primary hover:bg-primary/5" : "text-slate-300 hover:text-slate-400"
+                        )}
+                        disabled={!worked}
+                    >
+                        1d+
                     </button>
                 </div>
             </TableCell>
@@ -546,18 +569,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'extraClockIn')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'extraClockIn')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.extraClockIn`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`extraClockIn-${index}`}
@@ -565,7 +588,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`extraClockIn-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
@@ -578,18 +601,18 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                 onDragLeave={() => setIsDraggingOver(null)}
                 onDrop={(e) => handleDrop(e, 'extraClockOut')}
             >
-                <div className="flex items-center gap-0.5 px-0.5">
+                <div className="flex items-center px-1">
                     <div 
                         draggable 
                         onDragStart={(e) => handleDragStart(e, 'extraClockOut')} 
-                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     >
                         <GripVertical className="h-3 w-3 text-muted-foreground/30" />
                     </div>
                     <Input
                         type="time"
                         {...register(`rows.${index}.extraClockOut`)}
-                        className="h-9 border-0 shadow-none text-center focus-visible:ring-1 bg-transparent px-0.5 flex-1 min-w-[60px]"
+                        className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                         disabled={!worked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`extraClockOut-${index}`}
@@ -597,10 +620,21 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                     <button 
                         type="button"
                         onClick={() => openPicker(`extraClockOut-${index}`)}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-0"
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                         disabled={!worked}
                     >
                         <Clock className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setValue(`rows.${index}.extraClockOutNextDay`, !extraClockOutNextDay)}
+                        className={cn(
+                            "text-[10px] font-bold px-1 py-0.5 rounded transition-colors whitespace-nowrap",
+                            extraClockOutNextDay ? "text-primary hover:bg-primary/5" : "text-slate-300 hover:text-slate-400"
+                        )}
+                        disabled={!worked}
+                    >
+                        1d+
                     </button>
                 </div>
             </TableCell>
