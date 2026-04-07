@@ -81,10 +81,19 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     return normalizedIsoDate !== dayStr;
                 };
 
+                let status = "PRESENCA";
+                if (!dayClock) {
+                    status = "FOLGA"; // Sem DB entry vira Folga visualmente
+                } else if (dayClock.absenceReason) {
+                    status = dayClock.absenceReason;
+                } else if (!dayClock.clockIn) {
+                    status = "FOLGA"; // Com DB entry mas sem entrada, e sem absenceReason
+                }
+
                 return {
                     date: dayStr,
                     day, // Keep date obj for rendering
-                    worked: !!dayClock,
+                    status,
                     clockIn: formatTime(dayClock?.clockIn),
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
@@ -116,34 +125,24 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                     return d.toISOString();
                 };
 
-                // When worked is false, clear all time fields and set isExtraDay to false
-                if (!r.worked) {
-                    return {
-                        employee_id: employeeId,
-                        date: r.date,
-                        clockIn: null,
-                        breakStart: null,
-                        breakEnd: null,
-                        clockOut: null,
-                        extraClockIn: null,
-                        extraClockOut: null,
-                        isExtraDay: false,
-                        negotiatedValue: null,
-                        isVerified: r.isVerified ?? false,
-                        notes: "Edição em lote via Espelho"
-                    };
-                }
+                const st = r.status;
+                const isWorked = st === "PRESENCA";
+                const isAbsence = st !== "PRESENCA" && st !== "FOLGA";
+                const isJustified = st === "ATESTADO" || st === "FALTA_JUSTIFICADA";
+                const finalAbsenceReason = st === "PRESENCA" ? null : st;
 
                 return {
                     employee_id: employeeId,
                     date: r.date,
-                    clockIn: buildDateTime(r.clockIn),
-                    breakStart: buildDateTime(r.breakStart),
-                    breakEnd: buildDateTime(r.breakEnd),
-                    clockOut: buildDateTime(r.clockOut, r.clockOutNextDay),
-                    extraClockIn: buildDateTime(r.extraClockIn),
-                    extraClockOut: buildDateTime(r.extraClockOut, r.extraClockOutNextDay),
-                    isExtraDay: r.isExtraDay,
+                    clockIn: isWorked ? buildDateTime(r.clockIn) : null,
+                    breakStart: isWorked ? buildDateTime(r.breakStart) : null,
+                    breakEnd: isWorked ? buildDateTime(r.breakEnd) : null,
+                    clockOut: isWorked ? buildDateTime(r.clockOut, r.clockOutNextDay) : null,
+                    extraClockIn: isWorked ? buildDateTime(r.extraClockIn) : null,
+                    extraClockOut: isWorked ? buildDateTime(r.extraClockOut, r.extraClockOutNextDay) : null,
+                    isExtraDay: isWorked ? r.isExtraDay : false,
+                    absenceReason: finalAbsenceReason,
+                    isJustifiedAbsence: isJustified,
                     negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
                     isVerified: r.isVerified ?? true,
                     notes: "Edição em lote via Espelho"
@@ -203,7 +202,7 @@ export function TimeClockMirrorDialog({ employeeId, employeeName, isOpen, onClos
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 2</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Entrada 3</TableHead>
                                     <TableHead className="w-[85px] text-xs px-1 text-center">Saída 3</TableHead>
-                                    <TableHead className="w-[60px] text-center text-xs">Trab.?</TableHead>
+                                    <TableHead className="w-[100px] text-center text-xs px-1">Status</TableHead>
                                     <TableHead className="w-[60px] text-center text-xs">Extra?</TableHead>
                                     <TableHead className="w-[60px] text-center text-xs">Verif.?</TableHead>
                                     <TableHead className="w-[90px] text-xs">Valor (R$)</TableHead>
@@ -235,7 +234,8 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
     // Watch fields for this row
-    const worked = watch(`rows.${index}.worked`);
+    const status = watch(`rows.${index}.status`);
+    const isWorked = status === "PRESENCA";
     const isExtraDay = watch(`rows.${index}.isExtraDay`);
     const isVerified = watch(`rows.${index}.isVerified`);
     const clockIn = watch(`rows.${index}.clockIn`);
@@ -282,6 +282,12 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
 
     const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut, extraClockIn, extraClockOut);
 
+    const getDisplayHours = () => {
+        if (status === "ATESTADO") return "8h 00m (virtual)";
+        if (status !== "PRESENCA") return "--";
+        return netHours;
+    };
+
     return (
         <TableRow className={cn({ "bg-muted/20": isWeekend })}>
             <TableCell className="font-medium">
@@ -294,13 +300,13 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
             </TableCell>
 
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.clockIn`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <Input type="time" {...register(`rows.${index}.clockIn`)} className="h-8 px-1 text-center" disabled={!isWorked} />
             </TableCell>
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.breakStart`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <Input type="time" {...register(`rows.${index}.breakStart`)} className="h-8 px-1 text-center" disabled={!isWorked} />
             </TableCell>
             <TableCell className="px-1">
-                <Input type="time" {...register(`rows.${index}.breakEnd`)} className="h-8 px-1 text-center" disabled={!worked} />
+                <Input type="time" {...register(`rows.${index}.breakEnd`)} className="h-8 px-1 text-center" disabled={!isWorked} />
             </TableCell>
             <TableCell className="px-1">
                 <div className="flex flex-col items-center gap-0.5">
@@ -308,10 +314,10 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                         type="time" 
                         {...register(`rows.${index}.clockOut`)} 
                         className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
-                        disabled={!worked} 
+                        disabled={!isWorked} 
                     />
                     <label className="flex items-center gap-1 cursor-pointer select-none">
-                        <input type="checkbox" {...register(`rows.${index}.clockOutNextDay`)} className="h-3 w-3" disabled={!worked} />
+                        <input type="checkbox" {...register(`rows.${index}.clockOutNextDay`)} className="h-3 w-3" disabled={!isWorked} />
                         <span className="text-[9px] font-bold text-orange-600 leading-none">1d+</span>
                     </label>
                 </div>
@@ -321,7 +327,7 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                     type="time" 
                     {...register(`rows.${index}.extraClockIn`)} 
                     className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
-                    disabled={!worked} 
+                    disabled={!isWorked} 
                 />
             </TableCell>
             <TableCell className="px-1">
@@ -330,21 +336,37 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                         type="time" 
                         {...register(`rows.${index}.extraClockOut`)} 
                         className="h-8 px-1 text-center [&::-webkit-calendar-picker-indicator]:hidden" 
-                        disabled={!worked} 
+                        disabled={!isWorked} 
                     />
                     <label className="flex items-center gap-1 cursor-pointer select-none">
-                        <input type="checkbox" {...register(`rows.${index}.extraClockOutNextDay`)} className="h-3 w-3" disabled={!worked} />
+                        <input type="checkbox" {...register(`rows.${index}.extraClockOutNextDay`)} className="h-3 w-3" disabled={!isWorked} />
                         <span className="text-[9px] font-bold text-orange-600 leading-none">1d+</span>
                     </label>
                 </div>
             </TableCell>
 
-            <TableCell className="text-center">
-                <input type="checkbox" className="h-4 w-4" {...register(`rows.${index}.worked`)} />
+            <TableCell className="text-center px-1">
+                <select 
+                    {...register(`rows.${index}.status`)} 
+                    className={cn(
+                        "h-8 text-[11px] rounded border bg-background px-1",
+                        status === "ATESTADO" && "text-blue-600 font-medium",
+                        status === "FALTA_INJUSTIFICADA" && "text-red-600 font-medium",
+                        status === "PRESENCA" && "text-foreground",
+                        status === "FOLGA" && "text-muted-foreground italic",
+                        status === "FALTA_JUSTIFICADA" && "text-amber-600"
+                    )}
+                >
+                    <option value="PRESENCA">Presença</option>
+                    <option value="FOLGA">Folga</option>
+                    <option value="ATESTADO">Atestado</option>
+                    <option value="FALTA_JUSTIFICADA">F. Just.</option>
+                    <option value="FALTA_INJUSTIFICADA">F. Injust.</option>
+                </select>
             </TableCell>
 
             <TableCell className="text-center">
-                <input type="checkbox" className="h-4 w-4" {...register(`rows.${index}.isExtraDay`)} disabled={!worked} />
+                <input type="checkbox" className="h-4 w-4" {...register(`rows.${index}.isExtraDay`)} disabled={!isWorked} />
             </TableCell>
 
             <TableCell className="text-center">
@@ -363,8 +385,8 @@ function MirrorRowField({ index, register, watch, day }: { index: number, regist
                 )}
             </TableCell>
 
-            <TableCell className="text-right font-mono text-xs">
-                {worked ? netHours : '--'}
+            <TableCell className="text-right font-mono text-xs whitespace-nowrap">
+                {getDisplayHours()}
             </TableCell>
         </TableRow>
     )

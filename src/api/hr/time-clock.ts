@@ -19,6 +19,8 @@ export interface TimeClock {
     negotiatedValue: number | null
     isVerified: boolean
     notes: string | null
+    absenceReason: string | null
+    isJustifiedAbsence: boolean
     employee_id: string
     employee: Employee
 }
@@ -104,6 +106,8 @@ export interface UpsertTimeClockInput {
     negotiatedValue?: number | null
     isVerified?: boolean
     notes?: string | null
+    absenceReason?: string | null
+    isJustifiedAbsence?: boolean
 }
 
 export async function upsertTimeClock(data: UpsertTimeClockInput) {

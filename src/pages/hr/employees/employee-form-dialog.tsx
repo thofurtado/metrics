@@ -141,14 +141,20 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             console.error("Erro completo ao salvar funcionário:", error)
 
             const errorMessage = error?.response?.data?.message || error?.message
-            const errorData = error?.response?.data
+            const errorStatus = error?.response?.status
 
-            if (errorMessage === 'PIN_ALREADY_EXISTS') {
+            if (errorMessage === 'PIN_ALREADY_EXISTS' || errorStatus === 409) {
                 toast.error("Este PIN já está em uso por outro colaborador.")
-                form.setError("pin", { message: "PIN já existe" })
+                form.setError("pin", { 
+                    type: "manual",
+                    message: "PIN já existe" 
+                }, { shouldFocus: true })
+                
+                // Explicit focus with delay to ensure the modal state is updated and field is interactive
+                setTimeout(() => form.setFocus("pin"), 100)
             } else {
-                if (errorData) {
-                    console.log("Detalhes do erro do backend (ex. Zod):", errorData)
+                if (error?.response?.data) {
+                    console.log("Detalhes do erro do backend (ex. Zod):", error.response.data)
                 }
                 toast.error(`Erro ao salvar funcionário: ${errorMessage || 'Verifique os dados enviados.'}`)
             }
