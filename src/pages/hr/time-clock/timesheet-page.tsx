@@ -85,10 +85,19 @@ export function TimeSheetPage() {
                     return normalizedIsoDate !== dayStr;
                 };
 
+                let status = "PRESENCA";
+                if (!dayClock) {
+                    status = "FOLGA";
+                } else if (dayClock.absenceReason) {
+                    status = dayClock.absenceReason;
+                } else if (!dayClock.clockIn) {
+                    status = "FOLGA";
+                }
+
                 return {
                     date: dayStr,
                     day,
-                    worked: !!dayClock,
+                    status,
                     clockIn: formatTime(dayClock?.clockIn),
                     breakStart: formatTime(dayClock?.breakStart),
                     breakEnd: formatTime(dayClock?.breakEnd),
@@ -110,7 +119,7 @@ export function TimeSheetPage() {
         setIsSaving(true);
         try {
             const entries = data.rows
-                .filter((r: any) => r.worked || r.isExtraDay || r.clockIn || r.clockOut || r.extraClockIn || r.extraClockOut)
+                .filter((r: any) => r.status === "PRESENCA" || r.status === "ATESTADO" || r.status === "FALTA_JUSTIFICADA" || r.status === "FALTA_INJUSTIFICADA")
                 .map((r: any) => {
                     const buildDateTime = (timeStr?: string, isNextDay?: boolean) => {
                         if (!timeStr) return null;
@@ -121,16 +130,23 @@ export function TimeSheetPage() {
                         return d.toISOString();
                     };
 
+                    const st = r.status;
+                    const isWorked = st === "PRESENCA";
+                    const isJustified = st === "ATESTADO" || st === "FALTA_JUSTIFICADA";
+                    const finalAbsenceReason = st === "PRESENCA" ? null : st;
+
                     return {
                         employee_id: employeeId,
                         date: r.date,
-                        clockIn: buildDateTime(r.clockIn),
-                        breakStart: buildDateTime(r.breakStart),
-                        breakEnd: buildDateTime(r.breakEnd),
-                        clockOut: buildDateTime(r.clockOut, r.clockOutNextDay),
-                        extraClockIn: buildDateTime(r.extraClockIn),
-                        extraClockOut: buildDateTime(r.extraClockOut, r.extraClockOutNextDay),
-                        isExtraDay: r.isExtraDay,
+                        clockIn: isWorked ? buildDateTime(r.clockIn) : null,
+                        breakStart: isWorked ? buildDateTime(r.breakStart) : null,
+                        breakEnd: isWorked ? buildDateTime(r.breakEnd) : null,
+                        clockOut: isWorked ? buildDateTime(r.clockOut, r.clockOutNextDay) : null,
+                        extraClockIn: isWorked ? buildDateTime(r.extraClockIn) : null,
+                        extraClockOut: isWorked ? buildDateTime(r.extraClockOut, r.extraClockOutNextDay) : null,
+                        isExtraDay: isWorked ? r.isExtraDay : false,
+                        absenceReason: finalAbsenceReason,
+                        isJustifiedAbsence: isJustified,
                         negotiatedValue: r.negotiatedValue ? Number(r.negotiatedValue) : null,
                         isVerified: true,
                         notes: "Edição em lote via Espelho"
@@ -174,7 +190,7 @@ export function TimeSheetPage() {
                         const rows = watch('rows') || [];
                         let totalMinutes = 0;
                         rows.forEach((row: any) => {
-                            if (!row?.worked) return;
+                            if (row?.status !== "PRESENCA") return;
 
                             const setTime = (t: string) => {
                                 if (!t) return null;
@@ -233,7 +249,7 @@ export function TimeSheetPage() {
                                         <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Valor Estimado</span>
                                         <span className="font-mono font-bold text-xl text-green-700">
                                             {(() => {
-                                                const workedCount = rows.filter((r: any) => r.worked).length;
+                                                const workedCount = rows.filter((r: any) => r.status === "PRESENCA").length;
                                                 const rate = employee.dailyRate || 0;
                                                 return (workedCount * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                                             })()}
@@ -282,7 +298,7 @@ export function TimeSheetPage() {
                                 <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Saída 2</TableHead>
                                 <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Entrada 3</TableHead>
                                 <TableHead className="w-[85px] bg-muted font-bold text-center text-xs">Saída 3</TableHead>
-                                <TableHead className="w-[60px] bg-muted font-bold text-center text-xs">Trab.?</TableHead>
+                                <TableHead className="w-[110px] bg-muted font-bold text-center text-xs">Status</TableHead>
                                 <TableHead className="w-[60px] bg-muted font-bold text-center text-xs">Extra?</TableHead>
                                 <TableHead className="w-[90px] bg-muted font-bold text-xs pr-2">Valor</TableHead>
                                 <TableHead className="w-[80px] bg-muted font-bold text-right pr-4 text-xs">Saldo</TableHead>
@@ -323,7 +339,8 @@ export function TimeSheetPage() {
 function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { index: number, register: any, watch: any, setValue: any, day: Date, dailyRate: number }) {
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-    const worked = watch(`rows.${index}.worked`);
+    const status = watch(`rows.${index}.status`);
+    const isWorked = status === "PRESENCA";
     const isExtraDay = watch(`rows.${index}.isExtraDay`);
     const clockIn = watch(`rows.${index}.clockIn`);
     const breakStart = watch(`rows.${index}.breakStart`);
@@ -414,6 +431,12 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
 
     const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut, extraClockIn, extraClockOut);
 
+    const getDisplayHours = () => {
+        if (status === "ATESTADO") return "8h 00m (virtual)";
+        if (status !== "PRESENCA") return "--";
+        return netHours;
+    };
+
     return (
         <TableRow className={cn("hover:bg-muted/10 transition-colors", { "bg-blue-50/50": isWeekend })}>
             <TableCell className="font-medium pl-6 py-2 border-r">
@@ -442,7 +465,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.clockIn`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`clockIn-${index}`}
                     />
@@ -450,7 +473,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`clockIn-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -474,7 +497,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.breakStart`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`breakStart-${index}`}
                     />
@@ -482,7 +505,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`breakStart-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -506,7 +529,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.breakEnd`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`breakEnd-${index}`}
                     />
@@ -514,7 +537,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`breakEnd-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -538,7 +561,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.clockOut`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`clockOut-${index}`}
                     />
@@ -546,7 +569,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`clockOut-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -557,7 +580,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                             "text-[10px] font-bold px-1 py-0.5 rounded transition-colors whitespace-nowrap",
                             clockOutNextDay ? "text-primary hover:bg-primary/5" : "text-slate-300 hover:text-slate-400"
                         )}
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         1d+
                     </button>
@@ -581,7 +604,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.extraClockIn`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`extraClockIn-${index}`}
                     />
@@ -589,7 +612,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`extraClockIn-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -613,7 +636,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="time"
                         {...register(`rows.${index}.extraClockOut`)}
                         className="h-9 border-0 shadow-none text-center bg-transparent px-1 flex-1 min-w-0 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                        disabled={!worked}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e)}
                         id={`extraClockOut-${index}`}
                     />
@@ -621,7 +644,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         type="button"
                         onClick={() => openPicker(`extraClockOut-${index}`)}
                         className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         <Clock className="h-3.5 w-3.5" />
                     </button>
@@ -632,30 +655,33 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                             "text-[10px] font-bold px-1 py-0.5 rounded transition-colors whitespace-nowrap",
                             extraClockOutNextDay ? "text-primary hover:bg-primary/5" : "text-slate-300 hover:text-slate-400"
                         )}
-                        disabled={!worked}
+                        disabled={!isWorked}
                     >
                         1d+
                     </button>
                 </div>
             </TableCell>
 
-            <TableCell className="text-center border-r p-0">
+            <TableCell className="text-center border-r p-1">
                 <div className="flex items-center justify-center h-full">
-                    <input
-                        type="checkbox"
-                        className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
-                        {...register(`rows.${index}.worked`, {
-                            onChange: (e: any) => {
-                                if (e.target.checked) {
-                                    setTimeout(() => {
-                                        const el = document.getElementById(`clockIn-${index}`);
-                                        el?.focus();
-                                    }, 50);
-                                }
-                            }
-                        })}
-                        onKeyDown={(e) => handleKeyDown(e as any)}
-                    />
+                    <select
+                        {...register(`rows.${index}.status`)}
+                        className={cn(
+                            "h-8 text-[11px] rounded border bg-background px-1 w-full",
+                            status === "ATESTADO" && "text-blue-600 font-semibold",
+                            status === "FALTA_INJUSTIFICADA" && "text-red-600 font-semibold",
+                            status === "FALTA_JUSTIFICADA" && "text-amber-600 font-semibold",
+                            status === "FOLGA" && "text-muted-foreground italic",
+                            status === "PRESENCA" && "text-foreground"
+                        )}
+                        onKeyDown={(e: any) => handleKeyDown(e)}
+                    >
+                        <option value="PRESENCA">Presença</option>
+                        <option value="FOLGA">Folga</option>
+                        <option value="ATESTADO">Atestado</option>
+                        <option value="FALTA_JUSTIFICADA">F. Justificada</option>
+                        <option value="FALTA_INJUSTIFICADA">F. Injustificada</option>
+                    </select>
                 </div>
             </TableCell>
 
@@ -667,10 +693,8 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                         {...register(`rows.${index}.isExtraDay`, {
                             onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                                 const isChecked = e.target.checked;
-                                // Only auto-fill if checking the box and we have a valid daily rate
                                 if (isChecked && dailyRate && Number(dailyRate) > 0) {
                                     const currentVal = watch(`rows.${index}.negotiatedValue`);
-                                    // Auto-fill if empty or zero
                                     if (!currentVal || Number(currentVal) === 0) {
                                         setValue(`rows.${index}.negotiatedValue`, Number(dailyRate));
                                         toast.info(`Valor da diária preenchido: R$ ${Number(dailyRate).toFixed(2)}`, { duration: 1500 });
@@ -678,6 +702,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
                                 }
                             }
                         })}
+                        disabled={!isWorked}
                         onKeyDown={(e) => handleKeyDown(e as any)}
                     />
                 </div>
@@ -698,7 +723,7 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
             </TableCell>
 
             <TableCell className="text-right font-mono text-sm pr-6 bg-muted/5">
-                {worked ? netHours : '--'}
+                {getDisplayHours()}
             </TableCell>
         </TableRow>
     )
