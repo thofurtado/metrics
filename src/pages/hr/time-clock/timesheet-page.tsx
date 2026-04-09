@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO, addDays, getISOWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Loader2, Save, ArrowLeft, GripVertical, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -189,7 +189,23 @@ export function TimeSheetPage() {
                     {(() => {
                         const rows = watch('rows') || [];
                         let totalMinutes = 0;
+                        const weeksWithInjustFalta = new Set<string>();
                         rows.forEach((row: any) => {
+                            const DAILY_MINUTES = 440; // 7h20
+
+                            if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
+                                totalMinutes += DAILY_MINUTES;
+                                return;
+                            }
+
+                            if (row.status === "FALTA_INJUSTIFICADA") {
+                                totalMinutes -= DAILY_MINUTES;
+                                const d = new Date(row.date + "T12:00:00");
+                                const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
+                                weeksWithInjustFalta.add(weekKey);
+                                return;
+                            }
+
                             if (row?.status !== "PRESENCA") return;
 
                             const setTime = (t: string) => {
@@ -217,6 +233,8 @@ export function TimeSheetPage() {
                                 totalMinutes += (xcout - xcin);
                             }
                         });
+
+                        totalMinutes -= weeksWithInjustFalta.size * 440;
 
                         const h = Math.floor(Math.abs(totalMinutes) / 60);
                         const m = Math.abs(totalMinutes) % 60;
@@ -432,7 +450,8 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
     const netHours = calculateHours(clockIn, breakStart, breakEnd, clockOut, extraClockIn, extraClockOut);
 
     const getDisplayHours = () => {
-        if (status === "ATESTADO") return "8h 00m (virtual)";
+        if (status === "ATESTADO" || status === "FALTA_JUSTIFICADA") return "7h 20m (virtual)";
+        if (status === "FALTA_INJUSTIFICADA") return "-7h 20m";
         if (status !== "PRESENCA") return "--";
         return netHours;
     };
