@@ -70,7 +70,7 @@ const formSchema = z.object({
   ),
   supplier: z.string().optional(),
   payment_method: z.string().optional(),
-  confirmed: z.boolean().default(true),
+  confirmed: z.boolean().default(false),
 
   // Installments
   installments_count: z.string().optional(),
@@ -133,7 +133,7 @@ export function TransactionExpense() {
       account: '',
       sector: '',
       amount: '',
-      confirmed: true,
+      confirmed: false,
       payment_method: 'BOLETO',
       installments_count: '',
       interval_frequency: 'MONTHLY'
@@ -261,7 +261,7 @@ export function TransactionExpense() {
         account: '',
         sector: '',
         amount: '',
-        confirmed: true,
+        confirmed: false,
         payment_method: 'BOLETO',
         installments_count: '',
         interval_frequency: 'MONTHLY'
@@ -360,7 +360,7 @@ export function TransactionExpense() {
           if (v === 'installment') {
             form.setValue('confirmed', false)
           } else if (v === 'single') {
-            form.setValue('confirmed', true)
+            form.setValue('confirmed', false)
           }
         }} className="w-full mb-6">
           <TabsList className="grid w-full grid-cols-2 p-1.5 bg-muted/40 rounded-2xl h-auto">

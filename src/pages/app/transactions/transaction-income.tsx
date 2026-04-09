@@ -67,7 +67,7 @@ const formSchema = z.object({
     (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
     "Valor deve ser maior que zero"
   ),
-  confirmed: z.boolean().default(true),
+  confirmed: z.boolean().default(false),
 
   // Installments
   installments_count: z.string().optional(),
@@ -106,7 +106,7 @@ export function TransactionIncome() {
       account: '',
       sector: '',
       amount: '',
-      confirmed: true,
+      confirmed: false,
       installments_count: '',
       interval_frequency: 'MONTHLY'
     }
@@ -199,7 +199,7 @@ export function TransactionIncome() {
         account: '',
         sector: '',
         amount: '',
-        confirmed: true,
+        confirmed: false,
         installments_count: '',
         interval_frequency: 'MONTHLY'
       })
@@ -285,7 +285,7 @@ export function TransactionIncome() {
           if (v === 'installment') {
             form.setValue('confirmed', false)
           } else if (v === 'single') {
-            form.setValue('confirmed', true)
+            form.setValue('confirmed', false)
           }
         }} className="w-full mb-6">
           <TabsList className="grid w-full grid-cols-2 p-1.5 bg-muted/40 rounded-2xl h-auto">

@@ -189,9 +189,14 @@ export function TimeSheetPage() {
                     {(() => {
                         const rows = watch('rows') || [];
                         let totalMinutes = 0;
+                        const weeks = new Set<string>();
                         const weeksWithInjustFalta = new Set<string>();
+                        
                         rows.forEach((row: any) => {
                             const DAILY_MINUTES = 440; // 7h20
+                            const d = new Date(row.date + "T12:00:00");
+                            const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
+                            weeks.add(weekKey);
 
                             if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
                                 totalMinutes += DAILY_MINUTES;
@@ -199,27 +204,24 @@ export function TimeSheetPage() {
                             }
 
                             if (row.status === "FALTA_INJUSTIFICADA") {
-                                totalMinutes -= DAILY_MINUTES;
-                                const d = new Date(row.date + "T12:00:00");
-                                const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
                                 weeksWithInjustFalta.add(weekKey);
                                 return;
                             }
 
                             if (row?.status !== "PRESENCA") return;
 
-                            const setTime = (t: string) => {
+                            const setTime = (t: string, nextDay?: boolean) => {
                                 if (!t) return null;
                                 const [h, m] = t.split(':').map(Number);
-                                return h * 60 + m;
+                                return (h + (nextDay ? 24 : 0)) * 60 + m;
                             };
 
-                            const cin = setTime(row.clockIn);
-                            const bin = setTime(row.breakStart);
-                            const bout = setTime(row.breakEnd);
-                            const cout = setTime(row.clockOut);
-                            const xcin = setTime(row.extraClockIn);
-                            const xcout = setTime(row.extraClockOut);
+                            const cin = setTime(row.clockIn, false);
+                            const bin = setTime(row.breakStart, false);
+                            const bout = setTime(row.breakEnd, false);
+                            const cout = setTime(row.clockOut, row.clockOutNextDay);
+                            const xcin = setTime(row.extraClockIn, false);
+                            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
 
                             if (cin !== null && bin !== null && bout !== null && cout !== null) {
                                 totalMinutes += (bin - cin) + (cout - bout);
@@ -234,11 +236,18 @@ export function TimeSheetPage() {
                             }
                         });
 
-                        totalMinutes -= weeksWithInjustFalta.size * 440;
+                        // Adiciona o DSR (7h20) para cada semana na qual NÃO houve Falta Injustificada
+                        weeks.forEach(w => {
+                            if (!weeksWithInjustFalta.has(w)) {
+                                totalMinutes += 440;
+                            }
+                        });
 
-                        const h = Math.floor(Math.abs(totalMinutes) / 60);
-                        const m = Math.abs(totalMinutes) % 60;
-                        const formattedHours = `${h}h ${m.toString().padStart(2, '0')}m`;
+                        const isNegative = totalMinutes < 0;
+                        const absMins = Math.abs(totalMinutes);
+                        const h = Math.floor(absMins / 60);
+                        const m = absMins % 60;
+                        const formattedHours = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`;
 
                         return (
                             <>
@@ -451,7 +460,6 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
 
     const getDisplayHours = () => {
         if (status === "ATESTADO" || status === "FALTA_JUSTIFICADA") return "7h 20m (virtual)";
-        if (status === "FALTA_INJUSTIFICADA") return "-7h 20m";
         if (status !== "PRESENCA") return "--";
         return netHours;
     };
