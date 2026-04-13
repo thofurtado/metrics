@@ -147,6 +147,7 @@ interface Transaction {
   operation: 'income' | 'expense'
   amount: number
   totalValue?: number
+  attachment_url?: string | null
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
   transaction_group_id?: string | null

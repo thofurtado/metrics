@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Calendar, DollarSign, Clock, AlertTriangle, ArrowRight, Plus } from 'lucide-react'
+import { Calendar, DollarSign, Clock, AlertTriangle, ArrowRight, Plus, Paperclip } from 'lucide-react'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import { getAccounts } from '@/api/get-accounts'
+import { uploadFileTransaction } from '@/api/upload-file'
 
 // Importa o calendário
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { CreateAccountDialog } from '@/components/create-account-dialog'
+import { FileUpload } from '@/components/file-upload'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -87,6 +90,8 @@ export function PaymentModal({
     const [isLoading, setIsLoading] = useState(false)
     const [apiError, setApiError] = useState<string | null>(null)
     const [openNewAccountModal, setOpenNewAccountModal] = useState(false)
+    const [receiptFile, setReceiptFile] = useState<File | null>(null)
+    const [isUploading, setIsUploading] = useState(false)
 
     // Fetch Accounts
     const { data: accountsData } = useQuery({
@@ -201,6 +206,20 @@ export function PaymentModal({
 
             await onConfirm(confirmationPayload)
 
+            // Upload do comprovante se um arquivo foi selecionado
+            if (receiptFile) {
+                setIsLoading(false)
+                setIsUploading(true)
+                try {
+                    await uploadFileTransaction(transaction.id, receiptFile)
+                } catch (uploadErr) {
+                    console.error('Erro no upload do comprovante:', uploadErr)
+                    toast.warning('Pagamento confirmado, mas falha ao enviar comprovante.')
+                } finally {
+                    setIsUploading(false)
+                }
+            }
+
             // Sucesso
             form.reset()
             onOpenChange(false)
@@ -232,6 +251,7 @@ export function PaymentModal({
                 remainingDueDate: undefined,
             })
             setApiError(null)
+            setReceiptFile(null)
         }
     }, [open, transaction, form])
 
@@ -509,6 +529,17 @@ export function PaymentModal({
                             </div>
                         </div>
 
+                        {/* SEÇÃO COMPROVANTE */}
+                        <div className="px-2 pt-2">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-1.5">
+                                    <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Comprovante (opcional)</label>
+                                </div>
+                                <FileUpload onFileSelect={setReceiptFile} />
+                            </div>
+                        </div>
+
                         {/* FOOTER */}
                         <div className="p-6 border-t bg-slate-50 flex justify-end gap-3 pointer-events-auto z-50 relative">
                             <Button
@@ -516,13 +547,13 @@ export function PaymentModal({
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                                 className="h-12 px-6"
-                                disabled={isLoading}
+                                disabled={isLoading || isUploading}
                             >
                                 Cancelar
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isLoading || isUploading}
                                 className={cn(
                                     "h-12 px-8 text-base font-bold shadow-md transition-all hover:scale-[1.02]",
                                     transaction.operation === 'income'
@@ -530,9 +561,10 @@ export function PaymentModal({
                                         : 'bg-gradient-to-r from-red-600 to-red-500 hover:to-red-400 text-white'
                                 )}
                             >
-                                {isLoading ? 'Processando...' : `Confirmar ${transaction.operation === 'income' ? 'Recebimento' : 'Pagamento'}`}
+                                {(isLoading || isUploading) ? 'Processando...' : `Confirmar ${transaction.operation === 'income' ? 'Recebimento' : 'Pagamento'}`}
                             </Button>
                         </div>
+
                     </form>
                 </Form>
 

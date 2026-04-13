@@ -4,12 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, Check, DollarSign, Loader2, Edit2, AlertCircle } from 'lucide-react'
+import { Calendar as CalendarIcon, Check, DollarSign, Loader2, Edit2, AlertCircle, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { updateTransaction } from '@/api/update-transaction'
+import { uploadFileTransaction } from '@/api/upload-file'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
+import { FileUpload } from '@/components/file-upload'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -68,6 +70,7 @@ interface Transaction {
   operation: 'income' | 'expense'
   amount: number
   totalValue?: number
+  attachment_url?: string | null
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
   transaction_group_id?: string | null
@@ -91,6 +94,8 @@ export function TransactionDetailsModal({
   const isReadOnly = mode === 'view'
 
   const [isVencimentoOpen, setIsVencimentoOpen] = useState(false)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Fetch Auxiliar Data
   const { data: accountsData } = useQuery({
@@ -120,6 +125,7 @@ export function TransactionDetailsModal({
   useEffect(() => {
     if (open && transaction) {
       setMode(initialMode)
+      setReceiptFile(null)
       form.reset({
         description: transaction.description || '',
         amount: (transaction.totalValue ?? transaction.amount).toFixed(2),
@@ -159,6 +165,19 @@ export function TransactionDetailsModal({
         sector_id: data.sectorId === 'none' ? null : (data.sectorId || null),
         updateAllInGroup: data.updateAllInGroup,
       })
+
+      // Upload do comprovante se um arquivo foi selecionado
+      if (receiptFile) {
+        setIsUploading(true)
+        try {
+          await uploadFileTransaction(transaction.id, receiptFile)
+        } catch (uploadErr) {
+          console.error('Erro no upload do comprovante:', uploadErr)
+          toast.warning('Transação salva, mas falha ao enviar comprovante.')
+        } finally {
+          setIsUploading(false)
+        }
+      }
     } catch (e) {
       // handled by mutator
     }
@@ -403,6 +422,28 @@ export function TransactionDetailsModal({
                 />
               </div>
 
+              {/* COMPROVANTE */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                    Comprovante
+                  </label>
+                </div>
+                <FileUpload
+                  onFileSelect={isReadOnly ? () => {} : setReceiptFile}
+                  currentFileUrl={transaction.attachment_url || null}
+                  publicReceiptUrl={
+                    transaction.attachment_url
+                      ? `${window.location.origin}/recibo/${transaction.id}`
+                      : null
+                  }
+                />
+                {isReadOnly && !transaction.attachment_url && (
+                  <p className="text-xs text-muted-foreground italic">Nenhum comprovante anexado.</p>
+                )}
+              </div>
+
             </div>
 
             {/* FOOTER */}
@@ -432,10 +473,10 @@ export function TransactionDetailsModal({
               ) : (
                 <Button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || isUploading}
                   className="h-12 px-8 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
                 >
-                  {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                  {(isPending || isUploading) ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                     <>
                       <Check className="w-4 h-4 mr-2" />
                       Salvar Alterações

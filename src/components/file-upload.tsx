@@ -8,6 +8,7 @@ interface FileUploadProps {
   maxSizeMB?: number;
   currentFileUrl?: string | null;
   publicReceiptUrl?: string | null;
+  readOnly?: boolean;
 }
 
 export function FileUpload({ 
@@ -15,7 +16,8 @@ export function FileUpload({
   accept = "image/jpeg,image/png,image/webp,application/pdf", 
   maxSizeMB = 10,
   currentFileUrl,
-  publicReceiptUrl
+  publicReceiptUrl,
+  readOnly = false,
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -146,7 +148,7 @@ export function FileUpload({
             <X className="w-5 h-5" />
           </button>
         </div>
-      ) : (
+      ) : !readOnly ? (
         <div 
           className={`relative flex flex-col items-center justify-center w-full min-h-[120px] p-4 py-6 border-2 border-dashed rounded-xl transition-colors
             ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}
@@ -171,7 +173,7 @@ export function FileUpload({
             Suporta imagens ou PDF (máx. {maxSizeMB}MB)
           </p>
         </div>
-      )}
+      ) : null}
       
       {errorMsg && (
         <p className="text-xs text-destructive font-medium text-center">{errorMsg}</p>
