@@ -58,7 +58,11 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-export function TransactionTransfer() {
+export interface TransactionTransferProps {
+    open: boolean
+}
+
+export function TransactionTransfer({ open }: TransactionTransferProps) {
     const queryClient = useQueryClient()
     const [isPopoverOpen, setIsPopoverOpen] = useState(false)
     const [createAccountTarget, setCreateAccountTarget] = useState<'origin' | 'destination' | null>(null)
@@ -95,7 +99,7 @@ export function TransactionTransfer() {
 
 
     useEffect(() => {
-        if (form.formState.isSubmitSuccessful) {
+        if (!open) {
             form.reset({
                 date: new Date(),
                 description: '',
@@ -104,7 +108,7 @@ export function TransactionTransfer() {
                 amount: '',
             })
         }
-    }, [form.formState.isSubmitSuccessful, form])
+    }, [open, form])
 
     async function onSubmit(data: FormSchemaType) {
         try {

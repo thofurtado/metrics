@@ -245,15 +245,15 @@ export function Transactions() {
           </Popover>
 
           <ResponsiveDialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
-            <TransactionExpense />
+            <TransactionExpense open={isExpenseOpen} />
           </ResponsiveDialog>
 
           <ResponsiveDialog open={isIncomeOpen} onOpenChange={setIsIncomeOpen}>
-            <TransactionIncome />
+            <TransactionIncome open={isIncomeOpen} />
           </ResponsiveDialog>
 
           <ResponsiveDialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-            <TransactionTransfer />
+            <TransactionTransfer open={isTransferOpen} />
           </ResponsiveDialog>
         </PageHeader>
 

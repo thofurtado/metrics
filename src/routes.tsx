@@ -13,6 +13,7 @@ const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
 const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development';
 
 import { DownloadsPage } from './pages/downloads'
+import { ReceiptPage } from './pages/public/receipt-page'
 import { NotFound } from './pages/404'
 import { Dashboard } from './pages/app/dashboard/dashboard'
 import { Transactions } from './pages/app/transactions/transactions'
@@ -81,6 +82,10 @@ export const router = createBrowserRouter([
           }
         ]
         : []),
+      {
+        path: 'comprovante/:transactionId',
+        element: <ReceiptPage />,
+      },
       {
         path: 'downloads',
         element: <DownloadsPage />,

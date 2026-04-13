@@ -163,8 +163,22 @@ export function SupplierCombobox({ value, onSelect, suppliers = [], isLoading, o
                     )}
 
                     {/* Spacer empurra o botão de adicionar para a direita */}
-                    {((onEditInfo && selectedSupplier) || (onDeleteInfo && selectedSupplier)) && onQuickAdd && (
+                    {((onEditInfo && selectedSupplier) || (onDeleteInfo && selectedSupplier) || selectedSupplier) && onQuickAdd && (
                         <div className="flex-1" />
+                    )}
+
+                    {selectedSupplier && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-7 px-2.5 gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-foreground rounded-lg border-border/60"
+                            onClick={() => onSelect('')}
+                            title="Limpar seleção"
+                            disabled={isLoading}
+                        >
+                            Limpar
+                        </Button>
                     )}
 
                     {onQuickAdd && (

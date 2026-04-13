@@ -14,6 +14,7 @@ export interface Employee {
     points: number
     transportAllowance: number
     hasCestaBasica: boolean
+    photo_url?: string | null
 }
 
 export interface CreateEmployeeInput {

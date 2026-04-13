@@ -7,7 +7,7 @@ import {
   TrendingDown,
   ListChecks,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -25,6 +25,8 @@ import { CreateSectorDialog } from '@/components/create-sector-dialog'
 import { SupplierFormDialog } from '@/pages/app/suppliers/supplier-form-dialog'
 import { QuickAddSelect } from '@/components/ui/quick-add-select'
 import { SupplierCombobox } from '@/components/supplier-combobox'
+import { FileUpload } from '@/components/file-upload'
+import { uploadFileTransaction } from '@/api/upload-file'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { InstallmentPreviewDialog, InstallmentItem } from '@/components/installment-preview-dialog'
@@ -89,7 +91,7 @@ export interface TransactionExpenseProps {
   open: boolean
 }
 
-export function TransactionExpense() {
+export function TransactionExpense({ open }: TransactionExpenseProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
 
@@ -100,6 +102,9 @@ export function TransactionExpense() {
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
+  
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Bidirectional Calculator State
   const [installmentValue, setInstallmentValue] = useState<string>('')
@@ -139,6 +144,16 @@ export function TransactionExpense() {
       interval_frequency: 'MONTHLY'
     }
   })
+
+  // Reset on modal close
+  useEffect(() => {
+    if (!open) {
+      form.reset()
+      setActiveTab('single')
+      setInstallmentValue('')
+      setReceiptFile(null)
+    }
+  }, [open, form])
 
   // Queries
   const { data: sectors } = useQuery({
@@ -244,13 +259,27 @@ export function TransactionExpense() {
         }))
         : undefined
 
-      await createTransactionFn({
+      const response = await createTransactionFn({
         ...commonData,
         confirmed: data.confirmed, // Only for non-recurring? Recurring active is true by default.
         installments_count: isInstallment ? Number(data.installments_count) : undefined,
         interval_frequency: isInstallment ? data.interval_frequency : undefined,
         custom_installments: cleanInstallments
       })
+      
+      // Upload do arquivo, se houver, no caso de despesa única (não recorrente)
+      if (receiptFile && activeTab === 'single' && response.data?.id) {
+         setIsUploading(true)
+         try {
+            await uploadFileTransaction(response.data.id, receiptFile)
+         } catch(uploadErr) {
+            console.error('Erro no upload', uploadErr)
+            toast.error('Despesa salva, mas falha ao enviar comprovante.')
+         } finally {
+            setIsUploading(false)
+         }
+      }
+
       toast.success('Despesa registrada com sucesso!')
 
       // Reset
@@ -268,6 +297,7 @@ export function TransactionExpense() {
       })
       setActiveTab('single')
       setInstallmentValue('')
+      setReceiptFile(null)
 
     } catch (error) {
       console.error(error)
@@ -329,7 +359,7 @@ export function TransactionExpense() {
     toast.success(`Dados de ${data.type} aplicados ao formulário!`)
   }
 
-  const isPending = isTransactionPending
+  const isPending = isTransactionPending || isUploading
 
   return (
     <ResponsiveDialogContent>
@@ -741,6 +771,14 @@ export function TransactionExpense() {
                     </FormItem>
                   )}
                 />
+              </div>
+            )}
+            
+            {/* ─── FILE UPLOAD (Anexo) ─── */}
+            {activeTab === 'single' && (
+              <div className="mt-2">
+                <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest block mb-2">Comprovante</FormLabel>
+                <FileUpload onFileSelect={setReceiptFile} />
               </div>
             )}
 

@@ -26,6 +26,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { uploadFileProduct } from '@/api/upload-file'
+import { FileUpload } from '@/components/file-upload'
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -78,6 +80,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     const [newCategoryName, setNewCategoryName] = useState('')
     const [profit, setProfit] = useState(0)
     const [margin, setMargin] = useState(0)
+    const [productImage, setProductImage] = useState<File | null>(null)
 
     const { data: categoriesData } = useQuery({
         queryKey: ['categories'],
@@ -147,7 +150,16 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
     const { mutateAsync: createProductFn } = useMutation({
         mutationFn: createProduct,
-        onSuccess: () => {
+        onSuccess: async (res) => {
+            if (productImage && res?.data?.id) {
+                try {
+                    await uploadFileProduct(res.data.id, productImage)
+                } catch(e) {
+                    toast.error('Produto criado, mas erro ao salvar imagem.')
+                }
+            }
+            form.reset()
+            setProductImage(null)
             queryClient.invalidateQueries({ queryKey: ['items'] })
             onSuccess?.()
         },
@@ -155,7 +167,16 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
     const { mutateAsync: updateItemFn } = useMutation({
         mutationFn: updateItem,
-        onSuccess: () => {
+        onSuccess: async () => {
+            if (productImage && initialData?.id) {
+                try {
+                    await uploadFileProduct(initialData.id, productImage)
+                } catch(e) {
+                    toast.error('Produto atualizado, mas erro ao salvar imagem.')
+                }
+            }
+            form.reset()
+            setProductImage(null)
             queryClient.invalidateQueries({ queryKey: ['items'] })
             onSuccess?.()
         },
@@ -211,6 +232,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             setProfit(0)
             setMargin(0)
         }
+        setProductImage(null)
     }, [initialData, form])
 
     // Fetch next ID only in Create mode
@@ -707,6 +729,18 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                 </div>
                             )} />
                         </div>
+
+                        {/* --- FILE UPLOAD --- */}
+                        <div className="border-t pt-4">
+                            <FormLabel className="text-sm font-bold text-muted-foreground uppercase tracking-wide block mb-2">Foto do Produto</FormLabel>
+                            <FileUpload 
+                                onFileSelect={setProductImage}
+                                accept="image/*"
+                                maxSizeMB={5}
+                                currentFileUrl={initialData?.product?.image_url}
+                            />
+                        </div>
+
                     </div>
 
                     {/* --- FIXED FOOTER --- */}

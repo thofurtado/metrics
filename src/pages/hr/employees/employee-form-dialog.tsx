@@ -29,6 +29,8 @@ import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { PlusCircle, UserPlus, Info, Banknote, UserX, AlertTriangle, CalendarDays } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { FileUpload } from "@/components/file-upload"
+import { uploadFileEmployee } from "@/api/upload-file"
 
 const employeeFormSchema = z.object({
     name: z.string().min(2),
@@ -53,6 +55,7 @@ interface EmployeeFormDialogProps {
 
 export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogProps) {
     const [open, setOpen] = useState(false)
+    const [employeePhoto, setEmployeePhoto] = useState<File | null>(null)
     const queryClient = useQueryClient()
     const isEditing = !!employee
 
@@ -91,6 +94,7 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                 transportAllowance: Number(employee?.transportAllowance) || 0,
                 hasCestaBasica: employee?.hasCestaBasica ?? false,
             })
+            setEmployeePhoto(null)
         }
     }, [open, employee, form])
 
@@ -131,7 +135,14 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
             }
             return createEmployee(submissionData)
         },
-        onSuccess: () => {
+        onSuccess: async (createdOrUpdated) => {
+            if (employeePhoto && createdOrUpdated?.id) {
+                try {
+                    await uploadFileEmployee(createdOrUpdated.id, employeePhoto)
+                } catch (error) {
+                    toast.error("O funcionário foi cadastrado, mas a foto de perfil falhou.")
+                }
+            }
             queryClient.invalidateQueries({ queryKey: ['employees'] })
             queryClient.invalidateQueries({ queryKey: ['employee-summary'] })
             setOpen(false)
@@ -380,6 +391,21 @@ export function EmployeeFormDialog({ employee, children }: EmployeeFormDialogPro
                                             </FormControl>
                                         </FormItem>
                                     )}
+                                />
+                            </div>
+
+                            {/* Section 4: Foto */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                    <div className="h-px flex-1 bg-border" />
+                                    Foto de Perfil
+                                    <div className="h-px flex-1 bg-border" />
+                                </h3>
+                                <FileUpload 
+                                    onFileSelect={setEmployeePhoto} 
+                                    accept="image/*" 
+                                    maxSizeMB={3}
+                                    currentFileUrl={employee?.photo_url} 
                                 />
                             </div>
 

@@ -1,5 +1,5 @@
 
-import { Check, Plus } from "lucide-react"
+import { Check, Plus, X } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -109,6 +109,21 @@ export function QuickAddSelect({
                     )}
                 </SelectContent>
             </Select>
+
+            {value && onValueChange && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    title="Limpar seleção"
+                    disabled={disabled || isLoading}
+                    onClick={() => onValueChange('')}
+                    className="shrink-0 h-10 w-10 px-0 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors"
+                >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Limpar</span>
+                </Button>
+            )}
 
             {(onQuickAdd || onQuickAddClick) && (
                 onQuickAddClick ? (

@@ -7,7 +7,7 @@ import {
   CircleCheckBig,
   ListChecks,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -23,6 +23,10 @@ import { CreateSectorDialog } from '@/components/create-sector-dialog'
 import { QuickAddSelect } from '@/components/ui/quick-add-select'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { FileUpload } from '@/components/file-upload'
+import { uploadFileTransaction } from '@/api/upload-file'
+import { FileUpload } from '@/components/file-upload'
+import { uploadFileTransaction } from '@/api/upload-file'
 import { InstallmentPreviewDialog, InstallmentItem } from '@/components/installment-preview-dialog'
 import {
   ResponsiveDialogContent,
@@ -82,7 +86,11 @@ const formSchema = z.object({
 
 type FormSchemaType = z.infer<typeof formSchema>
 
-export function TransactionIncome() {
+export interface TransactionIncomeProps {
+  open: boolean
+}
+
+export function TransactionIncome({ open }: TransactionIncomeProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
@@ -93,6 +101,9 @@ export function TransactionIncome() {
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
+
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const [createAccountOpen, setCreateAccountOpen] = useState(false)
   const [createSectorOpen, setCreateSectorOpen] = useState(false)
@@ -111,6 +122,15 @@ export function TransactionIncome() {
       interval_frequency: 'MONTHLY'
     }
   })
+
+  useEffect(() => {
+    if (!open) {
+      form.reset()
+      setActiveTab('single')
+      setInstallmentValue('')
+      setReceiptFile(null)
+    }
+  }, [open, form])
 
   const { data: sectors } = useQuery({
     queryKey: ['sectors'],
@@ -189,7 +209,20 @@ export function TransactionIncome() {
         custom_installments: cleanInstallments
       }
 
-      await transaction(transactionData)
+      const response = await transaction(transactionData)
+      
+      if (receiptFile && activeTab === 'single' && response.data?.id) {
+         setIsUploading(true)
+         try {
+            await uploadFileTransaction(response.data.id, receiptFile)
+         } catch(uploadErr) {
+            console.error('Erro no upload', uploadErr)
+            toast.error('Receita salva, mas falha ao enviar comprovante.')
+         } finally {
+            setIsUploading(false)
+         }
+      }
+
       toast.success('Receita registrada com sucesso!')
 
       form.reset({
@@ -205,6 +238,7 @@ export function TransactionIncome() {
       })
       setActiveTab('single')
       setInstallmentValue('')
+      setReceiptFile(null)
     } catch (error) {
       console.error('Erro ao cadastrar receita:', error)
       toast.error('Erro ao cadastrar receita')
@@ -606,6 +640,14 @@ export function TransactionIncome() {
                 />
               </div>
             )}
+            
+            {/* ─── FILE UPLOAD (Anexo) ─── */}
+            {activeTab === 'single' && (
+              <div className="mt-2">
+                <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest block mb-2">Comprovante</FormLabel>
+                <FileUpload onFileSelect={setReceiptFile} />
+              </div>
+            )}
 
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
               <ResponsiveDialogClose asChild>
@@ -619,10 +661,10 @@ export function TransactionIncome() {
               </ResponsiveDialogClose>
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || isUploading}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto h-11 rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
-                {isPending ? 'Processando...' : (
+                {isPending || isUploading ? 'Processando...' : (
                   activeTab === 'installment' ? (
                     <>
                       <ListChecks className="w-4 h-4 mr-2" />
