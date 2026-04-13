@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/axios';
 import { Button } from './ui/button';
 
 interface FileUploadProps {
@@ -104,7 +105,10 @@ export function FileUpload({
                     type="button" 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => window.open(import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + currentFileUrl : currentFileUrl, '_blank')}
+                    onClick={() => {
+                      const finalUrl = currentFileUrl.startsWith('http') ? currentFileUrl : `${API_BASE_URL?.replace(/\/$/, '') || ''}${currentFileUrl.startsWith('/') ? '' : '/'}${currentFileUrl}`;
+                      window.open(finalUrl, '_blank')
+                    }}
                     className="w-full text-xs"
                 >
                     <FileText className="w-4 h-4 mr-2" />

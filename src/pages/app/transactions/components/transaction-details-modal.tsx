@@ -156,17 +156,7 @@ export function TransactionDetailsModal({
     if (!transaction) return
 
     try {
-      await updateFn({
-        id: transaction.id,
-        description: data.description,
-        amount: parseFloat(data.amount.replace(',', '.')),
-        data_vencimento: data.data_vencimento,
-        account_id: data.accountId,
-        sector_id: data.sectorId === 'none' ? null : (data.sectorId || null),
-        updateAllInGroup: data.updateAllInGroup,
-      })
-
-      // Upload do comprovante se um arquivo foi selecionado
+      // Upload do comprovante ANTES da atualização para evitar race condition na invalidação de queries
       if (receiptFile) {
         setIsUploading(true)
         try {
@@ -178,6 +168,16 @@ export function TransactionDetailsModal({
           setIsUploading(false)
         }
       }
+
+      await updateFn({
+        id: transaction.id,
+        description: data.description,
+        amount: parseFloat(data.amount.replace(',', '.')),
+        data_vencimento: data.data_vencimento,
+        account_id: data.accountId,
+        sector_id: data.sectorId === 'none' ? null : (data.sectorId || null),
+        updateAllInGroup: data.updateAllInGroup,
+      })
     } catch (e) {
       // handled by mutator
     }
@@ -435,7 +435,7 @@ export function TransactionDetailsModal({
                   currentFileUrl={transaction.attachment_url || null}
                   publicReceiptUrl={
                     transaction.attachment_url
-                      ? `${window.location.origin}/recibo/${transaction.id}`
+                      ? `${window.location.origin}/comprovante/${transaction.id}`
                       : null
                   }
                 />

@@ -204,11 +204,8 @@ export function PaymentModal({
 
             console.log({ "Payload: ": confirmationPayload })
 
-            await onConfirm(confirmationPayload)
-
-            // Upload do comprovante se um arquivo foi selecionado
+            // Upload do comprovante se um arquivo foi selecionado ANTES de confirmar o pagamento
             if (receiptFile) {
-                setIsLoading(false)
                 setIsUploading(true)
                 try {
                     await uploadFileTransaction(transaction.id, receiptFile)
@@ -219,6 +216,8 @@ export function PaymentModal({
                     setIsUploading(false)
                 }
             }
+
+            await onConfirm(confirmationPayload)
 
             // Sucesso
             form.reset()

@@ -29,7 +29,8 @@ const getDynamicBaseUrl = () => {
   return import.meta.env.VITE_API_URL
 }
 
-const BASE_URL = getDynamicBaseUrl()
+export const API_BASE_URL = getDynamicBaseUrl()
+const BASE_URL = API_BASE_URL
 
 // Log para ajudar no debug se houver erro de conexão
 console.log('DEBUG: Conectando na API:', BASE_URL);

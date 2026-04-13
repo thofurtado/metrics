@@ -272,6 +272,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
          setIsUploading(true)
          try {
             await uploadFileTransaction(response.data.id, receiptFile)
+            invalidateKeys() // Revalidate to fetch the new attachment_url
          } catch(uploadErr) {
             console.error('Erro no upload', uploadErr)
             toast.error('Despesa salva, mas falha ao enviar comprovante.')

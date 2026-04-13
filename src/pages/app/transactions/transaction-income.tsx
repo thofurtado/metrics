@@ -215,6 +215,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
          setIsUploading(true)
          try {
             await uploadFileTransaction(response.data.id, receiptFile)
+            queryClient.invalidateQueries({ queryKey: ['transactions'] })
          } catch(uploadErr) {
             console.error('Erro no upload', uploadErr)
             toast.error('Receita salva, mas falha ao enviar comprovante.')
