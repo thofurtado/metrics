@@ -38,3 +38,8 @@ export async function uploadFileEmployee(id: string, file: File) {
     
     return response.data;
 }
+
+export async function deleteFileTransaction(id: string) {
+    const response = await api.delete(`/uploads/transaction/${id}`);
+    return response.data;
+}

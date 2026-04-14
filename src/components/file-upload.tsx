@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/axios';
 import { Button } from './ui/button';
 
@@ -10,6 +10,7 @@ interface FileUploadProps {
   currentFileUrl?: string | null;
   publicReceiptUrl?: string | null;
   readOnly?: boolean;
+  onRemoveExistingFile?: () => void;
 }
 
 export function FileUpload({ 
@@ -19,6 +20,7 @@ export function FileUpload({
   currentFileUrl,
   publicReceiptUrl,
   readOnly = false,
+  onRemoveExistingFile,
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -99,7 +101,21 @@ export function FileUpload({
       {/* Exibe o arquivo existente, se houver + URL pública */}
       {currentFileUrl && !selectedFile && (
          <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg border border-border/50">
-            <span className="text-sm font-medium text-muted-foreground">Arquivo existente anexado</span>
+            <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Arquivo existente anexado</span>
+                {!readOnly && onRemoveExistingFile && (
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={onRemoveExistingFile}
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        title="Remover anexo"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
             <div className="flex gap-2">
                 <Button 
                     type="button" 

@@ -8,7 +8,7 @@ import { Calendar as CalendarIcon, Check, DollarSign, Loader2, Edit2, AlertCircl
 import { toast } from 'sonner'
 
 import { updateTransaction } from '@/api/update-transaction'
-import { uploadFileTransaction } from '@/api/upload-file'
+import { uploadFileTransaction, deleteFileTransaction } from '@/api/upload-file'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
 import { FileUpload } from '@/components/file-upload'
@@ -151,6 +151,22 @@ export function TransactionDetailsModal({
       toast.error('Falha na atualização: ' + msg)
     },
   })
+
+  async function handleRemoveAttachment() {
+    if (!transaction) return
+    if (!confirm('Tem certeza que deseja excluir o anexo desta transação?')) return
+
+    try {
+      await deleteFileTransaction(transaction.id)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      toast.success('Anexo removido com sucesso.')
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao remover o anexo.')
+    }
+  }
 
   async function onSubmit(data: UpdateFormData) {
     if (!transaction) return
@@ -438,6 +454,8 @@ export function TransactionDetailsModal({
                       ? `${window.location.origin}/comprovante/${transaction.id}`
                       : null
                   }
+                  readOnly={isReadOnly}
+                  onRemoveExistingFile={handleRemoveAttachment}
                 />
                 {isReadOnly && !transaction.attachment_url && (
                   <p className="text-xs text-muted-foreground italic">Nenhum comprovante anexado.</p>

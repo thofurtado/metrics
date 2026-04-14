@@ -7,10 +7,10 @@ import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/axios';
+import { api, API_BASE_URL } from '@/lib/axios';
 
-// Utilizando api.defaults.baseURL ou variável de ambiente para montar URL do arquivo
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+// Utilizando API_BASE_URL para montar URL do arquivo
+const BASE_URL = API_BASE_URL || '';
 
 export function ReceiptPage() {
     const { transactionId } = useParams<{ transactionId: string }>();
@@ -72,7 +72,9 @@ export function ReceiptPage() {
 
     const isExpense = receipt.operation === 'expense';
     const isImage = receipt.attachment_url?.match(/\.(jpeg|jpg|gif|png|webp)$/i);
-    const fullAttachmentUrl = receipt.attachment_url ? `${BASE_URL}${receipt.attachment_url}` : null;
+    const fullAttachmentUrl = receipt.attachment_url 
+        ? (receipt.attachment_url.startsWith('http') ? receipt.attachment_url : `${BASE_URL.replace(/\/$/, '')}${receipt.attachment_url.startsWith('/') ? '' : '/'}${receipt.attachment_url}`)
+        : null;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
