@@ -288,7 +288,7 @@ export function TransactionDetailsModal({
                            {format(field.value, 'dd/MM/yyyy')}
                         </div>
                       ) : (
-                        <Popover modal={false} open={isVencimentoOpen} onOpenChange={setIsVencimentoOpen}>
+                        <Popover modal={true} open={isVencimentoOpen} onOpenChange={setIsVencimentoOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button

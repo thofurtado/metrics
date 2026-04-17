@@ -254,7 +254,7 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col gap-1.5">
                                         <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Data</FormLabel>
-                                        <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                        <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button

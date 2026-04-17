@@ -425,7 +425,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
                     <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Emissão</FormLabel>
-                    <Popover modal={false} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
+                    <Popover modal={true} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -460,7 +460,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
                     <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Vencimento</FormLabel>
-                    <Popover modal={false} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
