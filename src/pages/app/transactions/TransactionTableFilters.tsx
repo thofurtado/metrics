@@ -31,6 +31,9 @@ export function TransactionTableFilters() {
   const accountIdParam = searchParams.get('accountId')
   const supplierIdParam = searchParams.get('supplierId')
   const typeParam = searchParams.get('type')
+  const sortByParam = searchParams.get('sortBy')
+  const sortDirectionParam = searchParams.get('sortDirection')
+  const combinedSortParam = sortByParam && sortDirectionParam ? `${sortByParam}-${sortDirectionParam}` : 'all'
 
   const previousFilters = useRef({
     description: descriptionParam ?? '',
@@ -38,7 +41,9 @@ export function TransactionTableFilters() {
     sectorId: sectorIdParam ?? 'all',
     accountId: accountIdParam ?? 'all',
     supplierId: supplierIdParam ?? 'all',
+    supplierId: supplierIdParam ?? 'all',
     type: typeParam ?? 'all',
+    sortBy: combinedSortParam
   })
 
   const { register, control, watch, reset } =
@@ -50,7 +55,9 @@ export function TransactionTableFilters() {
         sectorId: sectorIdParam ?? 'all',
         accountId: accountIdParam ?? 'all',
         supplierId: supplierIdParam ?? 'all',
+        supplierId: supplierIdParam ?? 'all',
         type: typeParam ?? 'all',
+        sortBy: combinedSortParam,
       },
     })
 
@@ -67,7 +74,8 @@ export function TransactionTableFilters() {
         sectorId !== previousFilters.current.sectorId ||
         accountId !== previousFilters.current.accountId ||
         supplierId !== previousFilters.current.supplierId ||
-        type !== previousFilters.current.type
+        type !== previousFilters.current.type ||
+        watchedFields.sortBy !== previousFilters.current.sortBy
 
       if (hasFiltersChanged) {
         setSearchParams((state) => {
@@ -107,6 +115,15 @@ export function TransactionTableFilters() {
             state.delete('type')
           }
 
+          if (watchedFields.sortBy && watchedFields.sortBy !== 'all') {
+            const [sortByStr, sortDirectionStr] = watchedFields.sortBy.split('-')
+            state.set('sortBy', sortByStr)
+            state.set('sortDirection', sortDirectionStr)
+          } else {
+            state.delete('sortBy')
+            state.delete('sortDirection')
+          }
+
           // Só reseta a página se os filtros mudaram
           state.set('page', '1')
 
@@ -120,7 +137,8 @@ export function TransactionTableFilters() {
           sectorId: sectorId ?? 'all',
           accountId: accountId ?? 'all',
           supplierId: supplierId ?? 'all',
-          type: type ?? 'all'
+          type: type ?? 'all',
+          sortBy: watchedFields.sortBy ?? 'all'
         }
       }
     }, 500)
@@ -149,6 +167,8 @@ export function TransactionTableFilters() {
       state.delete('accountId')
       state.delete('supplierId')
       state.delete('type')
+      state.delete('sortBy')
+      state.delete('sortDirection')
       state.set('page', '1')
       return state
     })
@@ -160,6 +180,7 @@ export function TransactionTableFilters() {
       accountId: 'all',
       supplierId: 'all',
       type: 'all',
+      sortBy: 'all'
     })
 
     // Atualiza a referência ao limpar filtros
@@ -170,10 +191,11 @@ export function TransactionTableFilters() {
       accountId: 'all',
       supplierId: 'all',
       type: 'all',
+      sortBy: 'all'
     }
   }
 
-  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all')
+  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all') || (sortByParam && sortByParam !== 'all')
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-5 md:p-4 bg-card border border-border rounded-2xl shadow-sm">
@@ -283,6 +305,30 @@ export function TransactionTableFilters() {
                       {supplier.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
+
+        <Controller
+          name="sortBy"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Ordem</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[150px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder="Ordenar Por" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Padrão</SelectItem>
+                  <SelectItem value="created_at-desc" className="text-xs">Lançamento (Mais novo)</SelectItem>
+                  <SelectItem value="created_at-asc" className="text-xs">Lançamento (Mais antigo)</SelectItem>
+                  <SelectItem value="data_vencimento-asc" className="text-xs">Vencimento (Mais prox)</SelectItem>
+                  <SelectItem value="data_vencimento-desc" className="text-xs">Vencimento (Mais dist)</SelectItem>
+                  <SelectItem value="data_emissao-desc" className="text-xs">Emissão (Mais novo)</SelectItem>
+                  <SelectItem value="data_emissao-asc" className="text-xs">Emissão (Mais antigo)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

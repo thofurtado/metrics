@@ -13,6 +13,8 @@ export interface GetTransactionsQuery {
   supplierId?: string | null
   type?: string | null
   month?: string | null // ISO date string used to filter by month
+  sortBy?: string | null
+  sortDirection?: string | null
 }
 
 export interface GetTransactionsResponse {
@@ -53,7 +55,9 @@ export async function getTransactions({
   fromDate,
   supplierId,
   type,
-  month
+  month,
+  sortBy,
+  sortDirection
 }: GetTransactionsQuery) {
 
   const response = await api.get<GetTransactionsResponse>('/transactions', {
@@ -69,7 +73,9 @@ export async function getTransactions({
       fromDate,
       supplier_id: supplierId,
       type,
-      month
+      month,
+      sortBy,
+      sortDirection
     },
   })
 

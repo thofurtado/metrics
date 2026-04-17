@@ -7,6 +7,8 @@ export const transactionFiltersSchema = z.object({
   accountId: z.string().optional(),
   supplierId: z.string().optional(),
   type: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional(),
 })
 
 export type TransactionFiltersSchema = z.infer<typeof transactionFiltersSchema>

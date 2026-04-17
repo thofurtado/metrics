@@ -68,6 +68,8 @@ export function Transactions() {
   const accountId = searchParams.get('accountId')
   const supplierId = searchParams.get('supplierId')
   const type = searchParams.get('type')
+  const sortBy = searchParams.get('sortBy')
+  const sortDirection = searchParams.get('sortDirection')
   const perPage = searchParams.get('per_page') ? Number(searchParams.get('per_page')) : 6
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -155,7 +157,9 @@ export function Transactions() {
       perPage,
       supplierId,
       type,
-      historyDate // Re-fetch when history month changes
+      historyDate, // Re-fetch when history month changes
+      sortBy,
+      sortDirection
     ],
     queryFn: () =>
       getTransactions({
@@ -169,7 +173,9 @@ export function Transactions() {
         type: type === 'all' ? null : type,
         status: activeTab === 'payable' ? 'pending' : 'completed',
         toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined, // Pass toDate only for payable
-        month: activeTab === 'history' ? historyDate.toISOString() : undefined // Pass month only for history
+        month: activeTab === 'history' ? historyDate.toISOString() : undefined, // Pass month only for history
+        sortBy: sortBy || undefined,
+        sortDirection: sortDirection || undefined
       }),
     refetchOnWindowFocus: 'always',
     enabled: activeTab !== 'transfers'
