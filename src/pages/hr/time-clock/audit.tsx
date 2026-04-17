@@ -128,12 +128,27 @@ export function TimeClockAudit() {
             const totalH = Math.floor(totalMinutes / 60)
             const totalM = totalMinutes % 60
 
+            const q1Value = emp.registrationType === 'DAILY' ? 
+                dayRecords.filter(dr => dr.isWorked && dr.day.getDate() <= 15).length * (emp.dailyRate || 0) : 0;
+            const q2Value = emp.registrationType === 'DAILY' ? 
+                dayRecords.filter(dr => dr.isWorked && dr.day.getDate() > 15).length * (emp.dailyRate || 0) : 0;
+            
+            let totalValue = 0;
+            if (emp.registrationType === 'DAILY') {
+                totalValue = totalDays * (emp.dailyRate || 0);
+            } else if (emp.registrationType === 'HOURLY') {
+                totalValue = (totalMinutes / 60) * (Number(emp.salary) || 0);
+            }
+
             return {
                 employee: emp,
                 dayRecords,
                 totalDays,
                 totalMinutes,
-                formattedTotalHours: `${totalH}h ${totalM.toString().padStart(2, '0')}m`
+                formattedTotalHours: `${totalH}h ${totalM.toString().padStart(2, '0')}m`,
+                q1Value,
+                q2Value,
+                totalValue
             }
         })
     }, [employeesList, timeClocks, daysInMonth, employeeType])
@@ -153,7 +168,11 @@ export function TimeClockAudit() {
         daysInMonth.forEach(day => {
             csvContent += `${format(day, 'dd/MM')};`
         })
-        csvContent += "Total Dias;Total Horas\n"
+        csvContent += "Total Dias;Total Horas"
+        if (employeeType === 'DAILY') {
+            csvContent += ";Q1 (Dias 1-15);Q2 (16+)"
+        }
+        csvContent += ";Valor Total Estimado\n"
 
         // Rows
         reportData.forEach(row => {
@@ -161,7 +180,12 @@ export function TimeClockAudit() {
             row.dayRecords.forEach(dr => {
                 csvContent += dr.isWorked ? `${dr.formattedHours};` : `${dr.statusText};`
             })
-            csvContent += `${row.totalDays};${row.formattedTotalHours}\n`
+            csvContent += `${row.totalDays};${row.formattedTotalHours}`
+            if (employeeType === 'DAILY') {
+                csvContent += `;${row.q1Value};${row.q2Value}`
+            }
+            csvContent += `;${row.totalValue}`
+            csvContent += "\n"
         })
 
         // Download logic
@@ -278,11 +302,24 @@ export function TimeClockAudit() {
                                         </div>
                                     </TableHead>
                                 ))}
-                                <TableHead className="w-[100px] sticky right-[100px] z-20 bg-muted font-bold text-center border-l shadow-[-1px_0_0_0_rgb(226,232,240)] print:static print:shadow-none">
+                                <TableHead className={cn("w-[90px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[380px]' : 'sticky right-[190px]', employeeType === 'HOURLY' && 'sticky right-[190px]', employeeType === 'all' && 'sticky right-[190px]', employeeType === 'REGISTERED' && 'sticky right-[190px]')}>
                                     Total Dias
                                 </TableHead>
-                                <TableHead className="w-[100px] sticky right-0 z-20 bg-muted font-bold text-right border-l print:static print:shadow-none">
+                                <TableHead className={cn("w-[90px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[290px]' : 'sticky right-[100px]', employeeType === 'HOURLY' && 'sticky right-[100px]', employeeType === 'all' && 'sticky right-[100px]', employeeType === 'REGISTERED' && 'sticky right-[100px]')}>
                                     Total Horas
+                                </TableHead>
+                                {employeeType === 'DAILY' && (
+                                    <>
+                                        <TableHead className="w-[90px] sticky right-[200px] z-20 bg-muted font-bold text-right border-l text-green-700 print:static print:shadow-none">
+                                            Q1 (1 a 15)
+                                        </TableHead>
+                                        <TableHead className="w-[90px] sticky right-[110px] z-20 bg-muted font-bold text-right border-l text-emerald-700 print:static print:shadow-none">
+                                            Q2 (16+)
+                                        </TableHead>
+                                    </>
+                                )}
+                                <TableHead className="w-[110px] sticky right-0 z-20 bg-muted font-bold text-right pr-4 border-l text-blue-700 print:static print:shadow-none shadow-[-1px_0_0_0_rgb(226,232,240)]">
+                                    Valor a Pagar
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -329,11 +366,24 @@ export function TimeClockAudit() {
                                         ))}
 
                                         {/* Totals */}
-                                        <TableCell className="sticky right-[100px] z-10 bg-background border-l text-center font-bold group-hover:bg-muted/5 transition-colors shadow-[-1px_0_0_0_rgb(226,232,240)] print:static print:shadow-none print:bg-transparent">
+                                        <TableCell className={cn("z-10 bg-background border-l text-center font-bold group-hover:bg-muted/5 transition-colors print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[380px]' : 'sticky right-[190px]', employeeType !== 'DAILY' && 'shadow-[-1px_0_0_0_rgb(226,232,240)]')}>
                                             {row.totalDays}
                                         </TableCell>
-                                        <TableCell className="sticky right-0 z-10 bg-background border-l text-right font-mono font-bold group-hover:bg-muted/5 transition-colors text-emerald-600 print:static print:shadow-none print:bg-transparent">
+                                        <TableCell className={cn("z-10 bg-background border-l text-center font-mono font-bold group-hover:bg-muted/5 transition-colors text-emerald-600 print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[290px]' : 'sticky right-[100px]')}>
                                             {row.formattedTotalHours}
+                                        </TableCell>
+                                        {employeeType === 'DAILY' && (
+                                            <>
+                                                <TableCell className="sticky right-[200px] z-10 bg-green-50/30 border-l text-right font-mono font-semibold group-hover:bg-green-50 text-green-700 print:static print:shadow-none print:bg-transparent">
+                                                    {row.q1Value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
+                                                <TableCell className="sticky right-[110px] z-10 bg-emerald-50/30 border-l text-right font-mono font-semibold group-hover:bg-emerald-50 text-emerald-700 print:static print:shadow-none print:bg-transparent">
+                                                    {row.q2Value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
+                                            </>
+                                        )}
+                                        <TableCell className="sticky right-0 z-10 bg-blue-50/30 border-l px-4 text-right font-mono font-bold group-hover:bg-blue-50 text-blue-700 print:static print:shadow-none print:bg-transparent shadow-[-1px_0_0_0_rgb(226,232,240)]">
+                                            {row.totalValue > 0 ? row.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}
                                         </TableCell>
                                     </TableRow>
                                 ))
