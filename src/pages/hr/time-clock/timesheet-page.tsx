@@ -272,21 +272,33 @@ export function TimeSheetPage() {
                                 </div>
 
                                 {employee?.registrationType === 'DAILY' && (
-                                    <div className="flex flex-col items-end px-4 py-2 bg-green-50/50 rounded-lg border border-green-100">
-                                        <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Valor Estimado</span>
-                                        <span className="font-mono font-bold text-xl text-green-700">
-                                            {(() => {
-                                                const workedCount = rows.filter((r: any) => r.status === "PRESENCA").length;
-                                                const rate = employee.dailyRate || 0;
-                                                return (workedCount * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                            })()}
-                                        </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col items-end px-3 py-2 bg-green-50/50 rounded-lg border border-green-100">
+                                            <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Q1 (1 a 15)</span>
+                                            <span className="font-mono font-bold text-lg text-green-700">
+                                                {(() => {
+                                                    const workedQ1 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() <= 15).length;
+                                                    const rate = employee.dailyRate || 0;
+                                                    return (workedQ1 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                                })()}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-end px-3 py-2 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                                            <span className="text-emerald-700 text-[10px] uppercase tracking-wider font-semibold">Q2 (16+)</span>
+                                            <span className="font-mono font-bold text-lg text-emerald-700">
+                                                {(() => {
+                                                    const workedQ2 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() > 15).length;
+                                                    const rate = employee.dailyRate || 0;
+                                                    return (workedQ2 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                                })()}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
 
                                 {employee?.registrationType === 'HOURLY' && (
                                     <div className="flex flex-col items-end px-4 py-2 bg-blue-50/50 rounded-lg border border-blue-100">
-                                        <span className="text-blue-700 text-[10px] uppercase tracking-wider font-semibold">Ganhos Estimados</span>
+                                        <span className="text-blue-700 text-[10px] uppercase tracking-wider font-semibold">Total a Pagar (Horas)</span>
                                         <span className="font-mono font-bold text-xl text-blue-700">
                                             {(() => {
                                                 const rate = Number(employee.salary) || 0;
