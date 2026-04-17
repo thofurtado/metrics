@@ -311,15 +311,24 @@ export function TimeClockAudit() {
                                 {employeeType === 'DAILY' && (
                                     <>
                                         <TableHead className="w-[90px] sticky right-[200px] z-20 bg-muted font-bold text-right border-l text-green-700 print:static print:shadow-none">
-                                            Q1 (1 a 15)
+                                            <div className="flex flex-col items-end leading-tight">
+                                                <span>Q1 (1 a 15)</span>
+                                                <span className="text-[10px] font-normal uppercase opacity-80">(R$)</span>
+                                            </div>
                                         </TableHead>
                                         <TableHead className="w-[90px] sticky right-[110px] z-20 bg-muted font-bold text-right border-l text-emerald-700 print:static print:shadow-none">
-                                            Q2 (16+)
+                                            <div className="flex flex-col items-end leading-tight">
+                                                <span>Q2 (16+)</span>
+                                                <span className="text-[10px] font-normal uppercase opacity-80">(R$)</span>
+                                            </div>
                                         </TableHead>
                                     </>
                                 )}
                                 <TableHead className="w-[110px] sticky right-0 z-20 bg-muted font-bold text-right pr-4 border-l text-blue-700 print:static print:shadow-none shadow-[-1px_0_0_0_rgb(226,232,240)]">
-                                    Valor a Pagar
+                                    <div className="flex flex-col items-end leading-tight">
+                                        <span>Valor a Pagar</span>
+                                        <span className="text-[10px] font-normal uppercase opacity-80">(em R$)</span>
+                                    </div>
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -374,16 +383,16 @@ export function TimeClockAudit() {
                                         </TableCell>
                                         {employeeType === 'DAILY' && (
                                             <>
-                                                <TableCell className="sticky right-[200px] z-10 bg-green-50/30 border-l text-right font-mono font-semibold group-hover:bg-green-50 text-green-700 print:static print:shadow-none print:bg-transparent">
-                                                    {row.q1Value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                <TableCell className="sticky right-[200px] z-10 bg-green-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-green-50 text-green-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
+                                                    {row.q1Value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                                                 </TableCell>
-                                                <TableCell className="sticky right-[110px] z-10 bg-emerald-50/30 border-l text-right font-mono font-semibold group-hover:bg-emerald-50 text-emerald-700 print:static print:shadow-none print:bg-transparent">
-                                                    {row.q2Value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                <TableCell className="sticky right-[110px] z-10 bg-emerald-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-emerald-50 text-emerald-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
+                                                    {row.q2Value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                                                 </TableCell>
                                             </>
                                         )}
-                                        <TableCell className="sticky right-0 z-10 bg-blue-50/30 border-l px-4 text-right font-mono font-bold group-hover:bg-blue-50 text-blue-700 print:static print:shadow-none print:bg-transparent shadow-[-1px_0_0_0_rgb(226,232,240)]">
-                                            {row.totalValue > 0 ? row.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}
+                                        <TableCell className="sticky right-0 z-10 bg-blue-50/30 border-l px-4 text-right font-mono font-bold group-hover:bg-blue-50 text-blue-700 print:static print:shadow-none print:bg-transparent shadow-[-1px_0_0_0_rgb(226,232,240)] tracking-tighter">
+                                            {row.totalValue > 0 ? row.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-'}
                                         </TableCell>
                                     </TableRow>
                                 ))
