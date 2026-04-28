@@ -60,8 +60,8 @@ export function Sidebar() {
                 size="icon"
                 onClick={toggleSidebar}
                 className={cn(
-                  "h-8 w-8 rounded-xl bg-secondary/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300 opacity-0 group-hover/header:opacity-100",
-                  collapsed ? "absolute -right-10 top-1.5 opacity-100 scale-90 translate-x-2 shadow-xl border border-border/50 bg-card hover:translate-x-3" : ""
+                  "h-8 w-8 rounded-xl bg-secondary/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300 opacity-100",
+                  collapsed ? "absolute -right-10 top-1.5 scale-90 translate-x-2 shadow-xl border border-border/50 bg-card hover:translate-x-3" : ""
                 )}
               >
                 {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

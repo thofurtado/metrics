@@ -112,6 +112,8 @@ import { useState } from 'react'
 import { deleteTransaction } from '@/api/delete-transaction'
 import { updateStatusTransaction } from '@/api/update-transaction-status'
 import { revertTransactionStatus } from '@/api/revert-transaction-status'
+import { deleteTransactionGroup } from '@/api/delete-transaction-group'
+import { deleteFutureTransactions } from '@/api/delete-transaction'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -252,6 +254,36 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
+  })
+
+  const { mutateAsync: DeleteFutureTransactions } = useMutation({
+    mutationFn: deleteFutureTransactions,
+    onMutate: () => setLocalLoading(true),
+    onSuccess: () => {
+      toast.warning('Transações futuras deletadas com sucesso.')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+    },
+    onError: () => toast.error('Ocorreu um erro ao deletar as transações.'),
+    onSettled: () => {
+      setLocalLoading(false)
+      setOpenDeleteAlert(false)
+    }
+  })
+
+  const { mutateAsync: DeleteGroup } = useMutation({
+    mutationFn: deleteTransactionGroup,
+    onMutate: () => setLocalLoading(true),
+    onSuccess: () => {
+      toast.warning('Parcelamento deletado com sucesso.')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+    },
+    onError: () => toast.error('Ocorreu um erro ao deletar o parcelamento.'),
+    onSettled: () => {
+      setLocalLoading(false)
+      setOpenDeleteAlert(false)
+    }
   })
 
   async function handlePayment(payload: {
@@ -499,22 +531,51 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             <AlertDialogHeader>
               <AlertDialogTitle>Deletar Transação?</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja deletar esta transação permanentemente?
+                Tem certeza que deseja deletar permanentemente? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={localLoading}>Não</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => handleDelete(transactions.id)}
-                disabled={localLoading}
-                className="bg-red-600 focus:ring-red-600"
-              >
-                {localLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Sim, Deletar'
-                )}
-              </AlertDialogAction>
+            <AlertDialogFooter className={transactions.transaction_group_id ? "flex-col sm:flex-col gap-2 items-stretch" : ""}>
+              {transactions.transaction_group_id ? (
+                <>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(transactions.id)}
+                    disabled={localLoading}
+                    className="bg-red-600 focus:ring-red-600 mb-0"
+                  >
+                    Apenas esta parcela
+                  </AlertDialogAction>
+                  <AlertDialogAction
+                    onClick={() => DeleteFutureTransactions({ id: transactions.id })}
+                    disabled={localLoading}
+                    className="bg-red-700 hover:bg-red-800 focus:ring-red-700 mb-0"
+                  >
+                    Esta e todas as futuras
+                  </AlertDialogAction>
+                  <AlertDialogAction
+                    onClick={() => DeleteGroup({ groupId: transactions.transaction_group_id! })}
+                    disabled={localLoading}
+                    className="bg-red-950 hover:bg-red-900 focus:ring-red-950 mb-0"
+                  >
+                    Todo o Parcelamento
+                  </AlertDialogAction>
+                  <AlertDialogCancel disabled={localLoading} className="mt-2">Cancelar</AlertDialogCancel>
+                </>
+              ) : (
+                <>
+                  <AlertDialogCancel disabled={localLoading}>Não</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(transactions.id)}
+                    disabled={localLoading}
+                    className="bg-red-600 focus:ring-red-600"
+                  >
+                    {localLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Sim, Deletar'
+                    )}
+                  </AlertDialogAction>
+                </>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

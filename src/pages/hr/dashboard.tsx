@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom"
 import { EmployeesList } from "./employees/employees-list"
 import { TimeClockAudit } from "./time-clock/audit"
 import { PayrollClosing } from "./payroll/closing"
+import { HrRulesSettings } from "./settings/hr-rules-settings"
 import { useModules } from "@/context/module-context"
 import { useEffect } from "react"
 
@@ -44,6 +45,7 @@ export function HRDashboard() {
                     <TabsTrigger value="employees">Colaboradores</TabsTrigger>
                     <TabsTrigger value="time-clock">Ponto Eletrônico</TabsTrigger>
                     <TabsTrigger value="payroll">Fechamento & Financeiro</TabsTrigger>
+                    <TabsTrigger value="settings">Configurações</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="employees" className="outline-none">
@@ -59,6 +61,10 @@ export function HRDashboard() {
                 <TabsContent value="payroll" className="outline-none">
                     {/* Render Payroll Closing */}
                     <PayrollClosing />
+                </TabsContent>
+
+                <TabsContent value="settings" className="outline-none">
+                    <HrRulesSettings />
                 </TabsContent>
             </Tabs>
         </div>

@@ -8,6 +8,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { listTimeClocks, bulkUpsertTimeClock } from "@/api/hr/time-clock";
+import { listHolidays } from "@/api/hr/holidays";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,6 +55,12 @@ export function TimeSheetPage() {
         }),
         enabled: !!employeeId,
         staleTime: 5 * 60 * 1000
+    });
+
+    const { data: holidaysData } = useQuery({
+        queryKey: ['holidays', month.getFullYear()],
+        queryFn: () => listHolidays(month.getFullYear()),
+        staleTime: 10 * 60 * 1000
     });
 
     const { register, control, handleSubmit, watch, setValue } = useForm({
@@ -189,7 +196,9 @@ export function TimeSheetPage() {
                 <div className="hidden md:flex items-center gap-4">
                     {(() => {
                         const rows = watch('rows') || [];
-                        let totalMinutes = 0;
+                        let totalMinutes60 = 0;
+                        let totalMinutes100 = 0;
+                        let dsrcMinutes = 0; // Descanso Semanal Remunerado
                         const weeks = new Set<string>();
                         const weeksWithInjustFalta = new Set<string>();
                         
@@ -225,24 +234,34 @@ export function TimeSheetPage() {
                             const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
 
                             if (cin !== null && bin !== null && bout !== null && cout !== null) {
-                                totalMinutes += (bin - cin) + (cout - bout);
+                                workedDayMins = (bin - cin) + (cout - bout);
                             } else if (cin !== null && cout !== null) {
                                 if (bin === null && bout === null) {
-                                    totalMinutes += (cout - cin);
+                                    workedDayMins = (cout - cin);
                                 }
                             }
 
                             if (xcin !== null && xcout !== null) {
-                                totalMinutes += (xcout - xcin);
+                                workedDayMins += (xcout - xcin);
+                            }
+
+                            const isSunday = d.getDay() === 0;
+                            const isHoliday = holidaysData?.holidays?.some(h => h.date.startsWith(row.date));
+                            if (isSunday || isHoliday) {
+                                totalMinutes100 += workedDayMins;
+                            } else {
+                                totalMinutes60 += workedDayMins;
                             }
                         });
 
                         // Adiciona o DSR (7h20) para cada semana na qual NÃO houve Falta Injustificada
                         weeks.forEach(w => {
                             if (!weeksWithInjustFalta.has(w)) {
-                                totalMinutes += 440;
+                                dsrcMinutes += 440;
                             }
                         });
+
+                        const totalMinutes = totalMinutes60 + totalMinutes100 + dsrcMinutes;
 
                         const isNegative = totalMinutes < 0;
                         const absMins = Math.abs(totalMinutes);
@@ -315,19 +334,44 @@ export function TimeSheetPage() {
                                         <span className="text-purple-700 text-[10px] uppercase tracking-wider font-semibold">Horas Extras (Estimativa)</span>
                                         <span className="font-mono font-bold text-lg text-purple-700">
                                             {(() => {
-                                                const standardMinutes = 220 * 60;
-                                                const overtimeMinutes = totalMinutes > standardMinutes ? totalMinutes - standardMinutes : 0;
-                                                
-                                                if (overtimeMinutes <= 0) return "0h00 - R$ 0,00";
-
                                                 const rate = Number(employee.salary) || 0;
                                                 const hourlyRate = rate / 220;
-                                                const overtimeHourlyRate = hourlyRate * 1.6; // 60%
-                                                const totalValue = (overtimeMinutes / 60) * overtimeHourlyRate;
                                                 
-                                                const h = Math.floor(overtimeMinutes / 60);
-                                                const m = overtimeMinutes % 60;
+                                                const overtimeHourlyRate60 = hourlyRate * 1.6; // 60%
+                                                const overtimeHourlyRate100 = hourlyRate * 2.0; // 100%
+
+                                                // Logica de saldo de banco de horas aproximada
+                                                // 1. DSR já é computado para a "conta mensal"
+                                                // 2. Horas de 100% são separadas e pagas à parte do saldo de horas em muitos lugares
+                                                // Mas como estamos "estimando", vamos pegar o saldo excedente
+                                                
+                                                let summaryResult = timeClocks?.summary;
+                                                
+                                                // Se não temos um sumário do backend, fazemos uma estimativa simples
+                                                const standardMinutes = 220 * 60;
+                                                let estimatedOvt60 = 0;
+                                                let estimatedOvt100 = totalMinutes100;
+
+                                                if (totalMinutes60 + dsrcMinutes > standardMinutes) {
+                                                    estimatedOvt60 = (totalMinutes60 + dsrcMinutes) - standardMinutes;
+                                                }
+                                                
+                                                // Preferência pelo backend caso exista (pois é preciso linha a linha)
+                                                const finalOvt60 = summaryResult?.totalOvertimeMinutes60 ?? estimatedOvt60;
+                                                const finalOvt100 = summaryResult?.totalOvertimeMinutes100 ?? estimatedOvt100;
+
+                                                const value60 = summaryResult?.totalOvertimeValue60 ?? ((finalOvt60 / 60) * overtimeHourlyRate60);
+                                                const value100 = summaryResult?.totalOvertimeValue100 ?? ((finalOvt100 / 60) * overtimeHourlyRate100);
+                                                const totalValue = value60 + value100;
+                                                
+                                                if (finalOvt60 <= 0 && finalOvt100 <= 0) return "0h00 - R$ 0,00";
+
+                                                const totalOvtMins = finalOvt60 + finalOvt100;
+                                                const h = Math.floor(totalOvtMins / 60);
+                                                const m = totalOvtMins % 60;
                                                 const formattedHE = `${h}h${m.toString().padStart(2, '0')}`;
+                                                
+                                                const formatMins = (mins: number) => `${Math.floor(mins/60)}h${(mins%60).toString().padStart(2, '0')}`;
 
                                                 return (
                                                     <TooltipProvider delayDuration={200}>
@@ -337,11 +381,20 @@ export function TimeSheetPage() {
                                                             </TooltipTrigger>
                                                             <TooltipContent side="bottom" className="text-xs bg-purple-900 text-purple-50 p-3 max-w-[280px] leading-relaxed shadow-xl border-purple-800">
                                                                 <p className="font-semibold mb-1 border-b border-purple-700 pb-1">Cálculo de Hora Extra</p>
-                                                                <ul className="space-y-1 mt-2">
-                                                                    <li><span className="opacity-70">Salário-base:</span> R$ {rate.toFixed(2)}</li>
-                                                                    <li><span className="opacity-70">Hora normal (div 220):</span> R$ {hourlyRate.toFixed(2)}</li>
-                                                                    <li><span className="opacity-70">Hora extra (+60%):</span> R$ {overtimeHourlyRate.toFixed(2)}</li>
-                                                                    <li><span className="opacity-70">Tempo excedente:</span> {formattedHE} ({overtimeMinutes} min)</li>
+                                                                <ul className="space-y-2 mt-2">
+                                                                    <li><span className="opacity-70">Salário-base:</span> R$ {rate.toFixed(2)} (R$ {hourlyRate.toFixed(2)}/h)</li>
+                                                                    {finalOvt60 > 0 && (
+                                                                        <li className="bg-purple-800/50 p-1.5 rounded">
+                                                                            <span className="opacity-70 font-semibold block">Dias Normais (+60%):</span> 
+                                                                            {formatMins(finalOvt60)} = {value60.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                        </li>
+                                                                    )}
+                                                                    {finalOvt100 > 0 && (
+                                                                        <li className="bg-purple-800/50 p-1.5 rounded">
+                                                                            <span className="opacity-70 font-semibold block">Dom/Feriado (+100%):</span> 
+                                                                            {formatMins(finalOvt100)} = {value100.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                        </li>
+                                                                    )}
                                                                     <li className="pt-1 mt-1 border-t border-purple-700 font-bold text-purple-200">
                                                                         Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                                     </li>

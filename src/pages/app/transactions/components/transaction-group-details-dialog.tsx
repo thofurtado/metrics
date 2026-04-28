@@ -30,6 +30,7 @@ import { Loader2, Scissors, Trash } from "lucide-react"
 import { toast } from "sonner"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { ReadjustTransactionGroupDialog } from "./readjust-transaction-group-dialog"
 
 interface TransactionGroupDetailsDialogProps {
     groupId: string | null
@@ -41,6 +42,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
     const queryClient = useQueryClient()
     const [terminatingId, setTerminatingId] = useState<string | null>(null)
     const [paymentAction, setPaymentAction] = useState<{ id: string, type: 'pay' | 'unpay', amount: number, data_vencimento: Date } | null>(null)
+    const [openReadjust, setOpenReadjust] = useState(false)
 
     const { data: groupDetails, isLoading } = useQuery({
         queryKey: ['transaction-group', groupId],
@@ -142,6 +144,10 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
         }
     }
 
+    const alreadyPaidCount = groupDetails?.transactions.filter(t => t.confirmed).length || 0
+    const alreadyPaidAmount = groupDetails?.transactions.filter(t => t.confirmed).reduce((acc, t) => acc + (t.totalValue ?? t.amount), 0) || 0
+    const pendingSum = groupDetails?.transactions.filter(t => !t.confirmed).reduce((acc, t) => acc + t.amount, 0) || 0
+
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,17 +168,26 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                 <div className="flex gap-4">
                                     <div><strong>Total Contrato:</strong> R$ {groupDetails.totalAmount.toFixed(2)}</div>
                                     <div><strong>Ocorrências:</strong> {groupDetails.installmentsCount}</div>
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setOpenReadjust(true)}
+                                        className="flex-1 sm:flex-none text-xs"
+                                    >
+                                        Reajustar Parcelas
+                                    </Button>
+                                    <Button 
+                                        variant="destructive" 
+                                        size="sm" 
+                                        onClick={handleDeleteGroup}
+                                        disabled={isDeleting}
+                                        className="flex-1 sm:flex-none text-xs"
+                                    >
+                                        {isDeleting ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Trash className="h-3 w-3 mr-2" />}
+                                        Excluir Parcelamento
+                                    </Button>
                                 </div>
-                                <Button 
-                                    variant="destructive" 
-                                    size="sm" 
-                                    onClick={handleDeleteGroup}
-                                    disabled={isDeleting}
-                                    className="w-full sm:w-auto text-xs"
-                                >
-                                    {isDeleting ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Trash className="h-3 w-3 mr-2" />}
-                                    Excluir Todo o Parcelamento
-                                </Button>
                             </div>
 
                             <div className="overflow-x-auto">
@@ -284,6 +299,17 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {groupId && (
+                <ReadjustTransactionGroupDialog
+                    groupId={groupId}
+                    open={openReadjust}
+                    onOpenChange={setOpenReadjust}
+                    alreadyPaidCount={alreadyPaidCount}
+                    alreadyPaidAmount={alreadyPaidAmount}
+                    pendingSum={pendingSum}
+                />
+            )}
         </>
     )
 }
