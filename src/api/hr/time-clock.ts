@@ -72,6 +72,10 @@ export interface ListTimeClocksResponse {
         totalMinutes?: number
         workedDays?: number
         extraDays?: number
+        totalOvertimeMinutes60?: number
+        totalOvertimeMinutes100?: number
+        totalOvertimeValue60?: number
+        totalOvertimeValue100?: number
     }
     meta: {
         page: number

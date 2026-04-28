@@ -168,6 +168,7 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
                                 <div className="flex gap-4">
                                     <div><strong>Total Contrato:</strong> R$ {groupDetails.totalAmount.toFixed(2)}</div>
                                     <div><strong>Ocorrências:</strong> {groupDetails.installmentsCount}</div>
+                                </div>
                                 <div className="flex gap-2 w-full sm:w-auto">
                                     <Button 
                                         variant="outline" 

@@ -209,7 +209,7 @@ export function TimeSheetPage() {
                             weeks.add(weekKey);
 
                             if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
-                                totalMinutes += DAILY_MINUTES;
+                                totalMinutes60 += DAILY_MINUTES;
                                 return;
                             }
 
@@ -233,6 +233,7 @@ export function TimeSheetPage() {
                             const xcin = setTime(row.extraClockIn, false);
                             const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
 
+                            let workedDayMins = 0;
                             if (cin !== null && bin !== null && bout !== null && cout !== null) {
                                 workedDayMins = (bin - cin) + (cout - bout);
                             } else if (cin !== null && cout !== null) {
@@ -322,7 +323,7 @@ export function TimeSheetPage() {
                                         <span className="font-mono font-bold text-xl text-blue-700">
                                             {(() => {
                                                 const rate = Number(employee.salary) || 0;
-                                                const totalValue = (totalMinutes / 60) * rate;
+                                            const totalValue = ((totalMinutes60 + totalMinutes100) / 60) * rate;
                                                 return totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                                             })()}
                                         </span>

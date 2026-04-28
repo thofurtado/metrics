@@ -41,7 +41,6 @@ export function TransactionTableFilters() {
     sectorId: sectorIdParam ?? 'all',
     accountId: accountIdParam ?? 'all',
     supplierId: supplierIdParam ?? 'all',
-    supplierId: supplierIdParam ?? 'all',
     type: typeParam ?? 'all',
     sortBy: combinedSortParam
   })
@@ -54,7 +53,6 @@ export function TransactionTableFilters() {
         value: valueParam ?? '',
         sectorId: sectorIdParam ?? 'all',
         accountId: accountIdParam ?? 'all',
-        supplierId: supplierIdParam ?? 'all',
         supplierId: supplierIdParam ?? 'all',
         type: typeParam ?? 'all',
         sortBy: combinedSortParam,
