@@ -11,6 +11,7 @@ import { listTimeClocks, bulkUpsertTimeClock } from "@/api/hr/time-clock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getEmployees } from "@/api/hr/employees";
 import { MonthPicker } from "@/components/MonthPicker";
@@ -328,7 +329,27 @@ export function TimeSheetPage() {
                                                 const m = overtimeMinutes % 60;
                                                 const formattedHE = `${h}h${m.toString().padStart(2, '0')}`;
 
-                                                return `${formattedHE} = ${totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+                                                return (
+                                                    <TooltipProvider delayDuration={200}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger className="cursor-help flex items-center gap-1 border-b border-dashed border-purple-300">
+                                                                {formattedHE} = {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="bottom" className="text-xs bg-purple-900 text-purple-50 p-3 max-w-[280px] leading-relaxed shadow-xl border-purple-800">
+                                                                <p className="font-semibold mb-1 border-b border-purple-700 pb-1">Cálculo de Hora Extra</p>
+                                                                <ul className="space-y-1 mt-2">
+                                                                    <li><span className="opacity-70">Salário-base:</span> R$ {rate.toFixed(2)}</li>
+                                                                    <li><span className="opacity-70">Hora normal (div 220):</span> R$ {hourlyRate.toFixed(2)}</li>
+                                                                    <li><span className="opacity-70">Hora extra (+60%):</span> R$ {overtimeHourlyRate.toFixed(2)}</li>
+                                                                    <li><span className="opacity-70">Tempo excedente:</span> {formattedHE} ({overtimeMinutes} min)</li>
+                                                                    <li className="pt-1 mt-1 border-t border-purple-700 font-bold text-purple-200">
+                                                                        Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                    </li>
+                                                                </ul>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
                                             })()}
                                         </span>
                                     </div>
