@@ -82,6 +82,14 @@ const files = [
         size: "74 MB",
         description: "Aplicativo especializado para manutenção do Windows.",
         tag: "App"
+    },
+    {
+        name: "Office 2019",
+        fileName: "office2019.rar",
+        version: "2019",
+        size: "N/A",
+        description: "Instalador do pacote Microsoft Office 2019.",
+        tag: "Produtividade"
     }
 ]
 
