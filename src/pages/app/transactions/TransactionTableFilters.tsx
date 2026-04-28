@@ -300,7 +300,9 @@ export function TransactionTableFilters() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
                   <SelectItem value="all" className="text-xs">Todos</SelectItem>
-                  {suppliers?.suppliers?.map((supplier) => (
+                  {[...(suppliers?.suppliers || [])]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id} className="text-xs">
                       {supplier.name}
                     </SelectItem>
