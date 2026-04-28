@@ -302,21 +302,21 @@ export function TimeClockAudit() {
                                         </div>
                                     </TableHead>
                                 ))}
-                                <TableHead className={cn("w-[90px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[380px]' : 'sticky right-[190px]', employeeType === 'HOURLY' && 'sticky right-[190px]', employeeType === 'all' && 'sticky right-[190px]', employeeType === 'REGISTERED' && 'sticky right-[190px]')}>
+                                <TableHead className={cn("w-[90px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[430px]' : 'sticky right-[230px]')}>
                                     Total Dias
                                 </TableHead>
-                                <TableHead className={cn("w-[90px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[290px]' : 'sticky right-[100px]', employeeType === 'HOURLY' && 'sticky right-[100px]', employeeType === 'all' && 'sticky right-[100px]', employeeType === 'REGISTERED' && 'sticky right-[100px]')}>
+                                <TableHead className={cn("w-[100px] z-20 bg-muted font-bold text-center border-l print:static print:shadow-none", employeeType === 'DAILY' ? 'sticky right-[330px]' : 'sticky right-[130px]')}>
                                     Total Horas
                                 </TableHead>
                                 {employeeType === 'DAILY' && (
                                     <>
-                                        <TableHead className="w-[90px] sticky right-[200px] z-20 bg-muted font-bold text-right border-l text-green-700 print:static print:shadow-none">
+                                        <TableHead className="w-[100px] sticky right-[230px] z-20 bg-muted font-bold text-right border-l text-green-700 print:static print:shadow-none">
                                             <div className="flex flex-col items-end leading-tight">
                                                 <span>Q1 (1 a 15)</span>
                                                 <span className="text-[10px] font-normal uppercase opacity-80">(R$)</span>
                                             </div>
                                         </TableHead>
-                                        <TableHead className="w-[90px] sticky right-[110px] z-20 bg-muted font-bold text-right border-l text-emerald-700 print:static print:shadow-none">
+                                        <TableHead className="w-[100px] sticky right-[130px] z-20 bg-muted font-bold text-right border-l text-emerald-700 print:static print:shadow-none">
                                             <div className="flex flex-col items-end leading-tight">
                                                 <span>Q2 (16+)</span>
                                                 <span className="text-[10px] font-normal uppercase opacity-80">(R$)</span>
@@ -324,7 +324,7 @@ export function TimeClockAudit() {
                                         </TableHead>
                                     </>
                                 )}
-                                <TableHead className="w-[110px] sticky right-0 z-20 bg-muted font-bold text-right pr-4 border-l text-blue-700 print:static print:shadow-none shadow-[-1px_0_0_0_rgb(226,232,240)]">
+                                <TableHead className="w-[130px] sticky right-0 z-20 bg-muted font-bold text-right pr-4 border-l text-blue-700 print:static print:shadow-none shadow-[-1px_0_0_0_rgb(226,232,240)]">
                                     <div className="flex flex-col items-end leading-tight">
                                         <span>Valor a Pagar</span>
                                         <span className="text-[10px] font-normal uppercase opacity-80">(em R$)</span>
@@ -375,24 +375,24 @@ export function TimeClockAudit() {
                                         ))}
 
                                         {/* Totals */}
-                                        <TableCell className={cn("z-10 bg-background border-l text-center font-bold group-hover:bg-muted/5 transition-colors print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[380px]' : 'sticky right-[190px]', employeeType !== 'DAILY' && 'shadow-[-1px_0_0_0_rgb(226,232,240)]')}>
+                                        <TableCell className={cn("z-10 bg-background border-l text-center font-bold group-hover:bg-muted/5 transition-colors print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[430px]' : 'sticky right-[230px]', employeeType !== 'DAILY' && 'shadow-[-1px_0_0_0_rgb(226,232,240)]')}>
                                             {row.totalDays}
                                         </TableCell>
-                                        <TableCell className={cn("z-10 bg-background border-l text-center font-mono font-bold group-hover:bg-muted/5 transition-colors text-emerald-600 print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[290px]' : 'sticky right-[100px]')}>
+                                        <TableCell className={cn("z-10 bg-background border-l text-center font-mono font-bold group-hover:bg-muted/5 transition-colors text-emerald-600 print:static print:shadow-none print:bg-transparent", employeeType === 'DAILY' ? 'sticky right-[330px]' : 'sticky right-[130px]')}>
                                             {row.formattedTotalHours}
                                         </TableCell>
                                         {employeeType === 'DAILY' && (
                                             <>
-                                                <TableCell className="sticky right-[200px] z-10 bg-green-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-green-50 text-green-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
-                                                    {row.q1Value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                                <TableCell className="sticky right-[230px] z-10 bg-green-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-green-50 text-green-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
+                                                    {row.q1Value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </TableCell>
-                                                <TableCell className="sticky right-[110px] z-10 bg-emerald-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-emerald-50 text-emerald-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
-                                                    {row.q2Value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                                <TableCell className="sticky right-[130px] z-10 bg-emerald-50/30 border-l px-2 text-right font-mono font-semibold group-hover:bg-emerald-50 text-emerald-700 print:static print:shadow-none print:bg-transparent tracking-tighter">
+                                                    {row.q2Value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </TableCell>
                                             </>
                                         )}
                                         <TableCell className="sticky right-0 z-10 bg-blue-50/30 border-l px-4 text-right font-mono font-bold group-hover:bg-blue-50 text-blue-700 print:static print:shadow-none print:bg-transparent shadow-[-1px_0_0_0_rgb(226,232,240)] tracking-tighter">
-                                            {row.totalValue > 0 ? row.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-'}
+                                            {row.totalValue > 0 ? row.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                                         </TableCell>
                                     </TableRow>
                                 ))

@@ -308,6 +308,31 @@ export function TimeSheetPage() {
                                         </span>
                                     </div>
                                 )}
+
+                                {employee?.registrationType === 'REGISTERED' && (
+                                    <div className="flex flex-col items-end px-4 py-2 bg-purple-50/50 rounded-lg border border-purple-100 shadow-sm">
+                                        <span className="text-purple-700 text-[10px] uppercase tracking-wider font-semibold">Horas Extras (Estimativa)</span>
+                                        <span className="font-mono font-bold text-lg text-purple-700">
+                                            {(() => {
+                                                const standardMinutes = 220 * 60;
+                                                const overtimeMinutes = totalMinutes > standardMinutes ? totalMinutes - standardMinutes : 0;
+                                                
+                                                if (overtimeMinutes <= 0) return "0h00 - R$ 0,00";
+
+                                                const rate = Number(employee.salary) || 0;
+                                                const hourlyRate = rate / 220;
+                                                const overtimeHourlyRate = hourlyRate * 1.6; // 60%
+                                                const totalValue = (overtimeMinutes / 60) * overtimeHourlyRate;
+                                                
+                                                const h = Math.floor(overtimeMinutes / 60);
+                                                const m = overtimeMinutes % 60;
+                                                const formattedHE = `${h}h${m.toString().padStart(2, '0')}`;
+
+                                                return `${formattedHE} = ${totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
                             </>
                         );
                     })()}
