@@ -196,20 +196,26 @@ export function TimeSheetPage() {
                 <div className="hidden md:flex items-center gap-4">
                     {(() => {
                         const rows = watch('rows') || [];
-                        let totalMinutes60 = 0;
-                        let totalMinutes100 = 0;
-                        let dsrcMinutes = 0; // Descanso Semanal Remunerado
+                        // Estimativa DIÁRIA (espelha a lógica do backend):
+                        // Para cada dia, apura o excedente acima da jornada diária (7h20 = 440min).
+                        // Se for Domingo/Feriado: excedente vai para 100%; caso contrário: 60%.
+                        let estimatedOvt60 = 0;  // minutos de HE a 60%
+                        let estimatedOvt100 = 0; // minutos de HE a 100%
+                        let totalMinutes60 = 0;   // total trabalhado em dias normais (para exibição de horas)
+                        let totalMinutes100 = 0;  // total trabalhado em Dom/Feriado (para exibição de horas)
+                        let dsrcMinutes = 0;
+                        const DAILY_WORKLOAD = 440; // 7h20
+                        const TOLERANCE = 10;       // 10 minutos de tolerância CLT
                         const weeks = new Set<string>();
                         const weeksWithInjustFalta = new Set<string>();
-                        
+
                         rows.forEach((row: any) => {
-                            const DAILY_MINUTES = 440; // 7h20
                             const d = new Date(row.date + "T12:00:00");
                             const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
                             weeks.add(weekKey);
 
                             if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
-                                totalMinutes60 += DAILY_MINUTES;
+                                totalMinutes60 += DAILY_WORKLOAD;
                                 return;
                             }
 
@@ -236,26 +242,30 @@ export function TimeSheetPage() {
                             let workedDayMins = 0;
                             if (cin !== null && bin !== null && bout !== null && cout !== null) {
                                 workedDayMins = (bin - cin) + (cout - bout);
-                            } else if (cin !== null && cout !== null) {
-                                if (bin === null && bout === null) {
-                                    workedDayMins = (cout - cin);
-                                }
+                            } else if (cin !== null && cout !== null && bin === null && bout === null) {
+                                workedDayMins = (cout - cin);
                             }
-
                             if (xcin !== null && xcout !== null) {
                                 workedDayMins += (xcout - xcin);
                             }
 
+                            // Excedente diário (com tolerância)
+                            const excess = workedDayMins - DAILY_WORKLOAD;
+                            const dailyOvt = excess > TOLERANCE ? excess : 0;
+
                             const isSunday = d.getDay() === 0;
                             const isHoliday = holidaysData?.holidays?.some(h => h.date.startsWith(row.date));
+
                             if (isSunday || isHoliday) {
                                 totalMinutes100 += workedDayMins;
+                                estimatedOvt100 += dailyOvt;
                             } else {
                                 totalMinutes60 += workedDayMins;
+                                estimatedOvt60 += dailyOvt;
                             }
                         });
 
-                        // Adiciona o DSR (7h20) para cada semana na qual NÃO houve Falta Injustificada
+                        // DSR: 1 folga por semana sem falta injustificada
                         weeks.forEach(w => {
                             if (!weeksWithInjustFalta.has(w)) {
                                 dsrcMinutes += 440;
@@ -337,27 +347,13 @@ export function TimeSheetPage() {
                                             {(() => {
                                                 const rate = Number(employee.salary) || 0;
                                                 const hourlyRate = rate / 220;
-                                                
+
                                                 const overtimeHourlyRate60 = hourlyRate * 1.6; // 60%
                                                 const overtimeHourlyRate100 = hourlyRate * 2.0; // 100%
 
-                                                // Logica de saldo de banco de horas aproximada
-                                                // 1. DSR já é computado para a "conta mensal"
-                                                // 2. Horas de 100% são separadas e pagas à parte do saldo de horas em muitos lugares
-                                                // Mas como estamos "estimando", vamos pegar o saldo excedente
-                                                
-                                                let summaryResult = timeClocks?.summary;
-                                                
-                                                // Se não temos um sumário do backend, fazemos uma estimativa simples
-                                                const standardMinutes = 220 * 60;
-                                                let estimatedOvt60 = 0;
-                                                let estimatedOvt100 = totalMinutes100;
+                                                const summaryResult = timeClocks?.summary;
 
-                                                if (totalMinutes60 + dsrcMinutes > standardMinutes) {
-                                                    estimatedOvt60 = (totalMinutes60 + dsrcMinutes) - standardMinutes;
-                                                }
-                                                
-                                                // Preferência pelo backend caso exista (pois é preciso linha a linha)
+                                                // Preferência pelo backend (linha a linha), caso contrário usa estimativa diária
                                                 const finalOvt60 = summaryResult?.totalOvertimeMinutes60 ?? estimatedOvt60;
                                                 const finalOvt100 = summaryResult?.totalOvertimeMinutes100 ?? estimatedOvt100;
 

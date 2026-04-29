@@ -10,13 +10,14 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
   }
 
   return (
-    <div 
-      className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all"
-      onClick={() => {
-        setDetailsMode('view')
-        setOpenDetailsModal(true)
-      }}
-    >
+    <>
+      <div 
+        className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all cursor-pointer"
+        onClick={() => {
+          setDetailsMode('view')
+          setOpenDetailsModal(true)
+        }}
+      >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={cn(
@@ -85,6 +86,8 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         </Button>
       </div>
 
+      </div>
+
        <PaymentModal
         open={openPaymentModal}
         onOpenChange={setOpenPaymentModal}
@@ -101,7 +104,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         transaction={transactions}
         initialMode={detailsMode}
       />
-    </div>
+    </>
   )
 }
 import { useMutation, useQueryClient } from '@tanstack/react-query'
