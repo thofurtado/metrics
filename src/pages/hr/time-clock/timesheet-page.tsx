@@ -456,6 +456,7 @@ export function TimeSheetPage() {
                                         setValue={setValue}
                                         day={parseDateOnly(field.date)}
                                         dailyRate={employee?.dailyRate || 0}
+                                        holidays={holidaysData?.holidays}
                                     />
                                 ))
                             )}
@@ -471,8 +472,14 @@ export function TimeSheetPage() {
 
 
 
-function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { index: number, register: any, watch: any, setValue: any, day: Date, dailyRate: number }) {
+function MirrorRowField({ index, register, watch, setValue, day, dailyRate, holidays }: { index: number, register: any, watch: any, setValue: any, day: Date, dailyRate: number, holidays?: any[] }) {
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+    // Holiday detection
+    const dayStr = format(day, 'yyyy-MM-dd');
+    const holiday = holidays?.find(h => h.date?.startsWith(dayStr));
+    const isNationalHoliday = holiday?.type === 'NATIONAL';
+    const isMunicipalHoliday = holiday?.type === 'MUNICIPAL' || holiday?.type === 'STATE' || holiday?.type === 'CUSTOM';
 
     const status = watch(`rows.${index}.status`);
     const isWorked = status === "PRESENCA";
@@ -573,11 +580,35 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate }: { 
     };
 
     return (
-        <TableRow className={cn("hover:bg-muted/10 transition-colors", { "bg-blue-50/50": isWeekend })}>
+        <TableRow className={cn(
+            "hover:bg-muted/10 transition-colors",
+            { "bg-blue-50/50": isWeekend && !holiday },
+            isNationalHoliday && "bg-green-50/60",
+            isMunicipalHoliday && "bg-sky-50/60"
+        )}>
             <TableCell className="font-medium pl-6 py-2 border-r">
                 <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{format(day, 'dd/MM')}</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold">{format(day, 'dd/MM')}</span>
+                        {holiday && (
+                            <span className={cn(
+                                "text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none",
+                                isNationalHoliday && "bg-green-100 text-green-700",
+                                isMunicipalHoliday && "bg-sky-100 text-sky-700"
+                            )}>
+                                {isNationalHoliday ? 'NAC' : 'MUN'}
+                            </span>
+                        )}
+                    </div>
                     <span className="text-xs text-muted-foreground capitalize">{format(day, 'EEE', { locale: ptBR })}</span>
+                    {holiday && (
+                        <span className={cn(
+                            "text-[10px] font-medium leading-tight",
+                            isNationalHoliday ? "text-green-600" : "text-sky-600"
+                        )}>
+                            {holiday.name}
+                        </span>
+                    )}
                 </div>
                 <input type="hidden" {...register(`rows.${index}.date`)} />
             </TableCell>
