@@ -1,3 +1,4 @@
 export async function signOut() {
-  await localStorage.removeItem('token')
+  localStorage.removeItem('token')
+  window.dispatchEvent(new Event('auth-change'))
 }

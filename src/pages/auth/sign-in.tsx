@@ -152,6 +152,9 @@ export function SignIn() {
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('refreshToken', response.data.refreshToken)
         localStorage.setItem('metrics.lastUserId', matchedUser.id)
+
+        // Notify ModuleProvider that the auth state changed so queries re-enable immediately
+        window.dispatchEvent(new Event('auth-change'))
       }
 
       toast.success('Parabéns, você será redirecionado')

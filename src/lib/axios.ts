@@ -76,6 +76,7 @@ api.interceptors.response.use(
       // 401 Unauthorized: token inválido ou expirado → logout
       if (status === 401) {
         localStorage.clear()
+        window.dispatchEvent(new Event('auth-change'))
         if (typeof window !== 'undefined') {
           window.location.href = '/sign-in'
         }

@@ -1,9 +1,24 @@
 
 import { useQuery } from '@tanstack/react-query'
-import { createContext, ReactNode, useContext, useMemo } from 'react'
+import { createContext, ReactNode, useContext, useMemo, useSyncExternalStore } from 'react'
 
 import { getSystemConfig, SystemConfig } from '@/api/get-system-config'
 import { getProfile } from '@/api/get-profile'
+
+// Reactive localStorage token listener — re-renders consumers when token changes
+function subscribeToToken(callback: () => void) {
+    // Listen for storage events (cross-tab) and custom event (same-tab)
+    window.addEventListener('storage', callback)
+    window.addEventListener('auth-change', callback)
+    return () => {
+        window.removeEventListener('storage', callback)
+        window.removeEventListener('auth-change', callback)
+    }
+}
+
+function getTokenSnapshot() {
+    return localStorage.getItem('token')
+}
 
 // Mapeamento canônico: chave do system_config → slug da tabela modules
 export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasicaValue' | 'financial_management_profile' | 'dashboard_cards'>, string> = {
@@ -35,7 +50,8 @@ interface ModuleContextType {
 const ModuleContext = createContext({} as ModuleContextType)
 
 export function ModuleProvider({ children }: { children: ReactNode }) {
-    const isLoggedIn = !!localStorage.getItem('token')
+    const token = useSyncExternalStore(subscribeToToken, getTokenSnapshot)
+    const isLoggedIn = !!token
 
     // Nível 1: configuração da instância
     const { data: systemConfig, isLoading: isLoadingConfig } = useQuery({
