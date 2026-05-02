@@ -39,7 +39,6 @@ interface CreateCreditCardDialogProps {
 
 const creditCardSchema = z.object({
     name: z.string().min(1, "Nome do cartão é obrigatório"),
-    bank: z.string().min(1, "Banco é obrigatório"),
     credit_limit: z.string().min(1, "Limite é obrigatório").refine(
         (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
         "O limite deve ser maior que zero"
@@ -71,7 +70,6 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
         resolver: zodResolver(creditCardSchema),
         defaultValues: {
             name: "",
-            bank: "",
             credit_limit: "",
             closing_day: "",
             due_day: "",
@@ -84,7 +82,6 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
         if (open) {
             form.reset({
                 name: "",
-                bank: "",
                 credit_limit: "",
                 closing_day: "",
                 due_day: "",
@@ -109,9 +106,11 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
     })
 
     async function onSubmit(data: CreditCardForm) {
+        const selectedAccount = accountsData?.accounts?.find((acc: any) => acc.id === data.account_id)
+        const bankValue = selectedAccount ? selectedAccount.name : "N/A"
         await createNewCreditCard({
             name: data.name,
-            bank: data.bank,
+            bank: bankValue,
             credit_limit: parseFloat(data.credit_limit.replace(',', '.')),
             closing_day: parseInt(data.closing_day),
             due_day: parseInt(data.due_day),
@@ -144,20 +143,6 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
                                     <FormLabel>Nome do Cartão</FormLabel>
                                     <FormControl>
                                         <Input placeholder="Ex: Cartão de Uso Diário" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="bank"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Banco</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ex: Mercado Pago, Nubank..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

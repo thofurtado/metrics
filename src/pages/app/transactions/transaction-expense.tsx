@@ -216,10 +216,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
     ).filter(Boolean)
 
     const result = calculateCreditCardDueDate(watchedEmissao, card, holidayStrings)
-    form.setValue('data_vencimento', result.due_date, { shouldValidate: true })
+    form.setValue('data_vencimento', result.due_date, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
     setBillingMonthLabel(result.billing_month_label)
     if (card.account_id) {
-      form.setValue('account', card.account_id, { shouldValidate: true })
+      form.setValue('account', card.account_id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
     }
   }, [isCreditCard, watchedCreditCardId, watchedEmissao, creditCardsData, holidaysData, form])
 
@@ -704,7 +704,23 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                         <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Cartão de Crédito</FormLabel>
                         <QuickAddSelect
                           value={field.value || ''}
-                          onValueChange={field.onChange}
+                          onValueChange={(val) => {
+                            field.onChange(val)
+                            const card = creditCardsData?.creditCards?.find(c => c.id === val)
+                            if (card) {
+                              if (card.account_id) {
+                                form.setValue('account', card.account_id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
+                              }
+                              if (watchedEmissao) {
+                                const holidayStrings = (holidaysData?.holidays ?? []).map((h: any) =>
+                                  typeof h.date === 'string' ? h.date.substring(0, 10) : ''
+                                ).filter(Boolean)
+                                const result = calculateCreditCardDueDate(watchedEmissao, card, holidayStrings)
+                                form.setValue('data_vencimento', result.due_date, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
+                                setBillingMonthLabel(result.billing_month_label)
+                              }
+                            }
+                          }}
                           isLoading={!creditCardsData}
                           placeholder="Selecione o cartão..."
                           emptyMessage="Nenhum cartão cadastrado"
