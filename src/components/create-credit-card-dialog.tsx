@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -20,7 +20,15 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { createCreditCard } from "@/api/credit-cards"
+import { getAccounts } from "@/api/get-accounts"
 import { useEffect } from "react"
 
 interface CreateCreditCardDialogProps {
@@ -44,13 +52,20 @@ const creditCardSchema = z.object({
         (val) => !isNaN(parseInt(val)) && parseInt(val) >= 1 && parseInt(val) <= 31,
         "Dia deve estar entre 1 e 31"
     ),
-    last_four_digits: z.string().optional()
+    last_four_digits: z.string().optional(),
+    account_id: z.string().optional().nullable()
 })
 
 type CreditCardForm = z.infer<typeof creditCardSchema>
 
 export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: CreateCreditCardDialogProps) {
     const queryClient = useQueryClient()
+
+    const { data: accountsData } = useQuery({
+        queryKey: ['accounts'],
+        queryFn: getAccounts,
+        enabled: open
+    })
 
     const form = useForm<CreditCardForm>({
         resolver: zodResolver(creditCardSchema),
@@ -61,6 +76,7 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
             closing_day: "",
             due_day: "",
             last_four_digits: "",
+            account_id: "",
         },
     })
 
@@ -73,6 +89,7 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
                 closing_day: "",
                 due_day: "",
                 last_four_digits: "",
+                account_id: "",
             })
         }
     }, [open, form])
@@ -99,6 +116,7 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
             closing_day: parseInt(data.closing_day),
             due_day: parseInt(data.due_day),
             last_four_digits: data.last_four_digits || null,
+            account_id: data.account_id || null,
         })
     }
 
@@ -141,6 +159,36 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
                                     <FormControl>
                                         <Input placeholder="Ex: Mercado Pago, Nubank..." {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="account_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Conta Vinculada (Opcional)</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        value={field.value || ""}
+                                        defaultValue={field.value || ""}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione uma conta" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="">Nenhuma</SelectItem>
+                                            {accountsData?.accounts?.map((acc) => (
+                                                <SelectItem key={acc.id} value={acc.id}>
+                                                    {acc.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}

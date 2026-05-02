@@ -2,6 +2,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
+  const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
 
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
@@ -14,8 +15,12 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       <div 
         className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all cursor-pointer"
         onClick={() => {
-          setDetailsMode('view')
-          setOpenDetailsModal(true)
+          if (transactions.isVirtual) {
+            setOpenCreditCardDialog(true)
+          } else {
+            setDetailsMode('view')
+            setOpenDetailsModal(true)
+          }
         }}
       >
       <div className="flex items-center justify-between">
@@ -104,6 +109,14 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         transaction={transactions}
         initialMode={detailsMode}
       />
+
+      {transactions.isVirtual && (
+        <CreditCardDetailsDialog
+          open={openCreditCardDialog}
+          onOpenChange={setOpenCreditCardDialog}
+          virtualTransaction={transactions as any}
+        />
+      )}
     </>
   )
 }
@@ -141,6 +154,7 @@ import { cn } from '@/lib/utils'
 import { MoreHorizontal, Scissors, Trash, Eye, Pencil } from "lucide-react"
 import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
 import { TransactionDetailsModal } from "./components/transaction-details-modal"
+import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -156,6 +170,9 @@ interface Transaction {
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
   transaction_group_id?: string | null
+  isVirtual?: boolean
+  swipes?: any[]
+  credit_card_id?: string
 }
 
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
@@ -187,6 +204,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [localLoading, setLocalLoading] = useState(false)
+  const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
@@ -367,16 +385,20 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       <TableCell className="w-[140px] text-center px-4 py-5">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
-          aria-label={transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
+          aria-label={transactions.isVirtual ? "Ver Fatura" : transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
           className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 w-[110px] text-[10px] font-black uppercase tracking-widest rounded-xl border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
-            transactions.confirmed
+            transactions.isVirtual
+              ? 'bg-amber-600 text-white border-transparent hover:bg-amber-700 focus:ring-amber-600'
+              : transactions.confirmed
               ? 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
               : transactions.operation === 'income'
-                ? 'bg-emerald-600 text-white border-transparent hover:bg-emerald-700 focus:ring-emerald-600' // Receber
-                : 'bg-rose-600 text-white border-transparent hover:bg-rose-700 focus:ring-rose-600' // Pagar
+              ? 'bg-emerald-600 text-white border-transparent hover:bg-emerald-700 focus:ring-emerald-600' // Receber
+              : 'bg-rose-600 text-white border-transparent hover:bg-rose-700 focus:ring-rose-600' // Pagar
           }`}
           onClick={() => {
-            if (transactions.confirmed) {
+            if (transactions.isVirtual) {
+              setOpenCreditCardDialog(true)
+            } else if (transactions.confirmed) {
               setOpenRevertAlert(true)
             } else {
               setOpenPaymentModal(true)
@@ -388,6 +410,11 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             <>
               <Loader2 className="h-4 w-4 animate-spin text-white" />
               ...
+            </>
+          ) : transactions.isVirtual ? (
+            <>
+              <Eye className="h-3 w-3" />
+              Ver Fatura
             </>
           ) : transactions.confirmed ? (
             <>
@@ -595,6 +622,14 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           transaction={transactions}
           initialMode={detailsMode}
         />
+
+        {transactions.isVirtual && (
+          <CreditCardDetailsDialog
+            open={openCreditCardDialog}
+            onOpenChange={setOpenCreditCardDialog}
+            virtualTransaction={transactions as any}
+          />
+        )}
       </TableCell>
     </TableRow>
   )

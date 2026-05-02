@@ -218,6 +218,9 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
     const result = calculateCreditCardDueDate(watchedEmissao, card, holidayStrings)
     form.setValue('data_vencimento', result.due_date, { shouldValidate: true })
     setBillingMonthLabel(result.billing_month_label)
+    if (card.account_id) {
+      form.setValue('account', card.account_id, { shouldValidate: true })
+    }
   }, [isCreditCard, watchedCreditCardId, watchedEmissao, creditCardsData, holidaysData, form])
 
   // Sync Logic handled in Inputs onChange directly.

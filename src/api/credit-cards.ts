@@ -10,6 +10,7 @@ export interface CreditCard {
   last_four_digits?: string | null
   color?: string | null
   active: boolean
+  account_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -22,6 +23,7 @@ export interface CreateCreditCardBody {
   due_day: number
   last_four_digits?: string | null
   color?: string | null
+  account_id?: string | null
 }
 
 export async function getCreditCards() {
@@ -41,4 +43,9 @@ export async function updateCreditCard(id: string, data: Partial<CreateCreditCar
 
 export async function deleteCreditCard(id: string) {
   await api.delete(`/credit-cards/${id}`)
+}
+
+export async function payCreditCardInvoice(id: string, month: string) {
+  const response = await api.patch<{ count: number }>(`/credit-cards/${id}/pay-invoice?month=${month}`)
+  return response.data
 }
