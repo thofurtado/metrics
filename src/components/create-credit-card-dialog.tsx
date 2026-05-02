@@ -171,9 +171,9 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
                                 <FormItem>
                                     <FormLabel>Conta Vinculada (Opcional)</FormLabel>
                                     <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value || ""}
-                                        defaultValue={field.value || ""}
+                                        onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                                        value={field.value || "none"}
+                                        defaultValue={field.value || "none"}
                                     >
                                         <FormControl>
                                             <SelectTrigger>
@@ -181,7 +181,7 @@ export function CreateCreditCardDialog({ open, onOpenChange, onSuccess }: Create
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="">Nenhuma</SelectItem>
+                                            <SelectItem value="none">Nenhuma</SelectItem>
                                             {accountsData?.accounts?.map((acc) => (
                                                 <SelectItem key={acc.id} value={acc.id}>
                                                     {acc.name}
