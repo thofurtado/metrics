@@ -206,21 +206,23 @@ export function TimeSheetPage() {
                         let dsrcMinutes = 0;
                         const DAILY_WORKLOAD = 440; // 7h20
                         const TOLERANCE = 10;       // 10 minutos de tolerância CLT
-                        const weeks = new Set<string>();
+                        // weeksWithPresence: semanas que tiveram ao menos 1 dia trabalhado ou justificado
+                        const weeksWithPresence = new Set<string>();
                         const weeksWithInjustFalta = new Set<string>();
 
                         rows.forEach((row: any) => {
                             const d = new Date(row.date + "T12:00:00");
                             const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
-                            weeks.add(weekKey);
 
                             if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
                                 totalMinutes60 += DAILY_WORKLOAD;
+                                weeksWithPresence.add(weekKey);
                                 return;
                             }
 
                             if (row.status === "FALTA_INJUSTIFICADA") {
                                 weeksWithInjustFalta.add(weekKey);
+                                weeksWithPresence.add(weekKey);
                                 return;
                             }
 
@@ -239,14 +241,21 @@ export function TimeSheetPage() {
                             const xcin = setTime(row.extraClockIn, false);
                             const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
 
+                            // Só conta horas se houver ao menos entrada + saída
                             let workedDayMins = 0;
                             if (cin !== null && bin !== null && bout !== null && cout !== null) {
                                 workedDayMins = (bin - cin) + (cout - bout);
                             } else if (cin !== null && cout !== null && bin === null && bout === null) {
                                 workedDayMins = (cout - cin);
                             }
+                            // Se só tem entrada sem saída, workedDayMins permanece 0 (registro incompleto)
                             if (xcin !== null && xcout !== null) {
                                 workedDayMins += (xcout - xcin);
+                            }
+
+                            // Só marca presença na semana se tiver ao menos entrada registrada
+                            if (cin !== null) {
+                                weeksWithPresence.add(weekKey);
                             }
 
                             // Excedente diário (com tolerância)
@@ -265,14 +274,15 @@ export function TimeSheetPage() {
                             }
                         });
 
-                        // DSR: 1 folga por semana sem falta injustificada
-                        weeks.forEach(w => {
+                        // DSR: 1 por semana que teve presença e sem falta injustificada
+                        weeksWithPresence.forEach(w => {
                             if (!weeksWithInjustFalta.has(w)) {
                                 dsrcMinutes += 440;
                             }
                         });
 
-                        const totalMinutes = totalMinutes60 + totalMinutes100 + dsrcMinutes;
+                        // Horas trabalhadas = apenas horas reais (sem DSR, que é remuneração contábil)
+                        const totalMinutes = totalMinutes60 + totalMinutes100;
 
                         const isNegative = totalMinutes < 0;
                         const absMins = Math.abs(totalMinutes);

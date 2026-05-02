@@ -19,6 +19,7 @@ export interface CreateTransactionBody {
     data_emissao?: Date
     amount: number
   }[] | null
+  credit_card_id?: string | null
 }
 
 export async function createTransaction({
@@ -36,6 +37,7 @@ export async function createTransaction({
   installments_count,
   interval_frequency,
   custom_installments,
+  credit_card_id,
 }: CreateTransactionBody) {
   const response = await api.post('/transaction', {
     operation,
@@ -52,6 +54,7 @@ export async function createTransaction({
     installments_count,
     interval_frequency,
     custom_installments,
+    credit_card_id: credit_card_id || null,
   })
   return response
 }

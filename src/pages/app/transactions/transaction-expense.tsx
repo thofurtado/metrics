@@ -22,6 +22,7 @@ import { deleteSupplier } from '@/api/delete-supplier'
 
 import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { CreateSectorDialog } from '@/components/create-sector-dialog'
+import { CreateCreditCardDialog } from '@/components/create-credit-card-dialog'
 import { SupplierFormDialog } from '@/pages/app/suppliers/supplier-form-dialog'
 import { QuickAddSelect } from '@/components/ui/quick-add-select'
 import { SupplierCombobox } from '@/components/supplier-combobox'
@@ -58,6 +59,10 @@ import { Dialog } from '@/components/ui/dialog'
 import { CameraScanner } from '@/components/camera-scanner'
 import { ScannerConfirmationModal, ExtractedData } from '@/components/scanner-confirmation-modal'
 import { ExtractionOverlay } from '@/components/extraction-overlay'
+import { getCreditCards } from '@/api/credit-cards'
+import { calculateCreditCardDueDate } from '@/lib/credit-card-due-date'
+import { listHolidays } from '@/api/hr/holidays'
+import { CreditCard } from 'lucide-react'
 
 // Schema
 const formSchema = z.object({
@@ -82,7 +87,8 @@ const formSchema = z.object({
     data_vencimento: z.date(),
     data_emissao: z.date().optional(),
     amount: z.number()
-  })).optional()
+  })).optional(),
+  credit_card_id: z.string().optional(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -108,6 +114,8 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
 
   // Bidirectional Calculator State
   const [installmentValue, setInstallmentValue] = useState<string>('')
+  // Credit Card: label do mês de fatura calculado
+  const [billingMonthLabel, setBillingMonthLabel] = useState<string | null>(null)
 
   function handleConfirmInstallments(installments: InstallmentItem[]) {
     // Sanitization: Remove visual/unique IDs from component, send only clean data
@@ -127,6 +135,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
   // Quick Add Dialogs
   const [createAccountOpen, setCreateAccountOpen] = useState(false)
   const [createSectorOpen, setCreateSectorOpen] = useState(false)
+  const [createCreditCardOpen, setCreateCreditCardOpen] = useState(false)
   const [supplierDialogOpen, setSupplierDialogOpen] = useState<{ open: boolean, id?: string }>({ open: false })
 
   const form = useForm<FormSchemaType>({
@@ -152,6 +161,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
       setActiveTab('single')
       setInstallmentValue('')
       setReceiptFile(null)
+      setBillingMonthLabel(null)
     }
   }, [open, form])
 
@@ -171,9 +181,44 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
     queryFn: () => getSuppliers({ page: 1, perPage: 100 }), // Basic fetch for select
   })
 
+  const { data: creditCardsData } = useQuery({
+    queryKey: ['credit-cards'],
+    queryFn: getCreditCards,
+    staleTime: 10 * 60 * 1000
+  })
+
+  const { data: holidaysData } = useQuery({
+    queryKey: ['holidays', new Date().getFullYear()],
+    queryFn: () => listHolidays(new Date().getFullYear()),
+    staleTime: 10 * 60 * 1000
+  })
+
   // Watching Amount and Count for Preview
   const watchedAmount = useWatch({ control: form.control, name: 'amount' })
   const watchedCount = useWatch({ control: form.control, name: 'installments_count' })
+  const watchedPaymentMethod = useWatch({ control: form.control, name: 'payment_method' })
+  const watchedCreditCardId = useWatch({ control: form.control, name: 'credit_card_id' })
+  const watchedEmissao = useWatch({ control: form.control, name: 'data_emissao' })
+
+  const isCreditCard = watchedPaymentMethod === 'CREDIT_CARD'
+
+  // Auto-calcular vencimento quando cartão, emissão ou método mudar
+  useEffect(() => {
+    if (!isCreditCard || !watchedCreditCardId || !watchedEmissao) {
+      if (!isCreditCard) setBillingMonthLabel(null)
+      return
+    }
+    const card = creditCardsData?.creditCards?.find(c => c.id === watchedCreditCardId)
+    if (!card) return
+
+    const holidayStrings = (holidaysData?.holidays ?? []).map((h: any) =>
+      typeof h.date === 'string' ? h.date.substring(0, 10) : ''
+    ).filter(Boolean)
+
+    const result = calculateCreditCardDueDate(watchedEmissao, card, holidayStrings)
+    form.setValue('data_vencimento', result.due_date, { shouldValidate: true })
+    setBillingMonthLabel(result.billing_month_label)
+  }, [isCreditCard, watchedCreditCardId, watchedEmissao, creditCardsData, holidaysData, form])
 
   // Sync Logic handled in Inputs onChange directly.
 
@@ -261,10 +306,11 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
 
       const response = await createTransactionFn({
         ...commonData,
-        confirmed: data.confirmed, // Only for non-recurring? Recurring active is true by default.
+        confirmed: data.confirmed,
         installments_count: isInstallment ? Number(data.installments_count) : undefined,
         interval_frequency: isInstallment ? data.interval_frequency : undefined,
-        custom_installments: cleanInstallments
+        custom_installments: cleanInstallments,
+        credit_card_id: data.credit_card_id || null,
       })
       
       // Upload do arquivo, se houver, no caso de despesa única (não recorrente)
@@ -538,16 +584,25 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 name="data_vencimento"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Vencimento</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                      <span>Vencimento</span>
+                      {isCreditCard && billingMonthLabel && (
+                        <span className="text-xs font-semibold text-red-600 lowercase tracking-normal">
+                          Fatura {billingMonthLabel}
+                        </span>
+                      )}
+                    </FormLabel>
                     <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             type="button"
+                            disabled={isCreditCard}
                             className={cn(
                               "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
+                              isCreditCard && "opacity-80 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border-dashed"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
@@ -599,8 +654,7 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 name="supplier"
                 render={({ field: { onChange, value } }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Fornecedor</FormLabel>
-                    <SupplierCombobox
+                              <SupplierCombobox
                       value={value}
                       onSelect={onChange}
                       suppliers={suppliersResult?.suppliers}
@@ -614,28 +668,55 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
               />
 
               {/* Payment Method */}
-              <FormField
-                  control={form.control}
-                  name="payment_method"
-                  render={({ field }) => (
+              <div className="flex flex-col gap-4">
+                <FormField
+                    control={form.control}
+                    name="payment_method"
+                    render={({ field }) => (
+                        <FormItem className="space-y-1.5">
+                            <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Forma de Pagamento</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
+                                        <SelectValue placeholder="Selecione" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="BOLETO">Boleto</SelectItem>
+                                    <SelectItem value="PIX">Pix</SelectItem>
+                                    <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                                    <SelectItem value="CHECK">Cheque</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormItem>
+                    )}
+                />
+
+                {isCreditCard && (
+                  <FormField
+                    control={form.control}
+                    name="credit_card_id"
+                    render={({ field }) => (
                       <FormItem className="space-y-1.5">
-                          <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Forma de Pagamento</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                              <FormControl>
-                                  <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
-                                      <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  <SelectItem value="BOLETO">Boleto</SelectItem>
-                                  <SelectItem value="PIX">Pix</SelectItem>
-                                  <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                                  <SelectItem value="CHECK">Cheque</SelectItem>
-                              </SelectContent>
-                          </Select>
+                        <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Cartão de Crédito</FormLabel>
+                        <QuickAddSelect
+                          value={field.value || ''}
+                          onValueChange={field.onChange}
+                          isLoading={!creditCardsData}
+                          placeholder="Selecione o cartão..."
+                          emptyMessage="Nenhum cartão cadastrado"
+                          options={creditCardsData?.creditCards?.map((card) => ({
+                            label: `${card.name} (${card.bank})`,
+                            value: card.id,
+                          }))}
+                          quickAddLabel="Novo Cartão de Crédito"
+                          onQuickAddClick={() => setCreateCreditCardOpen(true)}
+                        />
                       </FormItem>
-                  )}
-              />
+                    )}
+                  />
+                )}
+              </div>
             </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -833,6 +914,14 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
       <CreateSectorDialog
         open={createSectorOpen}
         onOpenChange={setCreateSectorOpen}
+      />
+
+      <CreateCreditCardDialog
+        open={createCreditCardOpen}
+        onOpenChange={setCreateCreditCardOpen}
+        onSuccess={(card) => {
+          form.setValue('credit_card_id', card.id, { shouldValidate: true })
+        }}
       />
 
       <Dialog open={supplierDialogOpen.open} onOpenChange={(open) => setSupplierDialogOpen({ open, id: open ? supplierDialogOpen.id : undefined })}>
