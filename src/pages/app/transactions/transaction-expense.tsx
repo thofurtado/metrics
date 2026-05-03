@@ -218,10 +218,17 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
     const result = calculateCreditCardDueDate(watchedEmissao, card, holidayStrings)
     form.setValue('data_vencimento', result.due_date, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
     setBillingMonthLabel(result.billing_month_label)
-    if (card.account_id) {
-      form.setValue('account', card.account_id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
+    
+    const matchingAccount = accounts?.accounts?.find(acc => 
+      acc.id === card.account_id || 
+      acc.name?.toLowerCase() === card.bank?.toLowerCase() || 
+      acc.name?.toLowerCase() === card.name?.toLowerCase()
+    )
+
+    if (matchingAccount) {
+      form.setValue('account', matchingAccount.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
     }
-  }, [isCreditCard, watchedCreditCardId, watchedEmissao, creditCardsData, holidaysData, form])
+  }, [isCreditCard, watchedCreditCardId, watchedEmissao, creditCardsData, holidaysData, accounts, form])
 
   // Sync Logic handled in Inputs onChange directly.
 
@@ -708,8 +715,13 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                             field.onChange(val)
                             const card = creditCardsData?.creditCards?.find(c => c.id === val)
                             if (card) {
-                              if (card.account_id) {
-                                form.setValue('account', card.account_id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
+                              const matchingAccount = accounts?.accounts?.find(acc => 
+                                acc.id === card.account_id || 
+                                acc.name?.toLowerCase() === card.bank?.toLowerCase() || 
+                                acc.name?.toLowerCase() === card.name?.toLowerCase()
+                              )
+                              if (matchingAccount) {
+                                form.setValue('account', matchingAccount.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true })
                               }
                               if (watchedEmissao) {
                                 const holidayStrings = (holidaysData?.holidays ?? []).map((h: any) =>
