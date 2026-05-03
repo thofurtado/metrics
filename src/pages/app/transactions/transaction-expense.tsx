@@ -461,7 +461,21 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
         </Tabs>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+                e.preventDefault()
+                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
+                const index = formElements.indexOf(e.target as HTMLElement)
+                if (index > -1 && index < formElements.length - 1) {
+                  const nextElement = formElements[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }}
+            className="flex flex-col gap-5"
+          >
 
             {/* ─── GRUPO 1: VALOR E STATUS ─── */}
             <div className={cn(
@@ -474,8 +488,9 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 name="amount"
                 render={({ field }) => (
                   <FormItem className="space-y-1.5 flex-1">
-                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">
-                      {activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Despesa'}
+                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
+                      <span>{activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Despesa'}</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
                     </FormLabel>
                     <div className={cn(
                       "flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/10 transition-all duration-200",
@@ -534,8 +549,8 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                   name="confirmed"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between px-4 h-[72px] rounded-xl border border-border/60 bg-muted/20 space-y-0 sm:mb-0">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight cursor-pointer">
-                        {field.value ? '✓ Já Paguei' : 'A Pagar'}
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight cursor-pointer flex items-center">
+                        <span>{field.value ? '✓ Já Paguei' : 'A Pagar'}</span>
                       </FormLabel>
                       <FormControl>
                         <Switch
@@ -550,7 +565,31 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
               )}
             </div>
 
-            {/* ─── GRUPO 2: DATAS ─── */}
+            {/* ─── GRUPO 2: DETALHES (Descrição / Observação) ─── */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <span>Descrição / Observação</span>
+                    <span className="text-red-500 font-bold ml-1">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Ex: Aluguel do escritório..."
+                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-red-500/30 focus-visible:border-red-500"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {/* ─── SEPARADOR ─── */}
+            <div className="border-t border-border/40 -mx-1" />
+
+            {/* ─── GRUPO 3: DATAS ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Emissão */}
               <FormField
@@ -558,7 +597,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 name="data_emissao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Emissão</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Emissão</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
+                    </FormLabel>
                     <Popover modal={true} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -595,7 +637,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
                     <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                      <span>Vencimento</span>
+                      <span className="flex items-center">
+                        <span>Vencimento</span>
+                        <span className="text-red-500 font-bold ml-1">*</span>
+                      </span>
                       {isCreditCard && billingMonthLabel && (
                         <span className="text-xs font-semibold text-red-600 lowercase tracking-normal">
                           Fatura {billingMonthLabel}
@@ -637,24 +682,6 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
             {/* ─── SEPARADOR ─── */}
             <div className="border-t border-border/40 -mx-1" />
 
-            {/* ─── GRUPO 3: DETALHES ─── */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Descrição</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ex: Aluguel do escritório..."
-                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-red-500/30 focus-visible:border-red-500"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
             {/* ─── GRUPO 4: ENTIDADES (Fornecedor, Categoria, Conta) ─── */}
             <div className="grid grid-cols-1 gap-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -664,7 +691,8 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                 name="supplier"
                 render={({ field: { onChange, value } }) => (
                   <FormItem className="space-y-1.5">
-                              <SupplierCombobox
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Fornecedor</FormLabel>
+                    <SupplierCombobox
                       value={value}
                       onSelect={onChange}
                       suppliers={suppliersResult?.suppliers}
@@ -757,7 +785,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                   name="sector"
                   render={({ field: { onChange, value, disabled } }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Categoria</FormLabel>
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                        <span>Categoria</span>
+                        <span className="text-red-500 font-bold ml-1">*</span>
+                      </FormLabel>
                       <QuickAddSelect
                         value={value || ''}
                         onValueChange={onChange}
@@ -784,7 +815,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                   name="account"
                   render={({ field: { onChange, value, disabled } }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Conta</FormLabel>
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                        <span>Conta</span>
+                        <span className="text-red-500 font-bold ml-1">*</span>
+                      </FormLabel>
                       <QuickAddSelect
                         value={value || ''}
                         onValueChange={onChange}

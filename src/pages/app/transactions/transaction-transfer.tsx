@@ -151,7 +151,21 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
 
             <div className="px-6 pb-2 pt-6 flex-1 overflow-y-auto">
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+                    <form 
+                        onSubmit={form.handleSubmit(onSubmit)} 
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+                                e.preventDefault()
+                                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
+                                const index = formElements.indexOf(e.target as HTMLElement)
+                                if (index > -1 && index < formElements.length - 1) {
+                                    const nextElement = formElements[index + 1]
+                                    if (nextElement) nextElement.focus()
+                                }
+                            }
+                        }}
+                        className="flex flex-col gap-6"
+                    >
 
                         {/* ─── GRUPO 1: VALOR ─── */}
                         <FormField
@@ -159,8 +173,9 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                             name="amount"
                             render={({ field }) => (
                                 <FormItem className="space-y-1.5">
-                                    <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">
-                                        Valor da Transferência
+                                    <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
+                                        <span>Valor da Transferência</span>
+                                        <span className="text-red-500 font-bold ml-1">*</span>
                                     </FormLabel>
                                     <div className="flex items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-4 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all duration-200 w-full sm:w-3/4 mx-auto sm:mx-0">
                                         <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
@@ -180,7 +195,28 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                             )}
                         />
 
-                        {/* ─── GRUPO 2: CONTAS (ORIGEM E DESTINO) ─── */}
+                        {/* ─── GRUPO 2: DESCRIÇÃO / OBSERVAÇÃO ─── */}
+                        <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem className="space-y-1.5">
+                                    <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                                        <span>Descrição / Observação</span>
+                                        <span className="text-red-500 font-bold ml-1">*</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            {...field}
+                                            placeholder="Ex: Reserva de emergência..."
+                                            className="h-11 rounded-xl border-border/70 bg-background text-sm font-medium placeholder:text-muted-foreground/50 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500"
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* ─── GRUPO 3: CONTAS (ORIGEM E DESTINO) ─── */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-muted/20 p-5 rounded-2xl border border-border/50 relative mt-2">
                             <span className="absolute -top-3 left-4 bg-background px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border rounded-full">
                                 Contas Envolvidas
@@ -192,7 +228,10 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                                 name="account_origin"
                                 render={({ field: { onChange, value, disabled } }) => (
                                     <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">De (Origem)</FormLabel>
+                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center">
+                                            <span>De (Origem)</span>
+                                            <span className="text-red-500 font-bold ml-1">*</span>
+                                        </FormLabel>
                                         <QuickAddSelect
                                             value={value}
                                             onValueChange={onChange}
@@ -217,7 +256,10 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                                 name="account_destination"
                                 render={({ field: { onChange, value, disabled } }) => (
                                     <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Para (Destino)</FormLabel>
+                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center">
+                                            <span>Para (Destino)</span>
+                                            <span className="text-red-500 font-bold ml-1">*</span>
+                                        </FormLabel>
                                         <QuickAddSelect
                                             value={value}
                                             onValueChange={onChange}
@@ -245,15 +287,18 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                             </div>
                         </div>
 
-                        {/* ─── GRUPO 3: DATA E DESCRIÇÃO ─── */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* ─── GRUPO 4: DATA ─── */}
+                        <div className="grid grid-cols-1 gap-4">
                             {/* Data */}
                             <FormField
                                 control={form.control}
                                 name="date"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col gap-1.5">
-                                        <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Data</FormLabel>
+                                        <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                                            <span>Data</span>
+                                            <span className="text-red-500 font-bold ml-1">*</span>
+                                        </FormLabel>
                                         <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
@@ -282,26 +327,6 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                                     </FormItem>
                                 )}
                             />
-
-                            {/* Descrição */}
-                            <div className="sm:col-span-2">
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Descrição</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="Ex: Reserva de emergência..."
-                                                    className="h-11 rounded-xl border-border/70 bg-background text-sm font-medium placeholder:text-muted-foreground/50 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500"
-                                                />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
                         </div>
 
                         {/* ─── AÇÕES ─── */}

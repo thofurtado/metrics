@@ -334,7 +334,21 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         </Tabs>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+                e.preventDefault()
+                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
+                const index = formElements.indexOf(e.target as HTMLElement)
+                if (index > -1 && index < formElements.length - 1) {
+                  const nextElement = formElements[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }}
+            className="flex flex-col gap-5"
+          >
             <div className={cn(
               "grid gap-4 items-end",
               activeTab === 'single' ? "grid-cols-1 sm:grid-cols-[1fr,200px]" : "grid-cols-1"
@@ -344,8 +358,9 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 name="amount"
                 render={({ field }) => (
                   <FormItem className="space-y-1.5 flex-1">
-                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">
-                      {activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Receita'}
+                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
+                      <span>{activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Receita'}</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
                     </FormLabel>
                     <div className={cn(
                       "flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200",
@@ -418,13 +433,38 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               )}
             </div>
 
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <span>Descrição / Observação</span>
+                    <span className="text-red-500 font-bold ml-1">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Ex: Venda de serviço, Consultoria..."
+                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="border-t border-border/40 -mx-1" />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="data_emissao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Emissão</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Emissão</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
+                    </FormLabel>
                     <Popover modal={true} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -459,7 +499,10 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 name="data_vencimento"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Vencimento</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Vencimento</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
+                    </FormLabel>
                     <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -492,30 +535,16 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
 
             <div className="border-t border-border/40 -mx-1" />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Descrição</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ex: Venda de serviço, Consultoria..."
-                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <FormField
                 control={form.control}
                 name="sector"
                 render={({ field: { onChange, value, disabled } }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Categoria</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Categoria</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
+                    </FormLabel>
                     <QuickAddSelect
                       value={value || ''}
                       onValueChange={onChange}
@@ -541,7 +570,10 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 name="account"
                 render={({ field: { onChange, value, disabled } }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Conta</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Conta</span>
+                      <span className="text-red-500 font-bold ml-1">*</span>
+                    </FormLabel>
                     <QuickAddSelect
                       value={value || ''}
                       onValueChange={onChange}

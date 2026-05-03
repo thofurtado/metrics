@@ -239,7 +239,21 @@ export function TransactionDetailsModal({
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col overflow-y-auto w-full">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+                e.preventDefault()
+                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
+                const index = formElements.indexOf(e.target as HTMLElement)
+                if (index > -1 && index < formElements.length - 1) {
+                  const nextElement = formElements[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }}
+            className="flex-1 flex flex-col overflow-y-auto w-full"
+          >
             <div className="p-6 space-y-5">
             
               {/* GROUP WARNING */}
@@ -272,89 +286,43 @@ export function TransactionDetailsModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {/* VENCIMENTO */}
-                <FormField
-                  control={form.control}
-                  name="data_vencimento"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                        Vencimento
-                      </FormLabel>
-                      {isReadOnly ? (
-                        <div className="flex h-12 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-base font-medium opacity-80">
-                           <CalendarIcon className="mr-2 h-5 w-5 text-slate-400" />
-                           {format(field.value, 'dd/MM/yyyy')}
-                        </div>
-                      ) : (
-                        <Popover modal={true} open={isVencimentoOpen} onOpenChange={setIsVencimentoOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                type="button"
-                                className={cn(
-                                  "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
-                                {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={(date) => { if (date) { field.onChange(date); setIsVencimentoOpen(false) } }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* AMOUNT */}
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Montante (R$)</span>
+                      {!isReadOnly && <span className="text-red-500 font-bold ml-1">*</span>}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        disabled={isReadOnly}
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        className={cn(
+                          "h-12 rounded-xl border-border/70 text-base font-medium",
+                          isReadOnly ? "bg-muted/30 opacity-80 cursor-default font-bold" : "bg-background"
+                        )}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* AMOUNT */}
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col gap-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                        Montante (R$)
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={isReadOnly}
-                          type="number"
-                          step="0.01"
-                          inputMode="decimal"
-                          className={cn(
-                            "h-12 rounded-xl border-border/70 text-base font-medium",
-                            isReadOnly ? "bg-muted/30 opacity-80 cursor-default font-bold" : "bg-background"
-                          )}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* DESCRIÇÃO */}
+              {/* DESCRIÇÃO / OBSERVAÇÃO */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                      Descrição
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Descrição / Observação</span>
+                      {!isReadOnly && <span className="text-red-500 font-bold ml-1">*</span>}
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -371,6 +339,53 @@ export function TransactionDetailsModal({
                 )}
               />
 
+              {/* VENCIMENTO */}
+              <FormField
+                control={form.control}
+                name="data_vencimento"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1.5">
+                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                      <span>Vencimento</span>
+                      {!isReadOnly && <span className="text-red-500 font-bold ml-1">*</span>}
+                    </FormLabel>
+                    {isReadOnly ? (
+                      <div className="flex h-12 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-base font-medium opacity-80">
+                         <CalendarIcon className="mr-2 h-5 w-5 text-slate-400" />
+                         {format(field.value, 'dd/MM/yyyy')}
+                      </div>
+                    ) : (
+                      <Popover modal={true} open={isVencimentoOpen} onOpenChange={setIsVencimentoOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              type="button"
+                              className={cn(
+                                "w-full justify-start text-left font-medium h-12 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
+                              {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => { if (date) { field.onChange(date); setIsVencimentoOpen(false) } }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* CONTA */}
                 <FormField
@@ -378,8 +393,9 @@ export function TransactionDetailsModal({
                   name="accountId"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                        Conta Fluxo
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                        <span>Conta Fluxo</span>
+                        {!isReadOnly && <span className="text-red-500 font-bold ml-1">*</span>}
                       </FormLabel>
                       {isReadOnly ? (
                         <div className="flex h-12 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-base font-medium opacity-80">
@@ -410,8 +426,9 @@ export function TransactionDetailsModal({
                   name="sectorId"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                        Categoria
+                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                        <span>Categoria</span>
+                        {!isReadOnly && <span className="text-red-500 font-bold ml-1">*</span>}
                       </FormLabel>
                       {isReadOnly ? (
                         <div className="flex h-12 items-center rounded-xl border border-border/70 bg-muted/30 px-3 text-base font-medium opacity-80">
