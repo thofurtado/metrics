@@ -92,7 +92,23 @@ export function QuickAddSelect({
                 onValueChange={onValueChange}
                 disabled={disabled || isLoading}
             >
-                <SelectTrigger className="flex-1 h-10">
+                <SelectTrigger 
+                    className="flex-1 h-10"
+                    onKeyDown={(e) => {
+                        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                            e.preventDefault();
+                            if (!options || options.length === 0) return;
+                            const currentIndex = options.findIndex(opt => opt.value === value);
+                            if (e.key === "ArrowDown") {
+                                const nextIdx = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, options.length - 1);
+                                if (options[nextIdx]) onValueChange(options[nextIdx].value);
+                            } else if (e.key === "ArrowUp") {
+                                const prevIdx = currentIndex === -1 ? options.length - 1 : Math.max(currentIndex - 1, 0);
+                                if (options[prevIdx]) onValueChange(options[prevIdx].value);
+                            }
+                        }
+                    }}
+                >
                     <SelectValue placeholder={isLoading ? "Carregando..." : placeholder} />
                 </SelectTrigger>
                 <SelectContent withPortal={false}>

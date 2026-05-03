@@ -464,12 +464,17 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
           <form 
             onSubmit={form.handleSubmit(onSubmit)} 
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+              if (e.key === 'Enter' && (
+                e.target instanceof HTMLInputElement || 
+                e.target instanceof HTMLSelectElement || 
+                (e.target as HTMLElement).getAttribute('role') === 'combobox' ||
+                (e.target as HTMLElement).getAttribute('role') === 'switch'
+              )) {
                 e.preventDefault()
-                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
-                const index = formElements.indexOf(e.target as HTMLElement)
-                if (index > -1 && index < formElements.length - 1) {
-                  const nextElement = formElements[index + 1]
+                const inputs = Array.from(e.currentTarget.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])')) as HTMLElement[]
+                const index = inputs.indexOf(e.target as HTMLElement)
+                if (index > -1 && index < inputs.length - 1) {
+                  const nextElement = inputs[index + 1]
                   if (nextElement) nextElement.focus()
                 }
               }
@@ -557,6 +562,15 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                           checked={field.value}
                           onCheckedChange={field.onChange}
                           className="data-[state=checked]:bg-red-600"
+                          onKeyDown={(e) => {
+                            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              field.onChange(false)
+                            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              field.onChange(true)
+                            }
+                          }}
                         />
                       </FormControl>
                     </FormItem>
@@ -611,6 +625,19 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                               "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
                               !field.value && "text-muted-foreground"
                             )}
+                            onKeyDown={(e) => {
+                              if (e.key === 'ArrowUp') {
+                                e.preventDefault()
+                                const d = field.value ? new Date(field.value) : new Date()
+                                d.setDate(d.getDate() - 1)
+                                field.onChange(d)
+                              } else if (e.key === 'ArrowDown') {
+                                e.preventDefault()
+                                const d = field.value ? new Date(field.value) : new Date()
+                                d.setDate(d.getDate() + 1)
+                                field.onChange(d)
+                              }
+                            }}
                           >
                             <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
                             {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -659,6 +686,20 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
                               !field.value && "text-muted-foreground",
                               isCreditCard && "opacity-80 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border-dashed"
                             )}
+                            onKeyDown={(e) => {
+                              if (isCreditCard) return;
+                              if (e.key === 'ArrowUp') {
+                                e.preventDefault()
+                                const d = field.value ? new Date(field.value) : new Date()
+                                d.setDate(d.getDate() - 1)
+                                field.onChange(d)
+                              } else if (e.key === 'ArrowDown') {
+                                e.preventDefault()
+                                const d = field.value ? new Date(field.value) : new Date()
+                                d.setDate(d.getDate() + 1)
+                                field.onChange(d)
+                              }
+                            }}
                           >
                             <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
                             {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}

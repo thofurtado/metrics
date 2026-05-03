@@ -154,12 +154,17 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                     <form 
                         onSubmit={form.handleSubmit(onSubmit)} 
                         onKeyDown={(e) => {
-                            if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+                            if (e.key === 'Enter' && (
+                                e.target instanceof HTMLInputElement || 
+                                e.target instanceof HTMLSelectElement || 
+                                (e.target as HTMLElement).getAttribute('role') === 'combobox' ||
+                                (e.target as HTMLElement).getAttribute('role') === 'switch'
+                            )) {
                                 e.preventDefault()
-                                const formElements = Array.from(e.currentTarget.elements) as HTMLElement[]
-                                const index = formElements.indexOf(e.target as HTMLElement)
-                                if (index > -1 && index < formElements.length - 1) {
-                                    const nextElement = formElements[index + 1]
+                                const inputs = Array.from(e.currentTarget.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])')) as HTMLElement[]
+                                const index = inputs.indexOf(e.target as HTMLElement)
+                                if (index > -1 && index < inputs.length - 1) {
+                                    const nextElement = inputs[index + 1]
                                     if (nextElement) nextElement.focus()
                                 }
                             }
@@ -309,6 +314,19 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                                                             "w-full justify-start text-left font-medium h-11 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-sm",
                                                             !field.value && "text-muted-foreground"
                                                         )}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'ArrowUp') {
+                                                                e.preventDefault()
+                                                                const d = field.value ? new Date(field.value) : new Date()
+                                                                d.setDate(d.getDate() - 1)
+                                                                field.onChange(d)
+                                                            } else if (e.key === 'ArrowDown') {
+                                                                e.preventDefault()
+                                                                const d = field.value ? new Date(field.value) : new Date()
+                                                                d.setDate(d.getDate() + 1)
+                                                                field.onChange(d)
+                                                            }
+                                                        }}
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4 text-slate-400 flex-shrink-0" />
                                                         {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
