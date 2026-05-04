@@ -63,56 +63,58 @@ export function EmployeesList() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Recursos Humanos</h2>
-                    <p className="text-muted-foreground">Gestão de funcionários, folha e ponto.</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Recursos Humanos</h2>
+                    <p className="text-muted-foreground text-sm sm:text-base">Gestão de funcionários, folha e ponto.</p>
                 </div>
-                <EmployeeFormDialog />
+                <div className="w-full sm:w-auto">
+                    <EmployeeFormDialog />
+                </div>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card className="col-span-4 md:col-span-2 lg:col-span-1 bg-primary text-primary-foreground">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-primary text-primary-foreground">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Geral</CardTitle>
                         <Users className="h-4 w-4 opacity-70" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-4xl font-bold">{summary?.total || 0}</div>
+                        <div className="text-3xl sm:text-4xl font-bold">{summary?.total || 0}</div>
                         <p className="text-xs opacity-70 mt-1">Colaboradores na base</p>
                     </CardContent>
                 </Card>
-                <div className="col-span-4 md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Registrados (CLT)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{summary?.registered || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Sem Registro</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-orange-600">{summary?.unregistered || 0}</div>
+                    </CardContent>
+                </Card>
+                <div className="grid grid-cols-2 gap-4 col-span-1 sm:col-span-2 lg:col-span-1">
                     <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Registrados (CLT)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{summary?.registered || 0}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Sem Registro</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-orange-600">{summary?.unregistered || 0}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader className="pb-2 px-3 sm:px-6">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Horistas</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-3 sm:px-6">
                             <div className="text-2xl font-bold text-slate-600">{summary?.hourly || 0}</div>
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader className="pb-2 px-3 sm:px-6">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Diaristas</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-3 sm:px-6">
                             <div className="text-2xl font-bold text-blue-600">{summary?.daily || 0}</div>
                         </CardContent>
                     </Card>
@@ -132,9 +134,9 @@ export function EmployeesList() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Premium Filter Bar */}
-                    <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-4 bg-muted/20 border border-border/50 rounded-2xl">
-                        <div className="flex flex-row items-center gap-3 w-full lg:w-auto">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all flex-1 lg:w-[300px]">
+                    <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-4 p-4 bg-muted/20 border border-border/50 rounded-2xl">
+                        <div className="flex flex-row items-center gap-3 w-full sm:w-auto flex-1">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-full border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all w-full sm:max-w-xs">
                                 <Search className="h-4 w-4 text-primary opacity-70" />
                                 <input
                                     placeholder="Buscar por nome..."
@@ -145,8 +147,8 @@ export function EmployeesList() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4 w-full lg:w-auto">
-                            <div className="flex items-center gap-3 bg-background py-1.5 px-4 rounded-full border border-border/50">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="flex items-center gap-3 bg-background py-1.5 px-4 rounded-full border border-border/50 w-full sm:w-auto justify-between sm:justify-start">
                                 <Filter className="h-4 w-4 text-primary opacity-70" />
                                 <div className="flex items-center gap-2">
                                     <Label htmlFor="status-filter" className="text-xs font-bold uppercase tracking-tight text-muted-foreground cursor-pointer whitespace-nowrap">
@@ -176,16 +178,16 @@ export function EmployeesList() {
                         </div>
                     </div>
 
-                    <div className="rounded-md border">
+                    <div className="overflow-x-auto rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Nome</TableHead>
-                                    <TableHead>Cargo</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Cargo</TableHead>
                                     <TableHead>Regime</TableHead>
                                     <TableHead>Remuneração</TableHead>
-                                    <TableHead className="text-center">V. Transporte</TableHead>
-                                    <TableHead className="text-center">Cesta B.</TableHead>
+                                    <TableHead className="text-center hidden sm:table-cell">V. Transporte</TableHead>
+                                    <TableHead className="text-center hidden md:table-cell">Cesta B.</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -205,11 +207,11 @@ export function EmployeesList() {
                                         <TableRow key={employee.id}>
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col">
-                                                    <span>{employee.name}</span>
+                                                    <span className="truncate max-w-[120px] sm:max-w-none">{employee.name}</span>
                                                     <span className="text-xs text-muted-foreground">PIN: {employee.pin}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{employee.role}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{employee.role}</TableCell>
                                             <TableCell>
                                                 <Badge variant="secondary" className="text-xs font-normal">
                                                     {employee.registrationType === 'DAILY' ? 'Diarista' :
@@ -217,14 +219,14 @@ export function EmployeesList() {
                                                         employee.registrationType === 'UNREGISTERED' ? 'Sem Registro' : 'CLT'}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="whitespace-nowrap">
                                                 {employee.registrationType === 'DAILY'
                                                     ? `${formatCurrency(Number(employee.dailyRate || 0))}/dia`
                                                     : employee.registrationType === 'HOURLY'
                                                         ? `${formatCurrency(Number(employee.salary || 0))}/hora`
                                                         : formatCurrency(Number(employee.salary || 0))}
                                             </TableCell>
-                                            <TableCell className="text-center text-muted-foreground">
+                                            <TableCell className="text-center text-muted-foreground hidden sm:table-cell">
                                                 {Number(employee.transportAllowance) > 0 ? (
                                                     <div className="flex items-center justify-center gap-1 text-slate-700 font-medium text-xs">
                                                         <Bus className="h-3 w-3" />
@@ -234,7 +236,7 @@ export function EmployeesList() {
                                                     <span className="text-xs opacity-50">-</span>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell className="text-center hidden md:table-cell">
                                                 {employee.hasCestaBasica ? (
                                                     <div className="flex justify-center text-green-600"><Check className="h-4 w-4" /></div>
                                                 ) : (
@@ -242,7 +244,7 @@ export function EmployeesList() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
+                                                <div className="flex justify-end gap-1 sm:gap-2">
                                                     <EmployeeFormDialog employee={employee}>
                                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                                             <Pencil className="h-4 w-4" />
@@ -252,11 +254,11 @@ export function EmployeesList() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="h-8 border-dashed"
+                                                        className="h-8 px-2 sm:px-3 border-dashed"
                                                         onClick={() => navigate(`/hr/timesheet/${employee.id}`)}
                                                     >
-                                                        <CalendarDays className="h-4 w-4 mr-2" />
-                                                        Ponto
+                                                        <CalendarDays className="h-4 w-4 sm:mr-2" />
+                                                        <span className="hidden sm:inline">Ponto</span>
                                                     </Button>
                                                     <DebtManagementDialog employeeId={employee.id} employeeName={employee.name} />
                                                 </div>

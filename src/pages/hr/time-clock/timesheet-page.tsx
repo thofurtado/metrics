@@ -359,257 +359,259 @@ export function TimeSheetPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
             {/* Header */}
-            <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 md:px-6 bg-card sticky top-0 z-30 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} title="Voltar">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight">Espelho de Ponto</h1>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="font-medium text-foreground">{employee?.name}</span>
-                            <span>•</span>
-                            <span>{employee?.role}</span>
+            <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b p-4 md:px-6 bg-card sticky top-0 z-30 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between xl:justify-start gap-4 w-full xl:w-auto">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} title="Voltar">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div>
+                            <h1 className="text-lg sm:text-xl font-bold tracking-tight">Espelho de Ponto</h1>
+                            <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-foreground">{employee?.name}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span>{employee?.role}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Summary Logic */}
-                <div className="hidden md:flex items-center gap-4">
-                    {(() => {
-                        const rows = watch('rows') || [];
-                        // Estimativa DIÁRIA (espelha a lógica do backend):
-                        // Para cada dia, apura o excedente acima da jornada diária (7h20 = 440min).
-                        // Se for Domingo/Feriado: excedente vai para 100%; caso contrário: 60%.
-                        let estimatedOvt60 = 0;  // minutos de HE a 60%
-                        let estimatedOvt100 = 0; // minutos de HE a 100%
-                        let totalMinutes60 = 0;   // total trabalhado em dias normais (para exibição de horas)
-                        let totalMinutes100 = 0;  // total trabalhado em Dom/Feriado (para exibição de horas)
-                        let dsrcMinutes = 0;
-                        const DAILY_WORKLOAD = 440; // 7h20
-                        const TOLERANCE = 10;       // 10 minutos de tolerância CLT
-                        // weeksWithPresence: semanas que tiveram ao menos 1 dia trabalhado ou justificado
-                        const weeksWithPresence = new Set<string>();
-                        const weeksWithInjustFalta = new Set<string>();
+                    {/* Summary Logic */}
+                    <div className="flex items-center gap-4 overflow-x-auto py-1 sm:py-0">
+                        {(() => {
+                            const rows = watch('rows') || [];
+                            // Estimativa DIÁRIA (espelha a lógica do backend):
+                            // Para cada dia, apura o excedente acima da jornada diária (7h20 = 440min).
+                            // Se for Domingo/Feriado: excedente vai para 100%; caso contrário: 60%.
+                            let estimatedOvt60 = 0;  // minutos de HE a 60%
+                            let estimatedOvt100 = 0; // minutos de HE a 100%
+                            let totalMinutes60 = 0;   // total trabalhado em dias normais (para exibição de horas)
+                            let totalMinutes100 = 0;  // total trabalhado em Dom/Feriado (para exibição de horas)
+                            let dsrcMinutes = 0;
+                            const DAILY_WORKLOAD = 440; // 7h20
+                            const TOLERANCE = 10;       // 10 minutos de tolerância CLT
+                            // weeksWithPresence: semanas que tiveram ao menos 1 dia trabalhado ou justificado
+                            const weeksWithPresence = new Set<string>();
+                            const weeksWithInjustFalta = new Set<string>();
 
-                        rows.forEach((row: any) => {
-                            const d = new Date(row.date + "T12:00:00");
-                            const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
+                            rows.forEach((row: any) => {
+                                const d = new Date(row.date + "T12:00:00");
+                                const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`;
 
-                            if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
-                                totalMinutes60 += DAILY_WORKLOAD;
-                                weeksWithPresence.add(weekKey);
-                                return;
-                            }
+                                if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") {
+                                    totalMinutes60 += DAILY_WORKLOAD;
+                                    weeksWithPresence.add(weekKey);
+                                    return;
+                                }
 
-                            if (row.status === "FALTA_INJUSTIFICADA") {
-                                weeksWithInjustFalta.add(weekKey);
-                                weeksWithPresence.add(weekKey);
-                                return;
-                            }
+                                if (row.status === "FALTA_INJUSTIFICADA") {
+                                    weeksWithInjustFalta.add(weekKey);
+                                    weeksWithPresence.add(weekKey);
+                                    return;
+                                }
 
-                            if (row?.status !== "PRESENCA") return;
+                                if (row?.status !== "PRESENCA") return;
 
-                            const setTime = (t: string, nextDay?: boolean) => {
-                                if (!t) return null;
-                                const [h, m] = t.split(':').map(Number);
-                                return (h + (nextDay ? 24 : 0)) * 60 + m;
-                            };
+                                const setTime = (t: string, nextDay?: boolean) => {
+                                    if (!t) return null;
+                                    const [h, m] = t.split(':').map(Number);
+                                    return (h + (nextDay ? 24 : 0)) * 60 + m;
+                                };
 
-                            const cin = setTime(row.clockIn, false);
-                            const bin = setTime(row.breakStart, false);
-                            const bout = setTime(row.breakEnd, false);
-                            const cout = setTime(row.clockOut, row.clockOutNextDay);
-                            const xcin = setTime(row.extraClockIn, false);
-                            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
+                                const cin = setTime(row.clockIn, false);
+                                const bin = setTime(row.breakStart, false);
+                                const bout = setTime(row.breakEnd, false);
+                                const cout = setTime(row.clockOut, row.clockOutNextDay);
+                                const xcin = setTime(row.extraClockIn, false);
+                                const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
 
-                            // Só conta horas se houver ao menos entrada + saída
-                            let workedDayMins = 0;
-                            if (cin !== null && bin !== null && bout !== null && cout !== null) {
-                                workedDayMins = (bin - cin) + (cout - bout);
-                            } else if (cin !== null && cout !== null && bin === null && bout === null) {
-                                workedDayMins = (cout - cin);
-                            }
-                            // Se só tem entrada sem saída, workedDayMins permanece 0 (registro incompleto)
-                            if (xcin !== null && xcout !== null) {
-                                workedDayMins += (xcout - xcin);
-                            }
+                                // Só conta horas se houver ao menos entrada + saída
+                                let workedDayMins = 0;
+                                if (cin !== null && bin !== null && bout !== null && cout !== null) {
+                                    workedDayMins = (bin - cin) + (cout - bout);
+                                } else if (cin !== null && cout !== null && bin === null && bout === null) {
+                                    workedDayMins = (cout - cin);
+                                }
+                                // Se só tem entrada sem saída, workedDayMins permanece 0 (registro incompleto)
+                                if (xcin !== null && xcout !== null) {
+                                    workedDayMins += (xcout - xcin);
+                                }
 
-                            // Só marca presença na semana se tiver ao menos entrada registrada
-                            if (cin !== null) {
-                                weeksWithPresence.add(weekKey);
-                            }
+                                // Só marca presença na semana se tiver ao menos entrada registrada
+                                if (cin !== null) {
+                                    weeksWithPresence.add(weekKey);
+                                }
 
-                            // Excedente diário (com tolerância)
-                            const excess = workedDayMins - DAILY_WORKLOAD;
-                            const dailyOvt = excess > TOLERANCE ? excess : 0;
+                                // Excedente diário (com tolerância)
+                                const excess = workedDayMins - DAILY_WORKLOAD;
+                                const dailyOvt = excess > TOLERANCE ? excess : 0;
 
-                            const isSunday = d.getDay() === 0;
-                            const isHoliday = holidaysData?.holidays?.some(h => h.date.startsWith(row.date));
+                                const isSunday = d.getDay() === 0;
+                                const isHoliday = holidaysData?.holidays?.some(h => h.date.startsWith(row.date));
 
-                            if (isSunday || isHoliday) {
-                                totalMinutes100 += workedDayMins;
-                                estimatedOvt100 += dailyOvt;
-                            } else {
-                                totalMinutes60 += workedDayMins;
-                                estimatedOvt60 += dailyOvt;
-                            }
-                        });
+                                if (isSunday || isHoliday) {
+                                    totalMinutes100 += workedDayMins;
+                                    estimatedOvt100 += dailyOvt;
+                                } else {
+                                    totalMinutes60 += workedDayMins;
+                                    estimatedOvt60 += dailyOvt;
+                                }
+                            });
 
-                        // DSR: 1 por semana que teve presença e sem falta injustificada
-                        weeksWithPresence.forEach(w => {
-                            if (!weeksWithInjustFalta.has(w)) {
-                                dsrcMinutes += 440;
-                            }
-                        });
+                            // DSR: 1 por semana que teve presença e sem falta injustificada
+                            weeksWithPresence.forEach(w => {
+                                if (!weeksWithInjustFalta.has(w)) {
+                                    dsrcMinutes += 440;
+                                }
+                            });
 
-                        // Horas trabalhadas = apenas horas reais (sem DSR, que é remuneração contábil)
-                        const totalMinutes = totalMinutes60 + totalMinutes100;
+                            // Horas trabalhadas = apenas horas reais (sem DSR, que é remuneração contábil)
+                            const totalMinutes = totalMinutes60 + totalMinutes100;
 
-                        const isNegative = totalMinutes < 0;
-                        const absMins = Math.abs(totalMinutes);
-                        const h = Math.floor(absMins / 60);
-                        const m = absMins % 60;
-                        const formattedHours = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`;
+                            const isNegative = totalMinutes < 0;
+                            const absMins = Math.abs(totalMinutes);
+                            const h = Math.floor(absMins / 60);
+                            const m = absMins % 60;
+                            const formattedHours = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`;
 
-                        return (
-                            <>
-                                <div className="flex items-center gap-6 px-4 py-2 bg-muted/30 rounded-lg border border-border/50 shadow-sm">
-                                    {/* Saldo de Horas */}
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Horas Trabalhadas</span>
-                                        <span className={cn("font-mono font-bold text-xl", "text-primary")}>
-                                            {timeClocks?.summary?.totalHours || formattedHours}
-                                        </span>
-                                    </div>
-
-                                    <div className="w-px h-8 bg-border" />
-
-                                    {/* Dias Extras */}
-                                    <div className="flex flex-col items-center text-green-600">
-                                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">Dias Extras</span>
-                                        <span className="font-mono font-bold text-xl">
-                                            {timeClocks?.summary?.extraDays ?? rows.filter((r: any) => r.isExtraDay).length}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {employee?.registrationType === 'DAILY' && (
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex flex-col items-end px-3 py-2 bg-green-50/50 rounded-lg border border-green-100">
-                                            <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold">Q1 (1 a 15)</span>
-                                            <span className="font-mono font-bold text-lg text-green-700">
-                                                {(() => {
-                                                    const workedQ1 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() <= 15).length;
-                                                    const rate = employee.dailyRate || 0;
-                                                    return (workedQ1 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                                })()}
+                            return (
+                                <>
+                                    <div className="flex items-center gap-4 px-3 py-1.5 bg-muted/30 rounded-lg border border-border/50 shadow-sm flex-shrink-0">
+                                        {/* Saldo de Horas */}
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Horas Trabalhadas</span>
+                                            <span className={cn("font-mono font-bold text-lg sm:text-xl", "text-primary")}>
+                                                {timeClocks?.summary?.totalHours || formattedHours}
                                             </span>
                                         </div>
-                                        <div className="flex flex-col items-end px-3 py-2 bg-emerald-50/50 rounded-lg border border-emerald-100">
-                                            <span className="text-emerald-700 text-[10px] uppercase tracking-wider font-semibold">Q2 (16+)</span>
-                                            <span className="font-mono font-bold text-lg text-emerald-700">
-                                                {(() => {
-                                                    const workedQ2 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() > 15).length;
-                                                    const rate = employee.dailyRate || 0;
-                                                    return (workedQ2 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                                })()}
+
+                                        <div className="w-px h-6 bg-border" />
+
+                                        {/* Dias Extras */}
+                                        <div className="flex flex-col items-center text-green-600">
+                                            <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Dias Extras</span>
+                                            <span className="font-mono font-bold text-lg sm:text-xl">
+                                                {timeClocks?.summary?.extraDays ?? rows.filter((r: any) => r.isExtraDay).length}
                                             </span>
                                         </div>
                                     </div>
-                                )}
 
-                                {employee?.registrationType === 'HOURLY' && (
-                                    <div className="flex flex-col items-end px-4 py-2 bg-blue-50/50 rounded-lg border border-blue-100">
-                                        <span className="text-blue-700 text-[10px] uppercase tracking-wider font-semibold">Total a Pagar (Horas)</span>
-                                        <span className="font-mono font-bold text-xl text-blue-700">
-                                            {(() => {
-                                                const rate = Number(employee.salary) || 0;
-                                            const totalValue = ((totalMinutes60 + totalMinutes100) / 60) * rate;
-                                                return totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                            })()}
-                                        </span>
-                                    </div>
-                                )}
+                                    {employee?.registrationType === 'DAILY' && (
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <div className="flex flex-col items-end px-3 py-1 bg-green-50/50 rounded-lg border border-green-100">
+                                                <span className="text-green-700 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Q1 (1 a 15)</span>
+                                                <span className="font-mono font-bold text-base sm:text-lg text-green-700">
+                                                    {(() => {
+                                                        const workedQ1 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() <= 15).length;
+                                                        const rate = employee.dailyRate || 0;
+                                                        return (workedQ1 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                                    })()}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end px-3 py-1 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                                                <span className="text-emerald-700 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Q2 (16+)</span>
+                                                <span className="font-mono font-bold text-base sm:text-lg text-emerald-700">
+                                                    {(() => {
+                                                        const workedQ2 = rows.filter((r: any) => r.status === "PRESENCA" && new Date(r.date + "T12:00:00").getDate() > 15).length;
+                                                        const rate = employee.dailyRate || 0;
+                                                        return (workedQ2 * rate).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
 
-                                {employee?.registrationType === 'REGISTERED' && (
-                                    <div className="flex flex-col items-end px-4 py-2 bg-purple-50/50 rounded-lg border border-purple-100 shadow-sm">
-                                        <span className="text-purple-700 text-[10px] uppercase tracking-wider font-semibold">Horas Extras (Estimativa)</span>
-                                        <span className="font-mono font-bold text-lg text-purple-700">
-                                            {(() => {
-                                                const rate = Number(employee.salary) || 0;
-                                                const hourlyRate = rate / 220;
+                                    {employee?.registrationType === 'HOURLY' && (
+                                        <div className="flex flex-col items-end px-3 py-1 bg-blue-50/50 rounded-lg border border-blue-100 flex-shrink-0">
+                                            <span className="text-blue-700 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Total a Pagar (Horas)</span>
+                                            <span className="font-mono font-bold text-base sm:text-lg text-blue-700">
+                                                {(() => {
+                                                    const rate = Number(employee.salary) || 0;
+                                                    const totalValue = ((totalMinutes60 + totalMinutes100) / 60) * rate;
+                                                    return totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                                })()}
+                                            </span>
+                                        </div>
+                                    )}
 
-                                                const overtimeHourlyRate60 = hourlyRate * 1.6; // 60%
-                                                const overtimeHourlyRate100 = hourlyRate * 2.0; // 100%
+                                    {employee?.registrationType === 'REGISTERED' && (
+                                        <div className="flex flex-col items-end px-3 py-1 bg-purple-50/50 rounded-lg border border-purple-100 shadow-sm flex-shrink-0">
+                                            <span className="text-purple-700 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">Horas Extras (Estimativa)</span>
+                                            <span className="font-mono font-bold text-base sm:text-lg text-purple-700">
+                                                {(() => {
+                                                    const rate = Number(employee.salary) || 0;
+                                                    const hourlyRate = rate / 220;
 
-                                                const summaryResult = timeClocks?.summary;
+                                                    const overtimeHourlyRate60 = hourlyRate * 1.6; // 60%
+                                                    const overtimeHourlyRate100 = hourlyRate * 2.0; // 100%
 
-                                                // Preferência pelo backend (linha a linha), caso contrário usa estimativa diária
-                                                const finalOvt60 = summaryResult?.totalOvertimeMinutes60 ?? estimatedOvt60;
-                                                const finalOvt100 = summaryResult?.totalOvertimeMinutes100 ?? estimatedOvt100;
+                                                    const summaryResult = timeClocks?.summary;
 
-                                                const value60 = summaryResult?.totalOvertimeValue60 ?? ((finalOvt60 / 60) * overtimeHourlyRate60);
-                                                const value100 = summaryResult?.totalOvertimeValue100 ?? ((finalOvt100 / 60) * overtimeHourlyRate100);
-                                                const totalValue = value60 + value100;
-                                                
-                                                if (finalOvt60 <= 0 && finalOvt100 <= 0) return "0h00 - R$ 0,00";
+                                                    // Preferência pelo backend (linha a linha), caso contrário usa estimativa diária
+                                                    const finalOvt60 = summaryResult?.totalOvertimeMinutes60 ?? estimatedOvt60;
+                                                    const finalOvt100 = summaryResult?.totalOvertimeMinutes100 ?? estimatedOvt100;
 
-                                                const totalOvtMins = finalOvt60 + finalOvt100;
-                                                const h = Math.floor(totalOvtMins / 60);
-                                                const m = totalOvtMins % 60;
-                                                const formattedHE = `${h}h${m.toString().padStart(2, '0')}`;
-                                                
-                                                const formatMins = (mins: number) => `${Math.floor(mins/60)}h${(mins%60).toString().padStart(2, '0')}`;
+                                                    const value60 = summaryResult?.totalOvertimeValue60 ?? ((finalOvt60 / 60) * overtimeHourlyRate60);
+                                                    const value100 = summaryResult?.totalOvertimeValue100 ?? ((finalOvt100 / 60) * overtimeHourlyRate100);
+                                                    const totalValue = value60 + value100;
 
-                                                return (
-                                                    <TooltipProvider delayDuration={200}>
-                                                        <Tooltip>
-                                                            <TooltipTrigger className="cursor-help flex items-center gap-1 border-b border-dashed border-purple-300">
-                                                                {formattedHE} = {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="bottom" className="text-xs bg-purple-900 text-purple-50 p-3 max-w-[280px] leading-relaxed shadow-xl border-purple-800">
-                                                                <p className="font-semibold mb-1 border-b border-purple-700 pb-1">Cálculo de Hora Extra</p>
-                                                                <ul className="space-y-2 mt-2">
-                                                                    <li><span className="opacity-70">Salário-base:</span> R$ {rate.toFixed(2)} (R$ {hourlyRate.toFixed(2)}/h)</li>
-                                                                    {finalOvt60 > 0 && (
-                                                                        <li className="bg-purple-800/50 p-1.5 rounded">
-                                                                            <span className="opacity-70 font-semibold block">Dias Normais (+60%):</span> 
-                                                                            {formatMins(finalOvt60)} = {value60.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                    if (finalOvt60 <= 0 && finalOvt100 <= 0) return "0h00 - R$ 0,00";
+
+                                                    const totalOvtMins = finalOvt60 + finalOvt100;
+                                                    const h = Math.floor(totalOvtMins / 60);
+                                                    const m = totalOvtMins % 60;
+                                                    const formattedHE = `${h}h${m.toString().padStart(2, '0')}`;
+
+                                                    const formatMins = (mins: number) => `${Math.floor(mins/60)}h${(mins%60).toString().padStart(2, '0')}`;
+
+                                                    return (
+                                                        <TooltipProvider delayDuration={200}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger className="cursor-help flex items-center gap-1 border-b border-dashed border-purple-300 whitespace-nowrap">
+                                                                    {formattedHE} = {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                </TooltipTrigger>
+                                                                <TooltipContent side="bottom" className="text-xs bg-purple-900 text-purple-50 p-3 max-w-[280px] leading-relaxed shadow-xl border-purple-800">
+                                                                    <p className="font-semibold mb-1 border-b border-purple-700 pb-1">Cálculo de Hora Extra</p>
+                                                                    <ul className="space-y-2 mt-2">
+                                                                        <li><span className="opacity-70">Salário-base:</span> R$ {rate.toFixed(2)} (R$ {hourlyRate.toFixed(2)}/h)</li>
+                                                                        {finalOvt60 > 0 && (
+                                                                            <li className="bg-purple-800/50 p-1.5 rounded">
+                                                                                <span className="opacity-70 font-semibold block">Dias Normais (+60%):</span> 
+                                                                                {formatMins(finalOvt60)} = {value60.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                            </li>
+                                                                        )}
+                                                                        {finalOvt100 > 0 && (
+                                                                            <li className="bg-purple-800/50 p-1.5 rounded">
+                                                                                <span className="opacity-70 font-semibold block">Dom/Feriado (+100%):</span> 
+                                                                                {formatMins(finalOvt100)} = {value100.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                            </li>
+                                                                        )}
+                                                                        <li className="pt-1 mt-1 border-t border-purple-700 font-bold text-purple-200">
+                                                                            Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                                         </li>
-                                                                    )}
-                                                                    {finalOvt100 > 0 && (
-                                                                        <li className="bg-purple-800/50 p-1.5 rounded">
-                                                                            <span className="opacity-70 font-semibold block">Dom/Feriado (+100%):</span> 
-                                                                            {formatMins(finalOvt100)} = {value100.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                                                        </li>
-                                                                    )}
-                                                                    <li className="pt-1 mt-1 border-t border-purple-700 font-bold text-purple-200">
-                                                                        Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                                                    </li>
-                                                                </ul>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                );
-                                            })()}
-                                        </span>
-                                    </div>
-                                )}
-                            </>
-                        );
-                    })()}
+                                                                    </ul>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                })()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 border rounded-md p-1 bg-background/50">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full xl:w-auto justify-end">
+                    <div className="flex items-center gap-2 border rounded-md p-1 bg-background/50 flex-shrink-0">
                         <MonthPicker date={month} setDate={setMonth} />
                     </div>
-                    <Button onClick={exportToPDF} variant="outline" className="shadow-md">
+                    <Button onClick={exportToPDF} variant="outline" className="shadow-md flex-1 sm:flex-initial">
                         <FileText className="mr-2 h-4 w-4" />
                         Exportar para PDF
                     </Button>
-                    <Button onClick={handleSubmit(onSubmit)} disabled={isSaving || isLoading} className="w-[180px] shadow-md">
+                    <Button onClick={handleSubmit(onSubmit)} disabled={isSaving || isLoading} className="w-full sm:w-[180px] shadow-md flex-1 sm:flex-initial">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         Salvar Alterações
                     </Button>
@@ -617,7 +619,7 @@ export function TimeSheetPage() {
             </header>
 
             {/* Grid */}
-            <div className="flex-1 overflow-auto p-0">
+            <div className="flex-1 overflow-x-auto w-full max-w-full p-0">
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <Table className="border-collapse">
                         <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">

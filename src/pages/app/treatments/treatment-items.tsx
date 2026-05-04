@@ -27,7 +27,9 @@ import { EmptyState } from '@/components/empty-state'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { ProductItemDialog } from '../items/product-item-dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -86,6 +88,20 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products')
   const [discountInputDisplay, setDiscountInputDisplay] = useState('0')
   const [isContractMode, setIsContractMode] = useState(false)
+
+  const [isCreateItemOpen, setIsCreateItemOpen] = useState(false)
+  const [createItemType, setCreateItemType] = useState<'PRODUCT' | 'SERVICE'>('PRODUCT')
+
+  function handleOpenCreateItem(type: 'PRODUCT' | 'SERVICE') {
+    setCreateItemType(type)
+    setIsCreateItemOpen(true)
+  }
+
+  function handleCreateItemSuccess() {
+    setIsCreateItemOpen(false)
+    queryClient.invalidateQueries({ queryKey: ['items-sales'] })
+    toast.success('Item cadastrado com sucesso!')
+  }
 
   // Ref for scrolling to form on item select (mobile primarily)
   const formRef = useRef<HTMLFormElement>(null)
@@ -420,17 +436,37 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             "flex-col w-full h-full md:w-[60%] lg:w-[65%] xl:w-[70%] bg-slate-50 dark:bg-slate-950 overflow-hidden",
             activeTab === 'products' ? "flex" : "hidden md:flex"
           )}>
-            {/* Search Bar */}
-            <div className="p-4 bg-white dark:bg-slate-900 border-b flex-none sticky top-0 z-10">
-              <div className="relative">
+            {/* Search Bar & Add Button */}
+            <div className="p-4 bg-white dark:bg-slate-900 border-b flex-none sticky top-0 z-10 flex gap-3 items-center">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder="Buscar produtos ou serviços..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 text-base shadow-sm border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl"
+                  className="pl-10 h-12 text-base shadow-sm border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl w-full"
                 />
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 border-minsk-200 text-minsk-700 bg-minsk-50/50 hover:bg-minsk-50 rounded-xl px-4 flex items-center gap-2 flex-shrink-0">
+                    <Plus className="h-5 w-5" />
+                    <span className="hidden sm:inline font-semibold">Novo Item</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 z-[10100]">
+                  <DropdownMenuItem onClick={() => handleOpenCreateItem('PRODUCT')} className="cursor-pointer">
+                    Novo Produto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenCreateItem('SERVICE')} className="cursor-pointer">
+                    Novo Serviço
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
+                <ProductItemDialog initialType={createItemType} onSuccess={handleCreateItemSuccess} />
+              </Dialog>
             </div>
 
             {/* Grid */}

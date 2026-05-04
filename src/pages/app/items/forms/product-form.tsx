@@ -89,13 +89,17 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
     const { mutateAsync: createCategoryFn } = useMutation({
         mutationFn: createCategory,
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] })
             setIsNewCategoryOpen(false)
             setNewCategoryName('')
             toast.success('Categoria criada!')
-            if (data?.category?.name) {
+            if (data?.category?.id) {
+                form.setValue('category', data.category.id)
+            } else if (data?.category?.name) {
                 form.setValue('category', data.category.name)
+            } else if (data?.id) {
+                form.setValue('category', data.id)
             }
         },
         onError: () => {
@@ -113,7 +117,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
         defaultValues: {
             name: initialData?.name ?? '',
             description: initialData?.description ?? '',
-            category: typeof initialData?.category === 'string' ? initialData.category : (initialData?.category?.name ?? ''),
+            category: initialData?.category?.id ?? initialData?.category_id ?? (typeof initialData?.category === 'string' ? initialData.category : ''),
 
             cost: (initialData?.product && typeof initialData.product.cost === 'number') ? initialData.product.cost : 0,
             price: initialData?.product?.price ?? 0,
@@ -188,7 +192,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             form.reset({
                 name: initialData.name,
                 description: initialData.description ?? '',
-                category: typeof initialData.category === 'string' ? initialData.category : (initialData.category?.name ?? ''),
+                category: initialData.category?.id ?? initialData.category_id ?? (typeof initialData.category === 'string' ? initialData.category : ''),
                 cost: initialData.product?.cost ?? 0,
                 price: initialData.product?.price ?? 0,
                 stock: initialData.product?.stock ?? 0,
@@ -367,7 +371,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                                 </FormControl>
                                                 <SelectContent withPortal={false} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.stopPropagation()}>
                                                     {(categoriesData?.categories || []).map((cat: any) => (
-                                                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>

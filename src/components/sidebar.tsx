@@ -8,6 +8,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useModules } from '@/context/module-context'
@@ -27,6 +28,7 @@ export function Sidebar() {
 
   const menuItems = [
     { name: 'Mercadoria', path: '/items', icon: Boxes, access: hasAccess('items') || isModuleActive('merchandise') },
+    { name: 'Atendimento', path: '/treatments', icon: ClipboardList, access: hasAccess('service') || isModuleActive('treatments') },
     { name: 'Financeiro', path: '/transactions', icon: PiggyBank, subtext: 'Fluxo e Saúde Financeira', access: hasAccess('finance') || isModuleActive('financial') },
     { name: 'RH', path: '/hr', icon: Users, access: hasAccess('hr') || isModuleActive('hr_module') },
   ].filter((item) => item.access)

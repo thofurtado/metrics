@@ -207,17 +207,17 @@ export function TimeClockAudit() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10 time-clock-report">
             {/* Header & Controls */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Espelho Ponto (Visão Geral)</h2>
-                    <p className="text-muted-foreground">Acompanhe a folha, presenças e horários de toda equipe.</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Espelho Ponto (Visão Geral)</h2>
+                    <p className="text-muted-foreground text-sm sm:text-base">Acompanhe a folha, presenças e horários de toda equipe.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={handleExportExcel} className="gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={handleExportExcel} className="gap-2 flex-1 sm:flex-initial">
                         <Download className="h-4 w-4" /> Excel
                     </Button>
-                    <Button variant="outline" onClick={handleExportPDF} className="gap-2">
-                        <Printer className="h-4 w-4" /> Imprimir (PDF)
+                    <Button variant="outline" onClick={handleExportPDF} className="gap-2 flex-1 sm:flex-initial">
+                        <Printer className="h-4 w-4" /> Imprimir
                     </Button>
                 </div>
             </div>
@@ -229,8 +229,8 @@ export function TimeClockAudit() {
                         <Search className="h-4 w-4" /> Filtros de Competência
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-4 items-end">
-                    <div className="space-y-2 min-w-[150px]">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
                         <label className="text-sm font-medium leading-none">Mês</label>
                         <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
                             <SelectTrigger>
@@ -246,7 +246,7 @@ export function TimeClockAudit() {
                         </Select>
                     </div>
 
-                    <div className="space-y-2 min-w-[100px]">
+                    <div className="space-y-2">
                         <label className="text-sm font-medium leading-none">Ano</label>
                         <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
                             <SelectTrigger>
@@ -260,7 +260,7 @@ export function TimeClockAudit() {
                         </Select>
                     </div>
 
-                    <div className="space-y-2 min-w-[250px] flex-1">
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                         <label className="text-sm font-medium leading-none">Tipo de Contrato</label>
                         <Select value={employeeType} onValueChange={setEmployeeType}>
                             <SelectTrigger>
@@ -284,8 +284,8 @@ export function TimeClockAudit() {
             </div>
 
             {/* Matrix Data Table */}
-            <Card className="border shadow-sm print:border-none print:shadow-none bg-background">
-                <div className="overflow-x-auto w-full max-w-[calc(100vw-300px)] print:max-w-none print:overflow-visible rounded-md custom-scrollbar">
+            <Card className="border shadow-sm print:border-none print:shadow-none bg-background overflow-hidden">
+                <div className="overflow-x-auto w-full max-w-full print:overflow-visible rounded-md custom-scrollbar">
                     <Table className="relative min-w-max border-collapse print:text-xs">
                         <TableHeader>
                             <TableRow className="bg-muted/50 hover:bg-muted/50">
