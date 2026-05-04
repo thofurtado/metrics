@@ -44,6 +44,8 @@
     "html5-qrcode": "^2.3.8",
     "i18next": "^25.8.17",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "jwt-decode": "^4.0.0",
     "localforage": "^1.10.0",
     "lucide-react": "^0.358.0",

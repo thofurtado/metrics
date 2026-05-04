@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, parseISO, addDays, getISOWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Save, ArrowLeft, GripVertical, Clock } from "lucide-react";
+import { Loader2, Save, ArrowLeft, GripVertical, Clock, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
@@ -16,6 +16,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { getEmployees } from "@/api/hr/employees";
 import { MonthPicker } from "@/components/MonthPicker";
+
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 /** Parse a date-only string (or ISO with T00:00:00Z) into a local Date without timezone shift */
 function parseDateOnly(dateStr: string): Date {
@@ -169,6 +172,185 @@ export function TimeSheetPage() {
             toast.error("Erro ao salvar mês.");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const exportToPDF = () => {
+        try {
+            const doc = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+            });
+
+            // Headings / Header Section
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("METRICS", 15, 15);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Espelho de Ponto Individual`, 15, 20);
+
+            // Month/Year
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text(`Mês: ${format(month, "MMMM / yyyy", { locale: ptBR })}`.toUpperCase(), 195, 15, { align: "right" });
+
+            // Horizontal line
+            doc.setDrawColor(200, 200, 200);
+            doc.line(15, 23, 195, 23);
+
+            // Employee Details
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.text("Colaborador:", 15, 29);
+            doc.setFont("helvetica", "normal");
+            doc.text(employee?.name || "N/D", 38, 29);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Cargo:", 15, 34);
+            doc.setFont("helvetica", "normal");
+            doc.text(employee?.role || "N/D", 27, 34);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Regime:", 110, 29);
+            doc.setFont("helvetica", "normal");
+            const regType = employee?.registrationType === "DAILY" ? "Diarista" :
+                employee?.registrationType === "HOURLY" ? "Horista" :
+                employee?.registrationType === "UNREGISTERED" ? "Sem Registro" : "CLT";
+            doc.text(regType, 124, 29);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Remuneração:", 110, 34);
+            doc.setFont("helvetica", "normal");
+            const salaryValue = employee?.registrationType === "DAILY"
+                ? `${Number(employee?.dailyRate || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/dia`
+                : `${Number(employee?.salary || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}${employee?.registrationType === 'HOURLY' ? '/hora' : ''}`;
+            doc.text(salaryValue, 133, 34);
+
+            doc.line(15, 37, 195, 37);
+
+            // Rows data processing
+            const rows = watch("rows") || [];
+
+            const calculateNetHours = (row: any) => {
+                if (row.status === "ATESTADO" || row.status === "FALTA_JUSTIFICADA") return "7h 20m";
+                if (row.status !== "PRESENCA") return "--";
+
+                const setTime = (t: string, isNext?: boolean) => {
+                    if (!t) return null;
+                    const [h, m] = t.split(':').map(Number);
+                    const d = parseDateOnly(row.date);
+                    d.setHours(h, m, 0, 0);
+                    if (isNext) d.setDate(d.getDate() + 1);
+                    return d;
+                };
+
+                let total = 0;
+                const cin = setTime(row.clockIn);
+                const bout = setTime(row.breakStart);
+                const bin = setTime(row.breakEnd);
+                const cout = setTime(row.clockOut, row.clockOutNextDay);
+                const xcin = setTime(row.extraClockIn);
+                const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay);
+
+                if (cin && bout) {
+                    total += differenceInMinutes(bout, cin);
+                } else if (cin && cout && !bout && !bin) {
+                    total += differenceInMinutes(cout, cin);
+                }
+
+                if (bin && cout) {
+                    total += differenceInMinutes(cout, bin);
+                }
+
+                if (xcin && xcout) {
+                    total += differenceInMinutes(xcout, xcin);
+                }
+
+                if (total <= 0) return "--";
+
+                const h = Math.floor(Math.abs(total) / 60);
+                const m = Math.abs(total) % 60;
+                return `${h}h ${m.toString().padStart(2, '0')}m`;
+            };
+
+            const tableRows = rows.map((r: any) => {
+                const parsedDay = parseDateOnly(r.date);
+                const formatTime = (time: string, nextDay?: boolean) => time ? `${time}${nextDay ? " (+1d)" : ""}` : "";
+                
+                const statusStr = r.status === "PRESENCA" ? "Presença" :
+                    r.status === "FOLGA" ? "Folga" :
+                    r.status === "ATESTADO" ? "Atestado" :
+                    r.status === "FALTA_JUSTIFICADA" ? "F. Justificada" :
+                    r.status === "FALTA_INJUSTIFICADA" ? "F. Injustificada" : r.status;
+
+                return [
+                    format(parsedDay, "dd/MM (EEE)", { locale: ptBR }),
+                    formatTime(r.clockIn),
+                    formatTime(r.breakStart),
+                    formatTime(r.breakEnd),
+                    formatTime(r.clockOut, r.clockOutNextDay),
+                    formatTime(r.extraClockIn),
+                    formatTime(r.extraClockOut, r.extraClockOutNextDay),
+                    statusStr,
+                    r.isExtraDay ? "Sim" : "Não",
+                    r.negotiatedValue ? Number(r.negotiatedValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "--",
+                    calculateNetHours(r)
+                ];
+            });
+
+            // Call autoTable
+            autoTable(doc, {
+                startY: 40,
+                margin: { left: 15, right: 15 },
+                styles: { fontSize: 7, cellPadding: 1.5, halign: "center", font: "helvetica" },
+                headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: "bold" },
+                alternateRowStyles: { fillColor: [245, 245, 245] },
+                head: [["Data", "Entrada 1", "Saída 1", "Entrada 2", "Saída 2", "Entrada 3", "Saída 3", "Status", "Extra?", "Valor", "Horas"]],
+                body: tableRows,
+            });
+
+            // Capture final position
+            let finalY = (doc as any).lastAutoTable.finalY + 10;
+
+            // Page bounds check
+            if (finalY > 260) {
+                doc.addPage();
+                finalY = 20;
+            }
+
+            // Summary Text
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            
+            const totalHoursFormatted = timeClocks?.summary?.totalHours || "--";
+            doc.text(`Total de Horas Trabalhadas: ${totalHoursFormatted}`, 15, finalY);
+
+            const totalExtraDays = timeClocks?.summary?.extraDays ?? rows.filter((r: any) => r.isExtraDay).length;
+            doc.text(`Dias Extras: ${totalExtraDays}`, 15, finalY + 5);
+
+            // Signature area
+            finalY += 15;
+            if (finalY > 275) {
+                doc.addPage();
+                finalY = 25;
+            }
+
+            doc.line(15, finalY, 95, finalY);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text("Assinatura do Colaborador", 15, finalY + 4);
+
+            doc.line(115, finalY, 195, finalY);
+            doc.text("Assinatura do Gestor / Empresa", 115, finalY + 4);
+
+            doc.save(`Espelho_Ponto_${employee?.name ? employee.name.replace(/\\s+/g, '_') : 'colaborador'}_${format(month, 'MM_yyyy')}.pdf`);
+            toast.success("PDF gerado com sucesso!");
+        } catch (error) {
+            console.error("Erro ao exportar PDF:", error);
+            toast.error("Erro ao gerar o PDF.");
         }
     };
 
@@ -423,6 +605,10 @@ export function TimeSheetPage() {
                     <div className="flex items-center gap-2 border rounded-md p-1 bg-background/50">
                         <MonthPicker date={month} setDate={setMonth} />
                     </div>
+                    <Button onClick={exportToPDF} variant="outline" className="shadow-md">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Exportar para PDF
+                    </Button>
                     <Button onClick={handleSubmit(onSubmit)} disabled={isSaving || isLoading} className="w-[180px] shadow-md">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         Salvar Alterações
