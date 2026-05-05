@@ -127,7 +127,7 @@ export function HrRulesSettings() {
                                             <TableCell className="font-medium">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                                    {format(new Date(holiday.date), "dd/MM/yyyy")}
+                                                    {format(new Date(holiday.date.split('T')[0] + 'T12:00:00Z'), "dd/MM/yyyy")}
                                                 </div>
                                             </TableCell>
                                             <TableCell>{holiday.name}</TableCell>
@@ -139,7 +139,6 @@ export function HrRulesSettings() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {holiday.type !== 'NATIONAL' && (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
@@ -148,7 +147,6 @@ export function HrRulesSettings() {
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
-                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))

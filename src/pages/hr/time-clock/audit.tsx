@@ -96,14 +96,19 @@ export function TimeClockAudit() {
                         // Calculate hours
                         if (tc.clockIn && tc.clockOut) {
                            let session = differenceInMinutes(parseISO(tc.clockOut), parseISO(tc.clockIn))
+                           if (session < 0) session += 24 * 60; // Tratamento de cruzamento de meia noite
+                           
                            if (tc.breakStart && tc.breakEnd) {
-                               session -= differenceInMinutes(parseISO(tc.breakEnd), parseISO(tc.breakStart))
+                               let breakSession = differenceInMinutes(parseISO(tc.breakEnd), parseISO(tc.breakStart));
+                               if (breakSession < 0) breakSession += 24 * 60;
+                               session -= breakSession;
                            }
                            minutesWorked += session > 0 ? session : 0
                         }
                         
                         if (tc.extraClockIn && tc.extraClockOut) {
-                             const extraSession = differenceInMinutes(parseISO(tc.extraClockOut), parseISO(tc.extraClockIn))
+                             let extraSession = differenceInMinutes(parseISO(tc.extraClockOut), parseISO(tc.extraClockIn))
+                             if (extraSession < 0) extraSession += 24 * 60;
                              minutesWorked += extraSession > 0 ? extraSession : 0
                         }
                     }
