@@ -5,11 +5,11 @@ export interface DeleteTransactionParams {
 }
 
 export async function deleteTransaction({ id }: DeleteTransactionParams) {
-  const response = await api.delete(`/financial/transaction/${id}`)
+  const response = await api.delete(`/transaction/${id}`)
   return response
 }
 
 export async function deleteFutureTransactions({ id }: DeleteTransactionParams) {
-  const response = await api.delete(`/financial/transaction/${id}/forward`)
+  const response = await api.delete(`/transaction/${id}/forward`)
   return response
 }
