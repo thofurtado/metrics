@@ -243,7 +243,8 @@ export function TimeSheetPage() {
                     const [h, m] = t.split(':').map(Number);
                     const d = parseDateOnly(row.date);
                     d.setHours(h, m, 0, 0);
-                    if (isNext) d.setDate(d.getDate() + 1);
+                    const isAutoNextDay = h < 4;
+                    if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1);
                     return d;
                 };
 
@@ -414,7 +415,8 @@ export function TimeSheetPage() {
                                 const setTime = (t: string, nextDay?: boolean) => {
                                     if (!t) return null;
                                     const [h, m] = t.split(':').map(Number);
-                                    return (h + (nextDay ? 24 : 0)) * 60 + m;
+                                    const isAutoNextDay = h < 4;
+                                    return (h + ((nextDay || isAutoNextDay) ? 24 : 0)) * 60 + m;
                                 };
 
                                 const cin = setTime(row.clockIn, false);
@@ -446,9 +448,12 @@ export function TimeSheetPage() {
                                 const dailyOvt = excess > TOLERANCE ? excess : 0;
 
                                 const isSunday = d.getDay() === 0;
-                                const isHoliday = holidaysData?.holidays?.some(h => h.date.startsWith(row.date));
+                                const isHoliday = holidaysData?.holidays?.some((h: any) => h.date.startsWith(row.date));
 
-                                if (isSunday || isHoliday) {
+                                if (isHoliday) {
+                                    totalMinutes100 += workedDayMins;
+                                    estimatedOvt100 += workedDayMins; // Feriado é 100% o dia todo
+                                } else if (isSunday) {
                                     totalMinutes100 += workedDayMins;
                                     estimatedOvt100 += dailyOvt;
                                 } else {
@@ -744,7 +749,8 @@ function MirrorRowField({ index, register, watch, setValue, day, dailyRate, holi
             const [h, m] = t.split(':').map(Number);
             let d = new Date(day);
             d.setHours(h, m, 0, 0);
-            if (isNext) d = addDays(d, 1);
+            const isAutoNextDay = h < 4;
+            if (isNext || isAutoNextDay) d = addDays(d, 1);
             return d;
         };
 
