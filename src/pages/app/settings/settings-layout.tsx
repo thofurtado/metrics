@@ -57,6 +57,20 @@ export function SettingsLayout() {
                             Contas Bancárias
                         </NavLink>
                         <NavLink
+                            to="/settings/credit-cards"
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                                    isActive
+                                        ? "bg-muted text-primary border-l-4 border-l-primary"
+                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-4 border-l-transparent"
+                                )
+                            }
+                        >
+                            <CreditCard className="h-4 w-4" />
+                            Cartões de Crédito
+                        </NavLink>
+                        <NavLink
                             to="/settings/payments"
                             className={({ isActive }) =>
                                 cn(

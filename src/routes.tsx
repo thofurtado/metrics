@@ -24,6 +24,7 @@ import { SignUp } from './pages/auth/sign-up'
 import { Items } from './pages/app/items'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { Accounts } from './pages/app/settings/accounts'
+import { CreditCards } from './pages/app/settings/credit-cards'
 import { Payments } from './pages/app/settings/payments'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
@@ -149,6 +150,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="modules" replace /> }, // Default to modules or accounts? Modules seems appropriate for admin.
               { path: 'accounts', element: <Accounts /> },
+              { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
               { path: 'modules', element: <ModulesSettings /> },
               { path: 'permissions', element: <Permissions /> },
