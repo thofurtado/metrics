@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { MetricsIcon } from '../../components/MetricsIcon'
+import { Pyramid } from 'lucide-react'
 
 export function AuthLayout() {
   return (
