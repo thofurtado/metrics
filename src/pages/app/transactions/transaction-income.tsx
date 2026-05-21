@@ -211,10 +211,11 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
 
       const response = await transaction(transactionData)
       
-      if (receiptFile && activeTab === 'single' && response.data?.id) {
+      const transactionId = response.data?.transaction?.id || response.data?.id;
+      if (receiptFile && activeTab === 'single' && transactionId) {
          setIsUploading(true)
          try {
-            await uploadFileTransaction(response.data.id, receiptFile)
+            await uploadFileTransaction(transactionId, receiptFile)
             queryClient.invalidateQueries({ queryKey: ['transactions'] })
          } catch(uploadErr) {
             console.error('Erro no upload', uploadErr)

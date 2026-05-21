@@ -9,7 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Wallet,
 } from 'lucide-react'
+import { MetricsIcon } from './MetricsIcon'
 import { cn } from '@/lib/utils'
 import { useModules } from '@/context/module-context'
 import { useSidebar } from '@/context/sidebar-context'
@@ -47,7 +49,7 @@ export function Sidebar() {
           <div className="flex items-center justify-between mb-8 w-full group/header relative">
             <Link to="/" className="flex items-center gap-3 px-1 group" onClick={() => setSheetOpen(false)}>
               <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 group-hover:scale-110 transition-all duration-500">
-                <Pyramid className="h-6 w-6" />
+                <MetricsIcon className="h-6 w-6" />
               </div>
               {!collapsed && (
                 <span className="text-2xl font-manrope font-black tracking-tighter text-foreground uppercase truncate animate-in fade-in slide-in-from-left-4 duration-500">
@@ -164,7 +166,7 @@ export function Sidebar() {
     <>
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b bg-background/90 backdrop-blur-lg flex items-center justify-between px-6 z-40">
         <Link to="/" className="flex items-center gap-2 pr-4">
-          <Pyramid className="h-6 w-6 text-primary" />
+          <MetricsIcon className="h-6 w-6" />
           <span className="text-xl font-manrope font-black tracking-tight uppercase bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">METRICS</span>
         </Link>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

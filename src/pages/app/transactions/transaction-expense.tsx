@@ -95,9 +95,10 @@ type FormSchemaType = z.infer<typeof formSchema>
 
 export interface TransactionExpenseProps {
   open: boolean
+  initialReceipt?: any
 }
 
-export function TransactionExpense({ open }: TransactionExpenseProps) {
+export function TransactionExpense({ open, initialReceipt }: TransactionExpenseProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
 
@@ -162,8 +163,10 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
       setInstallmentValue('')
       setReceiptFile(null)
       setBillingMonthLabel(null)
+    } else if (initialReceipt) {
+      form.setValue('description', initialReceipt.description)
     }
-  }, [open, form])
+  }, [open, form, initialReceipt])
 
   // Queries
   const { data: sectors } = useQuery({
@@ -323,11 +326,26 @@ export function TransactionExpense({ open }: TransactionExpenseProps) {
         credit_card_id: data.credit_card_id || null,
       })
       
-      // Upload do arquivo, se houver, no caso de despesa única (não recorrente)
-      if (receiptFile && activeTab === 'single' && response.data?.id) {
+      const transactionId = response.data?.transaction?.id || response.data?.id;
+      // Upload do arquivo pendente (vinculação)
+      if (initialReceipt && transactionId) {
          setIsUploading(true)
          try {
-            await uploadFileTransaction(response.data.id, receiptFile)
+            await import('@/lib/axios').then(m => m.api.patch(`/uploads/receipts/${initialReceipt.filename}/link/${transactionId}`))
+            invalidateKeys()
+            queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
+         } catch(uploadErr) {
+            console.error('Erro ao vincular comprovante', uploadErr)
+            toast.error('Despesa salva, mas falha ao vincular comprovante.')
+         } finally {
+            setIsUploading(false)
+         }
+      } 
+      // Upload de um novo arquivo, se houver
+      else if (receiptFile && activeTab === 'single' && transactionId) {
+         setIsUploading(true)
+         try {
+            await uploadFileTransaction(transactionId, receiptFile)
             invalidateKeys() // Revalidate to fetch the new attachment_url
          } catch(uploadErr) {
             console.error('Erro no upload', uploadErr)

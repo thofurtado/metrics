@@ -1,5 +1,5 @@
-import { Pyramid, Zap, BarChart4 } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
+import { MetricsIcon } from '../../components/MetricsIcon'
 
 export function AuthLayout() {
   return (
@@ -15,16 +15,13 @@ export function AuthLayout() {
         border-r border-minsk-800/20 p-10 text-white
       ">
         {/* LOGO SUPERIOR: APENAS NO DESKTOP */}
-        <div className="flex items-center gap-3 text-2xl font-bold">
-          <Pyramid className="h-7 w-7 text-minsk-200" />
-          <span className="text-minsk-100">
-            metrics
-          </span>
+        <div className="flex items-center gap-3 text-lg font-medium text-foreground">
+          <MetricsIcon className="h-6 w-6" />
+          <span className="font-semibold">Metrics</span>
         </div>
         
         {/* ILUSTRAÇÃO CENTRAL */}
         <div className="flex flex-col items-center justify-center space-y-4">
-          <BarChart4 className="h-40 w-40 text-minsk-200/50 opacity-70" /> 
           <div className="flex flex-col gap-2 text-center text-minsk-50">
             <h2 className="text-3xl font-extrabold leading-tight tracking-tight">
               Gestão descomplicada
