@@ -226,20 +226,32 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
                 </button>
 
                 {/* Imagem / PDF */}
-                <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden">
+                <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden w-full">
                   {activeReceipt.url.endsWith('.pdf') ? (
-                    <div className="flex flex-col items-center justify-center text-slate-400 p-8 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
-                      <FileText className="w-20 h-20 text-slate-300 mb-4" />
-                      <span className="text-white font-semibold text-lg">Documento PDF</span>
-                      <a
-                        href={`${API_BASE_URL}${activeReceipt.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-6 px-6 py-3 bg-white hover:bg-slate-200 text-slate-950 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-white/5"
-                      >
-                        Abrir PDF em nova aba
-                      </a>
-                    </div>
+                    <>
+                      {/* Desktop View: Embed PDF inside a gorgeous iframe */}
+                      <div className="hidden md:block w-full h-[55vh] max-w-4xl">
+                        <iframe
+                          src={`${API_BASE_URL}${activeReceipt.url}#toolbar=0`}
+                          className="w-full h-full rounded-2xl border border-white/10 bg-white"
+                          title="Visualização do PDF"
+                        />
+                      </div>
+                      
+                      {/* Mobile View: Fallback to the card & button */}
+                      <div className="block md:hidden flex flex-col items-center justify-center text-slate-400 p-6 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
+                        <FileText className="w-16 h-16 text-slate-300 mb-4" />
+                        <span className="text-white font-semibold text-base">Documento PDF</span>
+                        <a
+                          href={`${API_BASE_URL}${activeReceipt.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-4 px-5 py-2.5 bg-white hover:bg-slate-200 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-white/5"
+                        >
+                          Abrir PDF
+                        </a>
+                      </div>
+                    </>
                   ) : (
                     <img
                       src={`${API_BASE_URL}${activeReceipt.url}`}
