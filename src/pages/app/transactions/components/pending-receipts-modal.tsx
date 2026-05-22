@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/axios'
-import { FileText, Link as LinkIcon, Plus, Trash2 } from 'lucide-react'
+import { api, API_BASE_URL } from '@/lib/axios'
+import { FileText, Link as LinkIcon, Plus, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface PendingReceiptsModalProps {
   open: boolean
@@ -15,6 +15,8 @@ interface PendingReceiptsModalProps {
 
 export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onCreateNew }: PendingReceiptsModalProps) {
   const queryClient = useQueryClient()
+  const [activeReceiptIndex, setActiveReceiptIndex] = useState<number | null>(null)
+
   const { data: receiptsData, isLoading } = useQuery({
     queryKey: ['pending-receipts'],
     queryFn: async () => {
@@ -37,6 +39,73 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
     }
   })
 
+  const activeReceipt = activeReceiptIndex !== null ? receiptsData?.receipts?.[activeReceiptIndex] : null
+
+  const handlePrev = () => {
+    if (!receiptsData?.receipts?.length) return
+    setActiveReceiptIndex((prev) => {
+      if (prev === null) return null
+      return prev > 0 ? prev - 1 : receiptsData.receipts.length - 1
+    })
+  }
+
+  const handleNext = () => {
+    if (!receiptsData?.receipts?.length) return
+    setActiveReceiptIndex((prev) => {
+      if (prev === null) return null
+      return prev < receiptsData.receipts.length - 1 ? prev + 1 : 0
+    })
+  }
+
+  const handleDeleteInFullscreen = async (filename: string) => {
+    try {
+      await deleteReceipt(filename)
+      if (receiptsData?.receipts?.length <= 1) {
+        setActiveReceiptIndex(null)
+      } else {
+        setActiveReceiptIndex((prev) => {
+          if (prev === null) return null
+          return prev > 0 ? prev - 1 : 0
+        })
+      }
+    } catch (err) {
+      // erro tratado no mutation
+    }
+  }
+
+  useEffect(() => {
+    if (activeReceiptIndex === null || !open) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrev()
+      } else if (e.key === 'ArrowRight') {
+        handleNext()
+      } else if (e.key === 'Escape') {
+        setActiveReceiptIndex(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeReceiptIndex, open, receiptsData])
+
+  // Manter o índice ativo dentro dos limites caso a lista de comprovantes mude
+  useEffect(() => {
+    if (activeReceiptIndex !== null && receiptsData?.receipts) {
+      if (activeReceiptIndex >= receiptsData.receipts.length) {
+        setActiveReceiptIndex(receiptsData.receipts.length > 0 ? receiptsData.receipts.length - 1 : null)
+      }
+    }
+  }, [receiptsData, activeReceiptIndex])
+
+  // Resetar o estado ao fechar o modal principal
+  useEffect(() => {
+    if (!open) {
+      setActiveReceiptIndex(null)
+    }
+  }, [open])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-3xl p-6">
@@ -58,15 +127,18 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
             </div>
           )}
 
-          {!isLoading && receiptsData?.receipts?.map((receipt: any) => (
+          {!isLoading && receiptsData?.receipts?.map((receipt: any, index: number) => (
             <div key={receipt.filename} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col">
-              <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
+              <div 
+                className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setActiveReceiptIndex(index)}
+              >
                 {receipt.url.endsWith('.pdf') ? (
                   <FileText className="w-16 h-16 text-slate-400" />
                 ) : (
-                  <img src={`${import.meta.env.VITE_API_URL}${receipt.url}`} alt={receipt.description} className="w-full h-full object-cover" />
+                  <img src={`${API_BASE_URL}${receipt.url}`} alt={receipt.description} className="w-full h-full object-contain p-2" />
                 )}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <Button 
                     variant="destructive" 
                     size="icon" 
@@ -115,6 +187,110 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
           ))}
         </div>
       </DialogContent>
+
+      {/* Lightbox Modal em Tela Cheia */}
+      {activeReceiptIndex !== null && activeReceipt && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-6 animate-in fade-in duration-200">
+          {/* Header do Lightbox */}
+          <div className="flex items-center justify-between w-full max-w-7xl mx-auto border-b border-white/10 pb-4">
+            <div className="text-white flex-1 mr-4">
+              <span className="text-xs text-slate-400 font-medium block mb-1">
+                {new Date(activeReceipt.date).toLocaleString('pt-BR')}
+              </span>
+              <h3 className="font-bold text-lg md:text-xl line-clamp-1 text-white" title={activeReceipt.description}>
+                {activeReceipt.description}
+              </h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full w-10 h-10 transition-colors"
+              onClick={() => setActiveReceiptIndex(null)}
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+
+          {/* Área Central - Imagem e Setas */}
+          <div className="flex-1 flex items-center justify-between w-full max-w-7xl mx-auto my-4 gap-4 px-2">
+            {/* Seta Esquerda */}
+            <button
+              className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+              onClick={handlePrev}
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Imagem / PDF */}
+            <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden">
+              {activeReceipt.url.endsWith('.pdf') ? (
+                <div className="flex flex-col items-center justify-center text-slate-400 p-8 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
+                  <FileText className="w-20 h-20 text-slate-300 mb-4" />
+                  <span className="text-white font-semibold text-lg">Documento PDF</span>
+                  <a
+                    href={`${API_BASE_URL}${activeReceipt.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 px-6 py-3 bg-white hover:bg-slate-200 text-slate-950 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-white/5"
+                  >
+                    Abrir PDF em nova aba
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={`${API_BASE_URL}${activeReceipt.url}`}
+                  alt={activeReceipt.description}
+                  className="max-h-[60vh] max-w-[50vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+                />
+              )}
+            </div>
+
+            {/* Seta Direita */}
+            <button
+              className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+              onClick={handleNext}
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Rodapé - Ações */}
+          <div className="w-full max-w-2xl mx-auto flex flex-col md:flex-row gap-3 items-center justify-center border-t border-white/10 pt-6">
+            <Button
+              variant="outline"
+              className="w-full md:flex-1 font-bold border-white/20 text-white hover:bg-white/10 bg-transparent py-6 rounded-2xl text-sm transition-all"
+              onClick={() => {
+                onOpenChange(false)
+                onLinkToExisting(activeReceipt)
+                setActiveReceiptIndex(null)
+              }}
+            >
+              <LinkIcon className="w-4 h-4 mr-2" />
+              Vincular a Despesa
+            </Button>
+            <Button
+              className="w-full md:flex-1 font-bold bg-white text-slate-950 hover:bg-slate-100 py-6 rounded-2xl text-sm transition-all"
+              onClick={() => {
+                onOpenChange(false)
+                onCreateNew(activeReceipt)
+                setActiveReceiptIndex(null)
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Nova Despesa
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full md:w-auto font-bold bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white py-6 px-6 rounded-2xl text-sm transition-all"
+              onClick={() => handleDeleteInFullscreen(activeReceipt.filename)}
+              disabled={isDeleting}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Descartar
+            </Button>
+          </div>
+        </div>
+      )}
     </Dialog>
   )
 }
