@@ -5,6 +5,7 @@ import { api, API_BASE_URL } from '@/lib/axios'
 import { FileText, Link as LinkIcon, Plus, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 
 interface PendingReceiptsModalProps {
   open: boolean
@@ -190,106 +191,111 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
 
       {/* Lightbox Modal em Tela Cheia */}
       {activeReceiptIndex !== null && activeReceipt && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-6 animate-in fade-in duration-200">
-          {/* Header do Lightbox */}
-          <div className="flex items-center justify-between w-full max-w-7xl mx-auto border-b border-white/10 pb-4">
-            <div className="text-white flex-1 mr-4">
-              <span className="text-xs text-slate-400 font-medium block mb-1">
-                {new Date(activeReceipt.date).toLocaleString('pt-BR')}
-              </span>
-              <h3 className="font-bold text-lg md:text-xl line-clamp-1 text-white" title={activeReceipt.description}>
-                {activeReceipt.description}
-              </h3>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full w-10 h-10 transition-colors"
-              onClick={() => setActiveReceiptIndex(null)}
-            >
-              <X className="w-6 h-6" />
-            </Button>
-          </div>
-
-          {/* Área Central - Imagem e Setas */}
-          <div className="flex-1 flex items-center justify-between w-full max-w-7xl mx-auto my-4 gap-4 px-2">
-            {/* Seta Esquerda */}
-            <button
-              className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
-              onClick={handlePrev}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-
-            {/* Imagem / PDF */}
-            <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden">
-              {activeReceipt.url.endsWith('.pdf') ? (
-                <div className="flex flex-col items-center justify-center text-slate-400 p-8 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
-                  <FileText className="w-20 h-20 text-slate-300 mb-4" />
-                  <span className="text-white font-semibold text-lg">Documento PDF</span>
-                  <a
-                    href={`${API_BASE_URL}${activeReceipt.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-6 px-6 py-3 bg-white hover:bg-slate-200 text-slate-950 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-white/5"
-                  >
-                    Abrir PDF em nova aba
-                  </a>
+        <DialogPrimitive.Root open={true} onOpenChange={(open) => { if (!open) setActiveReceiptIndex(null) }}>
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="fixed inset-0 z-[9998] bg-black/85 backdrop-blur-sm" />
+            <DialogPrimitive.Content className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-6 animate-in fade-in duration-200 outline-none">
+              {/* Header do Lightbox */}
+              <div className="flex items-center justify-between w-full max-w-7xl mx-auto border-b border-white/10 pb-4">
+                <div className="text-white flex-1 mr-4">
+                  <span className="text-xs text-slate-400 font-medium block mb-1">
+                    {new Date(activeReceipt.date).toLocaleString('pt-BR')}
+                  </span>
+                  <h3 className="font-bold text-lg md:text-xl line-clamp-1 text-white" title={activeReceipt.description}>
+                    {activeReceipt.description}
+                  </h3>
                 </div>
-              ) : (
-                <img
-                  src={`${API_BASE_URL}${activeReceipt.url}`}
-                  alt={activeReceipt.description}
-                  className="max-h-[60vh] max-w-[50vw] object-contain rounded-2xl shadow-2xl border border-white/10"
-                />
-              )}
-            </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full w-10 h-10 transition-colors"
+                  onClick={() => setActiveReceiptIndex(null)}
+                >
+                  <X className="w-6 h-6" />
+                </Button>
+              </div>
 
-            {/* Seta Direita */}
-            <button
-              className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
-              onClick={handleNext}
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
+              {/* Área Central - Imagem e Setas */}
+              <div className="flex-1 flex items-center justify-between w-full max-w-7xl mx-auto my-4 gap-4 px-2">
+                {/* Seta Esquerda */}
+                <button
+                  className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+                  onClick={handlePrev}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
 
-          {/* Rodapé - Ações */}
-          <div className="w-full max-w-2xl mx-auto flex flex-col md:flex-row gap-3 items-center justify-center border-t border-white/10 pt-6">
-            <Button
-              variant="outline"
-              className="w-full md:flex-1 font-bold border-white/20 text-white hover:bg-white/10 bg-transparent py-6 rounded-2xl text-sm transition-all"
-              onClick={() => {
-                onOpenChange(false)
-                onLinkToExisting(activeReceipt)
-                setActiveReceiptIndex(null)
-              }}
-            >
-              <LinkIcon className="w-4 h-4 mr-2" />
-              Vincular a Despesa
-            </Button>
-            <Button
-              className="w-full md:flex-1 font-bold bg-white text-slate-950 hover:bg-slate-100 py-6 rounded-2xl text-sm transition-all"
-              onClick={() => {
-                onOpenChange(false)
-                onCreateNew(activeReceipt)
-                setActiveReceiptIndex(null)
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Criar Nova Despesa
-            </Button>
-            <Button
-              variant="destructive"
-              className="w-full md:w-auto font-bold bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white py-6 px-6 rounded-2xl text-sm transition-all"
-              onClick={() => handleDeleteInFullscreen(activeReceipt.filename)}
-              disabled={isDeleting}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Descartar
-            </Button>
-          </div>
-        </div>
+                {/* Imagem / PDF */}
+                <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden">
+                  {activeReceipt.url.endsWith('.pdf') ? (
+                    <div className="flex flex-col items-center justify-center text-slate-400 p-8 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
+                      <FileText className="w-20 h-20 text-slate-300 mb-4" />
+                      <span className="text-white font-semibold text-lg">Documento PDF</span>
+                      <a
+                        href={`${API_BASE_URL}${activeReceipt.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-6 px-6 py-3 bg-white hover:bg-slate-200 text-slate-950 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-white/5"
+                      >
+                        Abrir PDF em nova aba
+                      </a>
+                    </div>
+                  ) : (
+                    <img
+                      src={`${API_BASE_URL}${activeReceipt.url}`}
+                      alt={activeReceipt.description}
+                      className="max-h-[60vh] max-w-[50vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+                    />
+                  )}
+                </div>
+
+                {/* Seta Direita */}
+                <button
+                  className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+                  onClick={handleNext}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Rodapé - Ações */}
+              <div className="w-full max-w-2xl mx-auto flex flex-col md:flex-row gap-3 items-center justify-center border-t border-white/10 pt-6">
+                <Button
+                  variant="outline"
+                  className="w-full md:flex-1 font-bold border-white/20 text-white hover:bg-white/10 bg-transparent py-6 rounded-2xl text-sm transition-all"
+                  onClick={() => {
+                    onOpenChange(false)
+                    onLinkToExisting(activeReceipt)
+                    setActiveReceiptIndex(null)
+                  }}
+                >
+                  <LinkIcon className="w-4 h-4 mr-2" />
+                  Vincular a Despesa
+                </Button>
+                <Button
+                  className="w-full md:flex-1 font-bold bg-white text-slate-950 hover:bg-slate-100 py-6 rounded-2xl text-sm transition-all"
+                  onClick={() => {
+                    onOpenChange(false)
+                    onCreateNew(activeReceipt)
+                    setActiveReceiptIndex(null)
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Nova Despesa
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full md:w-auto font-bold bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white py-6 px-6 rounded-2xl text-sm transition-all"
+                  onClick={() => handleDeleteInFullscreen(activeReceipt.filename)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Descartar
+                </Button>
+              </div>
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
       )}
     </Dialog>
   )
