@@ -11,6 +11,15 @@ const R2_BASE_URL = "https://pub-92bef1bd95274c4885abde2bc51eadfb.r2.dev"
 // Downloads data
 const files = [
     {
+        name: "Sistema de Ponto Metrics",
+        fileName: "Metrics Setup 0.0.0.exe",
+        version: "v0.0.0",
+        size: "N/A",
+        description: "Instalador oficial do sistema de registro e controle de ponto eletrônico do Metrics.",
+        tag: "Sistema",
+        popular: true
+    },
+    {
         name: "AnyDesk",
         fileName: "AnyDesk.exe",
         version: "Latest",
