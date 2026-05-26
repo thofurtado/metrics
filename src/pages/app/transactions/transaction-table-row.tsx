@@ -154,7 +154,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from '@/lib/utils'
-import { MoreHorizontal, Scissors, Trash, Eye, Pencil } from "lucide-react"
+import { MoreHorizontal, Scissors, Trash, Eye, Pencil, Paperclip } from "lucide-react"
 import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
 import { TransactionDetailsModal } from "./components/transaction-details-modal"
 import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
@@ -543,14 +543,21 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </TableCell>
 
-      <TableCell className="w-[80px] text-right px-8 py-5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 w-9 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
-              <span className="sr-only">Opções</span>
-              <MoreHorizontal className="h-4 w-4 text-slate-400" />
-            </Button>
-          </DropdownMenuTrigger>
+      <TableCell className="w-[120px] px-8 py-5">
+        <div className="flex items-center justify-end gap-2">
+          {transactions.attachment_url && (
+            <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shadow-sm" title="Comprovante Anexado">
+              <Paperclip className="h-4 w-4" />
+            </div>
+          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-9 w-9 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <span className="sr-only">Opções</span>
+                <MoreHorizontal className="h-4 w-4 text-slate-400" />
+              </Button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onSelect={(e) => {
@@ -606,6 +613,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
 
         {/* DIALOGS */}
         <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
