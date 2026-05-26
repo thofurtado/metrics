@@ -111,7 +111,14 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-3xl p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-black text-slate-800">Comprovantes Rápidos</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-2xl font-black text-slate-800">Comprovantes Rápidos</DialogTitle>
+            {receiptsData?.receipts?.length > 0 && (
+              <span className="flex h-6 px-2.5 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 animate-in zoom-in duration-300">
+                {receiptsData.receipts.length}
+              </span>
+            )}
+          </div>
           <DialogDescription>
             Aqui estão os comprovantes enviados pelo celular que ainda não foram vinculados a nenhuma despesa.
           </DialogDescription>

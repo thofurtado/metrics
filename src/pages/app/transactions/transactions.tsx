@@ -47,6 +47,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Inbox } from 'lucide-react'
 import { PendingReceiptsModal } from './components/pending-receipts-modal'
 import { LinkReceiptModal } from './components/link-receipt-modal'
+import { api } from '@/lib/axios'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -78,6 +79,16 @@ export function Transactions() {
   
   const [isLinkReceiptOpen, setIsLinkReceiptOpen] = useState(false)
   const [selectedReceiptForLink, setSelectedReceiptForLink] = useState<any>(null)
+
+  // Query to fetch pending receipts count
+  const { data: receiptsData } = useQuery({
+    queryKey: ['pending-receipts'],
+    queryFn: async () => {
+      const response = await api.get('/uploads/receipts')
+      return response.data
+    }
+  })
+  const pendingCount = receiptsData?.receipts?.length ?? 0
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
@@ -230,11 +241,16 @@ export function Transactions() {
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto mb-8 md:mb-0">
             <Button
               variant="outline"
-              className="w-full md:w-auto h-12 md:h-10 px-6 py-2 rounded-2xl md:rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold"
+              className="relative w-full md:w-auto h-12 md:h-10 px-6 py-2 rounded-2xl md:rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-bold"
               onClick={() => setIsPendingReceiptsOpen(true)}
             >
               <Inbox className="h-5 w-5 mr-2" />
               <span>Caixa de Comprovantes</span>
+              {pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-background animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
             </Button>
 
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
