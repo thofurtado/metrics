@@ -90,6 +90,9 @@ export function Transactions() {
   })
   const pendingCount = receiptsData?.receipts?.length ?? 0
 
+  const [payableCount, setPayableCount] = useState<number | null>(null)
+  const [historyCount, setHistoryCount] = useState<number | null>(null)
+
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
 
@@ -97,7 +100,7 @@ export function Transactions() {
   const [historyDate, setHistoryDate] = useState<Date>(new Date())
 
   // Time Horizon State
-  const [timeHorizon, setTimeHorizon] = useState<'7' | '15' | '30' | 'custom'>('7')
+  const [timeHorizon, setTimeHorizon] = useState<'7' | '15' | '30' | 'all' | 'custom'>('7')
   const [customDate] = useState<Date | undefined>(undefined)
 
   const description = searchParams.get('description')
@@ -162,20 +165,38 @@ export function Transactions() {
     .number()
     .parse(searchParams.get('page') ?? '1')
 
-  // Calculate toDate based on horizon
+  // Calculate toDate and fromDate based on horizon
   let toDate = undefined;
+  let fromDate = undefined;
   if (activeTab === 'payable') {
     const now = new Date();
+    // Set fromDate to the start of today for upcoming cycle limits
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
     if (timeHorizon === '7') {
-      now.setDate(now.getDate() + 7);
-      toDate = now;
+      fromDate = startOfToday;
+      const targetDate = new Date(startOfToday);
+      targetDate.setDate(targetDate.getDate() + 7);
+      targetDate.setHours(23, 59, 59, 999);
+      toDate = targetDate;
     } else if (timeHorizon === '15') {
-      now.setDate(now.getDate() + 15);
-      toDate = now;
+      fromDate = startOfToday;
+      const targetDate = new Date(startOfToday);
+      targetDate.setDate(targetDate.getDate() + 15);
+      targetDate.setHours(23, 59, 59, 999);
+      toDate = targetDate;
     } else if (timeHorizon === '30') {
-      now.setDate(now.getDate() + 30);
-      toDate = now;
+      fromDate = startOfToday;
+      const targetDate = new Date(startOfToday);
+      targetDate.setDate(targetDate.getDate() + 30);
+      targetDate.setHours(23, 59, 59, 999);
+      toDate = targetDate;
+    } else if (timeHorizon === 'all') {
+      fromDate = undefined;
+      toDate = undefined;
     } else if (timeHorizon === 'custom' && customDate) {
+      fromDate = startOfToday;
       toDate = customDate;
     }
   }
@@ -197,7 +218,8 @@ export function Transactions() {
       type,
       historyDate, // Re-fetch when history month changes
       sortBy,
-      sortDirection
+      sortDirection,
+      checked
     ],
     queryFn: () =>
       getTransactions({
@@ -211,13 +233,27 @@ export function Transactions() {
         type: type === 'all' ? null : type,
         status: activeTab === 'payable' ? 'pending' : 'completed',
         toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined, // Pass toDate only for payable
+        fromDate: activeTab === 'payable' ? fromDate?.toISOString() : undefined, // Pass fromDate only for payable
         month: activeTab === 'history' ? historyDate.toISOString() : undefined, // Pass month only for history
         sortBy: sortBy || undefined,
-        sortDirection: sortDirection || undefined
+        sortDirection: sortDirection || undefined,
+        checked: checked || undefined
       }),
     refetchOnWindowFocus: 'always',
     enabled: activeTab !== 'transfers'
   })
+
+  // Synchronize Tab counters
+  useEffect(() => {
+    if (transactionsResult?.data?.transactions) {
+      const count = transactionsResult.data.transactions.totalCount
+      if (activeTab === 'payable') {
+        setPayableCount(count)
+      } else if (activeTab === 'history') {
+        setHistoryCount(count)
+      }
+    }
+  }, [transactionsResult, activeTab])
 
   // Query for Transfers
   const { data: transfersResult } = useQuery({
@@ -359,14 +395,14 @@ export function Transactions() {
               className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <Clock className="w-4 h-4 mr-1 md:mr-2" />
-              Pendência
+              Pendência {payableCount !== null ? `(${payableCount})` : ''}
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
               className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <CheckCircle2 className="w-4 h-4 mr-1 md:mr-2" />
-              Histórico
+              Histórico {historyCount !== null ? `(${historyCount})` : ''}
             </TabsTrigger>
             <TabsTrigger 
               value="transfers" 
@@ -397,6 +433,7 @@ export function Transactions() {
                       <SelectItem value="7" className="text-xs font-bold">Próximos 7 dias</SelectItem>
                       <SelectItem value="15" className="text-xs font-bold">Próximos 15 dias</SelectItem>
                       <SelectItem value="30" className="text-xs font-bold">Próximos 30 dias</SelectItem>
+                      <SelectItem value="all" className="text-xs font-bold">Todas as Pendentes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
