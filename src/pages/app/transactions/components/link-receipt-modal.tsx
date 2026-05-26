@@ -34,7 +34,7 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
   })
 
   // Filter transactions that don't have attachments yet (or just show all recent)
-  const availableTransactions = transactionsData?.transactions?.filter((t: any) => !t.attachment_url) || []
+  const availableTransactions = transactionsData?.transactions?.transactions?.filter((t: any) => !t.attachment_url) || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

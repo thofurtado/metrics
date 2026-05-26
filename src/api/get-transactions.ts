@@ -15,6 +15,7 @@ export interface GetTransactionsQuery {
   month?: string | null // ISO date string used to filter by month
   sortBy?: string | null
   sortDirection?: string | null
+  checked?: string | null
 }
 
 export interface GetTransactionsResponse {
@@ -29,6 +30,7 @@ export interface GetTransactionsResponse {
       sector_id: string | null
       description: string | null
       confirmed: boolean
+      checked: boolean
       attachment_url: string | null
       totalValue?: number | null
       payment_method?: string | null
@@ -57,7 +59,8 @@ export async function getTransactions({
   type,
   month,
   sortBy,
-  sortDirection
+  sortDirection,
+  checked
 }: GetTransactionsQuery) {
 
   const response = await api.get<GetTransactionsResponse>('/transactions', {
@@ -75,7 +78,8 @@ export async function getTransactions({
       type,
       month,
       sortBy,
-      sortDirection
+      sortDirection,
+      checked
     },
   })
 

@@ -67,9 +67,13 @@ interface Transaction {
   data_emissao: Date
   description: string
   confirmed: boolean
+  checked?: boolean
   operation: 'income' | 'expense'
   amount: number
   totalValue?: number
+  interest?: number
+  discount?: number
+  payment_method?: string
   attachment_url?: string | null
   sectors: { name: string; id?: string } | null
   accounts: { name: string; id: string }
@@ -454,6 +458,81 @@ export function TransactionDetailsModal({
                   )}
                 />
               </div>
+
+              {/* LIQUIDATION DETAILS & CONCILIATION */}
+              {isReadOnly && (
+                <div className="border-t border-border/60 pt-5 mt-2 space-y-4">
+                  <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+                    Liquidação & Conciliação
+                  </h4>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                    {/* Status de Confirmação */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Status</span>
+                      <Badge className={cn(
+                        "px-2.5 py-0.5 text-xs font-bold rounded-lg uppercase tracking-wider border-0 shadow-none",
+                        transaction.confirmed 
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400" 
+                          : "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400"
+                      )}>
+                        {transaction.confirmed ? 'Liquidada' : 'Pendente'}
+                      </Badge>
+                    </div>
+
+                    {/* Status de Conferência */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Conferência</span>
+                      <Badge className={cn(
+                        "px-2.5 py-0.5 text-xs font-bold rounded-lg uppercase tracking-wider border-0 shadow-none",
+                        transaction.checked 
+                          ? "bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-400" 
+                          : "bg-slate-100 text-slate-800 dark:bg-slate-900/50 dark:text-slate-400"
+                      )}>
+                        {transaction.checked ? 'Conferido' : 'Não Conferido'}
+                      </Badge>
+                    </div>
+
+                    {/* Método de Pagamento */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Meio de Pagamento</span>
+                      <span className="text-sm font-bold text-slate-750 dark:text-slate-350 uppercase tracking-wider">
+                        {transaction.payment_method || '-'}
+                      </span>
+                    </div>
+
+                    {/* Juros */}
+                    {transaction.confirmed && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Juros</span>
+                        <span className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                          {transaction.interest ? `+ R$ ${transaction.interest.toFixed(2)}` : 'R$ 0,00'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Desconto */}
+                    {transaction.confirmed && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Desconto</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          {transaction.discount ? `- R$ ${transaction.discount.toFixed(2)}` : 'R$ 0,00'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Valor Total Liquidado */}
+                    {transaction.confirmed && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Liquidado</span>
+                        <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                          R$ {(transaction.totalValue ?? transaction.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* COMPROVANTE */}
               <div className="space-y-1.5">

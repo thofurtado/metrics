@@ -34,6 +34,7 @@ export function TransactionTableFilters() {
   const sortByParam = searchParams.get('sortBy')
   const sortDirectionParam = searchParams.get('sortDirection')
   const combinedSortParam = sortByParam && sortDirectionParam ? `${sortByParam}-${sortDirectionParam}` : 'all'
+  const checkedParam = searchParams.get('checked')
 
   const previousFilters = useRef({
     description: descriptionParam ?? '',
@@ -42,7 +43,8 @@ export function TransactionTableFilters() {
     accountId: accountIdParam ?? 'all',
     supplierId: supplierIdParam ?? 'all',
     type: typeParam ?? 'all',
-    sortBy: combinedSortParam
+    sortBy: combinedSortParam,
+    checked: checkedParam ?? 'all'
   })
 
   const { register, control, watch, reset } =
@@ -56,6 +58,7 @@ export function TransactionTableFilters() {
         supplierId: supplierIdParam ?? 'all',
         type: typeParam ?? 'all',
         sortBy: combinedSortParam,
+        checked: checkedParam ?? 'all',
       },
     })
 
@@ -63,7 +66,7 @@ export function TransactionTableFilters() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const { description, value, sectorId, accountId, supplierId, type } = watchedFields
+      const { description, value, sectorId, accountId, supplierId, type, checked } = watchedFields
 
       // Verifica se realmente houve mudança nos filtros
       const hasFiltersChanged =
@@ -73,6 +76,7 @@ export function TransactionTableFilters() {
         accountId !== previousFilters.current.accountId ||
         supplierId !== previousFilters.current.supplierId ||
         type !== previousFilters.current.type ||
+        checked !== previousFilters.current.checked ||
         watchedFields.sortBy !== previousFilters.current.sortBy
 
       if (hasFiltersChanged) {
@@ -113,6 +117,12 @@ export function TransactionTableFilters() {
             state.delete('type')
           }
 
+          if (checked && checked !== 'all') {
+            state.set('checked', checked)
+          } else {
+            state.delete('checked')
+          }
+
           if (watchedFields.sortBy && watchedFields.sortBy !== 'all') {
             const [sortByStr, sortDirectionStr] = watchedFields.sortBy.split('-')
             state.set('sortBy', sortByStr)
@@ -136,7 +146,8 @@ export function TransactionTableFilters() {
           accountId: accountId ?? 'all',
           supplierId: supplierId ?? 'all',
           type: type ?? 'all',
-          sortBy: watchedFields.sortBy ?? 'all'
+          sortBy: watchedFields.sortBy ?? 'all',
+          checked: checked ?? 'all'
         }
       }
     }, 500)
@@ -167,6 +178,7 @@ export function TransactionTableFilters() {
       state.delete('type')
       state.delete('sortBy')
       state.delete('sortDirection')
+      state.delete('checked')
       state.set('page', '1')
       return state
     })
@@ -178,7 +190,8 @@ export function TransactionTableFilters() {
       accountId: 'all',
       supplierId: 'all',
       type: 'all',
-      sortBy: 'all'
+      sortBy: 'all',
+      checked: 'all'
     })
 
     // Atualiza a referência ao limpar filtros
@@ -189,11 +202,12 @@ export function TransactionTableFilters() {
       accountId: 'all',
       supplierId: 'all',
       type: 'all',
-      sortBy: 'all'
+      sortBy: 'all',
+      checked: 'all'
     }
   }
 
-  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all') || (sortByParam && sortByParam !== 'all')
+  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all') || (sortByParam && sortByParam !== 'all') || (checkedParam && checkedParam !== 'all')
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-center flex-wrap gap-4 p-5 md:p-4 bg-card border border-border rounded-2xl shadow-sm">
@@ -305,6 +319,26 @@ export function TransactionTableFilters() {
                       {supplier.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
+
+        <Controller
+          name="checked"
+          control={control}
+          render={({ field: { name, onChange, value, disabled } }) => (
+            <div className="flex items-center gap-2 bg-muted/30 py-1 pl-3 pr-1 rounded-full border border-border/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all flex-1 sm:w-auto">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight hidden sm:inline">Conferido</span>
+              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
+                <SelectTrigger className="h-8 border-none bg-transparent hover:bg-white/10 shadow-none px-2 flex-1 lg:w-[130px] text-xs font-semibold focus:ring-0">
+                  <SelectValue placeholder="Conferência" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                  <SelectItem value="true" className="text-xs text-sky-500">Conferidos</SelectItem>
+                  <SelectItem value="false" className="text-xs text-amber-500">Não Conferidos</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -50,6 +50,24 @@ import { LinkReceiptModal } from './components/link-receipt-modal'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Limpar todos os filtros ao entrar na página (mount)
+  useEffect(() => {
+    setSearchParams((state) => {
+      state.delete('description')
+      state.delete('value')
+      state.delete('sectorId')
+      state.delete('accountId')
+      state.delete('supplierId')
+      state.delete('type')
+      state.delete('sortBy')
+      state.delete('sortDirection')
+      state.delete('checked')
+      state.set('page', '1')
+      return state
+    }, { replace: true })
+  }, [])
+
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
   const [isIncomeOpen, setIsIncomeOpen] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)

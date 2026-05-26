@@ -16,6 +16,7 @@ import { Camera } from 'lucide-react'
 import { createTransaction } from '@/api/create-transaction'
 import { extractTransaction } from '@/api/extract-transaction'
 import { getAccounts } from '@/api/get-accounts'
+import { API_BASE_URL } from '@/lib/axios'
 import { getSectors } from '@/api/get-sectors'
 import { getSuppliers } from '@/api/get-suppliers'
 import { deleteSupplier } from '@/api/delete-supplier'
@@ -101,6 +102,7 @@ export interface TransactionExpenseProps {
 export function TransactionExpense({ open, initialReceipt }: TransactionExpenseProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
+  const [localReceipt, setLocalReceipt] = useState<any>(null)
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
@@ -163,8 +165,10 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
       setInstallmentValue('')
       setReceiptFile(null)
       setBillingMonthLabel(null)
+      setLocalReceipt(null)
     } else if (initialReceipt) {
       form.setValue('description', initialReceipt.description)
+      setLocalReceipt(initialReceipt)
     }
   }, [open, form, initialReceipt])
 
@@ -328,10 +332,10 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
       
       const transactionId = response.data?.transaction?.id || response.data?.id;
       // Upload do arquivo pendente (vinculação)
-      if (initialReceipt && transactionId) {
+      if (localReceipt && transactionId) {
          setIsUploading(true)
          try {
-            await import('@/lib/axios').then(m => m.api.patch(`/uploads/receipts/${initialReceipt.filename}/link/${transactionId}`))
+            await import('@/lib/axios').then(m => m.api.patch(`/uploads/receipts/${localReceipt.filename}/link/${transactionId}`))
             invalidateKeys()
             queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
          } catch(uploadErr) {
@@ -782,6 +786,8 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
                                     <SelectItem value="BOLETO">Boleto</SelectItem>
                                     <SelectItem value="PIX">Pix</SelectItem>
                                     <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                                    <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
+                                    <SelectItem value="CASH">Dinheiro</SelectItem>
                                     <SelectItem value="CHECK">Cheque</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -984,7 +990,13 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
             {activeTab === 'single' && (
               <div className="mt-2">
                 <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest block mb-2">Comprovante</FormLabel>
-                <FileUpload onFileSelect={setReceiptFile} />
+                <FileUpload 
+                  onFileSelect={setReceiptFile}
+                  currentFileUrl={localReceipt ? `${API_BASE_URL}${localReceipt.url}` : null}
+                  onRemoveExistingFile={() => {
+                    setLocalReceipt(null)
+                  }}
+                />
               </div>
             )}
 

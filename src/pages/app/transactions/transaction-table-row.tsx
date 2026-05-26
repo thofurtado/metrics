@@ -128,6 +128,7 @@ import { useState } from 'react'
 import { deleteTransaction } from '@/api/delete-transaction'
 import { updateStatusTransaction } from '@/api/update-transaction-status'
 import { revertTransactionStatus } from '@/api/revert-transaction-status'
+import { updateTransactionChecked } from '@/api/update-transaction-checked'
 import { deleteTransactionGroup } from '@/api/delete-transaction-group'
 import { deleteFutureTransactions } from '@/api/delete-transaction'
 import {
@@ -149,6 +150,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from '@/lib/utils'
 import { MoreHorizontal, Scissors, Trash, Eye, Pencil } from "lucide-react"
@@ -163,6 +166,7 @@ interface Transaction {
   data_emissao: Date
   description: string
   confirmed: boolean
+  checked: boolean
   operation: 'income' | 'expense'
   amount: number
   totalValue?: number
@@ -379,8 +383,42 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     await revertTransaction({ id: transactions.id })
   }
 
+  // Mutação para alterar o status "Conferido" (Auditoria) com atualização otimista
+  const { mutateAsync: toggleChecked } = useMutation({
+    mutationFn: updateTransactionChecked,
+    onMutate: async ({ id, checked }) => {
+      setLocalLoading(true)
+      queryClient.setQueryData(['transactions'], (old: any) => {
+        if (!old) return old
+        const transactionsArray = old.transactions || old || []
+        return {
+          ...old,
+          transactions: transactionsArray.map((transaction: Transaction) =>
+            transaction.id === id
+              ? { ...transaction, checked }
+              : transaction,
+          ),
+        }
+      })
+    },
+    onSuccess: (_, { checked }) => {
+      toast.success(checked ? 'Transação marcada como conferida!' : 'Conferência removida com sucesso.')
+    },
+    onError: () => {
+      toast.error('Ocorreu um erro ao alterar a conferência.')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+    onSettled: () => {
+      setLocalLoading(false)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+
   return (
-    <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
+    <TableRow className={cn(
+      "group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800",
+      transactions.checked && "bg-sky-500/5 hover:bg-sky-500/10 dark:bg-sky-500/5 dark:hover:bg-sky-500/10 border-l-4 border-l-sky-500/80 transition-all duration-300"
+    )}>
       {customPrefix}
       <TableCell className="w-[140px] text-center px-4 py-5">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
@@ -552,6 +590,20 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
               <Trash className="mr-2 h-4 w-4" />
               Deletar
             </DropdownMenuItem>
+            
+            {!transactions.isVirtual && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={transactions.checked}
+                  onCheckedChange={(checked) => {
+                    toggleChecked({ id: transactions.id, checked })
+                  }}
+                >
+                  Conferido
+                </DropdownMenuCheckboxItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

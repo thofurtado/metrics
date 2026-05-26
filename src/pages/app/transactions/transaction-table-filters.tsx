@@ -9,6 +9,7 @@ export const transactionFiltersSchema = z.object({
   type: z.string().optional(),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
+  checked: z.string().optional(),
 })
 
 export type TransactionFiltersSchema = z.infer<typeof transactionFiltersSchema>
