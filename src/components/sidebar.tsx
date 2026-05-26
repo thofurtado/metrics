@@ -48,8 +48,8 @@ export function Sidebar() {
           {/* HEADER / LOGO */}
           <div className="flex items-center justify-between mb-8 w-full group/header relative">
             <Link to="/" className="flex items-center gap-3 px-1 group" onClick={() => setSheetOpen(false)}>
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 group-hover:scale-110 transition-all duration-500">
-                <MetricsIcon className="h-6 w-6" />
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl group-hover:scale-110 transition-all duration-500">
+                <MetricsIcon className="h-8 w-8" />
               </div>
               {!collapsed && (
                 <span className="text-2xl font-manrope font-black tracking-tighter text-foreground uppercase truncate animate-in fade-in slide-in-from-left-4 duration-500">
