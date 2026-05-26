@@ -111,6 +111,7 @@ export function Transactions() {
   const type = searchParams.get('type')
   const sortBy = searchParams.get('sortBy')
   const sortDirection = searchParams.get('sortDirection')
+  const checked = searchParams.get('checked')
   const perPage = searchParams.get('per_page') ? Number(searchParams.get('per_page')) : 6
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
