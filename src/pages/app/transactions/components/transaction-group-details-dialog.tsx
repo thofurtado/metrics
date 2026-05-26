@@ -90,8 +90,9 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
     const { mutateAsync: unpayTransaction, isPending: isUnpaying } = useMutation({
         mutationFn: revertTransactionStatus,
         onSuccess: () => {
-            toast.success("Parcela marquée como PENDENTE!")
+            toast.success("Parcela marcada como PENDENTE!")
             queryClient.invalidateQueries({ queryKey: ['transactions'] })
+            queryClient.invalidateQueries({ queryKey: ['summary'] })
             queryClient.invalidateQueries({ queryKey: ['transaction-group', groupId] })
             setPaymentAction(null)
         },
