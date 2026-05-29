@@ -81,6 +81,9 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
         onSuccess: () => {
             toast.success("Parcela marcada como PAGA!")
             queryClient.invalidateQueries({ queryKey: ['transactions'] })
+            queryClient.invalidateQueries({ queryKey: ['summary'] })
+            queryClient.invalidateQueries({ queryKey: ['treatments'] })
+            queryClient.invalidateQueries({ queryKey: ['metrics'] })
             queryClient.invalidateQueries({ queryKey: ['transaction-group', groupId] })
             setPaymentAction(null)
         },
@@ -93,6 +96,8 @@ export function TransactionGroupDetailsDialog({ groupId, open, onOpenChange }: T
             toast.success("Parcela marcada como PENDENTE!")
             queryClient.invalidateQueries({ queryKey: ['transactions'] })
             queryClient.invalidateQueries({ queryKey: ['summary'] })
+            queryClient.invalidateQueries({ queryKey: ['treatments'] })
+            queryClient.invalidateQueries({ queryKey: ['metrics'] })
             queryClient.invalidateQueries({ queryKey: ['transaction-group', groupId] })
             setPaymentAction(null)
         },

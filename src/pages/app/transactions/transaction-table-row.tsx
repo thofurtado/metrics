@@ -1,13 +1,197 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
+import { Loader2, Undo2, CheckCircle2, MoreHorizontal, Scissors, Trash, Eye, Pencil, Paperclip } from 'lucide-react'
+import { useState } from 'react'
+
+import { deleteTransaction } from '@/api/delete-transaction'
+import { updateStatusTransaction } from '@/api/update-transaction-status'
+import { revertTransactionStatus } from '@/api/revert-transaction-status'
+import { updateTransactionChecked } from '@/api/update-transaction-checked'
+import { deleteTransactionGroup } from '@/api/delete-transaction-group'
+import { deleteFutureTransactions } from '@/api/delete-transaction'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { TableCell, TableRow } from '@/components/ui/table'
+import { PaymentModal } from './payment-modal'
+import { toast } from 'sonner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { cn } from '@/lib/utils'
+import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
+import { TransactionDetailsModal } from "./components/transaction-details-modal"
+import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
+
+// Interface de Transação Original do seu backend/query
+interface Transaction {
+  id: string
+  data_vencimento: Date
+  data_emissao: Date
+  description: string
+  confirmed: boolean
+  checked: boolean
+  operation: 'income' | 'expense'
+  amount: number
+  totalValue?: number
+  attachment_url?: string | null
+  sectors: { name: string; id?: string } | null
+  accounts: { name: string; id: string }
+  transaction_group_id?: string | null
+  isVirtual?: boolean
+  swipes?: any[]
+  credit_card_id?: string
+}
+
+// Interface que o PaymentModal realmente espera (com IDs em nível raiz)
+interface PaymentTransaction {
+  id: string
+  data_vencimento: Date
+  data_emissao: Date
+  description: string
+  confirmed: boolean
+  operation: 'income' | 'expense'
+  amount: number
+  sectorId: string | null // Campo MAPEADO
+  accountId: string // Campo MAPEADO
+  sectors: { name: string; id?: string } | null
+  accounts: { name: string; id: string }
+}
+
+interface TransactionTableRowProps {
+  transactions: Transaction
+  customPrefix?: React.ReactNode
+}
+
 export function TransactionMobileCard({ transactions }: TransactionTableRowProps) {
+  const queryClient = useQueryClient()
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
+  const [openRevertAlert, setOpenRevertAlert] = useState(false)
+  const [localLoading, setLocalLoading] = useState(false)
 
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
     sectorId: transactions.sectors?.id || null,
     accountId: transactions.accounts.id,
+  }
+
+  // Mutação para alterar o status (e criar o remanescente no Back-end)
+  const { mutateAsync: switchTransactionStatus } = useMutation({
+    mutationFn: updateStatusTransaction,
+    // Otimisticamente atualiza o status de confirmação
+    onMutate: async ({ id }) => {
+      setLocalLoading(true)
+      queryClient.setQueryData(['transactions'], (old: any) => {
+        if (!old) return old
+        const transactionsArray = old.transactions || old || []
+        return {
+          ...old,
+          transactions: transactionsArray.map((transaction: Transaction) =>
+            transaction.id === id
+              ? { ...transaction, confirmed: !transaction.confirmed }
+              : transaction,
+          ),
+        }
+      })
+    },
+    onError: (_error, _variables) => {
+      toast.error('Ocorreu um erro ao alterar o status do pagamento.')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+    onSettled: () => {
+      setLocalLoading(false)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+
+  // Revert Mutation
+  const { mutateAsync: revertTransaction } = useMutation({
+    mutationFn: revertTransactionStatus,
+    onMutate: () => setLocalLoading(true),
+    onSuccess: () => {
+      toast.success('Pagamento revertido com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['treatments'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      if (transactions.transaction_group_id) {
+        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+      }
+      setOpenRevertAlert(false)
+    },
+    onError: () => {
+      toast.error('Erro ao reverter pagamento.')
+    },
+    onSettled: () => setLocalLoading(false)
+  })
+
+  async function handlePayment(payload: {
+    id: string;
+    amount: number;
+    interest?: number;
+    discount?: number;
+    data_vencimento: Date;
+    data_emissao?: Date;
+    remainingDate?: Date;
+    accountId?: string;
+  }) {
+    setLocalLoading(true)
+    try {
+      const { amount, data_vencimento, remainingDate, accountId } = payload
+      const isPartialPayment = amount < transactions.amount
+
+      // 1. CHAMA A API APENAS UMA VEZ
+      await switchTransactionStatus({
+        id: transactions.id,
+        amount: amount,
+        interest: payload.interest,
+        discount: payload.discount,
+        data_vencimento: data_vencimento,
+        remainingDate: remainingDate,
+        accountId: accountId
+      })
+
+      toast.success(
+        isPartialPayment
+          ? 'Pagamento parcial processado com sucesso! Transação remanescente criada.'
+          : 'Pagamento processado com sucesso!'
+      )
+      setOpenPaymentModal(false)
+
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error)
+      throw error
+    } finally {
+      setLocalLoading(false)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['treatments'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+    }
+  }
+
+  async function handleRevert() {
+    try {
+      await revertTransaction({ id: transactions.id })
+    } catch (error) {
+      console.error('Erro ao reverter transação:', error)
+    }
   }
 
   return (
@@ -62,25 +246,60 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       </div>
 
       <div className="flex items-center gap-2 mt-1">
-        {!transactions.confirmed && (
+        {transactions.isVirtual ? (
+          <Button 
+            size="sm"
+            className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpenCreditCardDialog(true)
+            }}
+          >
+            Ver Fatura
+          </Button>
+        ) : transactions.confirmed ? (
+          <Button 
+            size="sm"
+            variant="outline"
+            className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700"
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpenRevertAlert(true)
+            }}
+            disabled={localLoading}
+          >
+            {localLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1 text-slate-500" />
+            ) : (
+              <Undo2 className="h-3 w-3 mr-1" />
+            )}
+            Reverter
+          </Button>
+        ) : (
           <Button 
             size="sm"
             className={cn(
-              "h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
+              "h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-white",
               transactions.operation === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
             )}
             onClick={(e) => {
               e.stopPropagation()
               setOpenPaymentModal(true)
             }}
+            disabled={localLoading}
           >
+            {localLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1 text-white" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+            )}
             {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
           </Button>
         )}
         <Button 
           variant="outline"
           size="sm"
-          className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest border-slate-200"
+          className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest border-slate-200 text-slate-800 dark:text-slate-200"
           onClick={(e) => {
             e.stopPropagation()
             setDetailsMode('edit')
@@ -97,10 +316,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         open={openPaymentModal}
         onOpenChange={setOpenPaymentModal}
         transaction={paymentTransaction}
-        // No card mobile, simplificamos o callback de confirmação para apenas fechar e toast
-        onConfirm={async () => {
-          setOpenPaymentModal(false)
-        }}
+        onConfirm={handlePayment}
       />
 
       <TransactionDetailsModal
@@ -117,86 +333,34 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           virtualTransaction={transactions as any}
         />
       )}
+
+      {/* ALERT DE REVERSÃO */}
+      <AlertDialog open={openRevertAlert} onOpenChange={setOpenRevertAlert}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-extrabold tracking-tight">Reverter Pagamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja marcar esta transação como não paga? Isso afetará o saldo atual.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={localLoading} className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                handleRevert()
+              }} 
+              disabled={localLoading} 
+              className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800"
+            >
+              {localLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Sim, Reverter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
-}
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import dayjs from 'dayjs'
-import { Loader2, Undo2, CheckCircle2 } from 'lucide-react'
-import { useState } from 'react'
-
-import { deleteTransaction } from '@/api/delete-transaction'
-import { updateStatusTransaction } from '@/api/update-transaction-status'
-import { revertTransactionStatus } from '@/api/revert-transaction-status'
-import { updateTransactionChecked } from '@/api/update-transaction-checked'
-import { deleteTransactionGroup } from '@/api/delete-transaction-group'
-import { deleteFutureTransactions } from '@/api/delete-transaction'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { TableCell, TableRow } from '@/components/ui/table'
-import { PaymentModal } from './payment-modal'
-import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { cn } from '@/lib/utils'
-import { MoreHorizontal, Scissors, Trash, Eye, Pencil, Paperclip } from "lucide-react"
-import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
-import { TransactionDetailsModal } from "./components/transaction-details-modal"
-import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
-
-// Interface de Transação Original do seu backend/query
-interface Transaction {
-  id: string
-  data_vencimento: Date
-  data_emissao: Date
-  description: string
-  confirmed: boolean
-  checked: boolean
-  operation: 'income' | 'expense'
-  amount: number
-  totalValue?: number
-  attachment_url?: string | null
-  sectors: { name: string; id?: string } | null
-  accounts: { name: string; id: string }
-  transaction_group_id?: string | null
-  isVirtual?: boolean
-  swipes?: any[]
-  credit_card_id?: string
-}
-
-// Interface que o PaymentModal realmente espera (com IDs em nível raiz)
-interface PaymentTransaction {
-  id: string
-  data_vencimento: Date
-  data_emissao: Date
-  description: string
-  confirmed: boolean
-  operation: 'income' | 'expense'
-  amount: number
-  sectorId: string | null // Campo MAPEADO
-  accountId: string // Campo MAPEADO
-  sectors: { name: string; id?: string } | null
-  accounts: { name: string; id: string }
-}
-
-interface TransactionTableRowProps {
-  transactions: Transaction
-  customPrefix?: React.ReactNode
 }
 
 export function TransactionTableRow({ transactions, customPrefix }: TransactionTableRowProps) {
@@ -352,6 +516,10 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      if (transactions.transaction_group_id) {
+        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+      }
     }
   }
 
@@ -371,6 +539,11 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       toast.success('Pagamento revertido com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['treatments'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      if (transactions.transaction_group_id) {
+        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+      }
       setOpenRevertAlert(false)
     },
     onError: () => {
@@ -380,7 +553,11 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   })
 
   async function handleRevert() {
-    await revertTransaction({ id: transactions.id })
+    try {
+      await revertTransaction({ id: transactions.id })
+    } catch (error) {
+      console.error('Erro ao reverter transação:', error)
+    }
   }
 
   // Mutação para alterar o status "Conferido" (Auditoria) com atualização otimista
