@@ -8,6 +8,7 @@ import {
     XAxis,
     YAxis,
     Tooltip,
+    ReferenceLine,
 } from 'recharts'
 import { cn } from '@/lib/utils'
 
@@ -140,6 +141,8 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                         value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
                                     }
                                 />
+
+                                <ReferenceLine y={0} stroke="#ef4444" strokeWidth={1.5} strokeOpacity={0.7} strokeDasharray="6 4" />
 
                                 <Tooltip
                                     cursor={{ stroke: '#4f46e5', strokeWidth: 2, strokeDasharray: '4 4' }}
