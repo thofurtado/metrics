@@ -101,7 +101,18 @@ export function Transactions() {
     queryKey: ['finance-metrics-overdue'],
     queryFn: () => getFinanceMetrics()
   })
-  const overdueTotal = (metricsData?.despesaVencida ?? 0) + (metricsData?.receitaVencida ?? 0);
+  const overdueExpenses = metricsData?.despesaVencida ?? 0;
+  const overdueIncomes = metricsData?.receitaVencida ?? 0;
+  const overdueTotal = overdueExpenses + overdueIncomes;
+
+  let overdueText = '';
+  if (overdueIncomes > 0 && overdueExpenses > 0) {
+    overdueText = `Você possui ${overdueIncomes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a receber e ${overdueExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a pagar.`;
+  } else if (overdueIncomes > 0) {
+    overdueText = `Você possui ${overdueIncomes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a receber.`;
+  } else if (overdueExpenses > 0) {
+    overdueText = `Você possui ${overdueExpenses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a pagar.`;
+  }
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
@@ -429,17 +440,16 @@ export function Transactions() {
 
         <div className="space-y-4">
           {activeTab === 'payable' && overdueTotal > 0 && (
-            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-              <div className="flex items-center gap-3 text-rose-600">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-3 text-amber-700">
                 <AlertTriangle className="h-6 w-6 shrink-0" />
                 <div className="flex flex-col">
                   <span className="font-bold text-sm">Atenção: Existem transações em atraso!</span>
-                  <span className="text-xs text-rose-600/80 font-medium">Você possui contas vencidas totalizando {overdueTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.</span>
+                  <span className="text-xs text-amber-700/80 font-medium">{overdueText}</span>
                 </div>
               </div>
               <Button 
-                variant="destructive" 
-                className="w-full sm:w-auto rounded-xl font-bold bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+                className="w-full sm:w-auto rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
                 onClick={() => setIsOverdueModalOpen(true)}
               >
                 Visualizar Vencidos
