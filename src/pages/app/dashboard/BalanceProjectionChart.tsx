@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { getBalanceProjectionData } from '@/api/get-balance-projection' // Substitua pela sua API real
+import { getFinanceMetrics } from '@/api/get-finance-metrics'
 import {
     Card,
     CardContent,
@@ -35,7 +36,7 @@ interface BalanceProjectionData {
 // --------------------------------------------------------
 // FUNÇÃO DE PROCESSAMENTO DE DADOS (Transformação)
 // --------------------------------------------------------
-function processChartData(data: { projection: BalanceProjectionData } | undefined) {
+function processChartData(data: { projection: BalanceProjectionData } | undefined, overdueNet: number) {
     if (!data || !data.projection || !data.projection.dailyBalances) {
         return []
     }
@@ -50,6 +51,7 @@ function processChartData(data: { projection: BalanceProjectionData } | undefine
             date: item.date,
             formattedDate: formattedDate,
             balance: item.balance,
+            riskBalance: item.balance + overdueNet,
             isProjection: item.isProjection,
         }
     })
@@ -69,7 +71,14 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
         queryKey: ['metrics', 'balance-projection'],
     })
 
-    const chartData = processChartData(balanceProjectionData)
+    const { data: metricsData } = useQuery({
+        queryKey: ['finance-metrics-overdue'],
+        queryFn: () => getFinanceMetrics()
+    })
+
+    const overdueNet = (metricsData?.receitaVencida ?? 0) - (metricsData?.despesaVencida ?? 0)
+
+    const chartData = processChartData(balanceProjectionData, overdueNet)
 
     return (
         <Card className={className}>
@@ -93,6 +102,12 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                         <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-500" />
                         <span>Projeção</span>
                     </div>
+                    {overdueNet !== 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 border-t-2 border-dashed border-rose-500" />
+                            <span className="text-rose-500">Projeção de Risco</span>
+                        </div>
+                    )}
                 </div>
             </CardHeader>
 
@@ -150,6 +165,15 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                                             <p className="text-[9px] font-bold text-slate-400 italic">Estimativa com base em transações pendentes</p>
                                                         )}
                                                     </div>
+                                                    {overdueNet !== 0 && (
+                                                        <div className="space-y-1 mt-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none">Projeção de Risco</p>
+                                                            <p className="text-base font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter">
+                                                                {data.riskBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                            </p>
+                                                            <p className="text-[9px] font-bold text-slate-400 italic">Considerando acerto das contas atrasadas hoje</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )
                                         }
@@ -176,6 +200,17 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                     }}
                                     activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
                                 />
+                                {overdueNet !== 0 && (
+                                    <Line
+                                        type="monotone"
+                                        strokeWidth={2}
+                                        dataKey="riskBalance"
+                                        stroke="#f43f5e"
+                                        strokeDasharray="5 5"
+                                        dot={false}
+                                        activeDot={{ r: 4, stroke: 'white', strokeWidth: 2 }}
+                                    />
+                                )}
                             </LineChart>
                         </ResponsiveContainer>
                     </>
