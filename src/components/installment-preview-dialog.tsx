@@ -7,6 +7,7 @@ import { TrendingDown, TrendingUp, CheckCircle2, AlertCircle } from "lucide-reac
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Switch } from "@/components/ui/switch"
 import {
     ResponsiveDialog,
     ResponsiveDialogContent,
@@ -45,6 +46,7 @@ export function InstallmentPreviewDialog({
 }: InstallmentPreviewDialogProps) {
     const [installments, setInstallments] = useState<InstallmentItem[]>([])
     const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
+    const [skipWeekends, setSkipWeekends] = useState(false)
 
     // Theme Colors based on variant
     const theme = variant === 'expense' ? {
@@ -70,7 +72,13 @@ export function InstallmentPreviewDialog({
         if (open && totalAmount > 0 && installmentsCount > 0) {
             generateInitialInstallments()
         }
-    }, [open, totalAmount, installmentsCount, frequency, startDate])
+    }, [open, totalAmount, installmentsCount, frequency, startDate, skipWeekends])
+
+    useEffect(() => {
+        if (!open) {
+            setSkipWeekends(false)
+        }
+    }, [open])
 
     function generateInitialInstallments() {
         const baseValue = Math.floor((totalAmount / installmentsCount) * 100) / 100
@@ -84,9 +92,19 @@ export function InstallmentPreviewDialog({
             let amount = baseValue
             if (i === 1) amount += remainder
 
+            let finalDate = new Date(currentDate)
+            if (skipWeekends) {
+                const day = finalDate.getDay()
+                if (day === 6) { // Sábado
+                    finalDate.setDate(finalDate.getDate() + 2)
+                } else if (day === 0) { // Domingo
+                    finalDate.setDate(finalDate.getDate() + 1)
+                }
+            }
+
             newInstallments.push({
                 installmentNumber: i,
-                date: new Date(currentDate),
+                date: finalDate,
                 amount: Number(amount.toFixed(2))
             })
 
@@ -161,10 +179,22 @@ export function InstallmentPreviewDialog({
                         </ResponsiveDialogTitle>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-center gap-2">
+                    <div className="mt-4 flex flex-col items-center justify-center gap-4">
                         <span className={cn("px-3 py-1 rounded-full text-xs font-semibold bg-background/60 border shadow-sm", theme.subText)}>
                             {installmentsCount} parcelas {frequency === 'MONTHLY' ? 'mensais' : frequency === 'WEEKLY' ? 'semanais' : 'anuais'}
                         </span>
+
+                        <div className="flex items-center gap-3 bg-background/40 backdrop-blur-md px-4 py-2 rounded-xl border border-border/50 shadow-sm">
+                            <Switch
+                                id="skip-weekends"
+                                checked={skipWeekends}
+                                onCheckedChange={setSkipWeekends}
+                                className={cn(variant === 'expense' ? "data-[state=checked]:bg-red-600" : "data-[state=checked]:bg-emerald-600")}
+                            />
+                            <label htmlFor="skip-weekends" className={cn("text-sm font-semibold cursor-pointer select-none transition-colors", theme.text)}>
+                                Evitar vencimentos em finais de semana
+                            </label>
+                        </div>
                     </div>
                 </ResponsiveDialogHeader>
 

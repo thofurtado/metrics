@@ -355,69 +355,55 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
             }}
             className="flex flex-col gap-5"
           >
-            <div className={cn(
-              "grid gap-4 items-end",
-              activeTab === 'single' ? "grid-cols-1 sm:grid-cols-[1fr,200px]" : "grid-cols-1"
-            )}>
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem className="space-y-1.5 flex-1">
-                    <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
-                      <span>{activeTab === 'installment' ? 'Valor Total do Contrato' : 'Valor da Receita'}</span>
-                      <span className="text-red-500 font-bold ml-1">*</span>
-                    </FormLabel>
-                    <div className={cn(
-                      "flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200",
-                      activeTab === 'single' ? "w-full" : "w-full justify-center"
-                    )}>
-                      <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
-                      <FormControl>
-                        <input
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e)
-                            const val = parseFloat(e.target.value)
-                            const count = parseInt(form.getValues('installments_count') || '1')
-                            if (!isNaN(val) && !isNaN(count) && count > 0) {
-                              setInstallmentValue((val / count).toFixed(2))
-                            } else {
-                              setInstallmentValue('')
-                            }
-                          }}
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          placeholder="0,00"
-                          className={cn(
-                            "text-4xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500",
-                            activeTab === 'single' ? "w-full" : "w-full text-center"
-                          )}
-                          autoFocus
-                        />
-                      </FormControl>
+            {activeTab === 'single' ? (
+              <div className="grid gap-4 items-end grid-cols-1 sm:grid-cols-[1fr,200px]">
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5 flex-1">
+                      <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
+                        <span>Valor da Receita</span>
+                        <span className="text-red-500 font-bold ml-1">*</span>
+                      </FormLabel>
+                      <div className="flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200 w-full">
+                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
+                        <FormControl>
+                          <input
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e)
+                              const val = parseFloat(e.target.value) || 0
+                              const count = parseInt(form.getValues('installments_count') || '1') || 1
+                              if (!isNaN(val) && !isNaN(count) && count > 0) {
+                                setInstallmentValue((val / count).toFixed(2))
+                              } else {
+                                setInstallmentValue('')
+                              }
+                            }}
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            placeholder="0,00"
+                            className="w-full text-4xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500"
+                            autoFocus
+                          />
+                        </FormControl>
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
-                        onClick={handleOpenScanner}
-                      >
-                        <Camera className="h-7 w-7" />
-                      </Button>
-                    </div>
-                    {installmentPreview && activeTab === 'installment' && (
-                      <p className="text-sm font-medium text-emerald-600/80 dark:text-emerald-400 ml-1">
-                        <strong>{installmentPreview.count}×</strong> de <strong>{installmentPreview.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-                      </p>
-                    )}
-                  </FormItem>
-                )}
-              />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="lg:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
+                          onClick={handleOpenScanner}
+                        >
+                          <Camera className="h-7 w-7" />
+                        </Button>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-              {activeTab === 'single' && (
                 <FormField
                   control={form.control}
                   name="confirmed"
@@ -445,8 +431,124 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                     </FormItem>
                   )}
                 />
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-xl border border-dashed border-emerald-200/50 dark:border-emerald-900/30 relative mt-2">
+                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-100 rounded-full">
+                  Condição de Pagamento
+                </span>
+
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                        Valor Total <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                          <Input
+                            {...field}
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="h-12 pl-9 rounded-xl border-border/70 bg-background text-base font-medium"
+                            onChange={(e) => {
+                              field.onChange(e)
+                              const val = parseFloat(e.target.value) || 0
+                              const count = parseInt(form.getValues('installments_count') || '1') || 1
+                              if (!isNaN(val) && !isNaN(count) && count > 0) {
+                                setInstallmentValue((val / count).toFixed(2))
+                              } else {
+                                setInstallmentValue('')
+                              }
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={installmentValue}
+                        className="h-12 pl-9 rounded-xl border-border/70 bg-background text-base font-medium"
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setInstallmentValue(val)
+                          const instVal = parseFloat(val) || 0
+                          const count = parseInt(form.getValues('installments_count') || '1') || 1
+                          if (!isNaN(instVal) && !isNaN(count) && count > 0) {
+                            form.setValue('amount', (instVal * count).toFixed(2), { shouldValidate: true })
+                          }
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                </FormItem>
+
+                <FormField
+                  control={form.control}
+                  name="installments_count"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Repetições</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="12"
+                          className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
+                          onChange={(e) => {
+                            field.onChange(e)
+                            const count = parseInt(e.target.value) || 1
+                            const total = parseFloat(form.getValues('amount') || '0') || 0
+                            if (!isNaN(total) && !isNaN(count) && count > 0) {
+                              setInstallmentValue((total / count).toFixed(2))
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="interval_frequency"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Frequência</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent withPortal={false}>
+                          <SelectItem value="WEEKLY">Semanal</SelectItem>
+                          <SelectItem value="MONTHLY">Mensal</SelectItem>
+                          <SelectItem value="YEARLY">Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -635,85 +737,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               />
             </div>
 
-            {activeTab === 'installment' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-xl border border-dashed border-emerald-200/50 dark:border-emerald-900/30 relative mt-2">
-                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-100 rounded-full">
-                  Recorrência
-                </span>
 
-                <FormField
-                  control={form.control}
-                  name="installments_count"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Repetições</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="12"
-                          className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
-                          onChange={(e) => {
-                            field.onChange(e)
-                            const count = parseInt(e.target.value) || 1
-                            const total = parseFloat(form.getValues('amount') || '0') || 0
-                            if (!isNaN(total) && !isNaN(count) && count > 0) {
-                              setInstallmentValue((total / count).toFixed(2))
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={installmentValue}
-                      className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
-                      onChange={(e) => {
-                        const val = e.target.value
-                        setInstallmentValue(val)
-                        const instVal = parseFloat(val) || 0
-                        const count = parseInt(form.getValues('installments_count') || '1') || 1
-                        if (!isNaN(instVal) && !isNaN(count) && count > 0) {
-                          form.setValue('amount', (instVal * count).toFixed(2))
-                        }
-                      }}
-                    />
-                  </FormControl>
-                </FormItem>
-
-                <FormField
-                  control={form.control}
-                  name="interval_frequency"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Frequência</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent withPortal={false}>
-                          <SelectItem value="WEEKLY">Semanal</SelectItem>
-                          <SelectItem value="MONTHLY">Mensal</SelectItem>
-                          <SelectItem value="YEARLY">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
             
             {/* ─── FILE UPLOAD (Anexo) ─── */}
             {activeTab === 'single' && (
