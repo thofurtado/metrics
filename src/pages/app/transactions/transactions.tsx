@@ -101,7 +101,7 @@ export function Transactions() {
     queryKey: ['finance-metrics-overdue'],
     queryFn: () => getFinanceMetrics()
   })
-  const overdueExpensesTotal = metricsData?.despesaVencida ?? 0;
+  const overdueTotal = (metricsData?.despesaVencida ?? 0) + (metricsData?.receitaVencida ?? 0);
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
@@ -428,13 +428,13 @@ export function Transactions() {
         </Tabs>
 
         <div className="space-y-4">
-          {activeTab === 'payable' && overdueExpensesTotal > 0 && (
+          {activeTab === 'payable' && overdueTotal > 0 && (
             <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
               <div className="flex items-center gap-3 text-rose-600">
                 <AlertTriangle className="h-6 w-6 shrink-0" />
                 <div className="flex flex-col">
-                  <span className="font-bold text-sm">Atenção: Existem despesas vencidas!</span>
-                  <span className="text-xs text-rose-600/80 font-medium">Você possui contas em atraso totalizando {overdueExpensesTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.</span>
+                  <span className="font-bold text-sm">Atenção: Existem transações em atraso!</span>
+                  <span className="text-xs text-rose-600/80 font-medium">Você possui contas vencidas totalizando {overdueTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.</span>
                 </div>
               </div>
               <Button 

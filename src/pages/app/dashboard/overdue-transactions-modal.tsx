@@ -37,7 +37,6 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
         queryKey: ['overdue-transactions'],
         queryFn: () => getTransactions({
             status: 'overdue',
-            type: 'out', // despesas
             perPage: 100 // Trazemos um limite maior já que é um resumo de pendências
         }),
         enabled: open,
@@ -90,10 +89,10 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                 <DialogHeader className="pb-4 border-b">
                     <DialogTitle className="flex items-center gap-2 text-xl font-bold text-stiletto-700">
                         <AlertTriangle className="h-6 w-6" />
-                        Despesas Vencidas
+                        Transações em Atraso
                     </DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Listagem de todas as contas não pagas com vencimento anterior ao dia de hoje.
+                        Listagem de todas as contas não consolidadas com vencimento anterior ao dia de hoje.
                     </p>
                 </DialogHeader>
 
@@ -141,13 +140,15 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                                             <TableCell>
                                                 {t.supplier?.name || '-'}
                                             </TableCell>
-                                            <TableCell className="text-right font-bold text-stiletto-600 whitespace-nowrap tabular-nums">
+                                            <TableCell className={`text-right font-bold whitespace-nowrap tabular-nums ${t.operation === 'income' ? 'text-emerald-600' : 'text-stiletto-600'}`}>
                                                 {Number(t.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Button 
                                                     size="sm"
-                                                    className="h-8 w-full rounded-lg text-[10px] font-black uppercase tracking-widest bg-rose-600 hover:bg-rose-700 text-white"
+                                                    className={`h-8 w-full rounded-lg text-[10px] font-black uppercase tracking-widest text-white ${
+                                                        t.operation === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                                                    }`}
                                                     onClick={() => {
                                                         setSelectedTransaction(t)
                                                         setIsPaymentModalOpen(true)
@@ -159,7 +160,7 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                                                     ) : (
                                                         <>
                                                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                            Pagar
+                                                            {t.operation === 'income' ? 'Receber' : 'Pagar'}
                                                         </>
                                                     )}
                                                 </Button>
