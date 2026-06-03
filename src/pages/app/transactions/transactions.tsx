@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
+import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { MonthPicker } from '@/components/MonthPicker'
 
 import { getTransactions } from '@/api/get-transactions'
+import { getFinanceMetrics } from '@/api/get-finance-metrics'
 import { Pagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +48,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Inbox } from 'lucide-react'
 import { PendingReceiptsModal } from './components/pending-receipts-modal'
 import { LinkReceiptModal } from './components/link-receipt-modal'
+import { OverdueTransactionsModal } from '@/pages/app/dashboard/overdue-transactions-modal'
 import { api } from '@/lib/axios'
 
 export function Transactions() {
@@ -80,6 +82,8 @@ export function Transactions() {
   const [isLinkReceiptOpen, setIsLinkReceiptOpen] = useState(false)
   const [selectedReceiptForLink, setSelectedReceiptForLink] = useState<any>(null)
 
+  const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
+
   // Query to fetch pending receipts count
   const { data: receiptsData } = useQuery({
     queryKey: ['pending-receipts'],
@@ -92,6 +96,12 @@ export function Transactions() {
 
   const [payableCount, setPayableCount] = useState<number | null>(null)
   const [historyCount, setHistoryCount] = useState<number | null>(null)
+
+  const { data: metricsData } = useQuery({
+    queryKey: ['finance-metrics-overdue'],
+    queryFn: () => getFinanceMetrics()
+  })
+  const overdueExpensesTotal = metricsData?.despesaVencida ?? 0;
 
   // Tab State: 'payable' | 'history' | 'transfers'
   const [activeTab, setActiveTab] = useState<'payable' | 'history' | 'transfers'>('payable')
@@ -376,6 +386,8 @@ export function Transactions() {
           <ResponsiveDialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
             <TransactionTransfer open={isTransferOpen} />
           </ResponsiveDialog>
+
+          <OverdueTransactionsModal open={isOverdueModalOpen} onOpenChange={setIsOverdueModalOpen} />
         </PageHeader>
 
         {/* TABS HEADER */}
@@ -416,6 +428,25 @@ export function Transactions() {
         </Tabs>
 
         <div className="space-y-4">
+          {activeTab === 'payable' && overdueExpensesTotal > 0 && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <AlertTriangle className="h-6 w-6 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm">Atenção: Existem despesas vencidas!</span>
+                  <span className="text-xs text-rose-600/80 font-medium">Você possui contas em atraso totalizando {overdueExpensesTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.</span>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                className="w-full sm:w-auto rounded-xl font-bold bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+                onClick={() => setIsOverdueModalOpen(true)}
+              >
+                Visualizar Vencidos
+              </Button>
+            </div>
+          )}
+
           {activeTab !== 'transfers' && (
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
               <div className="flex-1">
