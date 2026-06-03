@@ -105,8 +105,8 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                     </div>
                     {overdueNet !== 0 && (
                         <div className="flex items-center gap-2">
-                            <div className="w-4 border-t-2 border-dashed border-rose-500" />
-                            <span className="text-rose-500">Projeção de Risco</span>
+                            <div className="w-4 border-t-2 border-dashed border-amber-500" />
+                            <span className="text-amber-500">Projeção de Risco</span>
                         </div>
                     )}
                 </div>
@@ -170,8 +170,8 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                                     </div>
                                                     {overdueNet !== 0 && (
                                                         <div className="space-y-1 mt-3 border-t border-slate-100 dark:border-slate-800 pt-3">
-                                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none">Projeção de Risco</p>
-                                                            <p className="text-base font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tighter">
+                                                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">Projeção de Risco</p>
+                                                            <p className="text-base font-black text-amber-600 dark:text-amber-400 tabular-nums tracking-tighter">
                                                                 {data.riskBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                             </p>
                                                             <p className="text-[9px] font-bold text-slate-400 italic">Considerando acerto das contas atrasadas hoje</p>
@@ -208,7 +208,7 @@ export function BalanceProjectionChart({ className }: { className?: string }) {
                                         type="monotone"
                                         strokeWidth={2}
                                         dataKey="riskBalance"
-                                        stroke="#f43f5e"
+                                        stroke="#f59e0b"
                                         strokeDasharray="5 5"
                                         dot={false}
                                         activeDot={{ r: 4, stroke: 'white', strokeWidth: 2 }}
