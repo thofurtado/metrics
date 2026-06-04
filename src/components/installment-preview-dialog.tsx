@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { calculateCreditCardDueDate } from '@/lib/credit-card-due-date'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { format, addMonths, addWeeks, addYears } from "date-fns"
@@ -30,6 +31,9 @@ interface InstallmentPreviewDialogProps {
     installmentsCount: number
     frequency: 'WEEKLY' | 'MONTHLY' | 'YEARLY'
     startDate: Date
+    originalEmissao?: Date
+    creditCard?: any
+    holidays?: string[]
     variant?: 'expense' | 'income'
     onConfirm: (installments: InstallmentItem[]) => void
 }
@@ -41,6 +45,9 @@ export function InstallmentPreviewDialog({
     installmentsCount,
     frequency,
     startDate,
+    originalEmissao,
+    creditCard,
+    holidays,
     variant = 'expense',
     onConfirm
 }: InstallmentPreviewDialogProps) {
@@ -86,19 +93,36 @@ export function InstallmentPreviewDialog({
         const remainder = Number((totalAmount - totalBase).toFixed(2))
 
         const newInstallments: InstallmentItem[] = []
-        let currentDate = new Date(startDate)
 
         for (let i = 1; i <= installmentsCount; i++) {
             let amount = baseValue
             if (i === 1) amount += remainder
 
-            let finalDate = new Date(currentDate)
-            if (skipWeekends) {
-                const day = finalDate.getDay()
-                if (day === 6) { // Sábado
-                    finalDate.setDate(finalDate.getDate() + 2)
-                } else if (day === 0) { // Domingo
-                    finalDate.setDate(finalDate.getDate() + 1)
+            let finalDate: Date;
+
+            if (creditCard && originalEmissao) {
+                // Simula emissão avançando meses para descobrir fatura correta
+                let simulatedPurchaseDate = new Date(originalEmissao)
+                if (frequency === 'MONTHLY') simulatedPurchaseDate = addMonths(simulatedPurchaseDate, i - 1)
+                else if (frequency === 'WEEKLY') simulatedPurchaseDate = addWeeks(simulatedPurchaseDate, i - 1)
+                else if (frequency === 'YEARLY') simulatedPurchaseDate = addYears(simulatedPurchaseDate, i - 1)
+                
+                const result = calculateCreditCardDueDate(simulatedPurchaseDate, creditCard, holidays || [])
+                finalDate = result.due_date
+            } else {
+                // Cálculo Normal previne drift do "Efeito Fevereiro"
+                finalDate = new Date(startDate)
+                if (frequency === 'MONTHLY') finalDate = addMonths(finalDate, i - 1)
+                else if (frequency === 'WEEKLY') finalDate = addWeeks(finalDate, i - 1)
+                else if (frequency === 'YEARLY') finalDate = addYears(finalDate, i - 1)
+
+                if (skipWeekends) {
+                    const day = finalDate.getDay()
+                    if (day === 6) { // Sábado
+                        finalDate.setDate(finalDate.getDate() + 2)
+                    } else if (day === 0) { // Domingo
+                        finalDate.setDate(finalDate.getDate() + 1)
+                    }
                 }
             }
 
@@ -107,10 +131,6 @@ export function InstallmentPreviewDialog({
                 date: finalDate,
                 amount: Number(amount.toFixed(2))
             })
-
-            if (frequency === 'MONTHLY') currentDate = addMonths(currentDate, 1)
-            else if (frequency === 'WEEKLY') currentDate = addWeeks(currentDate, 1)
-            else if (frequency === 'YEARLY') currentDate = addYears(currentDate, 1)
         }
         setInstallments(newInstallments)
     }
@@ -184,17 +204,24 @@ export function InstallmentPreviewDialog({
                             {installmentsCount} parcelas {frequency === 'MONTHLY' ? 'mensais' : frequency === 'WEEKLY' ? 'semanais' : 'anuais'}
                         </span>
 
-                        <div className="flex items-center gap-3 bg-background/40 backdrop-blur-md px-4 py-2 rounded-xl border border-border/50 shadow-sm">
-                            <Switch
-                                id="skip-weekends"
-                                checked={skipWeekends}
-                                onCheckedChange={setSkipWeekends}
-                                className={cn(variant === 'expense' ? "data-[state=checked]:bg-red-600" : "data-[state=checked]:bg-emerald-600")}
-                            />
-                            <label htmlFor="skip-weekends" className={cn("text-sm font-semibold cursor-pointer select-none transition-colors", theme.text)}>
-                                Evitar vencimentos em finais de semana
-                            </label>
-                        </div>
+                        {!creditCard && (
+                            <div className="flex items-center gap-3 bg-background/40 backdrop-blur-md px-4 py-2 rounded-xl border border-border/50 shadow-sm">
+                                <Switch
+                                    id="skip-weekends"
+                                    checked={skipWeekends}
+                                    onCheckedChange={setSkipWeekends}
+                                    className={cn(variant === 'expense' ? "data-[state=checked]:bg-red-600" : "data-[state=checked]:bg-emerald-600")}
+                                />
+                                <label htmlFor="skip-weekends" className={cn("text-sm font-semibold cursor-pointer select-none transition-colors", theme.text)}>
+                                    Evitar vencimentos em finais de semana
+                                </label>
+                            </div>
+                        )}
+                        {creditCard && (
+                            <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-bold text-center border border-slate-200 dark:border-slate-800 shadow-sm">
+                                Vencimentos automáticos no dia da fatura ({creditCard.due_day}). Finais de semana ignorados.
+                            </div>
+                        )}
                     </div>
                 </ResponsiveDialogHeader>
 

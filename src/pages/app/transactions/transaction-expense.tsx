@@ -1055,10 +1055,14 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
       <InstallmentPreviewDialog
         open={previewInstallmentsOpen}
         onOpenChange={setPreviewInstallmentsOpen}
-        totalAmount={parseFloat(form.getValues('amount') || '0')}
-        installmentsCount={parseInt(form.getValues('installments_count') || '1') || 1}
+        totalAmount={Number(form.getValues('amount')) || 0}
+        installmentsCount={Number(form.getValues('installments_count')) || 1}
         frequency={form.getValues('interval_frequency') || 'MONTHLY'}
-        startDate={form.getValues('data_vencimento')}
+        startDate={form.getValues('data_vencimento') || new Date()}
+        originalEmissao={form.getValues('data_emissao') || new Date()}
+        creditCard={isCreditCard ? creditCardsData?.creditCards?.find((c: any) => c.id === watchedCreditCardId) : undefined}
+        holidays={(holidaysData?.holidays ?? []).map((h: any) => typeof h.date === 'string' ? h.date.substring(0, 10) : '').filter(Boolean)}
+        variant="expense"
         onConfirm={handleConfirmInstallments}
       />
 
