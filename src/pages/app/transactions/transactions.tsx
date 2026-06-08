@@ -440,12 +440,12 @@ export function Transactions() {
 
         <div className="space-y-4">
           {activeTab === 'payable' && overdueTotal > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-              <div className="flex items-center gap-3 text-amber-700">
-                <AlertTriangle className="h-6 w-6 shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-bold text-sm">Atenção: Existem transações em atraso!</span>
-                  <span className="text-xs text-amber-700/80 font-medium">{overdueText}</span>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-start sm:items-center gap-3 text-amber-700 w-full">
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 mt-0.5 sm:mt-0" />
+                <div className="flex flex-col flex-1">
+                  <span className="font-bold text-sm sm:text-base leading-tight">Atenção: Existem transações em atraso!</span>
+                  <span className="text-xs text-amber-700/80 font-medium mt-0.5">{overdueText}</span>
                 </div>
               </div>
               <Button 
