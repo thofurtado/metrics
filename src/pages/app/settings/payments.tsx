@@ -45,6 +45,13 @@ type CreatePaymentSchema = z.infer<typeof createPaymentSchema>
 
 export function Payments() {
     const queryClient = useQueryClient()
+    const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(() => localStorage.getItem('metrics-default-payment-method') || 'BOLETO')
+
+    function handleDefaultMethodChange(value: string) {
+        localStorage.setItem('metrics-default-payment-method', value)
+        setDefaultPaymentMethod(value)
+        toast.success('Forma de pagamento principal atualizada!')
+    }
 
     const { data: payments, isLoading } = useQuery({
         queryKey: ['payments'],
@@ -186,6 +193,26 @@ export function Payments() {
                         </form>
                     </DialogContent>
                 </Dialog>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border bg-muted/20">
+                <div className="space-y-1">
+                    <h3 className="font-medium text-foreground">Forma de Pagamento Principal</h3>
+                    <p className="text-sm text-muted-foreground">Selecionada por padrão em novas transações.</p>
+                </div>
+                <Select value={defaultPaymentMethod} onValueChange={handleDefaultMethodChange}>
+                    <SelectTrigger className="w-[200px] h-10 bg-background">
+                        <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="BOLETO">Boleto</SelectItem>
+                        <SelectItem value="PIX">Pix</SelectItem>
+                        <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
+                        <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
+                        <SelectItem value="CASH">Dinheiro</SelectItem>
+                        <SelectItem value="CHECK">Cheque</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

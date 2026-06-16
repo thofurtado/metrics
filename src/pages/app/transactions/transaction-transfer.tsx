@@ -72,7 +72,7 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
         defaultValues: {
             date: new Date(),
             description: '',
-            account_origin: '',
+            account_origin: localStorage.getItem('metrics-default-account') || '',
             account_destination: '',
             amount: '',
         }
@@ -103,7 +103,7 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
             form.reset({
                 date: new Date(),
                 description: '',
-                account_origin: '',
+                account_origin: localStorage.getItem('metrics-default-account') || '',
                 account_destination: '',
                 amount: '',
             })

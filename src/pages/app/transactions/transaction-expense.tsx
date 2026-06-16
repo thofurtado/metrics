@@ -147,11 +147,11 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
       data_vencimento: new Date(),
       data_emissao: new Date(),
       description: '',
-      account: '',
+      account: localStorage.getItem('metrics-default-account') || '',
       sector: '',
       amount: '',
       confirmed: false,
-      payment_method: 'BOLETO',
+      payment_method: localStorage.getItem('metrics-default-payment-method') || 'BOLETO',
       installments_count: '',
       interval_frequency: 'MONTHLY'
     }
@@ -366,11 +366,11 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
         data_vencimento: new Date(),
         data_emissao: new Date(),
         description: '',
-        account: '',
+        account: localStorage.getItem('metrics-default-account') || '',
         sector: '',
         amount: '',
         confirmed: false,
-        payment_method: 'BOLETO',
+        payment_method: localStorage.getItem('metrics-default-payment-method') || 'BOLETO',
         installments_count: '',
         interval_frequency: 'MONTHLY'
       })

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Wallet, MoreVertical } from 'lucide-react'
+import { Pencil, Plus, Wallet, MoreVertical, Star } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,6 +18,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -42,6 +48,13 @@ export function Accounts() {
     const queryClient = useQueryClient()
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+    const [defaultAccountId, setDefaultAccountId] = useState<string | null>(() => localStorage.getItem('metrics-default-account'))
+
+    function handleSetDefaultAccount(id: string) {
+        localStorage.setItem('metrics-default-account', id)
+        setDefaultAccountId(id)
+        toast.success('Conta definida como principal!')
+    }
 
     const { data: accountsResult, isLoading } = useQuery({
         queryKey: ['accounts'],
@@ -241,17 +254,36 @@ export function Accounts() {
                                                 {account.description}
                                             </p>
                                         )}
+                                        {defaultAccountId === account.id && (
+                                            <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium bg-primary/10 w-fit px-2 py-0.5 rounded-full">
+                                                <Star className="h-3 w-3 fill-primary" />
+                                                Principal
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="-mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => openAdjustModal(account)}
-                                        title="Ajustar Saldo"
-                                    >
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="-mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Opções"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleSetDefaultAccount(account.id)}>
+                                                <Star className="h-4 w-4 mr-2" />
+                                                Tornar Principal
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => openAdjustModal(account)}>
+                                                <Pencil className="h-4 w-4 mr-2" />
+                                                Ajustar Saldo
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 <div className="mt-4">
