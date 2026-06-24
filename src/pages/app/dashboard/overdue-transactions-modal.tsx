@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { differenceInDays } from 'date-fns'
-import { AlertTriangle, CalendarX2, CheckCircle2, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { AlertTriangle, CalendarX2, CheckCircle2, Loader2, Search } from 'lucide-react'
+import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { updateStatusTransaction } from '@/api/update-transaction-status'
 import { PaymentModal } from '../transactions/payment-modal'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import {
     Dialog,
     DialogContent,
@@ -33,6 +41,13 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
     const [localLoadingId, setLocalLoadingId] = useState<string | null>(null)
 
+    const [searchDesc, setSearchDesc] = useState('')
+    const [filterMonth, setFilterMonth] = useState('all')
+    const [filterYear, setFilterYear] = useState('all')
+
+    const currentYear = new Date().getFullYear()
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
+
     const { data: transactionsData, isLoading } = useQuery({
         queryKey: ['overdue-transactions'],
         queryFn: () => getTransactions({
@@ -44,6 +59,22 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
     })
 
     const transactions = transactionsData?.data?.transactions?.transactions || []
+
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            if (searchDesc && (!t.description || !t.description.toLowerCase().includes(searchDesc.toLowerCase()))) {
+                return false
+            }
+            
+            if (filterMonth !== 'all' || filterYear !== 'all') {
+                const date = new Date(t.data_vencimento)
+                if (filterMonth !== 'all' && date.getMonth() !== Number(filterMonth)) return false
+                if (filterYear !== 'all' && date.getFullYear() !== Number(filterYear)) return false
+            }
+            
+            return true
+        })
+    }, [transactions, searchDesc, filterMonth, filterYear])
 
     const { mutateAsync: switchTransactionStatus } = useMutation({
         mutationFn: updateStatusTransaction,
@@ -96,6 +127,49 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                     </p>
                 </DialogHeader>
 
+                <div className="flex flex-col sm:flex-row items-center gap-3 mt-4 px-1">
+                    <div className="relative w-full sm:w-auto flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Filtrar por descrição..."
+                            className="pl-9 h-9"
+                            value={searchDesc}
+                            onChange={(e) => setSearchDesc(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex w-full sm:w-auto items-center gap-2">
+                        <Select value={filterMonth} onValueChange={setFilterMonth}>
+                            <SelectTrigger className="w-full sm:w-[140px] h-9">
+                                <SelectValue placeholder="Mês" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os meses</SelectItem>
+                                {Array.from({ length: 12 }, (_, i) => {
+                                    const monthName = new Date(0, i).toLocaleString('pt-BR', { month: 'long' });
+                                    return (
+                                        <SelectItem key={i} value={i.toString()}>
+                                            {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
+                        <Select value={filterYear} onValueChange={setFilterYear}>
+                            <SelectTrigger className="w-full sm:w-[110px] h-9">
+                                <SelectValue placeholder="Ano" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os anos</SelectItem>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
                 <div className="flex-1 overflow-y-auto mt-4 pr-1">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-10 opacity-70">
@@ -107,6 +181,12 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                             <CalendarX2 className="h-10 w-10 mb-3 opacity-50" />
                             <p className="text-base font-semibold">Nenhuma conta vencida encontrada.</p>
                             <p className="text-sm">Todo o financeiro está em dia!</p>
+                        </div>
+                    ) : filteredTransactions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground text-center">
+                            <Search className="h-10 w-10 mb-3 opacity-50" />
+                            <p className="text-base font-semibold">Nenhuma transação encontrada.</p>
+                            <p className="text-sm">Tente ajustar os filtros acima.</p>
                         </div>
                     ) : (
                         <div className="rounded-md border overflow-hidden">
@@ -122,7 +202,7 @@ export function OverdueTransactionsModal({ open, onOpenChange }: OverdueTransact
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {transactions.map((t) => {
+                                    {filteredTransactions.map((t) => {
                                         const diasVencido = differenceInDays(new Date(), new Date(t.data_vencimento))
                                         return (
                                         <TableRow key={t.id} className="hover:bg-stiletto-50/50 transition-colors">
