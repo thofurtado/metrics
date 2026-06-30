@@ -639,7 +639,8 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             </div>
 
             {/* Cart List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30">
+            <ScrollArea className="flex-1 bg-slate-50/30">
+              <div className="p-4 space-y-3">
               {(treatment.items || []).map((item) => (
                 <div key={item.id} className="relative group bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-all">
                   <div className="flex justify-between items-start mb-2">
@@ -699,7 +700,8 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                   <p className="text-sm">Carrinho vazio</p>
                 </div>
               )}
-            </div>
+              </div>
+            </ScrollArea>
 
             {/* Sticky Footer Cart Actions */}
             <div className="flex-none p-4 bg-white border-t space-y-3 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
