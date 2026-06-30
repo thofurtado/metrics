@@ -49,6 +49,7 @@ interface TreatmentDetails {
     quantity: number
     salesValue?: number
     discount?: number
+    observations?: string
     items: {
       name: string
       isItem: boolean
@@ -60,10 +61,10 @@ interface TreatmentDetails {
   }
 }
 
-const formSchema = z.object({
   item: z.string(),
   quantity: z.string().nullish(),
   discount: z.string().nullish(),
+  observations: z.string().nullish(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -111,6 +112,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     defaultValues: {
       quantity: '1',
       discount: '0',
+      observations: '',
     }
   })
 
@@ -120,6 +122,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         item: '',
         quantity: '1',
         discount: '0',
+        observations: '',
       })
       setSalesValue(0)
       setItemQuantity(1)
@@ -249,6 +252,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         quantity,
         salesValue: unitSalesValue,
         discount: discountValue,
+        observations: data.observations || undefined,
       })
 
       const selectedItemDetails = items?.find((i: any) => i.id === data.item)
@@ -260,6 +264,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           quantity: quantity,
           salesValue: unitSalesValue,
           discount: discountValue,
+          observations: data.observations || '',
           items: {
             name: selectedItemDetails.name,
             id: selectedItemDetails.id,
@@ -546,6 +551,24 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     </span>
                   </div>
 
+                  <FormField
+                    control={form.control}
+                    name="observations"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase">Observações (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Ex: Posição do cabo, destino da mercadoria..."
+                            className="bg-white border-slate-200 shadow-sm rounded-xl focus-visible:ring-minsk-500"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
                     {/* QTD */}
                     <FormField
@@ -648,9 +671,16 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       <div className={cn("p-1.5 rounded-lg", item.items.isItem ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600")}>
                         {item.items.isItem ? <Box className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
                       </div>
-                      <span className="font-semibold text-sm text-slate-800 line-clamp-1" title={item.items.name}>
-                        {item.items.name}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm text-slate-800 line-clamp-1" title={item.items.name}>
+                          {item.items.name}
+                        </span>
+                        {item.observations && (
+                          <span className="text-xs text-slate-500 line-clamp-2 mt-0.5" title={item.observations}>
+                            Obs: {item.observations}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

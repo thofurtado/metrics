@@ -30,6 +30,7 @@ interface Item {
   item_id: string
   quantity: number
   salesValue: number
+  observations?: string | null
   items: {
     name: string
   }
@@ -348,9 +349,14 @@ Total: R$ ${subtotal.toFixed(2)}
                   <CardContent className="p-0">
                     <div className="divide-y">
                       {treatment.items.map((item, idx) => (
-                        <div key={`${item.item_id}-${idx}`} className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-gray-50 transition-colors">
-                          <div className="col-span-6 font-medium text-gray-900">
-                            {item.items.name}
+                        <div key={`${item.item_id}-${idx}`} className="grid grid-cols-12 gap-4 p-4 items-start hover:bg-gray-50 transition-colors">
+                          <div className="col-span-6 flex flex-col font-medium text-gray-900">
+                            <span>{item.items.name}</span>
+                            {item.observations && (
+                              <span className="text-xs font-normal text-gray-500 mt-1 line-clamp-3" title={item.observations}>
+                                Obs: {item.observations}
+                              </span>
+                            )}
                           </div>
                           <div className="col-span-2 text-center text-sm bg-gray-100 rounded-md py-1 text-gray-600">
                             {item.quantity}x
