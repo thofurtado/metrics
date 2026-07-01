@@ -61,6 +61,7 @@ interface TreatmentDetails {
   }
 }
 
+const formSchema = z.object({
   item: z.string(),
   quantity: z.string().nullish(),
   discount: z.string().nullish(),
