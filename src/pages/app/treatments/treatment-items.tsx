@@ -262,8 +262,13 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       }
 
       if (editingItemId) {
-        const response = await UpdateTreatmentItem({
-          treatmentItemId: editingItemId,
+        // Since backend doesn't have a PATCH route for treatment items, 
+        // we simulate the edit by deleting the old item and creating a new one.
+        await DeleteTreatmentItem({ treatmentItemId: editingItemId })
+        
+        const response = await treatmentItem({
+          treatmentId,
+          itemId: data.item,
           quantity,
           salesValue: unitSalesValue,
           discount: discountValue,
@@ -280,6 +285,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                 if (i.id === editingItemId) {
                   return {
                     ...i,
+                    id: updatedItem.id, // Update to the new treatment item ID
                     quantity,
                     salesValue: unitSalesValue,
                     discount: discountValue,
