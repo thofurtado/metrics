@@ -22,6 +22,7 @@ import { deleteTreatmentItem } from '@/api/delete-treatment-item'
 import { getProducts } from '@/api/get-products'
 import { getServices } from '@/api/get-services'
 import { getTreatmentDetails } from '@/api/get-treatment-details'
+import { updateTreatmentItem } from '@/api/update-treatment-item'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { EmptyState } from '@/components/empty-state'
 import { ErrorBoundary } from '@/components/error-boundary'
@@ -107,6 +108,9 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
   // Ref for scrolling to form on item select (mobile primarily)
   const formRef = useRef<HTMLFormElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
 
   const form = useForm<FormSchemaType>({
     resolver: zodResolver(formSchema),
@@ -131,6 +135,11 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       setFinalSalesValue(0)
       setSearchTerm('')
       setDiscountInputDisplay('0')
+      setEditingItemId(null)
+      // Return focus to search input
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 100)
     }
   }, [form.formState.isSubmitSuccessful, form])
 
@@ -201,6 +210,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     mutationFn: createTreatmentItem,
   })
 
+  const { mutateAsync: UpdateTreatmentItem } = useMutation({
+    mutationFn: updateTreatmentItem,
+  })
+
   const { mutateAsync: DeleteTreatmentItem } = useMutation({
     mutationFn: deleteTreatmentItem,
   })
@@ -247,46 +260,81 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         }
       }
 
-      const response = await treatmentItem({
-        treatmentId,
-        itemId: data.item,
-        quantity,
-        salesValue: unitSalesValue,
-        discount: discountValue,
-        observations: data.observations || undefined,
-      })
-
-      const selectedItemDetails = items?.find((i: any) => i.id === data.item)
-      const createdItem = response.data.treatmentItem || response.data
-
-      if (selectedItemDetails && createdItem && createdItem.id) {
-        const newItem = {
-          id: createdItem.id,
-          quantity: quantity,
+      if (editingItemId) {
+        const response = await UpdateTreatmentItem({
+          treatmentItemId: editingItemId,
+          quantity,
           salesValue: unitSalesValue,
           discount: discountValue,
-          observations: data.observations || '',
-          items: {
-            name: selectedItemDetails.name,
-            id: selectedItemDetails.id,
-            isItem: selectedItemDetails.isItem
+          observations: data.observations || undefined,
+        })
+        const updatedItem = response.data.treatmentItem || response.data
+        
+        if (updatedItem && updatedItem.id) {
+          queryClient.setQueryData(['treatment', treatmentId], (oldData: TreatmentDetails | undefined) => {
+            if (!oldData) return oldData
+            return {
+              ...oldData,
+              items: (oldData.items || []).map(i => {
+                if (i.id === editingItemId) {
+                  return {
+                    ...i,
+                    quantity,
+                    salesValue: unitSalesValue,
+                    discount: discountValue,
+                    observations: data.observations || ''
+                  }
+                }
+                return i
+              })
+            }
+          })
+        }
+        
+        await itemRefetch()
+        toast.success('Item atualizado com sucesso')
+      } else {
+        const response = await treatmentItem({
+          treatmentId,
+          itemId: data.item,
+          quantity,
+          salesValue: unitSalesValue,
+          discount: discountValue,
+          observations: data.observations || undefined,
+        })
+
+        const selectedItemDetails = items?.find((i: any) => i.id === data.item)
+        const createdItem = response.data.treatmentItem || response.data
+
+        if (selectedItemDetails && createdItem && createdItem.id) {
+          const newItem = {
+            id: createdItem.id,
+            quantity: quantity,
+            salesValue: unitSalesValue,
+            discount: discountValue,
+            observations: data.observations || '',
+            items: {
+              name: selectedItemDetails.name,
+              id: selectedItemDetails.id,
+              isItem: selectedItemDetails.isItem
+            }
           }
+
+          queryClient.setQueryData(['treatment', treatmentId], (oldData: TreatmentDetails | undefined) => {
+            if (!oldData) return oldData
+            return {
+              ...oldData,
+              items: [...(oldData.items || []), newItem]
+            }
+          })
         }
 
-        queryClient.setQueryData(['treatment', treatmentId], (oldData: TreatmentDetails | undefined) => {
-          if (!oldData) return oldData
-          return {
-            ...oldData,
-            items: [...(oldData.items || []), newItem]
-          }
-        })
-      }
-
-      await itemRefetch()
-      toast.success('Item adicionado com sucesso')
-      // Switch to cart on mobile after add to show feedback
-      if (window.innerWidth < 768) {
-        setActiveTab('cart')
+        await itemRefetch()
+        toast.success('Item adicionado com sucesso')
+        // Switch to cart on mobile after add to show feedback
+        if (window.innerWidth < 768) {
+          setActiveTab('cart')
+        }
       }
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Erro ao adicionar item'
@@ -295,12 +343,17 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   }
 
   function onItemSelect(item: any) {
+    setEditingItemId(null)
     form.setValue('item', item.id)
     const newSalesValue = item.price
     setSalesValue(newSalesValue)
 
     setItemQuantity(1)
     form.setValue('quantity', '1')
+    form.setValue('observations', '')
+    setItemDiscount(0)
+    setDiscountInputDisplay('0')
+    form.setValue('discount', '0')
 
     if (treatment && treatment.clients?.contract) {
       // Logic for auto-selecting contract mode based on item type could go here
@@ -312,12 +365,57 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       }
     }
 
-    const finalPrice = calculateFinalValue(newSalesValue, 1, itemDiscount)
+    const finalPrice = calculateFinalValue(newSalesValue, 1, 0)
     setFinalSalesValue(finalPrice)
     setSearchTerm('')
 
     // Smooth scroll to form area
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // Focus quantity input for quick editing
+    setTimeout(() => {
+      document.getElementById('quantity-input')?.focus()
+    }, 100)
+  }
+
+  function onCartItemSelect(cartItem: any) {
+    setEditingItemId(cartItem.id)
+    form.setValue('item', cartItem.items.id)
+    
+    // Fallback if salesValue doesn't exist on the cart item
+    const newSalesValue = cartItem.salesValue || 0
+    setSalesValue(newSalesValue)
+
+    const qty = cartItem.quantity || 1
+    setItemQuantity(qty)
+    form.setValue('quantity', String(qty))
+
+    const obs = cartItem.observations || ''
+    form.setValue('observations', obs)
+
+    const disc = cartItem.discount || 0
+    setItemDiscount(disc)
+    setDiscountInputDisplay(String(disc))
+    form.setValue('discount', String(disc))
+
+    if (treatment && treatment.clients?.contract) {
+      if (!cartItem.items.isItem) {
+        setIsContractMode(true)
+      } else {
+        setIsContractMode(false)
+      }
+    }
+
+    const finalPrice = calculateFinalValue(newSalesValue, qty, disc)
+    setFinalSalesValue(finalPrice)
+
+    // Scroll to form and focus quantity
+    if (window.innerWidth < 768) {
+      setActiveTab('products') // ensure form is visible on mobile
+    }
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.getElementById('quantity-input')?.focus()
+    }, 150)
   }
 
   function onQuantityChange(newQuantityString: string | undefined) {
@@ -447,6 +545,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <Input
+                  ref={searchInputRef}
                   placeholder="Buscar produtos ou serviços..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -583,6 +682,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                               <Minus className="h-4 w-4" />
                             </button>
                             <Input
+                              id="quantity-input"
                               {...field}
                               type="number"
                               className="h-full border-none shadow-none text-center font-bold text-lg p-0 focus-visible:ring-0"
@@ -631,15 +731,51 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       </div>
                     )}
 
-                    {/* Add Button */}
-                    <Button
-                      type="submit"
-                      disabled={!form.watch('item')}
-                      className="h-12 col-span-2 md:col-span-1 bg-minsk-600 hover:bg-minsk-700 text-white font-bold rounded-xl shadow-lg shadow-minsk-200 active:scale-95 transition-all text-base"
-                    >
-                      <Plus className="mr-2 h-5 w-5" />
-                      ADICIONAR
-                    </Button>
+                    {/* Add/Save Button */}
+                    <div className="col-span-2 md:col-span-1 flex gap-2">
+                      <Button
+                        type="submit"
+                        disabled={!form.watch('item')}
+                        className={cn(
+                          "h-12 w-full text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all text-base",
+                          editingItemId 
+                            ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" 
+                            : "bg-minsk-600 hover:bg-minsk-700 shadow-minsk-200"
+                        )}
+                      >
+                        {editingItemId ? (
+                          <>SALVAR</>
+                        ) : (
+                          <><Plus className="mr-2 h-5 w-5" />ADICIONAR</>
+                        )}
+                      </Button>
+                      
+                      {editingItemId && (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setEditingItemId(null)
+                            form.reset({
+                              item: '',
+                              quantity: '1',
+                              discount: '0',
+                              observations: '',
+                            })
+                            setSalesValue(0)
+                            setItemQuantity(1)
+                            setItemDiscount(0)
+                            setFinalSalesValue(0)
+                            setSearchTerm('')
+                            setDiscountInputDisplay('0')
+                            searchInputRef.current?.focus()
+                          }}
+                          className="h-12 w-12 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl flex items-center justify-center flex-shrink-0"
+                          title="Cancelar edição"
+                        >
+                          <Minus className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </form>
               </Form>
@@ -666,7 +802,16 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             <ScrollArea className="flex-1 bg-slate-50/30">
               <div className="p-4 space-y-3">
               {(treatment.items || []).map((item) => (
-                <div key={item.id} className="relative group bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-all">
+                <div 
+                  key={item.id} 
+                  onClick={() => onCartItemSelect(item)}
+                  className={cn(
+                    "relative group bg-white border rounded-xl p-3 shadow-sm transition-all cursor-pointer",
+                    editingItemId === item.id 
+                      ? "border-amber-400 ring-1 ring-amber-400 bg-amber-50/10" 
+                      : "border-slate-100 hover:shadow-md hover:border-slate-300"
+                  )}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2 max-w-[85%]">
                       <div className={cn("p-1.5 rounded-lg", item.items.isItem ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600")}>
@@ -685,7 +830,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <button className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                        <button 
+                          onClick={(e) => e.stopPropagation()} 
+                          className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </AlertDialogTrigger>

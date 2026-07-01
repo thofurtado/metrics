@@ -8,6 +8,7 @@ const treatmentItemForm = z.object({
   quantity: z.number(),
   salesValue: z.number(),
   discount: z.number().optional(),
+  observations: z.string().optional(),
 })
 
 type TreatmentItemForm = z.infer<typeof treatmentItemForm>
@@ -18,6 +19,7 @@ export async function createTreatmentItem({
   quantity,
   salesValue,
   discount,
+  observations,
 }: TreatmentItemForm) {
   const response = await api.post(`/treatment-item`, {
     treatment_id: treatmentId,
@@ -25,6 +27,7 @@ export async function createTreatmentItem({
     quantity,
     value: salesValue,
     discount,
+    observations,
   })
   console.log(response)
   return response
