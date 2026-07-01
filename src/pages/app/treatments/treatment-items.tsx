@@ -381,7 +381,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
   function onCartItemSelect(cartItem: any) {
     setEditingItemId(cartItem.id)
-    form.setValue('item', cartItem.item_id)
+    
+    // Make sure 'item' is set to something so the form is valid and button is enabled
+    const productId = cartItem.item_id || cartItem.itemId || cartItem.items?.id || cartItem.id
+    form.setValue('item', productId)
     
     // Fallback if salesValue doesn't exist on the cart item
     const newSalesValue = cartItem.salesValue || 0
@@ -649,7 +652,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                     <Box className="h-5 w-5 text-slate-400 shrink-0" />
                     <span className="text-sm font-medium text-slate-700 truncate flex-1">
-                      {items?.find((i: any) => i.id === form.watch('item'))?.name || 'Selecione um item acima'}
+                      {editingItemId 
+                        ? `Editando o item: ${treatment?.items?.find(i => i.id === editingItemId)?.items?.name || ''}`
+                        : (items?.find((i: any) => i.id === form.watch('item'))?.name || 'Selecione um item acima')
+                      }
                     </span>
                   </div>
 
