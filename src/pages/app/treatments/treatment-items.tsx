@@ -47,6 +47,7 @@ interface TreatmentDetails {
   id: string
   items: {
     id: string
+    item_id: string
     quantity: number
     salesValue?: number
     discount?: number
@@ -313,6 +314,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             salesValue: unitSalesValue,
             discount: discountValue,
             observations: data.observations || '',
+            item_id: data.item,
             items: {
               name: selectedItemDetails.name,
               id: selectedItemDetails.id,
@@ -379,7 +381,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
   function onCartItemSelect(cartItem: any) {
     setEditingItemId(cartItem.id)
-    form.setValue('item', cartItem.items.id)
+    form.setValue('item', cartItem.item_id)
     
     // Fallback if salesValue doesn't exist on the cart item
     const newSalesValue = cartItem.salesValue || 0
