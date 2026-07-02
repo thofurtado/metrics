@@ -389,7 +389,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     setEditingItemId(cartItem.id)
     
     // Make sure 'item' is set to something so the form is valid and button is enabled
-    const productId = cartItem.item_id || cartItem.itemId || cartItem.items?.id || cartItem.id
+    const productId = cartItem.product_id || cartItem.service_id || cartItem.supply_id || cartItem.item_id || cartItem.itemId || cartItem.id
     form.setValue('item', productId)
     
     // Fallback if salesValue doesn't exist on the cart item
