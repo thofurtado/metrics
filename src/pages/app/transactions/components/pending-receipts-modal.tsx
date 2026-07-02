@@ -146,7 +146,7 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
                 ) : (
                   <img src={`${API_BASE_URL}${receipt.url}`} alt={receipt.description} className="w-full h-full object-contain p-2" />
                 )}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute top-2 right-2 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <Button 
                     variant="destructive" 
                     size="icon" 
