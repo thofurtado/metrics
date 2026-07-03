@@ -21,6 +21,7 @@ export function AppLayout() {
             navigate('/sign-in', { replace: true })
           }
         }
+        return Promise.reject(error)
       },
     )
 

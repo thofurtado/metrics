@@ -27,7 +27,7 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
 
   const { mutateAsync: linkReceipt, isPending } = useMutation({
     mutationFn: async (transactionId: string) => {
-      const res = await api.patch(`/uploads/receipts/${receipt.filename}/link/${transactionId}`)
+      const res = await api.patch(`/uploads/receipts/${receipt.filename}/link/${transactionId}`, {})
       return res.data
     },
     onSuccess: (data, transactionId) => {
@@ -91,7 +91,7 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
   }
 
   // Filter transactions that don't have attachments yet (or just show all recent)
-  const availableTransactions = transactionsData?.transactions?.transactions?.filter((t: any) => !t.attachment_url) || []
+  const availableTransactions = transactionsData?.transactions?.transactions?.filter((t: any) => !t.attachment_url && !t.id.startsWith('virtual-card-')) || []
 
   return (
     <>
