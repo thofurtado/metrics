@@ -27,9 +27,10 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
 
   const { mutateAsync: linkReceipt, isPending } = useMutation({
     mutationFn: async (transactionId: string) => {
-      await api.patch(`/uploads/receipts/${receipt.filename}/link/${transactionId}`)
+      const res = await api.patch(`/uploads/receipts/${receipt.filename}/link/${transactionId}`)
+      return res.data
     },
-    onSuccess: (_, transactionId) => {
+    onSuccess: (data, transactionId) => {
       toast.success('Comprovante vinculado com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
@@ -38,6 +39,7 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
       if (transaction) {
         setSelectedTransactionForPayment({
           ...transaction,
+          attachment_url: data?.attachment_url,
           sectorId: transaction.sectors?.id || null,
           accountId: transaction.accounts?.id || null,
         })

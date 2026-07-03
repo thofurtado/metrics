@@ -72,6 +72,7 @@ interface Transaction {
     accountId: string
     sectors: { name: string } | null
     accounts: { name: string }
+    attachment_url?: string
 }
 
 interface PaymentModalProps {
@@ -535,7 +536,10 @@ export function PaymentModal({
                                     <Paperclip className="h-3.5 w-3.5 text-slate-400" />
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Comprovante (opcional)</label>
                                 </div>
-                                <FileUpload onFileSelect={setReceiptFile} />
+                                <FileUpload 
+                                    onFileSelect={setReceiptFile} 
+                                    currentFileUrl={transaction.attachment_url}
+                                />
                             </div>
                         </div>
 
