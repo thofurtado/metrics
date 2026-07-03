@@ -97,9 +97,10 @@ type FormSchemaType = z.infer<typeof formSchema>
 export interface TransactionExpenseProps {
   open: boolean
   initialReceipt?: any
+  onOpenChange?: (open: boolean) => void
 }
 
-export function TransactionExpense({ open, initialReceipt }: TransactionExpenseProps) {
+export function TransactionExpense({ open, initialReceipt, onOpenChange }: TransactionExpenseProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'single' | 'installment'>('single')
   const [localReceipt, setLocalReceipt] = useState<any>(null)
@@ -377,6 +378,8 @@ export function TransactionExpense({ open, initialReceipt }: TransactionExpenseP
       setActiveTab('single')
       setInstallmentValue('')
       setReceiptFile(null)
+      
+      onOpenChange?.(false)
 
     } catch (error) {
       console.error(error)

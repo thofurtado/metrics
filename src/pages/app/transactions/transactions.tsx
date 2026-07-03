@@ -366,7 +366,14 @@ export function Transactions() {
             setIsExpenseOpen(open)
             if (!open) setSelectedReceiptForExpense(null)
           }}>
-            <TransactionExpense open={isExpenseOpen} initialReceipt={selectedReceiptForExpense} />
+            <TransactionExpense 
+              open={isExpenseOpen} 
+              initialReceipt={selectedReceiptForExpense} 
+              onOpenChange={(open) => {
+                setIsExpenseOpen(open)
+                if (!open) setSelectedReceiptForExpense(null)
+              }}
+            />
           </ResponsiveDialog>
 
           <PendingReceiptsModal 
