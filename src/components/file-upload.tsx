@@ -168,7 +168,7 @@ export function FileUpload({
             <X className="w-5 h-5" />
           </button>
         </div>
-      ) : !readOnly ? (
+      ) : (!readOnly && !currentFileUrl) ? (
         <div 
           className={`relative flex flex-col items-center justify-center w-full min-h-[120px] p-4 py-6 border-2 border-dashed rounded-xl transition-colors
             ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}

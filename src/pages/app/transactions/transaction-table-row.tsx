@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils'
 import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
 import { TransactionDetailsModal } from "./components/transaction-details-modal"
 import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
+import { AttachmentModal } from './components/attachment-modal'
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -82,6 +83,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
+  const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
   const [localLoading, setLocalLoading] = useState(false)
 
@@ -183,6 +185,9 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       queryClient.invalidateQueries({ queryKey: ['summary'] })
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      if (transactions.transaction_group_id) {
+        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+      }
     }
   }
 
@@ -216,6 +221,17 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {dayjs(transactions.data_vencimento).format('DD MMM')}
           </span>
+          {transactions.attachment_url && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenAttachmentModal(true)
+              }}
+              className="hover:bg-slate-100 p-0.5 rounded-full transition-colors"
+            >
+              <Paperclip className="h-3 w-3 text-slate-400" />
+            </button>
+          )}
         </div>
         <div className={cn(
           "text-base font-black tabular-nums",
@@ -324,6 +340,13 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         onOpenChange={setOpenDetailsModal}
         transaction={transactions}
         initialMode={detailsMode}
+      />
+
+      <AttachmentModal 
+        open={openAttachmentModal}
+        onOpenChange={setOpenAttachmentModal}
+        attachmentUrl={transactions.attachment_url || null}
+        description={transactions.description}
       />
 
       {transactions.isVirtual && (
@@ -723,9 +746,14 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       <TableCell className="w-[120px] px-8 py-5">
         <div className="flex items-center justify-end gap-2">
           {transactions.attachment_url && (
-            <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shadow-sm" title="Comprovante Anexado">
+            <button
+              onClick={() => setOpenAttachmentModal(true)}
+              className="flex items-center justify-center h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400" 
+              title="Visualizar Comprovante"
+              aria-label="Visualizar Comprovante"
+            >
               <Paperclip className="h-4 w-4" />
-            </div>
+            </button>
           )}
           
           <DropdownMenu>
