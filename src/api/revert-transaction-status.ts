@@ -5,5 +5,5 @@ interface RevertTransactionParams {
 }
 
 export async function revertTransactionStatus({ id }: RevertTransactionParams) {
-    await api.patch(`/revert-transaction/${id}`)
+    await api.patch(`/revert-transaction/${id}`, {})
 }
