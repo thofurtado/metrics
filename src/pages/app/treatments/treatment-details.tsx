@@ -30,6 +30,7 @@ interface Item {
   item_id: string
   quantity: number
   salesValue: number
+  discount?: number
   observations?: string | null
   items: {
     name: string
@@ -99,12 +100,17 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   }
 
   let subtotal = 0
+  let totalDiscounts = 0
   if (treatment) {
     subtotal = treatment.items.reduce((accumulator, item) => {
       const currentSubtotal = item.quantity * item.salesValue
       return accumulator + currentSubtotal
     }, 0)
+    totalDiscounts = treatment.items.reduce((accumulator, item) => {
+      return accumulator + (item.discount || 0)
+    }, 0)
   }
+  const grandTotal = subtotal - totalDiscounts
 
   // Calculate Duration
   const totalDuration = treatment ? calculateDuration(
@@ -172,7 +178,7 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
 Protocolo: ${treatment.id}
 Cliente: ${treatment.clients.name}
 Status: ${treatment.status === 'resolved' ? 'Resolvido' : 'Em Andamento'}
-Total: R$ ${subtotal.toFixed(2)}
+${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${totalDiscounts.toFixed(2)}\nTotal: R$ ${grandTotal.toFixed(2)}` : `Total: R$ ${subtotal.toFixed(2)}`}
       `.trim()
 
       if (attemptShare) {
@@ -361,15 +367,45 @@ Total: R$ ${subtotal.toFixed(2)}
                           <div className="col-span-2 text-center text-sm bg-gray-100 rounded-md py-1 text-gray-600">
                             {item.quantity}x
                           </div>
-                          <div className="col-span-4 text-right font-medium text-gray-900">
-                            R$ {(item.quantity * item.salesValue).toFixed(2)}
+                          <div className="col-span-4 flex flex-col items-end justify-center text-right">
+                            {(item.discount && item.discount > 0) ? (
+                              <>
+                                <span className="text-xs text-gray-400 line-through">
+                                  R$ {(item.quantity * item.salesValue).toFixed(2)}
+                                </span>
+                                <span className="font-bold text-green-600">
+                                  R$ {((item.quantity * item.salesValue) - item.discount).toFixed(2)}
+                                </span>
+                                {item.discount >= (item.quantity * item.salesValue) && (
+                                  <Badge variant="outline" className="mt-1 text-[10px] bg-green-50 text-green-600 border-green-200 uppercase tracking-widest px-1 py-0 h-4">
+                                    100% OFF (Contrato)
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <span className="font-medium text-gray-900">
+                                R$ {(item.quantity * item.salesValue).toFixed(2)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="bg-gray-50 p-4 border-t flex justify-between items-center">
-                      <span className="text-gray-600 font-medium">Total Geral</span>
-                      <span className="text-xl font-bold text-green-600">R$ {subtotal.toFixed(2)}</span>
+                    <div className="bg-gray-50 p-4 border-t flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span>Subtotal</span>
+                        <span>R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                      {totalDiscounts > 0 && (
+                        <div className="flex justify-between items-center text-sm text-red-500 font-medium">
+                          <span>Descontos</span>
+                          <span>- R$ {totalDiscounts.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-1">
+                        <span className="text-gray-600 font-medium">Total Geral</span>
+                        <span className="text-xl font-bold text-green-600">R$ {grandTotal.toFixed(2)}</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
