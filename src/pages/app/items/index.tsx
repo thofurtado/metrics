@@ -11,6 +11,7 @@ import { getSupplies } from '@/api/get-supplies'
 
 import { EmptyState } from '@/components/empty-state'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { PrintDepartmentsDialog } from './print-departments-dialog'
 import { TableSkeleton } from '@/components/table-skeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -48,6 +49,7 @@ export function Items() {
 
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [createDialogType, setCreateDialogType] = useState<ItemType>('PRODUCT')
+    const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false)
 
     const { data: result = { items: [], meta: { pageIndex: 1, perPage: 10, totalCount: 0 } }, isFetching, isLoading } = useQuery({
         queryKey: ['items', activeTabType, pageIndex, nameFilter, displayIdFilter],
@@ -131,8 +133,20 @@ export function Items() {
                         <span className="sm:hidden">Novo</span>
                     </Button>
 
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsDeptDialogOpen(true)}
+                        className="h-10 w-auto px-4 py-2 rounded-md shadow-sm"
+                    >
+                        Gerenciar Departamentos
+                    </Button>
+
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <ProductItemDialog initialType={createDialogType} onSuccess={() => setIsCreateDialogOpen(false)} />
+                    </Dialog>
+
+                    <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+                        <PrintDepartmentsDialog />
                     </Dialog>
                 </PageHeader>
 
