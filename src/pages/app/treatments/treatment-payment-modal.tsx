@@ -23,6 +23,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
+import { getTreatmentDetails } from '@/api/get-treatment-details'
+
 interface PaymentModalProps {
   treatmentId: string
   totalAmount: number
@@ -36,6 +38,9 @@ interface PaymentMethodItem {
   paymentId: string
   amount: number
   installments: number
+  date?: string
+  isPaid: boolean
+  description: string
 }
 
 // Utility for currency formatting
@@ -58,16 +63,44 @@ export function TreatmentPaymentModal({
   const safeTotalAmount = totalAmount || 0
   const valueInputRef = useRef<HTMLInputElement>(null)
 
+  const { data: treatment } = useQuery({
+    queryKey: ['treatment', treatmentId],
+    queryFn: async () => {
+      const data = await getTreatmentDetails({ treatmentId })
+      return data as any
+    },
+    enabled: isOpen,
+  })
+
+  const defaultDescription = treatment ? `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}` : `O.S. #${treatmentId.slice(0, 8)}`
+
   const [paymentMethodsData, setPaymentMethodsData] = useState<PaymentMethodItem[]>([])
   const [currentPayment, setCurrentPayment] = useState<{
     paymentId: string
     amount: string
     installments: number
+    date: string
+    isPaid: boolean
+    description: string
   }>({
     paymentId: '',
     amount: '',
-    installments: 1
+    installments: 1,
+    date: new Date().toISOString().split('T')[0],
+    isPaid: true,
+    description: defaultDescription
   })
+  
+  // Update description when treatment loads
+  useEffect(() => {
+    if (treatment && currentPayment.description.includes('O.S.')) {
+      setCurrentPayment(prev => ({
+        ...prev,
+        description: `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}`
+      }))
+    }
+  }, [treatment, treatmentId])
+
   const [discount, setDiscount] = useState<string>('')
   const [changeAlert, setChangeAlert] = useState<number | null>(null) // Stores the change amount to show
   const [isFinishing, setIsFinishing] = useState(false)
@@ -76,10 +109,6 @@ export function TreatmentPaymentModal({
   const { data: availablePayments = [] } = useQuery({
     queryKey: ['payments'],
     queryFn: getPayments,
-  })
-
-  const { mutateAsync: createPaymentEntryMutation } = useMutation({
-    mutationFn: createPaymentEntry,
   })
 
   // Reset state on open
@@ -91,7 +120,10 @@ export function TreatmentPaymentModal({
       setCurrentPayment({
         paymentId: '',
         amount: safeTotalAmount.toFixed(2),
-        installments: 1
+        installments: 1,
+        date: new Date().toISOString().split('T')[0],
+        isPaid: true,
+        description: defaultDescription
       })
     }
   }, [isOpen, safeTotalAmount])
@@ -161,18 +193,22 @@ export function TreatmentPaymentModal({
       id: crypto.randomUUID(),
       paymentId: currentPayment.paymentId,
       amount: amountToRegister,
-      installments: isCreditCard ? currentPayment.installments : 1
+      installments: isCreditCard ? currentPayment.installments : 1,
+      date: currentPayment.date,
+      isPaid: currentPayment.isPaid,
+      description: currentPayment.description
     }
 
     setPaymentMethodsData([...paymentMethodsData, newItem])
 
     // Reset for next entry
     const newRemaining = Math.max(0, remainingAmount - amountToRegister)
-    setCurrentPayment({
+    setCurrentPayment(prev => ({
+      ...prev,
       paymentId: '',
       amount: newRemaining > 0 ? newRemaining.toFixed(2) : '',
       installments: 1
-    })
+    }))
   }
 
   const handleRemovePayment = (id: string) => {
@@ -192,18 +228,20 @@ export function TreatmentPaymentModal({
     try {
       console.log('Enviando pagamentos:', paymentMethodsData)
 
-      // Sequential execution to avoid race conditions or backend overload
-      for (const method of paymentMethodsData) {
-        await createPaymentEntryMutation({
-          payment_id: method.paymentId,
-          treatment_id: treatmentId,
-          occurrences: method.installments || 1,
-          amount: method.amount,
-        })
-      }
+      const payloadPayments = paymentMethodsData.map(method => ({
+        payment_id: method.paymentId,
+        amount: method.amount,
+        occurrences: method.installments || 1,
+        date: method.date ? `${method.date}T12:00:00.000Z` : undefined,
+        is_paid: method.isPaid,
+        description: method.description
+      }))
 
-      // Finalize treatment status
-      await finishTreatment({ treatmentId })
+      // Finalize treatment status and send payments to generate transactions
+      await finishTreatment({ 
+        treatmentId, 
+        payments: payloadPayments 
+      })
 
       toast.success('Venda finalizada com sucesso!')
       onSuccess()
@@ -391,6 +429,42 @@ export function TreatmentPaymentModal({
                       </motion.div>
                     )}
                   </AnimatePresence>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Data Base</Label>
+                    <Input 
+                      type="date" 
+                      value={currentPayment.date} 
+                      onChange={e => setCurrentPayment(prev => ({ ...prev, date: e.target.value }))}
+                      className="h-12 bg-card shadow-sm"
+                      disabled={isFullyPaid}
+                    />
+                  </div>
+                  <div className="col-span-1 flex items-center h-12 mt-5">
+                     <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                           type="checkbox" 
+                           checked={currentPayment.isPaid}
+                           onChange={e => setCurrentPayment(prev => ({ ...prev, isPaid: e.target.checked }))}
+                           className="w-5 h-5 rounded border-primary/50 text-primary focus:ring-primary"
+                           disabled={isFullyPaid}
+                        />
+                        <span className="text-sm font-semibold text-foreground">Já está pago?</span>
+                     </label>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Descrição do Lançamento</Label>
+                    <Input 
+                      type="text" 
+                      value={currentPayment.description} 
+                      onChange={e => setCurrentPayment(prev => ({ ...prev, description: e.target.value }))}
+                      className="h-12 bg-card shadow-sm"
+                      placeholder="Ex: O.S. #1234 - Cliente"
+                      disabled={isFullyPaid}
+                    />
+                  </div>
                 </div>
 
                 <Button

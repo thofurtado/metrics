@@ -55,6 +55,7 @@ interface Transaction {
   isVirtual?: boolean
   swipes?: any[]
   credit_card_id?: string
+  treatment_id?: string | null
 }
 
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
@@ -243,8 +244,19 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       </div>
 
       <div className="flex flex-col gap-0.5">
-        <span className="font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight">
+        <span className="font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight flex items-center gap-2">
           {transactions.description}
+          {transactions.treatment_id && (
+            <span 
+              onClick={(e) => {
+                e.stopPropagation()
+                window.location.href = '/treatments'
+              }}
+              className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+            >
+              O.S.
+            </span>
+          )}
         </span>
         <div className="flex items-center gap-2">
            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -721,7 +733,21 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       </TableCell>
 
       <TableCell className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 max-w-[200px] truncate tracking-tight">
-        {transactions.description}
+        <div className="flex items-center gap-2">
+          {transactions.description}
+          {transactions.treatment_id && (
+            <span 
+              onClick={(e) => {
+                e.stopPropagation()
+                window.location.href = '/treatments'
+              }}
+              className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+              title="Abrir Ordem de Serviço"
+            >
+              O.S.
+            </span>
+          )}
+        </div>
       </TableCell>
 
       <TableCell className="text-center hidden md:table-cell px-4 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">

@@ -142,6 +142,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           </DialogTrigger>
           <TreatmentInteraction
             open={isInteractionsOpen}
+            onOpenChange={setIsInteractionsOpen}
             treatmentId={treatments.id}
             status={treatments.status}
             amount={treatments.amount}

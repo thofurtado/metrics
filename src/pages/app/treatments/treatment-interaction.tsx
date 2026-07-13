@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -48,6 +48,7 @@ export interface TreatmentInteractionsProps {
   open: boolean
   status: string
   amount: number
+  onOpenChange?: (open: boolean) => void
 }
 
 // Componente de Calendário Simples
@@ -194,7 +195,9 @@ export function TreatmentInteraction({
   treatmentId,
   status,
   amount,
+  onOpenChange,
 }: TreatmentInteractionsProps) {
+  const queryClient = useQueryClient()
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [pendingInteractionData, setPendingInteractionData] = useState<FormSchemaType | null>(null)
   const [continueOnSubmit, setContinueOnSubmit] = useState(false)
@@ -235,8 +238,12 @@ export function TreatmentInteraction({
       })
 
       if (response !== undefined) {
+        queryClient.invalidateQueries({ queryKey: ['treatments'] })
+        queryClient.invalidateQueries({ queryKey: ['interactions'] })
         toast.success('Interação cadastrada', { position: 'top-center' })
-        if (!continueOnSubmit) navigate('/treatments')
+        if (!continueOnSubmit) {
+          onOpenChange?.(false)
+        }
       }
     } catch (error) {
       toast.error('Erro ao cadastrar interação')
