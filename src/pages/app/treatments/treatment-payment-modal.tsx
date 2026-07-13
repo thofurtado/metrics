@@ -325,6 +325,27 @@ export function TreatmentPaymentModal({
 
             {/* LEFT: INPUT AREA */}
             <div className="md:col-span-7 flex flex-col p-6 md:p-8 space-y-6 md:border-r border-border/40">
+              
+              {/* ITENS DO ATENDIMENTO */}
+              {treatment?.items && treatment.items.length > 0 && (
+                <div className="space-y-3 pb-4 border-b border-border/40">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Itens do Atendimento</h3>
+                  <div className="max-h-[120px] overflow-y-auto space-y-2 pr-2">
+                    {treatment.items.map((item: any) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm p-2 bg-muted/20 rounded-lg">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{item.quantity}x {item.items?.name}</span>
+                          {item.discount > 0 && <span className="text-[10px] text-red-500 font-medium">Desc: {formatCurrency(item.discount)}</span>}
+                        </div>
+                        <span className="font-bold text-slate-700">
+                          {formatCurrency((item.quantity * item.salesValue) - (item.discount || 0))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Registrar Pagamento</h3>
                 {changeAlert !== null && (

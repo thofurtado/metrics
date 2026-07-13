@@ -49,6 +49,7 @@ export interface TreatmentInteractionsProps {
   status: string
   amount: number
   onOpenChange?: (open: boolean) => void
+  onOpenPaymentModal?: (data: any) => void
 }
 
 // Componente de Calendário Simples
@@ -196,9 +197,9 @@ export function TreatmentInteraction({
   status,
   amount,
   onOpenChange,
+  onOpenPaymentModal
 }: TreatmentInteractionsProps) {
   const queryClient = useQueryClient()
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [pendingInteractionData, setPendingInteractionData] = useState<FormSchemaType | null>(null)
   const [continueOnSubmit, setContinueOnSubmit] = useState(false)
   const navigate = useNavigate()
@@ -251,13 +252,12 @@ export function TreatmentInteraction({
   }
 
   async function onSubmit(data: FormSchemaType) {
-    // Check if status is changing to 'resolved' which usually triggers payment
     if (data.status === 'resolved' && status !== 'resolved') {
-      // Conditional Logic: Only open payment modal if there is a positive amount to pay.
-      // If amount is 0 (e.g. Warranty, Doubt, or Contract), skip payment and finish directly.
       if (amount && amount > 0) {
-        setPendingInteractionData(data)
-        setIsPaymentModalOpen(true)
+        if (onOpenPaymentModal) {
+          // Pass the processSubmission callback so the parent can call it when payment is done
+          onOpenPaymentModal({ interactionData: data, processFn: () => processSubmission(data) })
+        }
         return
       }
     }
@@ -266,13 +266,6 @@ export function TreatmentInteraction({
 
   return (
     <>
-      <TreatmentPaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSuccess={() => { setIsPaymentModalOpen(false); if (pendingInteractionData) processSubmission(pendingInteractionData); }}
-        totalAmount={amount}
-        treatmentId={treatmentId}
-      />
       <DialogContent className="w-full max-w-full p-4 sm:max-w-md md:max-w-lg lg:max-w-xl">
         <DialogHeader>
           <DialogTitle>Cadastro Interação do Atendimento</DialogTitle>

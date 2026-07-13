@@ -11,6 +11,7 @@ import { TreatmentStatus } from '@/components/ui/treatment-status'
 import { TreatmentDetails } from './treatment-details'
 import { TreatmentInteraction } from './treatment-interaction'
 import { TreatmentItems } from './treatment-items'
+import { TreatmentPaymentModal } from './treatment-payment-modal'
 import { useModules } from '@/context/module-context'
 
 export interface TreatmentTableRowProps {
@@ -55,6 +56,8 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isInteractionsOpen, setIsInteractionsOpen] = useState(false)
   const [isItemsOpen, setIsItemsOpen] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [pendingInteraction, setPendingInteraction] = useState<{ interactionData: any, processFn: () => void } | null>(null)
 
   return (
     <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
@@ -146,8 +149,26 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
             treatmentId={treatments.id}
             status={treatments.status}
             amount={treatments.amount}
+            onOpenPaymentModal={(data) => {
+              setPendingInteraction(data)
+              setIsPaymentModalOpen(true)
+            }}
           />
         </Dialog>
+
+        {/* Render Payment Modal outside the interaction dialog to fix Radix nested dialog focus issues */}
+        <TreatmentPaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          onSuccess={() => {
+            setIsPaymentModalOpen(false)
+            if (pendingInteraction) {
+              pendingInteraction.processFn()
+            }
+          }}
+          totalAmount={treatments.amount}
+          treatmentId={treatments.id}
+        />
       </TableCell>
     </TableRow>
   )
