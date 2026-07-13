@@ -3,7 +3,7 @@ import { Plus, Banknote, CreditCard, Wallet } from 'lucide-react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 import { createPayment } from '@/api/create-payment'
