@@ -114,7 +114,6 @@ export function TreatmentPaymentModal({
   useEffect(() => {
     if (isOpen) {
       setPaymentMethodsData([])
-      setDiscount('')
       setChangeAlert(null)
       setCurrentPayment({
         paymentId: '',
