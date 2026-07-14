@@ -260,7 +260,7 @@ export function TreatmentPaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl h-[90vh] md:h-auto flex flex-col">
+      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl h-[90vh] md:h-auto md:max-h-[90vh] flex flex-col">
 
         {/* HERO HEADER - PROGRESS & TOTAL */}
         <div className="bg-primary/5 p-6 md:p-8 flex-shrink-0 relative overflow-hidden">
@@ -320,7 +320,7 @@ export function TreatmentPaymentModal({
         </div>
 
         {/* MAIN BODY - SPLIT VIEW */}
-        <div className="flex-1 overflow-y-auto md:overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto bg-background">
           <div className="grid grid-cols-1 md:grid-cols-12 h-full">
 
             {/* LEFT: INPUT AREA */}
@@ -370,9 +370,6 @@ export function TreatmentPaymentModal({
                         setCurrentPayment(prev => ({ ...prev, paymentId: val }))
                       }}
                       disabled={isFullyPaid}
-                      onOpenChange={(isOpen) => {
-                        if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
-                      }}
                     >
                       <SelectTrigger className="h-14 text-lg bg-card shadow-sm border-input hover:border-primary/50 transition-colors">
                         <SelectValue placeholder="Selecione o método..." />
@@ -431,9 +428,6 @@ export function TreatmentPaymentModal({
                           value={String(currentPayment.installments)}
                           onValueChange={val => setCurrentPayment(prev => ({ ...prev, installments: Number(val) }))}
                           disabled={isFullyPaid}
-                          onOpenChange={(isOpen) => {
-                            if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
-                          }}
                         >
                           <SelectTrigger className="h-14 bg-card shadow-sm">
                             <div className="flex items-center gap-2">
