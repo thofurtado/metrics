@@ -101,7 +101,6 @@ export function TreatmentPaymentModal({
     }
   }, [treatment, treatmentId])
 
-  const [discount, setDiscount] = useState<string>('')
   const [changeAlert, setChangeAlert] = useState<number | null>(null) // Stores the change amount to show
   const [isFinishing, setIsFinishing] = useState(false)
 
@@ -129,11 +128,9 @@ export function TreatmentPaymentModal({
   }, [isOpen, safeTotalAmount])
 
   // Derived Calculations
-  const discountValue = parseFloat(discount) || 0
-  const totalWithDiscount = Math.max(0, safeTotalAmount - discountValue)
   const totalPaid = paymentMethodsData.reduce((acc, item) => acc + item.amount, 0)
-  const remainingAmount = Math.max(0, totalWithDiscount - totalPaid)
-  const progressPercentage = totalWithDiscount > 0 ? (totalPaid / totalWithDiscount) * 100 : 0
+  const remainingAmount = Math.max(0, safeTotalAmount - totalPaid)
+  const progressPercentage = safeTotalAmount > 0 ? Math.min(100, Math.round((totalPaid / safeTotalAmount) * 100)) : 100
   const isFullyPaid = remainingAmount < 0.01
 
   // Helpers
@@ -298,22 +295,15 @@ export function TreatmentPaymentModal({
                 <span className="font-medium">{formatCurrency(safeTotalAmount)}</span>
               </div>
               <div className="flex justify-between w-full md:w-48 text-sm items-center">
-                <span className="text-muted-foreground">Desconto</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-red-500 font-bold">-</span>
-                  <input
-                    type="number"
-                    className="w-16 text-right bg-transparent border-b border-dashed border-red-200 focus:border-red-500 outline-none text-red-600 font-medium text-sm p-0 h-5"
-                    placeholder="0.00"
-                    value={discount}
-                    onChange={e => setDiscount(e.target.value)}
-                  />
-                </div>
+                <span className="text-muted-foreground">Desconto nos Itens</span>
+                <span className="font-medium text-red-500">
+                  {treatment?.items ? formatCurrency(treatment.items.reduce((acc: number, item: any) => acc + (item.discount || 0), 0)) : 'R$ 0,00'}
+                </span>
               </div>
               <div className="w-full h-px bg-border/50 my-1" />
               <div className="flex justify-between w-full md:w-48 text-base font-bold text-primary">
-                <span>Total Final</span>
-                <span>{formatCurrency(totalWithDiscount)}</span>
+                <span>Total a Pagar</span>
+                <span>{formatCurrency(safeTotalAmount)}</span>
               </div>
             </div>
           </div>
