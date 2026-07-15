@@ -42,12 +42,14 @@ export function PrintDepartmentsDialog() {
     const selectedDept = departments.find(d => d.id === selectedDeptId)
 
     useEffect(() => {
-        if (selectedDept) {
-            setDraftProductIds(selectedDept.products.map(p => p.product_id))
+        const dept = departments.find(d => d.id === selectedDeptId)
+        if (dept) {
+            setDraftProductIds(dept.products.map(p => p.product_id))
         } else {
             setDraftProductIds([])
         }
-    }, [selectedDeptId, departmentsData])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDeptId])
 
     const allProducts = productsData?.data?.products || []
     
