@@ -169,6 +169,9 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
       setLocalReceipt(null)
     } else if (initialReceipt) {
       form.setValue('description', initialReceipt.description)
+      if (initialReceipt.value) {
+        form.setValue('amount', initialReceipt.value.toString())
+      }
       setLocalReceipt(initialReceipt)
     }
   }, [open, form, initialReceipt])

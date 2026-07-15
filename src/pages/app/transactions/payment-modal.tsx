@@ -73,6 +73,8 @@ interface Transaction {
     sectors: { name: string } | null
     accounts: { name: string }
     attachment_url?: string
+    suggestedInterest?: number
+    suggestedDiscount?: number
 }
 
 interface PaymentModalProps {
@@ -105,8 +107,8 @@ export function PaymentModal({
         resolver: zodResolver(paymentSchema),
         defaultValues: {
             accountId: transaction.accountId,
-            additions: '',
-            discounts: '',
+            additions: transaction.suggestedInterest?.toFixed(2) || '',
+            discounts: transaction.suggestedDiscount?.toFixed(2) || '',
             paidAmount: transaction.amount.toFixed(2),
             paymentDate: new Date(),
             remainingDueDate: undefined,

@@ -37,11 +37,25 @@ export function LinkReceiptModal({ receipt, open, onOpenChange }: { receipt: any
       
       const transaction = availableTransactions.find((t: any) => t.id === transactionId)
       if (transaction) {
+        let initialInterest = 0;
+        let initialDiscount = 0;
+        
+        if (receipt.value && receipt.value > 0) {
+           const diff = receipt.value - transaction.amount;
+           if (diff > 0.01) {
+              initialInterest = diff;
+           } else if (diff < -0.01) {
+              initialDiscount = Math.abs(diff);
+           }
+        }
+
         setSelectedTransactionForPayment({
           ...transaction,
           attachment_url: data?.attachment_url,
           sectorId: transaction.sectors?.id || null,
           accountId: transaction.accounts?.id || null,
+          suggestedInterest: initialInterest > 0 ? initialInterest : undefined,
+          suggestedDiscount: initialDiscount > 0 ? initialDiscount : undefined,
         })
       } else {
         onOpenChange(false)
