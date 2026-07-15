@@ -24,11 +24,11 @@ export function PrintDepartmentsDialog() {
 
     const { data: productsData } = useQuery({
         queryKey: ['products-all', productSearch],
-        queryFn: () => getProducts({ query: productSearch, pageIndex: 1, pageSize: 50 }),
+        queryFn: () => getProducts({ query: productSearch, pageIndex: 1, perPage: 50 }),
     })
 
     const departments = departmentsData?.departments || []
-    const products = productsData?.products || []
+    const products = productsData?.data?.products || []
     const selectedDept = departments.find(d => d.id === selectedDeptId)
 
     const createMutation = useMutation({
