@@ -44,7 +44,7 @@ export function PrintDepartmentsDialog() {
     useEffect(() => {
         const dept = departments.find(d => d.id === selectedDeptId)
         if (dept) {
-            setDraftProductIds(dept.products.map(p => p.product_id))
+            setDraftProductIds(dept.products?.map((p: any) => typeof p === 'string' ? p : (p.product_id || p.id)) || [])
         } else {
             setDraftProductIds([])
         }
