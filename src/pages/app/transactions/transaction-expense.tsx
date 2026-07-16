@@ -90,6 +90,7 @@ const formSchema = z.object({
     amount: z.number()
   })).optional(),
   credit_card_id: z.string().optional(),
+  interest: z.string().optional(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -332,6 +333,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
         interval_frequency: isInstallment ? data.interval_frequency : undefined,
         custom_installments: cleanInstallments,
         credit_card_id: data.credit_card_id || null,
+        interest: data.interest ? Number(data.interest) : undefined,
       })
       
       const transactionId = response.data?.transaction?.id || response.data?.id;
@@ -339,7 +341,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
       if (localReceipt && transactionId) {
          setIsUploading(true)
          try {
-            await import('@/lib/axios').then(m => m.api.patch(`/uploads/receipts/${localReceipt.filename}/link/${transactionId}`))
+            await import('@/lib/axios').then(m => m.api.patch(`/uploads/receipts/${encodeURIComponent(localReceipt.filename)}/link/${transactionId}`, {}))
             invalidateKeys()
             queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
          } catch(uploadErr) {
@@ -512,7 +514,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
 
             {/* ─── GRUPO 1: VALOR E STATUS / RECORRÊNCIA ─── */}
             {activeTab === 'single' ? (
-              <div className="grid gap-4 items-end grid-cols-1 sm:grid-cols-[1fr,200px]">
+              <div className={cn("grid gap-4 items-end grid-cols-1", localReceipt ? "sm:grid-cols-[1fr,150px,200px]" : "sm:grid-cols-[1fr,200px]")}>
                 {/* VALOR */}
                 <FormField
                   control={form.control}
@@ -560,6 +562,31 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
                     </FormItem>
                   )}
                 />
+
+                {localReceipt && (
+                  <FormField
+                    control={form.control}
+                    name="interest"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1.5 flex-1">
+                        <FormLabel className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-0.5">Juros</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                            <Input
+                              {...field}
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              placeholder="0,00"
+                              className="h-[72px] pl-9 rounded-xl border-border/70 bg-background text-base font-medium"
+                            />
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

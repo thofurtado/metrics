@@ -21,7 +21,7 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
   const { data: receiptsData, isLoading } = useQuery({
     queryKey: ['pending-receipts'],
     queryFn: async () => {
-      const response = await api.get('/uploads/receipts')
+      const response = await api.get('/uploads/receipts?per_page=100')
       return response.data
     },
     enabled: open
@@ -161,9 +161,14 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
               
               <div className="p-4 flex flex-col flex-1">
                 <p className="text-xs text-slate-500 mb-1">{new Date(receipt.date).toLocaleString('pt-BR')}</p>
-                <p className="font-bold text-slate-800 text-sm mb-4 line-clamp-2 flex-1" title={receipt.description}>
+                <p className="font-bold text-slate-800 text-sm mb-2 line-clamp-2 flex-1" title={receipt.description}>
                   {receipt.description}
                 </p>
+                {receipt.value != null && (
+                  <p className="text-sm font-bold text-emerald-600 mb-4">
+                    {Number(receipt.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                )}
                 
                 <div className="flex gap-2 mt-auto">
                   <Button 
@@ -211,6 +216,11 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
                   <h3 className="font-bold text-lg md:text-xl line-clamp-1 text-white" title={activeReceipt.description}>
                     {activeReceipt.description}
                   </h3>
+                  {activeReceipt.value != null && (
+                    <span className="text-emerald-400 font-bold text-sm block mt-1">
+                      {Number(activeReceipt.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  )}
                 </div>
                 <Button
                   variant="ghost"
