@@ -307,7 +307,7 @@ export function Transactions() {
               <Inbox className="h-5 w-5 mr-2" />
               <span>Caixa de Comprovantes</span>
               {pendingCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-background animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs font-black text-white ring-2 ring-background animate-pulse">
                   {pendingCount}
                 </span>
               )}
@@ -425,21 +425,21 @@ export function Transactions() {
           <TabsList className="w-full h-auto p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl flex border border-slate-200/50 dark:border-slate-700/50">
             <TabsTrigger 
               value="payable" 
-              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-xs sm:text-sm md:text-base rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-amber-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <Clock className="w-4 h-4 mr-1 md:mr-2" />
               Pendência {payableCount !== null ? `(${payableCount})` : ''}
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
-              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-xs sm:text-sm md:text-base rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <CheckCircle2 className="w-4 h-4 mr-1 md:mr-2" />
               Histórico {historyCount !== null ? `(${historyCount})` : ''}
             </TabsTrigger>
             <TabsTrigger 
               value="transfers" 
-              className="flex-1 py-3 text-[11px] md:text-sm rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
+              className="flex-1 py-3 text-xs sm:text-sm md:text-base rounded-xl data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all font-bold tracking-tight"
             >
               <ArrowRightLeft className="w-4 h-4 mr-1 md:mr-2 hidden sm:block" />
               Transferência
@@ -467,43 +467,38 @@ export function Transactions() {
           )}
 
           {activeTab !== 'transfers' && (
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
-              <div className="flex-1">
-                <TransactionTableFilters />
-              </div>
-
-              {/* HORIZON SELECTOR - Only visible in Payable Tab */}
-              {activeTab === 'payable' && (
-                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 py-1.5 pl-4 pr-1.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Ciclo:</span>
-                  <Select value={timeHorizon} onValueChange={(val: any) => setTimeHorizon(val)}>
-                    <SelectTrigger className="h-8 w-full sm:w-[180px] border-none shadow-none rounded-full text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs font-black uppercase tracking-tight">
-                      <SelectValue placeholder="Selecione o período" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-none shadow-2xl">
-                      <SelectItem value="7" className="text-xs font-bold">Próximos 7 dias</SelectItem>
-                      <SelectItem value="15" className="text-xs font-bold">Próximos 15 dias</SelectItem>
-                      <SelectItem value="30" className="text-xs font-bold">Próximos 30 dias</SelectItem>
-                      <SelectItem value="all" className="text-xs font-bold">Todas as Pendentes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* MONTH PICKER - Only visible in History Tab */}
-              {activeTab === 'history' && (
-                <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
-                    className="font-bold text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 h-9"
-                    onClick={() => setIsSummaryOpen(true)}
-                  >
-                    Resumo Consolidado
-                  </Button>
-                  <MonthPicker date={historyDate} setDate={setHistoryDate} />
-                  <MonthlySummaryDialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen} month={historyDate} />
-                </div>
-              )}
+            <div className="w-full">
+              <TransactionTableFilters>
+                {activeTab === 'payable' && (
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all w-full">
+                    <span className="text-xs text-slate-400 uppercase tracking-widest font-black shrink-0 hidden sm:inline">Ciclo</span>
+                    <Select value={timeHorizon} onValueChange={(val: any) => setTimeHorizon(val)}>
+                      <SelectTrigger className="h-8 w-full border-none shadow-none rounded-xl text-slate-700 dark:text-slate-300 focus:ring-0 text-sm font-bold min-w-0">
+                        <SelectValue placeholder="Selecione o período" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-none shadow-2xl">
+                        <SelectItem value="7" className="text-sm font-bold">Próximos 7 dias</SelectItem>
+                        <SelectItem value="15" className="text-sm font-bold">Próximos 15 dias</SelectItem>
+                        <SelectItem value="30" className="text-sm font-bold">Próximos 30 dias</SelectItem>
+                        <SelectItem value="all" className="text-sm font-bold">Todas as Pendentes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {activeTab === 'history' && (
+                  <div className="flex items-center gap-3 w-full">
+                    <MonthPicker date={historyDate} setDate={setHistoryDate} />
+                    <Button 
+                      variant="outline" 
+                      className="font-bold text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 h-10 md:h-11 rounded-2xl px-4 flex-1 sm:flex-none"
+                      onClick={() => setIsSummaryOpen(true)}
+                    >
+                      Resumo Consolidado
+                    </Button>
+                    <MonthlySummaryDialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen} month={historyDate} />
+                  </div>
+                )}
+              </TransactionTableFilters>
             </div>
           )}
 
@@ -516,11 +511,11 @@ export function Transactions() {
                     {/* Different Headers for Transfers */}
                     {activeTab === 'transfers' ? (
                       <>
-                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest pl-8 py-5">Data</TableHead>
-                        <TableHead className="w-2/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Descrição</TableHead>
-                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Origem</TableHead>
-                        <TableHead className="w-1/6 text-[11px] text-slate-500 font-bold uppercase tracking-widest">Destino</TableHead>
-                        <TableHead className="w-1/6 text-right text-[11px] text-slate-500 font-bold uppercase tracking-widest pr-8">Valor</TableHead>
+                        <TableHead className="w-1/6 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest pl-8 py-5">Data</TableHead>
+                        <TableHead className="w-2/6 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest">Descrição</TableHead>
+                        <TableHead className="w-1/6 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest">Origem</TableHead>
+                        <TableHead className="w-1/6 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest">Destino</TableHead>
+                        <TableHead className="w-1/6 text-right text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest pr-8">Valor</TableHead>
                       </>
                     ) : (
                       <>
@@ -534,22 +529,22 @@ export function Transactions() {
                             className="rounded-md border-slate-300"
                           />
                         </TableHead>
-                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                        <TableHead className="w-[140px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest">
                           Controle
                         </TableHead>
-                        <TableHead className="w-[120px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest">
+                        <TableHead className="w-[120px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest">
                           Vencimento
                         </TableHead>
-                        <TableHead className="text-[11px] text-slate-500 font-bold uppercase tracking-widest px-6">
+                        <TableHead className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest px-6">
                           Descrição da Transação
                         </TableHead>
-                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden md:table-cell">
+                        <TableHead className="w-[140px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest hidden lg:table-cell">
                           Setor
                         </TableHead>
-                        <TableHead className="w-[140px] text-center text-[11px] text-slate-500 font-bold uppercase tracking-widest hidden md:table-cell">
+                        <TableHead className="w-[140px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest hidden xl:table-cell">
                           Conta Fluxo
                         </TableHead>
-                        <TableHead className="text-right text-[12px] text-slate-700 font-black uppercase tracking-widest pr-8">
+                        <TableHead className="text-right text-sm md:text-base text-slate-700 font-black uppercase tracking-widest pr-8">
                           Montante
                         </TableHead>
                         <TableHead className="w-[60px] pr-8"></TableHead>

@@ -20,7 +20,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { TreatmentDetails } from '../treatments/treatment-details'
 import { PaymentModal } from './payment-modal'
 import { toast } from 'sonner'
 import {
@@ -85,6 +87,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
+  const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
   const [localLoading, setLocalLoading] = useState(false)
 
@@ -219,7 +222,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
             "h-2 w-2 rounded-full",
             transactions.confirmed ? "bg-emerald-500" : (transactions.operation === 'income' ? "bg-emerald-500/30" : "bg-rose-500")
           )} />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
             {dayjs(transactions.data_vencimento).format('DD MMM')}
           </span>
           {transactions.attachment_url && (
@@ -238,7 +241,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           "text-base font-black tabular-nums",
           transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
         )}>
-          <span className="text-[11px] font-bold opacity-60 mr-0.5">R$</span>
+          <span className="text-sm font-bold opacity-60 mr-0.5">R$</span>
           {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       </div>
@@ -250,22 +253,22 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
             <span 
               onClick={(e) => {
                 e.stopPropagation()
-                window.location.href = '/treatments?treatmentId=' + transactions.treatment_id
+                setOpenTreatmentModal(true)
               }}
-              className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+              className="px-1.5 py-0.5 rounded text-xs uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
             >
               O.S.
             </span>
           )}
         </span>
         <div className="flex items-center gap-2">
-           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+           <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
             {transactions.accounts.name}
           </span>
           {transactions.sectors && (
             <>
               <span className="h-1 w-1 rounded-full bg-slate-300" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 {transactions.sectors.name}
               </span>
             </>
@@ -277,7 +280,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         {transactions.isVirtual ? (
           <Button 
             size="sm"
-            className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-700 text-white"
+            className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-700 text-white"
             onClick={(e) => {
               e.stopPropagation()
               setOpenCreditCardDialog(true)
@@ -289,7 +292,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           <Button 
             size="sm"
             variant="outline"
-            className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700"
+            className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700"
             onClick={(e) => {
               e.stopPropagation()
               setOpenRevertAlert(true)
@@ -307,7 +310,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           <Button 
             size="sm"
             className={cn(
-              "h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-white",
+              "h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest text-white",
               transactions.operation === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
             )}
             onClick={(e) => {
@@ -327,7 +330,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         <Button 
           variant="outline"
           size="sm"
-          className="h-8 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest border-slate-200 text-slate-800 dark:text-slate-200"
+          className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest border-slate-200 text-slate-800 dark:text-slate-200"
           onClick={(e) => {
             e.stopPropagation()
             setDetailsMode('edit')
@@ -367,6 +370,12 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           onOpenChange={setOpenCreditCardDialog}
           virtualTransaction={transactions as any}
         />
+      )}
+
+      {transactions.treatment_id && (
+        <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
+          <TreatmentDetails open={openTreatmentModal} treatmentId={transactions.treatment_id} />
+        </Dialog>
       )}
 
       {/* ALERT DE REVERSÃO */}
@@ -409,6 +418,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   const [localLoading, setLocalLoading] = useState(false)
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
+  const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
@@ -637,7 +647,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
           aria-label={transactions.isVirtual ? "Ver Fatura" : transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 w-[110px] text-[10px] font-black uppercase tracking-widest rounded-xl border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
+          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 w-[110px] text-xs font-black uppercase tracking-widest rounded-xl border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
             transactions.isVirtual
               ? 'bg-amber-600 text-white border-transparent hover:bg-amber-700 focus:ring-amber-600'
               : transactions.confirmed
@@ -727,7 +737,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           )}>
             {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
           </span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">
+          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest leading-none">
             {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
           </span>
         </div>
@@ -740,9 +750,9 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             <span 
               onClick={(e) => {
                 e.stopPropagation()
-                window.location.href = '/treatments?treatmentId=' + transactions.treatment_id
+                setOpenTreatmentModal(true)
               }}
-              className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+              className="px-1.5 py-0.5 rounded text-xs uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
               title="Abrir Ordem de Serviço"
             >
               O.S.
@@ -751,12 +761,12 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         </div>
       </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell px-4 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+      <TableCell className="text-center hidden md:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
       <TableCell className="text-center hidden md:table-cell px-4 py-5">
-        <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-slate-200/50 dark:border-slate-700/50">
+        <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 border border-slate-200/50 dark:border-slate-700/50">
           {transactions.accounts.name}
         </span>
       </TableCell>
@@ -766,7 +776,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         "text-right font-black tabular-nums px-8 py-5 text-base",
         transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
       )}>
-        <span className="text-[11px] font-bold opacity-60 mr-0.5">R$</span>
+        <span className="text-sm font-bold opacity-60 mr-0.5">R$</span>
         {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </TableCell>
 
@@ -928,6 +938,12 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             onOpenChange={setOpenCreditCardDialog}
             virtualTransaction={transactions as any}
           />
+        )}
+
+        {transactions.treatment_id && (
+          <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
+            <TreatmentDetails open={openTreatmentModal} treatmentId={transactions.treatment_id} />
+          </Dialog>
         )}
       </TableCell>
     </TableRow>
