@@ -250,7 +250,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
             <span 
               onClick={(e) => {
                 e.stopPropagation()
-                window.location.href = '/treatments'
+                window.location.href = '/treatments?treatmentId=' + transactions.treatment_id
               }}
               className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
             >
@@ -408,6 +408,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [localLoading, setLocalLoading] = useState(false)
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
+  const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
@@ -739,7 +740,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             <span 
               onClick={(e) => {
                 e.stopPropagation()
-                window.location.href = '/treatments'
+                window.location.href = '/treatments?treatmentId=' + transactions.treatment_id
               }}
               className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
               title="Abrir Ordem de Serviço"
@@ -912,6 +913,13 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           onOpenChange={setOpenDetailsModal}
           transaction={transactions}
           initialMode={detailsMode}
+        />
+
+        <AttachmentModal 
+          open={openAttachmentModal}
+          onOpenChange={setOpenAttachmentModal}
+          attachmentUrl={transactions.attachment_url || null}
+          description={transactions.description}
         />
 
         {transactions.isVirtual && (
