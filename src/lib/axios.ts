@@ -2,49 +2,37 @@ import axios from 'axios'
 import { toast } from 'sonner'
 
 /**
- * Função para detectar dinamicamente a URL da API com base no domínio de acesso.
+ * Agora usamos UMA ÚNICA URL de API (A do Coolify).
+ * A separação de clientes é feita pelo header 'x-tenant-domain' que vamos enviar abaixo.
  */
-const getDynamicBaseUrl = () => {
-  // 1. Ambiente de Desenvolvimento (Localhost)
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_URL
-  }
-
-  // 2. Ambiente de Produção (Navegador)
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-
-    // Identifica Marujo Gastro Bar
-    if (hostname.includes('marujo')) {
-      return 'https://api.marujogastrobar.tech'
-    }
-
-    // Identifica Eureca Tech
-    if (hostname.includes('eureca')) {
-      return 'https://api.eurecatech.com.br'
-    }
-  }
-
-  // Fallback: Usa a variável do .env se nada acima coincidir
-  return import.meta.env.VITE_API_URL
-}
-
-export const API_BASE_URL = getDynamicBaseUrl()
-const BASE_URL = API_BASE_URL
+const BASE_URL = import.meta.env.VITE_API_URL
 
 // Log para ajudar no debug se houver erro de conexão
-console.log('DEBUG: Conectando na API:', BASE_URL);
+console.log('DEBUG: Conectando na API central:', BASE_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,
 })
 
-// Interceptor para adicionar o token DINAMICAMENTE em cada requisição
+// Interceptor para adicionar o token e o domínio DINAMICAMENTE em cada requisição
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Envia a URL de onde o cliente está acessando para o backend saber qual banco usar
+  if (typeof window !== 'undefined') {
+    let hostname = window.location.hostname
+    
+    // Se o desenvolvedor estiver testando localmente, força um domínio de teste
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      hostname = 'marujo.metrics.dev.br' // Troque se quiser testar outro cliente localmente
+    }
+    
+    config.headers['x-tenant-domain'] = hostname
+  }
+
   return config
 })
 
