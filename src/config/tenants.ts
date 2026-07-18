@@ -47,6 +47,6 @@ export function getCurrentTenant() {
         return TENANTS_CONFIG['localhost'];
     }
 
-    // Fallback padrão para produção (Eureca)
-    return TENANTS_CONFIG['eureca'];
+    // Fallback padrão para novos clientes (Redireciona para o Login)
+    return null;
 }

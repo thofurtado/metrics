@@ -10,6 +10,11 @@ export function LandingInterceptor() {
     }
 
     const tenant = getCurrentTenant();
+    
+    if (!tenant || !tenant.landingComponent) {
+        return <Navigate to="/sign-in" replace />;
+    }
+
     const LandingComponent = tenant.landingComponent;
 
     return (
