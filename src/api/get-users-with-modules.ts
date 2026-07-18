@@ -4,6 +4,7 @@ export interface UserWithModules {
   id: string
   name: string
   email: string
+  role: 'ADMIN' | 'MEMBER'
   modules: string[]
 }
 
