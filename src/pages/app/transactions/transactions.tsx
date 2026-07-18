@@ -49,6 +49,7 @@ import { Inbox } from 'lucide-react'
 import { PendingReceiptsModal } from './components/pending-receipts-modal'
 import { LinkReceiptModal } from './components/link-receipt-modal'
 import { OverdueTransactionsModal } from '@/pages/app/dashboard/overdue-transactions-modal'
+import { MonthlySummaryDialog } from './components/monthly-summary-dialog'
 import { api } from '@/lib/axios'
 
 export function Transactions() {
@@ -83,6 +84,7 @@ export function Transactions() {
   const [selectedReceiptForLink, setSelectedReceiptForLink] = useState<any>(null)
 
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false)
 
   // Query to fetch pending receipts count
   const { data: receiptsData } = useQuery({
@@ -490,7 +492,17 @@ export function Transactions() {
 
               {/* MONTH PICKER - Only visible in History Tab */}
               {activeTab === 'history' && (
-                <MonthPicker date={historyDate} setDate={setHistoryDate} />
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="font-bold text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 h-9"
+                    onClick={() => setIsSummaryOpen(true)}
+                  >
+                    Resumo Consolidado
+                  </Button>
+                  <MonthPicker date={historyDate} setDate={setHistoryDate} />
+                  <MonthlySummaryDialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen} month={historyDate} />
+                </div>
               )}
             </div>
           )}
