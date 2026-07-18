@@ -5,7 +5,8 @@ import { toast } from 'sonner'
  * Agora usamos UMA ÚNICA URL de API (A do Coolify).
  * A separação de clientes é feita pelo header 'x-tenant-domain' que vamos enviar abaixo.
  */
-const BASE_URL = import.meta.env.VITE_API_URL
+export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+const BASE_URL = API_BASE_URL
 
 // Log para ajudar no debug se houver erro de conexão
 console.log('DEBUG: Conectando na API central:', BASE_URL);
