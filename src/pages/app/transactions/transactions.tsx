@@ -335,11 +335,11 @@ export function Transactions() {
                   <span>Nova Transação</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-2 rounded-2xl shadow-2xl border-none bg-white/95 backdrop-blur-md" side="bottom" align="end">
+              <PopoverContent className="w-80 p-2 rounded-2xl shadow-2xl border-none bg-white/95 dark:bg-slate-900/95 backdrop-blur-md" side="bottom" align="end">
               <Button
                 aria-label="Adicionar Despesa"
                 variant="ghost"
-                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-rose-50 hover:text-rose-600 font-bold"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-600 dark:hover:text-rose-400 font-bold text-slate-800 dark:text-slate-100"
                 onClick={() => {
                   setIsMenuOpen(false)
                   setIsExpenseOpen(true)
@@ -351,7 +351,7 @@ export function Transactions() {
               <Button
                 aria-label="Adicionar Receita"
                 variant="ghost"
-                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-emerald-50 hover:text-emerald-600 font-bold"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-slate-800 dark:text-slate-100"
                 onClick={() => {
                   setIsMenuOpen(false)
                   setIsIncomeOpen(true)
@@ -362,7 +362,7 @@ export function Transactions() {
               </Button>
               <Button
                 variant="ghost"
-                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-blue-50 hover:text-blue-600 font-bold"
+                className="flex w-full items-center justify-start p-3 rounded-xl transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-slate-800 dark:text-slate-100"
                 aria-label="Adicionar Transação"
                 onClick={() => {
                   setIsMenuOpen(false)

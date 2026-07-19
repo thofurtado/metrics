@@ -230,38 +230,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
 
   const isCreditCard = watchedPaymentMethod === 'CREDIT_CARD'
 
-  // Boleto Holiday Effect
-  useEffect(() => {
-    if (watchedPaymentMethod !== 'BOLETO' || !watchedVencimento) return
-
-    const dateString = format(watchedVencimento, 'yyyy-MM-dd')
-    if (lastAlertedDate === dateString) return // Já alertamos para esta data
-
-    const holidays = (holidaysData?.holidays ?? []).map((h: any) =>
-      typeof h.date === 'string' ? h.date.substring(0, 10) : ''
-    ).filter(Boolean)
-
-    const day = watchedVencimento.getDay()
-    const isWeekend = day === 0 || day === 6
-    const isHoliday = holidays.includes(dateString)
-
-    if (isWeekend || isHoliday) {
-      setLastAlertedDate(dateString)
-      
-      let current = new Date(watchedVencimento)
-      while (true) {
-        current.setDate(current.getDate() + 1)
-        const d = current.getDay()
-        const isWknd = d === 0 || d === 6
-        const dStr = format(current, 'yyyy-MM-dd')
-        if (!isWknd && !holidays.includes(dStr)) {
-          setNextBusinessDay(new Date(current))
-          setBoletoAlertOpen(true)
-          break
-        }
-      }
-    }
-  }, [watchedVencimento, watchedPaymentMethod, holidaysData, lastAlertedDate])
+  // Boleto Holiday Effect (Removed - agora fica no onSubmit)
 
   // Auto-calcular vencimento quando cartão, emissão ou método mudar
   useEffect(() => {
@@ -349,6 +318,37 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
       setPreviewInstallmentsOpen(true)
       return
     }
+
+    // --- BOLETO HOLIDAY INTERCEPTOR ---
+    const dateString = format(data.data_vencimento, 'yyyy-MM-dd')
+    const isBoleto = data.payment_method === 'BOLETO'
+    const holidaysList = (holidaysData?.holidays ?? []).map((h: any) =>
+      typeof h.date === 'string' ? h.date.substring(0, 10) : ''
+    ).filter(Boolean)
+
+    if (isBoleto && lastAlertedDate !== dateString) {
+      const day = data.data_vencimento.getDay()
+      const isWeekend = day === 0 || day === 6
+      const isHoliday = holidaysList.includes(dateString)
+
+      if (isWeekend || isHoliday) {
+        setLastAlertedDate(dateString) // Evita loop infinito se o usuario manter
+        
+        let current = new Date(data.data_vencimento)
+        while (true) {
+          current.setDate(current.getDate() + 1)
+          const d = current.getDay()
+          const isWknd = d === 0 || d === 6
+          const dStr = format(current, 'yyyy-MM-dd')
+          if (!isWknd && !holidaysList.includes(dStr)) {
+            setNextBusinessDay(new Date(current))
+            setBoletoAlertOpen(true)
+            return // Bloqueia este submit, aguardando resposta do modal
+          }
+        }
+      }
+    }
+    // -----------------------------------
 
     try {
       const commonData = {
@@ -1202,12 +1202,22 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl font-bold">Manter Vencimento</AlertDialogCancel>
+            <AlertDialogCancel 
+              className="rounded-xl font-bold"
+              onClick={() => {
+                // Ao cancelar (manter), chama o submit de novo pois lastAlertedDate já autoriza
+                setTimeout(() => form.handleSubmit(onSubmit)(), 0)
+              }}
+            >
+              Manter Vencimento
+            </AlertDialogCancel>
             <AlertDialogAction 
               className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800"
               onClick={() => {
                 if (nextBusinessDay) {
                   form.setValue('data_vencimento', nextBusinessDay, { shouldValidate: true })
+                  setLastAlertedDate(format(nextBusinessDay, 'yyyy-MM-dd'))
+                  setTimeout(() => form.handleSubmit(onSubmit)(), 0)
                 }
               }}
             >
