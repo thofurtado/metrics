@@ -58,6 +58,7 @@ interface Transaction {
   swipes?: any[]
   credit_card_id?: string
   treatment_id?: string | null
+  supplier?: { name: string; id: string } | null
 }
 
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
@@ -761,11 +762,15 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         </div>
       </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
+      <TableCell className="text-center hidden lg:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
+        {(transactions.supplier && transactions.supplier.name) || '-'}
+      </TableCell>
+
+      <TableCell className="text-center hidden lg:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="text-center hidden md:table-cell px-4 py-5">
+      <TableCell className="text-center hidden xl:table-cell px-4 py-5">
         <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 border border-slate-200/50 dark:border-slate-700/50">
           {transactions.accounts.name}
         </span>

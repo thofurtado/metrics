@@ -40,6 +40,16 @@ import {
   ResponsiveDialogClose
 } from '@/components/ui/responsive-dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Form,
   FormControl,
   FormField,
@@ -121,6 +131,11 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
   const [installmentValue, setInstallmentValue] = useState<string>('')
   // Credit Card: label do mês de fatura calculado
   const [billingMonthLabel, setBillingMonthLabel] = useState<string | null>(null)
+
+  // Boleto Holiday Alert
+  const [boletoAlertOpen, setBoletoAlertOpen] = useState(false)
+  const [nextBusinessDay, setNextBusinessDay] = useState<Date | null>(null)
+  const [lastAlertedDate, setLastAlertedDate] = useState<string | null>(null)
 
   function handleConfirmInstallments(installments: InstallmentItem[]) {
     // Sanitization: Remove visual/unique IDs from component, send only clean data
@@ -211,8 +226,42 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
   const watchedPaymentMethod = useWatch({ control: form.control, name: 'payment_method' })
   const watchedCreditCardId = useWatch({ control: form.control, name: 'credit_card_id' })
   const watchedEmissao = useWatch({ control: form.control, name: 'data_emissao' })
+  const watchedVencimento = useWatch({ control: form.control, name: 'data_vencimento' })
 
   const isCreditCard = watchedPaymentMethod === 'CREDIT_CARD'
+
+  // Boleto Holiday Effect
+  useEffect(() => {
+    if (watchedPaymentMethod !== 'BOLETO' || !watchedVencimento) return
+
+    const dateString = format(watchedVencimento, 'yyyy-MM-dd')
+    if (lastAlertedDate === dateString) return // Já alertamos para esta data
+
+    const holidays = (holidaysData?.holidays ?? []).map((h: any) =>
+      typeof h.date === 'string' ? h.date.substring(0, 10) : ''
+    ).filter(Boolean)
+
+    const day = watchedVencimento.getDay()
+    const isWeekend = day === 0 || day === 6
+    const isHoliday = holidays.includes(dateString)
+
+    if (isWeekend || isHoliday) {
+      setLastAlertedDate(dateString)
+      
+      let current = new Date(watchedVencimento)
+      while (true) {
+        current.setDate(current.getDate() + 1)
+        const d = current.getDay()
+        const isWknd = d === 0 || d === 6
+        const dStr = format(current, 'yyyy-MM-dd')
+        if (!isWknd && !holidays.includes(dStr)) {
+          setNextBusinessDay(new Date(current))
+          setBoletoAlertOpen(true)
+          break
+        }
+      }
+    }
+  }, [watchedVencimento, watchedPaymentMethod, holidaysData, lastAlertedDate])
 
   // Auto-calcular vencimento quando cartão, emissão ou método mudar
   useEffect(() => {
@@ -553,7 +602,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="lg:hidden h-14 w-14 rounded-2xl text-red-600 hover:bg-red-50 hover:text-red-700 bg-red-50/50"
+                          className="lg:hidden h-14 w-14 rounded-2xl text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-700 dark:hover:text-red-400 bg-red-50/50 dark:bg-red-900/20"
                           onClick={handleOpenScanner}
                         >
                           <Camera className="h-7 w-7" />
@@ -569,10 +618,10 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
                     name="interest"
                     render={({ field }) => (
                       <FormItem className="space-y-1.5 flex-1">
-                        <FormLabel className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-0.5">Juros</FormLabel>
+                        <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5">Juros</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-medium">R$</span>
                             <Input
                               {...field}
                               type="number"
@@ -618,7 +667,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 dark:bg-slate-800/40 p-5 rounded-xl border border-dashed border-border/60 relative mt-2">
-                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest border rounded-full">
+                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border rounded-full">
                   Condição de Pagamento
                 </span>
 
@@ -632,7 +681,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
                       </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-medium">R$</span>
                           <Input
                             {...field}
                             type="number"
@@ -661,7 +710,7 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
                   <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-medium">R$</span>
                       <Input
                         type="number"
                         step="0.01"
@@ -1142,6 +1191,31 @@ export function TransactionExpense({ open, initialReceipt, onOpenChange }: Trans
           onConfirm={applyExtractedData}
         />
       )}
+
+      {/* BOLETO HOLIDAY ALERT */}
+      <AlertDialog open={boletoAlertOpen} onOpenChange={setBoletoAlertOpen}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-extrabold tracking-tight">Vencimento em dia não útil</AlertDialogTitle>
+            <AlertDialogDescription>
+              O vencimento deste boleto cai em um fim de semana ou feriado. Deseja alterar o vencimento para o próximo dia útil ({nextBusinessDay ? format(nextBusinessDay, "dd/MM/yyyy") : ''})?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl font-bold">Manter Vencimento</AlertDialogCancel>
+            <AlertDialogAction 
+              className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800"
+              onClick={() => {
+                if (nextBusinessDay) {
+                  form.setValue('data_vencimento', nextBusinessDay, { shouldValidate: true })
+                }
+              }}
+            >
+              Alterar para dia útil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ResponsiveDialogContent>
   )
 }

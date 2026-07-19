@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowRightLeft, Plus, TrendingDown, TrendingUp, Clock, CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
@@ -85,6 +86,17 @@ export function Transactions() {
 
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
+  const [isOverdueExpanded, setIsOverdueExpanded] = useState(true)
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout
+    if (isOverdueExpanded) {
+      timeout = setTimeout(() => {
+        setIsOverdueExpanded(false)
+      }, 5000)
+    }
+    return () => clearTimeout(timeout)
+  }, [isOverdueExpanded])
 
   // Query to fetch pending receipts count
   const { data: receiptsData } = useQuery({
@@ -449,21 +461,56 @@ export function Transactions() {
 
         <div className="space-y-4">
           {activeTab === 'payable' && overdueTotal > 0 && (
-            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-              <div className="flex items-start sm:items-center gap-3 text-amber-700 w-full flex-1 min-w-0">
-                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 mt-0.5 sm:mt-0" />
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-bold text-sm sm:text-base leading-tight break-words">Atenção: Existem transações em atraso!</span>
-                  <span className="text-xs text-amber-700/80 font-medium mt-0.5 break-words">{overdueText}</span>
-                </div>
-              </div>
-              <Button 
-                className="w-full sm:w-auto shrink-0 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
-                onClick={() => setIsOverdueModalOpen(true)}
-              >
-                Visualizar Vencidos
-              </Button>
-            </div>
+            <AnimatePresence mode="wait">
+              {isOverdueExpanded ? (
+                <motion.div 
+                  key="expanded"
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50, height: 0, overflow: 'hidden' }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+                >
+                  <div className="flex items-start sm:items-center gap-3 text-amber-700 w-full flex-1 min-w-0">
+                    <AlertTriangle 
+                      className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 mt-0.5 sm:mt-0 cursor-pointer" 
+                      onClick={() => setIsOverdueExpanded(false)} 
+                      title="Ocultar aviso"
+                    />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-sm sm:text-base leading-tight break-words">Atenção: Existem transações em atraso!</span>
+                      <span className="text-xs text-amber-700/80 font-medium mt-0.5 break-words">{overdueText}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full sm:w-auto shrink-0 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
+                    onClick={() => setIsOverdueModalOpen(true)}
+                  >
+                    Visualizar Vencidos
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="collapsed"
+                  layout
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-fit"
+                >
+                  <Button 
+                    variant="outline"
+                    className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 rounded-full pl-3 pr-4 h-10 shadow-sm flex items-center gap-2"
+                    onClick={() => setIsOverdueExpanded(true)}
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="font-bold text-sm">Contas em Atraso</span>
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
 
           {activeTab !== 'transfers' && (
@@ -537,6 +584,9 @@ export function Transactions() {
                         </TableHead>
                         <TableHead className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest px-6">
                           Descrição da Transação
+                        </TableHead>
+                        <TableHead className="w-[160px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest hidden lg:table-cell">
+                          Fornecedor
                         </TableHead>
                         <TableHead className="w-[140px] text-center text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest hidden lg:table-cell">
                           Setor

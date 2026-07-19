@@ -96,6 +96,9 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
     // INTERSEÇÃO: ambas as camadas devem liberar
     function hasAccess(slug: string): boolean {
         if (isLoading) return false
+        if (profileData?.role === 'ADMIN') {
+            return instanceSlugs.includes(slug)
+        }
         return instanceSlugs.includes(slug) && userSlugs.includes(slug)
     }
 
