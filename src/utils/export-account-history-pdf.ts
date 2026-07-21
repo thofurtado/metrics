@@ -2,7 +2,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { AccountHistoryItem } from '@/api/get-account-history'
 
-export function exportAccountHistoryPDF(accountName: string, history: AccountHistoryItem[]) {
+export function exportAccountHistoryPDF(accountName: string, history: (AccountHistoryItem & { runningBalance?: number })[]) {
   const doc = new jsPDF()
 
   // Título
@@ -38,21 +38,23 @@ export function exportAccountHistoryPDF(accountName: string, history: AccountHis
     })
 
     const valueStr = `${signal} R$ ${item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    const newBalanceStr = item.new_balance !== undefined && item.new_balance !== null 
-      ? `R$ ${item.new_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+    
+    const runningBalanceVal = item.runningBalance ?? item.new_balance
+    const balanceStr = runningBalanceVal !== undefined && runningBalanceVal !== null 
+      ? `R$ ${runningBalanceVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
       : '-'
 
     return [
       dateStr,
       typeDesc,
       valueStr,
-      newBalanceStr,
+      balanceStr,
     ]
   })
 
   autoTable(doc, {
     startY: 35,
-    head: [['Data', 'Descrição', 'Valor', 'Saldo Resultante (Ajustes)']],
+    head: [['Data', 'Descrição', 'Valor', 'Saldo Resultante']],
     body: tableData,
     theme: 'striped',
     headStyles: { fillColor: [41, 128, 185] },

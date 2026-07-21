@@ -10,6 +10,7 @@ import { getAccounts } from '@/api/get-accounts'
 import { adjustAccountBalance } from '@/api/adjust-account-balance'
 import { getAccountHistory } from '@/api/get-account-history'
 import { exportAccountHistoryPDF } from '@/utils/export-account-history-pdf'
+import { AccountHistoryDialog } from './account-history-dialog'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -50,6 +51,7 @@ export function Accounts() {
     const queryClient = useQueryClient()
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+    const [selectedAccountForHistory, setSelectedAccountForHistory] = useState<{ id: string, name: string, balance: number } | null>(null)
     const [defaultAccountId, setDefaultAccountId] = useState<string | null>(() => localStorage.getItem('metrics-default-account'))
 
     function handleSetDefaultAccount(id: string) {
@@ -137,20 +139,15 @@ export function Accounts() {
         setIsAdjustModalOpen(true)
     }
 
-    async function handleExportReport(account: { id: string, name: string }) {
-        const toastId = toast.loading('Gerando relatório...')
-        try {
-            const data = await getAccountHistory({ accountId: account.id, page: 1, limit: 1000 })
-            exportAccountHistoryPDF(account.name, data.history)
-            toast.success('Relatório gerado com sucesso!', { id: toastId })
-        } catch (error) {
-            console.error(error)
-            toast.error('Erro ao gerar relatório. Tente novamente.', { id: toastId })
-        }
-    }
-
     return (
         <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
+            <AccountHistoryDialog
+                isOpen={!!selectedAccountForHistory}
+                onOpenChange={(open) => !open && setSelectedAccountForHistory(null)}
+                account={selectedAccountForHistory}
+                onExportPDF={exportAccountHistoryPDF}
+            />
+
             <Dialog open={isAdjustModalOpen} onOpenChange={setIsAdjustModalOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -296,9 +293,9 @@ export function Accounts() {
                                                 <Pencil className="h-4 w-4 mr-2" />
                                                 Ajustar Saldo
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleExportReport(account)}>
+                                            <DropdownMenuItem onClick={() => setSelectedAccountForHistory(account)}>
                                                 <FileText className="h-4 w-4 mr-2" />
-                                                Exportar Histórico (PDF)
+                                                Visualizar Histórico
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
