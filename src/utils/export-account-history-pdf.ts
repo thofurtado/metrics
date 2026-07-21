@@ -43,20 +43,46 @@ export function exportAccountHistoryPDF(account: { name: string; balance?: numbe
 
   doc.setTextColor(71, 85, 105) // Slate 600
   doc.setFontSize(10)
-  doc.text('Total de Registros:', 20, 55)
-  doc.setFont("helvetica", "bold")
-  doc.setTextColor(15, 23, 42)
-  doc.text(`${history.length}`, 20, 62)
-
-  doc.setFont("helvetica", "normal")
-  doc.setTextColor(71, 85, 105)
-  doc.text('Saldo Atual:', 100, 55)
-  doc.setFont("helvetica", "bold")
   
   const currentBalance = history.length > 0 ? (history[0].runningBalance ?? history[0].new_balance ?? 0) : 0
+  
+  let initialBalance = currentBalance
+  for (let i = 0; i < history.length; i++) {
+    const item = history[i]
+    if (item.type === 'adjustment') {
+        initialBalance = item.previous_balance ?? (initialBalance - item.value)
+    } else {
+        if (item.operation === 'income') {
+            initialBalance -= item.value
+        } else {
+            initialBalance += item.value
+        }
+    }
+  }
+
+  // Column 1: Saldo Inicial
+  doc.text('Saldo Inicial:', 20, 53)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(15, 23, 42)
+  doc.text(`R$ ${initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 20, 60)
+
+  // Column 2: Movimentações
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(71, 85, 105)
+  doc.text('Movimentações:', 85, 53)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(15, 23, 42)
+  doc.text(`${history.length}`, 85, 60)
+
+  // Column 3: Saldo Atual
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(71, 85, 105)
+  doc.text('Saldo Atual:', 150, 53)
+  doc.setFont("helvetica", "bold")
+  
   const balanceColor = currentBalance >= 0 ? [16, 185, 129] : [244, 63, 94]
   doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2])
-  doc.text(`R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 100, 62)
+  doc.text(`R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 150, 60)
 
   // Table
   const tableData = history.map((item) => {

@@ -61,11 +61,15 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
     useEffect(() => {
         if (!observerRef.current) return
+        
+        // Find the scroll viewport container of Radix UI
+        const viewport = observerRef.current.closest('[data-radix-scroll-area-viewport]')
+        
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
                 fetchNextPage()
             }
-        }, { rootMargin: '200px' })
+        }, { root: viewport, rootMargin: '200px' })
 
         observer.observe(observerRef.current)
         return () => observer.disconnect()
@@ -103,7 +107,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pr-8">
                         <div>
                             <DialogTitle className="text-xl">Histórico da Conta</DialogTitle>
                             <DialogDescription>
