@@ -39,11 +39,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         try {
             const element = timelineRef.current
             const canvas = await html2canvas(element, {
-                backgroundColor: '#ffffff',
-                scale: 1, // Reduzido para 1 para evitar canvas gigantes em listas longas
+                backgroundColor: null,
+                scale: 2, // Melhorar resolução
                 useCORS: true,
                 allowTaint: true,
-                scrollY: 0,
+                scrollY: -window.scrollY,
                 windowHeight: element.scrollHeight,
                 height: element.scrollHeight,
             })
@@ -74,6 +74,54 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         observer.observe(observerRef.current)
         return () => observer.disconnect()
     }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+    // Drag to scroll functionality
+    useEffect(() => {
+        const viewport = timelineRef.current?.closest('[data-radix-scroll-area-viewport]') as HTMLElement
+        if (!viewport) return
+
+        let isDown = false
+        let startY = 0
+        let scrollTop = 0
+
+        const handleMouseDown = (e: MouseEvent) => {
+            isDown = true
+            viewport.style.cursor = 'grabbing'
+            startY = e.pageY - viewport.offsetTop
+            scrollTop = viewport.scrollTop
+        }
+
+        const handleMouseLeave = () => {
+            isDown = false
+            viewport.style.cursor = 'auto'
+        }
+
+        const handleMouseUp = () => {
+            isDown = false
+            viewport.style.cursor = 'auto'
+        }
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDown) return
+            e.preventDefault()
+            const y = e.pageY - viewport.offsetTop
+            const walk = (y - startY) * 1.5 // Scroll speed
+            viewport.scrollTop = scrollTop - walk
+        }
+
+        viewport.addEventListener('mousedown', handleMouseDown)
+        viewport.addEventListener('mouseleave', handleMouseLeave)
+        viewport.addEventListener('mouseup', handleMouseUp)
+        viewport.addEventListener('mousemove', handleMouseMove)
+
+        return () => {
+            viewport.removeEventListener('mousedown', handleMouseDown)
+            viewport.removeEventListener('mouseleave', handleMouseLeave)
+            viewport.removeEventListener('mouseup', handleMouseUp)
+            viewport.removeEventListener('mousemove', handleMouseMove)
+            viewport.style.cursor = 'auto'
+        }
+    }, [isOpen])
 
     const { historyWithBalance, initialBalance } = (() => {
         if (!data || !account) return { historyWithBalance: [], initialBalance: account?.balance || 0 }
@@ -140,8 +188,8 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                 </DialogHeader>
 
                 <div className="flex-1 min-h-0 overflow-hidden relative">
-                <ScrollArea className="h-full p-6">
-                    <div ref={timelineRef} className="px-2">
+                <ScrollArea className="h-full">
+                    <div ref={timelineRef} className="px-6 py-6 bg-background text-foreground select-none">
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -186,10 +234,10 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     const displayValue = Math.abs(item.value)
                                     
                                     const cardBgClass = isAdjustment 
-                                        ? "bg-amber-500/5 dark:bg-amber-400/5 border-amber-500/20" 
+                                        ? "bg-card border-amber-500/40 shadow-amber-500/5" 
                                         : isIncome 
-                                            ? "bg-emerald-500/5 dark:bg-emerald-400/5 border-emerald-500/20" 
-                                            : "bg-rose-500/5 dark:bg-rose-400/5 border-rose-500/20"
+                                            ? "bg-card border-emerald-500/40 shadow-emerald-500/5" 
+                                            : "bg-card border-rose-500/40 shadow-rose-500/5"
                                             
                                     return (
                                         <div key={item.id} className={cn(
