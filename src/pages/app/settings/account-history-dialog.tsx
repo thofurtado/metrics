@@ -1,11 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from 'lucide-react'
+import { FileText, Download } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import html2canvas from 'html2canvas'
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -22,6 +24,25 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         queryFn: () => getAccountHistory({ accountId: account!.id, page: 1, limit: 1000 }),
         enabled: !!account && isOpen,
     })
+
+    const timelineRef = useRef<HTMLDivElement>(null)
+
+    const handleExportImage = async () => {
+        if (!timelineRef.current || !account) return
+        try {
+            const canvas = await html2canvas(timelineRef.current, {
+                backgroundColor: '#ffffff', // Ensures white background
+                scale: 2,
+            })
+            const image = canvas.toDataURL('image/png', 1.0)
+            const link = document.createElement('a')
+            link.download = `timeline_${account.name.replace(/\s+/g, '_').toLowerCase()}.png`
+            link.href = image
+            link.click()
+        } catch (error) {
+            console.error('Erro ao exportar imagem:', error)
+        }
+    }
 
     const historyWithBalance = (() => {
         if (!data || !account) return []
@@ -58,20 +79,33 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                 {account?.name}
                             </DialogDescription>
                         </div>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="hidden sm:flex gap-2"
-                            onClick={() => account && onExportPDF(account, historyWithBalance)}
-                            disabled={isLoading || historyWithBalance.length === 0}
-                        >
-                            <FileText className="w-4 h-4" />
-                            Exportar PDF
-                        </Button>
+                        <div className="hidden sm:flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="gap-2"
+                                onClick={handleExportImage}
+                                disabled={isLoading || historyWithBalance.length === 0}
+                            >
+                                <Download className="w-4 h-4" />
+                                Exportar Imagem
+                            </Button>
+                            <Button 
+                                variant="default" 
+                                size="sm" 
+                                className="gap-2 bg-primary/90"
+                                onClick={() => account && onExportPDF(account, historyWithBalance)}
+                                disabled={isLoading || historyWithBalance.length === 0}
+                            >
+                                <FileText className="w-4 h-4" />
+                                Exportar Tabela PDF
+                            </Button>
+                        </div>
                     </div>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 p-6">
+                    <div ref={timelineRef} className="px-2">
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -115,11 +149,17 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     const sign = isAdjustment ? (item.value >= 0 ? '+' : '-') : isIncome ? '+' : '-'
                                     const displayValue = Math.abs(item.value)
                                     
+                                    const cardBgClass = isAdjustment 
+                                        ? "bg-amber-500/5 dark:bg-amber-400/5 border-amber-500/20" 
+                                        : isIncome 
+                                            ? "bg-emerald-500/5 dark:bg-emerald-400/5 border-emerald-500/20" 
+                                            : "bg-rose-500/5 dark:bg-rose-400/5 border-rose-500/20"
+                                            
                                     return (
                                         <div key={item.id} className={cn(
                                             "relative flex w-full group",
                                             "sm:w-1/2",
-                                            isRightSide ? "sm:ml-auto pl-14 sm:pl-8" : "sm:mr-auto pl-14 sm:pr-8 sm:pl-0"
+                                            isRightSide ? "sm:ml-auto pl-14 sm:pl-10" : "sm:mr-auto pl-14 sm:pr-10 sm:pl-0"
                                         )}>
                                             {/* Dot */}
                                             <div className={cn(
@@ -132,12 +172,13 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                             {/* Connector Line */}
                                             <div className={cn(
                                                 "hidden sm:block absolute top-1/2 -translate-y-1/2 h-0.5 bg-border/60 z-10 transition-colors group-hover:bg-border",
-                                                isRightSide ? "left-0 w-8" : "right-0 w-8"
+                                                isRightSide ? "left-0 w-10" : "right-0 w-10"
                                             )} />
 
                                             {/* Card */}
                                             <div className={cn(
-                                                "w-full bg-card border border-border/50 p-4 rounded-2xl shadow-sm group-hover:shadow-md transition-all relative z-10",
+                                                "w-full border p-4 rounded-2xl shadow-sm group-hover:shadow-md transition-all relative z-10",
+                                                cardBgClass,
                                                 isRightSide ? "" : "sm:text-right"
                                             )}>
                                                 <div className={cn(
@@ -145,10 +186,10 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                     isRightSide ? "" : "sm:flex-row-reverse"
                                                 )}>
                                                     <div>
-                                                        <p className="font-bold text-foreground">
+                                                        <p className="font-bold text-foreground text-sm sm:text-base">
                                                             {isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação'}
                                                         </p>
-                                                        <p className="text-[11px] font-bold text-muted-foreground mt-1 tracking-wider uppercase opacity-80">
+                                                        <p className="text-[10px] sm:text-[11px] font-bold text-muted-foreground mt-1 tracking-wider uppercase opacity-80">
                                                             {format(new Date(item.date), "dd 'de' MMM, HH:mm", { locale: ptBR })}
                                                         </p>
                                                     </div>
@@ -177,17 +218,27 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             </div>
                         </div>
                     )}
+                    </div>
                 </ScrollArea>
                 
-                <div className="p-4 border-t bg-muted/20 sm:hidden">
+                <div className="p-4 border-t bg-muted/20 sm:hidden flex flex-col gap-2">
+                    <Button 
+                        variant="outline" 
+                        className="w-full gap-2"
+                        onClick={handleExportImage}
+                        disabled={isLoading || historyWithBalance.length === 0}
+                    >
+                        <Download className="w-4 h-4" />
+                        Exportar Imagem
+                    </Button>
                     <Button 
                         variant="default" 
-                        className="w-full gap-2"
+                        className="w-full gap-2 bg-primary/90"
                         onClick={() => account && onExportPDF(account, historyWithBalance)}
                         disabled={isLoading || historyWithBalance.length === 0}
                     >
                         <FileText className="w-4 h-4" />
-                        Exportar Relatório PDF
+                        Exportar Tabela PDF
                     </Button>
                 </div>
             </DialogContent>

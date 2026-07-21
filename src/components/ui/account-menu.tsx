@@ -37,7 +37,7 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
 
   return (
     <Dialog>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           {isCollapsed ? (
             <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-colors ring-1 ring-border/50">
