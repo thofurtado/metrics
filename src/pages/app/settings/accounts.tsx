@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Wallet, MoreVertical, Star } from 'lucide-react'
+import { Pencil, Plus, Wallet, MoreVertical, Star, FileText } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,6 +8,8 @@ import { useState } from 'react'
 import { createAccount } from '@/api/create-account'
 import { getAccounts } from '@/api/get-accounts'
 import { adjustAccountBalance } from '@/api/adjust-account-balance'
+import { getAccountHistory } from '@/api/get-account-history'
+import { exportAccountHistoryPDF } from '@/utils/export-account-history-pdf'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -133,6 +135,18 @@ export function Accounts() {
         setSelectedAccountId(account.id)
         setValueAdjust('newBalance', account.balance)
         setIsAdjustModalOpen(true)
+    }
+
+    async function handleExportReport(account: { id: string, name: string }) {
+        const toastId = toast.loading('Gerando relatório...')
+        try {
+            const data = await getAccountHistory({ accountId: account.id, page: 1, limit: 1000 })
+            exportAccountHistoryPDF(account.name, data.history)
+            toast.success('Relatório gerado com sucesso!', { id: toastId })
+        } catch (error) {
+            console.error(error)
+            toast.error('Erro ao gerar relatório. Tente novamente.', { id: toastId })
+        }
     }
 
     return (
@@ -281,6 +295,10 @@ export function Accounts() {
                                             <DropdownMenuItem onClick={() => openAdjustModal(account)}>
                                                 <Pencil className="h-4 w-4 mr-2" />
                                                 Ajustar Saldo
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleExportReport(account)}>
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                Exportar Histórico (PDF)
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

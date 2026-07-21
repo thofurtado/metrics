@@ -14,8 +14,12 @@ interface FinanceCardOperacionalProps extends ComponentProps<'div'> {
 }
 
 // Função auxiliar para formatar em Reais
-const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const formatCurrency = (value: number, hideSymbol = false) => {
+    if (hideSymbol) {
+        return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
 
 export function FinanceCardOperacional({ className, month, year, ...props }: FinanceCardOperacionalProps) {
     const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
@@ -61,9 +65,12 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                             {isLoading ? (
                                 <div className="h-8 w-24 bg-emerald-200 animate-pulse rounded mt-1"></div>
                             ) : (
-                                <span className="text-2xl font-black text-emerald-600 block tabular-nums tracking-tighter">
-                                    {formatCurrency(receitaAcumulada)}
-                                </span>
+                                <div className="flex items-baseline gap-1 overflow-hidden">
+                                    <span className="text-sm font-bold text-emerald-600/70 shrink-0">R$</span>
+                                    <span className="text-xl font-black text-emerald-600 block tabular-nums tracking-tighter truncate" title={formatCurrency(receitaAcumulada)}>
+                                        {formatCurrency(receitaAcumulada, true)}
+                                    </span>
+                                </div>
                             )}
                         </div>
                         {/* Sub-indicadores da Receita */}
@@ -90,9 +97,12 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                             {isLoading ? (
                                 <div className="h-8 w-24 bg-slate-200 animate-pulse rounded mt-1"></div>
                             ) : (
-                                <span className="text-2xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter">
-                                    {formatCurrency(totalDespesasMes)}
-                                </span>
+                                <div className="flex items-baseline gap-1 overflow-hidden">
+                                    <span className="text-sm font-bold text-slate-500 shrink-0">R$</span>
+                                    <span className="text-xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter truncate" title={formatCurrency(totalDespesasMes)}>
+                                        {formatCurrency(totalDespesasMes, true)}
+                                    </span>
+                                </div>
                             )}
                         </div>
                         {/* Sub-indicadores da Despesa */}

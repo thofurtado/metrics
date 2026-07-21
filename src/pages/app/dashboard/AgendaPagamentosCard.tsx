@@ -117,7 +117,7 @@ export function AgendaPagamentosCard({ className, ...props }: AgendaPagamentosCa
                                     tickLine={false}
                                     axisLine={false}
                                     tick={{ fontSize: 10, fontWeight: "bold", fill: '#94a3b8' }}
-                                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
+                                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1).replace(/\\.0$/, '')}k` : value}
                                     width={40}
                                 />
                                 <Tooltip 
