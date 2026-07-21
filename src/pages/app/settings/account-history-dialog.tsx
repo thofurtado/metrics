@@ -95,6 +95,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             <FileText className="w-12 h-12 mb-4 opacity-20" />
                             <p>Nenhuma movimentação encontrada.</p>
                         </div>
+                    ) : (
                         <div className="relative py-8 sm:px-0">
                             {/* Linha vertical central */}
                             <div className="absolute left-6 sm:left-1/2 top-0 bottom-0 w-0.5 bg-border/60 sm:-translate-x-1/2 rounded-full" />
