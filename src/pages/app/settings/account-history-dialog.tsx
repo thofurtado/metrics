@@ -1,13 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, Download } from 'lucide-react'
+import { FileText, Download, Loader2 } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import html2canvas from 'html2canvas'
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -19,9 +19,16 @@ interface AccountHistoryDialogProps {
 }
 
 export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPDF }: AccountHistoryDialogProps) {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
         queryKey: ['account-history', account?.id],
-        queryFn: () => getAccountHistory({ accountId: account!.id, page: 1, limit: 1000 }),
+        queryFn: ({ pageParam }) => getAccountHistory({ accountId: account!.id, page: pageParam as number, limit: 20 }),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => {
+            if (lastPage.currentPage < lastPage.totalPages) {
+                return lastPage.currentPage + 1
+            }
+            return undefined
+        },
         enabled: !!account && isOpen,
     })
 
@@ -30,9 +37,15 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
     const handleExportImage = async () => {
         if (!timelineRef.current || !account) return
         try {
-            const canvas = await html2canvas(timelineRef.current, {
-                backgroundColor: '#ffffff', // Ensures white background
-                scale: 2,
+            const element = timelineRef.current
+            const canvas = await html2canvas(element, {
+                backgroundColor: '#ffffff',
+                scale: 1, // Reduzido para 1 para evitar canvas gigantes em listas longas
+                useCORS: true,
+                allowTaint: true,
+                scrollY: 0,
+                windowHeight: element.scrollHeight,
+                height: element.scrollHeight,
             })
             const image = canvas.toDataURL('image/png', 1.0)
             const link = document.createElement('a')
@@ -44,11 +57,27 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         }
     }
 
-    const historyWithBalance = (() => {
-        if (!data || !account) return []
-        let currentBalance = account.balance
+    const observerRef = useRef<HTMLDivElement>(null)
 
-        return data.history.map((item) => {
+    useEffect(() => {
+        if (!observerRef.current) return
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                fetchNextPage()
+            }
+        }, { rootMargin: '200px' })
+
+        observer.observe(observerRef.current)
+        return () => observer.disconnect()
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+    const { historyWithBalance, initialBalance } = (() => {
+        if (!data || !account) return { historyWithBalance: [], initialBalance: account?.balance || 0 }
+        let currentBalance = account.balance
+        
+        const allHistory = data.pages.flatMap((page) => page.history)
+
+        const history = allHistory.map((item) => {
             const balanceAtThisPoint = currentBalance
             
             if (item.type === 'adjustment') {
@@ -66,6 +95,8 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                 runningBalance: balanceAtThisPoint
             }
         })
+        
+        return { historyWithBalance: history, initialBalance: currentBalance }
     })()
 
     return (
@@ -216,6 +247,20 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     )
                                 })}
                             </div>
+                            
+                            {hasNextPage && (
+                                <div ref={observerRef} className="flex justify-center py-6">
+                                    {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
+                                </div>
+                            )}
+
+                            {!hasNextPage && historyWithBalance.length > 0 && (
+                                <div className="relative flex justify-start sm:justify-center mt-8 mb-4 z-10 pl-14 sm:pl-0">
+                                    <div className="bg-muted border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-bold flex items-center justify-center text-muted-foreground">
+                                        Saldo Inicial: R$ {initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                     </div>

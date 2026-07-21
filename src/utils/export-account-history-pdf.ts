@@ -2,14 +2,27 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { AccountHistoryItem } from '@/api/get-account-history'
 
-export function exportAccountHistoryPDF(accountName: string, history: (AccountHistoryItem & { runningBalance?: number })[]) {
+export function exportAccountHistoryPDF(account: { name: string; balance?: number }, history: (AccountHistoryItem & { runningBalance?: number })[]) {
   const doc = new jsPDF()
+  const accountName = account.name
 
-  // Título
-  doc.setFontSize(16)
-  doc.text(`Relatório de Movimento - ${accountName}`, 14, 20)
+  // Header Background
+  doc.setFillColor(15, 23, 42) // Slate 900
+  doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F')
 
-  // Data de geração
+  // Title
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(22)
+  doc.setFont("helvetica", "bold")
+  doc.text('EXTRATO DE MOVIMENTAÇÃO', 14, 20)
+
+  // Subtitle / Account Name
+  doc.setFontSize(14)
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(200, 200, 200)
+  doc.text(`Conta: ${accountName}`, 14, 30)
+
+  // Date of generation
   doc.setFontSize(10)
   const today = new Date().toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -18,13 +31,38 @@ export function exportAccountHistoryPDF(accountName: string, history: (AccountHi
     hour: '2-digit',
     minute: '2-digit',
   })
-  doc.text(`Gerado em: ${today}`, 14, 28)
+  
+  // Align right
+  const pageWidth = doc.internal.pageSize.width
+  doc.text(`Gerado em: ${today}`, pageWidth - 14, 30, { align: 'right' })
 
-  // Tabela
+  // Summary box
+  doc.setDrawColor(226, 232, 240) // Slate 200
+  doc.setFillColor(248, 250, 252) // Slate 50
+  doc.roundedRect(14, 45, pageWidth - 28, 25, 3, 3, 'FD')
+
+  doc.setTextColor(71, 85, 105) // Slate 600
+  doc.setFontSize(10)
+  doc.text('Total de Registros:', 20, 55)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(15, 23, 42)
+  doc.text(`${history.length}`, 20, 62)
+
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(71, 85, 105)
+  doc.text('Saldo Atual:', 100, 55)
+  doc.setFont("helvetica", "bold")
+  
+  const currentBalance = history.length > 0 ? (history[0].runningBalance ?? history[0].new_balance ?? 0) : 0
+  const balanceColor = currentBalance >= 0 ? [16, 185, 129] : [244, 63, 94]
+  doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2])
+  doc.text(`R$ ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 100, 62)
+
+  // Table
   const tableData = history.map((item) => {
     const isIncome = item.operation === 'income'
     const isAdjustment = item.type === 'adjustment'
-    const signal = isIncome ? '+' : '-'
+    const signal = isAdjustment ? (item.value >= 0 ? '+' : '-') : isIncome ? '+' : '-'
     
     let typeDesc = item.description || 'Transação'
     if (isAdjustment) typeDesc = 'Ajuste Manual'
@@ -37,7 +75,8 @@ export function exportAccountHistoryPDF(accountName: string, history: (AccountHi
       minute: '2-digit',
     })
 
-    const valueStr = `${signal} R$ ${item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const displayValue = Math.abs(item.value)
+    const valueStr = `${signal} R$ ${displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     
     const runningBalanceVal = item.runningBalance ?? item.new_balance
     const balanceStr = runningBalanceVal !== undefined && runningBalanceVal !== null 
@@ -53,12 +92,41 @@ export function exportAccountHistoryPDF(accountName: string, history: (AccountHi
   })
 
   autoTable(doc, {
-    startY: 35,
+    startY: 80,
     head: [['Data', 'Descrição', 'Valor', 'Saldo Resultante']],
     body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185] },
+    theme: 'grid',
+    headStyles: { 
+      fillColor: [15, 23, 42], 
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'left'
+    },
+    styles: {
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: 5,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.1,
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    columnStyles: {
+      2: { halign: 'right', fontStyle: 'bold' },
+      3: { halign: 'right' }
+    },
+    didParseCell: function (data) {
+      if (data.section === 'body' && data.column.index === 2) {
+        const value = data.cell.raw as string
+        if (value.startsWith('+')) {
+          data.cell.styles.textColor = [16, 185, 129] // Emerald 500
+        } else if (value.startsWith('-')) {
+          data.cell.styles.textColor = [244, 63, 94] // Rose 500
+        }
+      }
+    }
   })
 
-  doc.save(`relatorio_${accountName.replace(/\s+/g, '_').toLowerCase()}.pdf`)
+  doc.save(`extrato_${accountName.replace(/\s+/g, '_').toLowerCase()}.pdf`)
 }
