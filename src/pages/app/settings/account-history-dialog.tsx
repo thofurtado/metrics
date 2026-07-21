@@ -176,6 +176,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                 })}
                             </div>
                         </div>
+                    )}
                 </ScrollArea>
                 
                 <div className="p-4 border-t bg-muted/20 sm:hidden">
