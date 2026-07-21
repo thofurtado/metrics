@@ -107,7 +107,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b">
-                    <div className="flex items-center justify-between pr-8">
+                    <div className="flex items-center justify-between pr-12">
                         <div>
                             <DialogTitle className="text-xl">Histórico da Conta</DialogTitle>
                             <DialogDescription>
@@ -139,7 +139,8 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     </div>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 p-6">
+                <div className="flex-1 min-h-0 overflow-hidden relative">
+                <ScrollArea className="h-full p-6">
                     <div ref={timelineRef} className="px-2">
                     {isLoading ? (
                         <div className="space-y-4">
@@ -269,6 +270,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     )}
                     </div>
                 </ScrollArea>
+                </div>
                 
                 <div className="p-4 border-t bg-muted/20 sm:hidden flex flex-col gap-2">
                     <Button 
