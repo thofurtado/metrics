@@ -18,7 +18,7 @@ import {
 import { Skeleton } from './skeleton'
 import { StoreProfileDialog } from './store-profile-dialog'
 
-export function AccountMenu() {
+export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -39,17 +39,31 @@ export function AccountMenu() {
     <Dialog>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant={'outline'}
-            className="flex select-none items-center gap-2"
-          >
-            {isLoadingProfile ? (
-              <Skeleton className="h-4 w-40" />
-            ) : (
-              profile?.name
-            )}
-            <ChevronDown className="h-4 w-4" />
-          </Button>
+          {isCollapsed ? (
+            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-colors ring-1 ring-border/50">
+              {isLoadingProfile ? (
+                <Skeleton className="h-10 w-10 rounded-full" />
+              ) : (
+                profile?.name ? (
+                  profile.name.trim().split(/\s+/).length === 1 
+                    ? profile.name.trim().substring(0, 2).toUpperCase() 
+                    : (profile.name.trim().split(/\s+/)[0][0] + profile.name.trim().split(/\s+/).pop()![0]).toUpperCase()
+                ) : 'User'
+              )}
+            </button>
+          ) : (
+            <Button
+              variant={'outline'}
+              className="flex select-none items-center gap-2"
+            >
+              {isLoadingProfile ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                profile?.name ? profile.name.trim().split(/\s+/)[0] : 'User'
+              )}
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex flex-col">

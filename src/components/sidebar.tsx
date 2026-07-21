@@ -1,4 +1,6 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { signOut } from '@/api/sign-out'
 import {
   Boxes,
   PiggyBank,
@@ -27,11 +29,21 @@ export function Sidebar() {
   const { pathname } = useLocation()
   const [sheetOpen, setSheetOpen] = useState(false)
   const { isCollapsed, toggleSidebar } = useSidebar()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  
+  const { mutateAsync: signOutFn, isPending: isSigningOut } = useMutation({
+    mutationFn: signOut,
+    onSuccess: () => {
+      queryClient.clear()
+      navigate('/sign-in', { replace: true })
+    },
+  })
 
   const menuItems = [
     { name: 'Mercadoria', path: '/items', icon: Boxes, access: hasAccess('items') },
     { name: 'Atendimento', path: '/treatments', icon: ClipboardList, access: hasAccess('service') },
-    { name: 'Financeiro', path: '/transactions', icon: PiggyBank, subtext: 'Fluxo e Saúde Financeira', access: hasAccess('finance') },
+    { name: 'Financeiro', path: '/transactions', icon: PiggyBank, access: hasAccess('finance') },
     { name: 'RH', path: '/hr', icon: Users, access: hasAccess('hr') },
   ].filter((item) => item.access)
 
@@ -102,8 +114,8 @@ export function Sidebar() {
                         {!collapsed && (
                           <div className="flex flex-col truncate">
                             <span className={cn(
-                              "font-manrope text-[15px] tracking-tight animate-in fade-in slide-in-from-left-2",
-                              isActive ? "font-bold" : "font-medium"
+                              "font-manrope text-base tracking-tight animate-in fade-in slide-in-from-left-2",
+                              isActive ? "font-extrabold" : "font-bold"
                             )}>
                               {item.name}
                             </span>
@@ -144,15 +156,19 @@ export function Sidebar() {
                 collapsed ? "flex-col gap-4 p-2 w-full" : "p-2 px-3"
             )}>
               <div className={cn(collapsed ? "scale-90" : "")}>
-                 <AccountMenu />
+                 <AccountMenu isCollapsed={collapsed} />
               </div>
               <ModeToggle />
             </div>
 
-            <button className={cn(
-                "flex items-center gap-3 transition-all duration-200 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl w-full",
-                collapsed ? "justify-center p-3" : "px-4 py-3 text-sm font-manrope font-bold"
-            )}>
+            <button 
+              onClick={() => signOutFn()}
+              disabled={isSigningOut}
+              className={cn(
+                  "flex items-center gap-3 transition-all duration-200 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl w-full disabled:opacity-50",
+                  collapsed ? "justify-center p-3" : "px-4 py-3 text-sm font-manrope font-bold"
+              )}
+            >
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>Encerrar Sessão</span>}
             </button>
