@@ -62,8 +62,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
     useEffect(() => {
         if (!observerRef.current) return
         
-        // Find the scroll viewport container of Radix UI
-        const viewport = observerRef.current.closest('[data-radix-scroll-area-viewport]')
+        const viewport = document.getElementById('timeline-scroll-container')
         
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
@@ -77,7 +76,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
     // Drag to scroll functionality
     useEffect(() => {
-        const viewport = timelineRef.current?.closest('[data-radix-scroll-area-viewport]') as HTMLElement
+        const viewport = document.getElementById('timeline-scroll-container')
         if (!viewport) return
 
         let isDown = false
@@ -187,9 +186,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 min-h-0 overflow-hidden relative">
-                <ScrollArea className="h-full">
-                    <div ref={timelineRef} className="px-6 py-6 bg-background text-foreground select-none">
+                <div 
+                    id="timeline-scroll-container"
+                    className="flex-1 min-h-0 overflow-y-auto relative custom-scrollbar"
+                >
+                    <div ref={timelineRef} className="px-6 py-6 bg-background text-foreground select-none min-h-full">
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -216,7 +217,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     ) : (
                         <div className="relative py-8 sm:px-0">
                             {/* Linha vertical central */}
-                            <div className="absolute left-6 sm:left-1/2 top-0 bottom-0 w-0.5 bg-border/60 sm:-translate-x-1/2 rounded-full" />
+                            <div className={cn(
+                                "absolute left-6 sm:left-1/2 w-0.5 bg-border/60 sm:-translate-x-1/2 rounded-full",
+                                "top-10",
+                                !hasNextPage ? "bottom-12" : "bottom-0"
+                            )} />
 
                             {/* Nó Inicial: Saldo Atual */}
                             <div className="relative flex justify-start sm:justify-center mb-10 z-10 pl-14 sm:pl-0">
@@ -317,7 +322,6 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         </div>
                     )}
                     </div>
-                </ScrollArea>
                 </div>
                 
                 <div className="p-4 border-t bg-muted/20 sm:hidden flex flex-col gap-2">
