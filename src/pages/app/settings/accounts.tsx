@@ -155,7 +155,7 @@ export function Accounts() {
             />
 
             <Dialog open={isAdjustModalOpen} onOpenChange={setIsAdjustModalOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="w-full sm:max-w-[425px] h-[100dvh] sm:h-auto sm:max-h-[85vh]">
                     <DialogHeader>
                         <DialogTitle>Ajustar Saldo Manualmente</DialogTitle>
                         <DialogDescription>
@@ -186,28 +186,28 @@ export function Accounts() {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Contas Bancárias</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Contas Bancárias</h1>
                     <p className="text-muted-foreground text-lg">
                         Gerencie seus saldos e caixas.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col w-full sm:w-auto sm:flex-row items-stretch sm:items-center gap-3 mt-4 sm:mt-0">
                     <Button 
                         variant="outline" 
                         size="lg" 
                         className="shadow-sm hover:shadow-md transition-all active:scale-95 text-foreground bg-background"
                         onClick={() => setSelectedAccountForHistory({ id: 'all', name: 'Visão Consolidada (Todas as Contas)', balance: generalBalance })}
                     >
-                        <FileText className="mr-2 h-5 w-5" /> Ver Histórico Geral
+                        <FileText className="mr-2 h-5 w-5 shrink-0" /> Ver Histórico Geral
                     </Button>
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button size="lg" className="shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:to-primary transition-all active:scale-95">
+                            <Button size="lg" className="shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:to-primary transition-all active:scale-95 w-full sm:w-auto">
                                 <Plus className="mr-2 h-5 w-5" /> Nova Conta
                             </Button>
                         </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="w-full sm:max-w-[500px] h-[100dvh] sm:h-auto sm:max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Nova Conta Bancária</DialogTitle>
                             <DialogDescription>

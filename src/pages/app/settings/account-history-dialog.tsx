@@ -270,7 +270,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     animation: shimmer 2s infinite linear;
                 }
             `}</style>
-            <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-0">
+            <DialogContent className="w-full sm:max-w-[800px] h-[100dvh] sm:h-auto sm:max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b shrink-0">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-col">
@@ -353,9 +353,9 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
                 <div  
                     id="timeline-scroll-container"
-                    className="flex-1 min-h-0 overflow-y-auto relative custom-scrollbar"
+                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative custom-scrollbar"
                 >
-                    <div ref={timelineRef} className="px-6 py-6 bg-background text-foreground select-none min-h-full">
+                    <div ref={timelineRef} className="px-2 sm:px-6 py-6 bg-background text-foreground select-none min-h-full">
                     {isLoading ? (
                         <div className="space-y-4">
                             {Array.from({ length: 5 }).map((_, i) => (
@@ -464,12 +464,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                 {(item as any).totalIncome > 0 && (item as any).totalExpense > 0 && isGroupedByDay ? (
                                                     <div className="w-full flex flex-col sm:flex-row relative z-10 gap-3 sm:gap-0 mt-12 sm:mt-0">
                                                         {/* Left side (Expense) */}
-                                                        <div className="w-full sm:w-1/2 sm:mr-auto flex justify-start sm:justify-end pl-16 sm:pl-0 sm:pr-12 relative">
+                                                        <div className="w-full sm:w-1/2 flex justify-start sm:justify-end pl-12 sm:pl-0 sm:pr-12 relative">
                                                             {/* Mobile Connector */}
                                                             <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-rose-500/80" />
                                                             {/* Card Content */}
                                                             <div className={cn(
-                                                                "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[260px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
+                                                                "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[280px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg mr-4 sm:mr-0",
                                                                 "border-l-[6px] border-l-rose-500 border-y-rose-500/10 border-r-rose-500/10",
                                                                 "sm:text-right"
                                                             )}>
@@ -489,12 +489,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                             </div>
                                                         </div>
                                                         {/* Right side (Income) */}
-                                                        <div className="w-full sm:w-1/2 sm:ml-auto flex justify-start pl-16 sm:pl-12 relative">
+                                                        <div className="w-full sm:w-1/2 flex justify-start pl-12 sm:pl-12 relative">
                                                             {/* Mobile Connector */}
                                                             <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-emerald-500/80" />
                                                             {/* Card Content */}
                                                             <div className={cn(
-                                                                "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[260px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
+                                                                "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[280px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg mr-4 sm:mr-0",
                                                                 "border-l-[6px] border-l-emerald-500 border-y-emerald-500/10 border-r-emerald-500/10"
                                                             )}>
                                                                 <div className="flex items-center gap-3">
@@ -516,11 +516,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                 ) : (
                                                     <div className={cn(
                                                         "w-full sm:w-1/2 flex relative z-10",
-                                                        isRightSide ? "sm:ml-auto justify-start pl-16 sm:pl-12" : "sm:mr-auto sm:justify-end pl-16 sm:pl-0 sm:pr-12"
+                                                        isRightSide ? "justify-start pl-12 sm:pl-12" : "justify-start sm:justify-end pl-12 sm:pl-0 sm:pr-12"
                                                     )}>
                                                         {/* Card Content */}
                                                         <div className={cn(
-                                                            "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[260px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
+                                                            "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[280px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg mr-4 sm:mr-0",
                                                             isAdjustment ? "border-l-[6px] border-l-amber-500 border-y-amber-500/10 border-r-amber-500/10" : 
                                                             isIncome ? "border-l-[6px] border-l-emerald-500 border-y-emerald-500/10 border-r-emerald-500/10" : 
                                                                        "border-l-[6px] border-l-rose-500 border-y-rose-500/10 border-r-rose-500/10",
