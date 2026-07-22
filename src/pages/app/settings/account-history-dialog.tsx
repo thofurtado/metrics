@@ -7,7 +7,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import html2canvas from 'html2canvas'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -19,6 +19,7 @@ interface AccountHistoryDialogProps {
 }
 
 export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPDF }: AccountHistoryDialogProps) {
+    const [isGroupedByDay, setIsGroupedByDay] = useState(false)
     const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
         queryKey: ['account-history', account?.id],
         queryFn: ({ pageParam }) => getAccountHistory({ accountId: account!.id, page: pageParam as number, limit: 20 }),
@@ -128,7 +129,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         
         const allHistory = data.pages.flatMap((page) => page.history)
 
-        const history = allHistory.map((item) => {
+        let processedHistory = allHistory.map((item) => {
             const balanceAtThisPoint = currentBalance
             
             if (item.type === 'adjustment') {
@@ -147,7 +148,41 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
             }
         })
         
-        return { historyWithBalance: history, initialBalance: currentBalance }
+        if (isGroupedByDay) {
+            const grouped: any[] = []
+            let currentGroup: any = null
+            
+            for (const item of processedHistory) {
+                const dateKey = format(new Date(item.date), 'yyyy-MM-dd')
+                const itemNetValue = item.type === 'adjustment' 
+                      ? (item.value >= 0 ? item.value : -Math.abs(item.value))
+                      : (item.operation === 'income' ? item.value : -item.value)
+                      
+                if (!currentGroup || currentGroup.dateKey !== dateKey) {
+                    if (currentGroup) grouped.push(currentGroup)
+                    currentGroup = {
+                        dateKey,
+                        id: `group-${dateKey}`,
+                        date: item.date,
+                        description: 'Resumo Diário',
+                        runningBalance: item.runningBalance,
+                        netValue: itemNetValue
+                    }
+                } else {
+                    currentGroup.netValue += itemNetValue
+                }
+            }
+            if (currentGroup) grouped.push(currentGroup)
+            
+            processedHistory = grouped.map((g: any) => ({
+                ...g,
+                value: Math.abs(g.netValue),
+                operation: g.netValue >= 0 ? 'income' : 'expense',
+                type: 'transaction'
+            }))
+        }
+
+        return { historyWithBalance: processedHistory, initialBalance: currentBalance }
     })()
 
     return (
@@ -168,6 +203,20 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             </DialogDescription>
                         </div>
                         <div className="hidden sm:flex items-center gap-2">
+                            <div className="flex bg-muted/50 p-1 rounded-lg mr-2 border border-border/50">
+                                <button
+                                    onClick={() => setIsGroupedByDay(false)}
+                                    className={cn("px-3 py-1 text-xs font-semibold rounded-md transition-all", !isGroupedByDay ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                                >
+                                    Detalhado
+                                </button>
+                                <button
+                                    onClick={() => setIsGroupedByDay(true)}
+                                    className={cn("px-3 py-1 text-xs font-semibold rounded-md transition-all", isGroupedByDay ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                                >
+                                    Diário
+                                </button>
+                            </div>
                             <Button 
                                 variant="outline" 
                                 size="sm" 
@@ -222,21 +271,14 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         </div>
                     ) : (
                         <div className="relative py-8 sm:px-0">
-                            {/* Linha vertical central */}
-                            <div className={cn(
-                                "absolute left-6 sm:left-1/2 w-0.5 bg-border/60 sm:-translate-x-1/2 rounded-full",
-                                "top-10",
-                                !hasNextPage ? "bottom-12" : "bottom-0"
-                            )} />
-
-                            {/* Nó Inicial: Saldo Atual */}
-                            <div className="relative flex justify-start sm:justify-center mb-10 z-10 pl-14 sm:pl-0">
-                                <div className="bg-background border-2 border-primary/20 shadow-sm rounded-full px-5 py-2 text-sm font-extrabold flex items-center justify-center text-primary">
+                            {/* Saldo Atual (Top node) */}
+                            <div className="relative z-20 mb-8 flex w-full sm:justify-center">
+                                <div className="sm:mx-auto ml-6 sm:ml-0 -translate-x-1/2 sm:translate-x-0 bg-primary/10 border-2 border-primary/20 shadow-sm rounded-full px-6 py-2 text-base font-black text-primary">
                                     Saldo Atual: R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
                             </div>
 
-                            <div className="flex flex-col space-y-4 sm:space-y-2">
+                            <div className="flex flex-col">
                                 {historyWithBalance.map((item) => {
                                     const isIncome = item.operation === 'income'
                                     const isAdjustment = item.type === 'adjustment'
@@ -244,81 +286,61 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     const sign = isAdjustment ? (item.value >= 0 ? '+' : '-') : isIncome ? '+' : '-'
                                     const displayValue = Math.abs(item.value)
                                     
-                                    const cardBgClass = isAdjustment 
-                                        ? "bg-card border-amber-500/40 shadow-amber-500/5" 
-                                        : isIncome 
-                                            ? "bg-card border-emerald-500/40 shadow-emerald-500/5" 
-                                            : "bg-card border-rose-500/40 shadow-rose-500/5"
-                                            
+                                    const olderBalance = isAdjustment 
+                                        ? item.previous_balance ?? (item.runningBalance - item.value)
+                                        : (isIncome ? item.runningBalance - item.value : item.runningBalance + item.value)
+                                        
+                                    const isLastItem = historyWithBalance.indexOf(item) === historyWithBalance.length - 1 && !hasNextPage
+
                                     return (
-                                        <div key={item.id} className={cn(
-                                            "relative flex w-full group items-center py-4",
-                                            "sm:w-1/2",
-                                            isRightSide ? "sm:ml-auto pl-12 sm:pl-10" : "sm:mr-auto pl-12 sm:pr-10 sm:pl-0"
-                                        )}>
-                                            {/* Dot */}
-                                            <div className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full ring-4 ring-background z-20 transition-transform group-hover:scale-125 flex items-center justify-center",
-                                                "left-6 -translate-x-1/2", 
-                                                isRightSide ? "sm:-left-2 sm:translate-x-0" : "sm:left-auto sm:-right-2 sm:translate-x-0"
-                                            )}
-                                            style={{ backgroundColor: isAdjustment ? '#fbbf24' : isIncome ? '#10b981' : '#f43f5e' }}>
-                                                <div className="w-1.5 h-1.5 bg-background rounded-full opacity-50" />
-                                            </div>
-
-                                            {/* Balance Pill (Desktop only) */}
-                                            <div className={cn(
-                                                "hidden sm:flex absolute w-full items-center",
-                                                isRightSide ? "left-0 justify-start pr-10 -translate-x-full" : "right-0 justify-end pl-10 translate-x-full"
-                                            )}>
-                                                <div className="text-[11px] font-mono font-bold text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-border/50 shadow-sm flex items-center gap-2">
-                                                    <span className="opacity-50">SALDO</span>
-                                                    <span className="text-foreground/80">R$ {item.runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Connector Line (Desktop) */}
-                                            <div className={cn(
-                                                "hidden sm:block absolute top-1/2 -translate-y-1/2 h-px bg-border/60 z-10 transition-colors group-hover:bg-border w-6",
-                                                isRightSide ? "left-2" : "right-2"
-                                            )} />
-
-                                            {/* Connector Line (Mobile) */}
-                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px bg-border/60 z-10 left-6 w-6" />
-
-                                            {/* Card */}
-                                            <div className={cn(
-                                                "flex flex-col p-5 sm:p-6 rounded-3xl bg-card/40 backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:bg-card/60 hover:border-border transition-all w-full max-w-sm relative overflow-hidden group/card",
-                                                isRightSide ? "mr-auto" : "ml-auto"
-                                            )}>
-                                                {/* Background Glow */}
-                                                <div className={cn(
-                                                   "absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-10 group-hover/card:opacity-30 transition-opacity",
-                                                   isAdjustment ? "bg-amber-500" : isIncome ? "bg-emerald-500" : "bg-rose-500"
-                                                )} />
+                                        <div key={item.id} className="relative flex flex-col w-full group">
+                                            {/* The Line segment containing the Math and Card */}
+                                            <div className="relative w-full flex justify-center py-6 sm:py-8">
+                                                {/* Vertical Line */}
+                                                <div className="absolute left-6 sm:left-1/2 top-0 bottom-0 w-0.5 bg-border/60 sm:-translate-x-1/2" />
                                                 
-                                                <div className="relative z-10 flex flex-col">
-                                                    <div className="flex justify-between items-center mb-4">
-                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black opacity-70">
-                                                            {format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
-                                                        </span>
-                                                        <div className="sm:hidden text-[10px] font-mono font-bold text-muted-foreground bg-background/50 px-2 py-1 rounded-full border border-border/50">
-                                                            R$ {item.runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </div>
-                                                    </div>
-
-                                                    <span className={cn(
-                                                        "text-2xl sm:text-3xl font-black tracking-tighter tabular-nums drop-shadow-sm",
-                                                        isAdjustment ? "text-amber-500 dark:text-amber-400" :
-                                                        isIncome ? "text-emerald-500 dark:text-emerald-400" :
-                                                        "text-rose-500 dark:text-rose-400"
+                                                {/* The Math Label ON the line */}
+                                                <div className="absolute left-6 sm:left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20">
+                                                    <div className={cn(
+                                                        "px-3 py-1 rounded-full text-xs sm:text-sm font-black tabular-nums border-2 shadow-sm whitespace-nowrap",
+                                                        isAdjustment ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800" :
+                                                        isIncome ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800" 
+                                                                 : "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950 dark:text-rose-400 dark:border-rose-800"
                                                     )}>
                                                         {sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </span>
+                                                    </div>
+                                                </div>
 
-                                                    <span className="text-sm font-bold text-foreground/90 mt-2">
-                                                        {isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação'}
+                                                {/* The Card Branching off */}
+                                                <div className={cn(
+                                                    "w-full sm:w-1/2 flex relative z-10",
+                                                    isRightSide ? "sm:ml-auto justify-start pl-20 sm:pl-12" : "sm:mr-auto sm:justify-end pl-20 sm:pl-0 sm:pr-12"
+                                                )}>
+                                                    {/* Card Content */}
+                                                    <div className={cn(
+                                                        "flex flex-col p-4 rounded-2xl bg-card/60 backdrop-blur-md border shadow-sm w-full max-w-[280px] sm:max-w-xs transition-all hover:bg-card hover:shadow-md",
+                                                        isAdjustment ? "border-amber-500/20" : isIncome ? "border-emerald-500/20" : "border-rose-500/20",
+                                                        !isRightSide && "sm:text-right"
+                                                    )}>
+                                                        <span className="font-bold text-foreground text-sm sm:text-base">
+                                                            {isGroupedByDay ? 'Resumo do Dia' : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
+                                                        </span>
+                                                        <span className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">
+                                                            {isGroupedByDay 
+                                                                ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
+                                                                : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* The Balance Pill BEFORE this transaction (Older Balance) */}
+                                            <div className="relative z-20 my-1 flex w-full sm:justify-center">
+                                                <div className="sm:mx-auto ml-6 sm:ml-0 -translate-x-1/2 sm:translate-x-0 bg-background border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-extrabold text-foreground flex items-center gap-2">
+                                                    <span className="opacity-50 font-mono text-xs">
+                                                        {isLastItem ? 'SALDO INICIAL' : 'SALDO'}
                                                     </span>
+                                                    <span>R$ {olderBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -329,14 +351,6 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             {hasNextPage && (
                                 <div ref={observerRef} className="flex justify-center py-6">
                                     {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
-                                </div>
-                            )}
-
-                            {!hasNextPage && historyWithBalance.length > 0 && (
-                                <div className="relative flex justify-start sm:justify-center mt-8 mb-4 z-10 pl-14 sm:pl-0">
-                                    <div className="bg-muted border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-bold flex items-center justify-center text-muted-foreground">
-                                        Saldo Inicial: R$ {initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </div>
                                 </div>
                             )}
                         </div>

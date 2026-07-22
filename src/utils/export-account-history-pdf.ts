@@ -93,13 +93,12 @@ export function exportAccountHistoryPDF(account: { name: string; balance?: numbe
     let typeDesc = item.description || 'Transação'
     if (isAdjustment) typeDesc = 'Ajuste Manual'
 
-    const dateStr = new Date(item.date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    const isGrouped = item.description === 'Resumo Diário'
+    const dateOpts: Intl.DateTimeFormatOptions = isGrouped 
+       ? { day: '2-digit', month: '2-digit', year: 'numeric' }
+       : { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+    
+    const dateStr = new Date(item.date).toLocaleDateString('pt-BR', dateOpts)
 
     const displayValue = Math.abs(item.value)
     const valueStr = `${signal} R$ ${displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
