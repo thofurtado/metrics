@@ -291,12 +291,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             {/* Saldo Atual (Top node) */}
                             <div className="relative z-20 mb-8 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
                                 <div className={cn(
-                                    "-translate-x-1/2 sm:translate-x-0 border-2 shadow-lg rounded-full px-6 py-2 text-base font-black whitespace-nowrap transition-all duration-500 hover:scale-105",
+                                    "-translate-x-1/2 sm:translate-x-0 border-[3px] shadow-lg rounded-full px-8 py-2 text-base font-black whitespace-nowrap transition-all duration-500 hover:scale-105",
                                     account?.balance && account.balance < 0 
-                                        ? "bg-rose-500/5 text-rose-500 border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.15)]" 
-                                        : "bg-emerald-500/5 text-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                                        ? "bg-indigo-50 text-indigo-600 border-indigo-400 dark:bg-indigo-950/80 dark:text-indigo-400 dark:border-indigo-700/50 shadow-[0_0_20px_rgba(99,102,241,0.15)]" 
+                                        : "bg-blue-50 text-blue-600 border-blue-400 dark:bg-blue-950/80 dark:text-blue-400 dark:border-blue-700/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
                                 )}>
-                                    Saldo Atual: R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
                             </div>
 
@@ -449,14 +449,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                             {/* The Balance Pill BEFORE this transaction (Older Balance) */}
                                             <div className="relative z-20 my-1 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
                                                 <div className={cn(
-                                                    "-translate-x-1/2 sm:translate-x-0 bg-background border-2 shadow-sm rounded-full px-5 py-2 text-sm font-extrabold flex items-center gap-2 whitespace-nowrap transition-all duration-500 hover:scale-105",
+                                                    "-translate-x-1/2 sm:translate-x-0 bg-background border-2 shadow-sm rounded-full px-6 py-2 text-sm font-extrabold flex items-center gap-2 whitespace-nowrap transition-all duration-500 hover:scale-105",
                                                     olderBalance < 0 
-                                                        ? "border-rose-500/20 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:border-rose-500/40" 
-                                                        : "border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-500/40"
+                                                        ? "border-indigo-400 text-indigo-600 dark:text-indigo-400 dark:border-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.2)]" 
+                                                        : "border-blue-400 text-blue-600 dark:text-blue-400 dark:border-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
                                                 )}>
-                                                    <span className="opacity-50 font-mono text-xs">
-                                                        {isLastItem ? 'SALDO INICIAL' : 'SALDO'}
-                                                    </span>
                                                     <span>R$ {olderBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
