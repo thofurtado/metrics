@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft } from 'lucide-react'
+import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft, AlertTriangle } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@/api/get-accounts'
@@ -45,8 +45,9 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         queryKey: ['account-history', account?.id, selectedAccountIds],
         queryFn: async ({ pageParam }) => {
             if (account!.id === 'all') {
-                const res = await getTransactions({ accountId: selectedAccountIds.length > 0 ? selectedAccountIds : undefined, page: pageParam as number, perPage: 20 })
-                return {
+                try {
+                    const res = await getTransactions({ accountId: selectedAccountIds.length > 0 ? selectedAccountIds.join(',') : undefined, page: pageParam as number, perPage: 20 })
+                    return {
                     account: { id: 'all', name: 'Histórico Geral', balance: 0 },
                     history: res.transactions.transactions.map(t => ({
                         id: t.id,
@@ -60,6 +61,10 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     totalCount: res.transactions.totalCount,
                     totalPages: Math.ceil(res.transactions.totalCount / res.transactions.perPage),
                     currentPage: res.transactions.pageIndex
+                }
+                } catch (error) {
+                    console.error("Error fetching transactions for all accounts:", error)
+                    throw error
                 }
             } else {
                 return getAccountHistory({ accountId: account!.id, page: pageParam as number, limit: 20 })
@@ -340,16 +345,19 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     <div className="flex gap-4 items-center">
                                         <Skeleton className="w-10 h-10 rounded-full" />
                                         <div className="space-y-2">
-                                            <Skeleton className="w-32 h-4" />
-                                            <Skeleton className="w-20 h-3" />
+                                            <Skeleton className="h-4 w-[150px]" />
+                                            <Skeleton className="h-3 w-[100px]" />
                                         </div>
                                     </div>
-                                    <div className="space-y-2 text-right flex flex-col items-end">
-                                        <Skeleton className="w-24 h-4" />
-                                        <Skeleton className="w-16 h-3" />
-                                    </div>
+                                    <Skeleton className="h-6 w-[80px]" />
                                 </div>
                             ))}
+                        </div>
+                    ) : isError ? (
+                        <div className="flex flex-col items-center justify-center h-full text-rose-500 opacity-90 py-12">
+                            <AlertTriangle className="w-16 h-16 mb-4" />
+                            <p className="text-lg font-semibold">Ocorreu um erro ao carregar o histórico.</p>
+                            <p className="text-sm text-muted-foreground mt-2">Por favor, tente novamente.</p>
                         </div>
                     ) : historyWithBalance.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
