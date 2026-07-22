@@ -148,7 +148,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     queryKey: ['treatment', treatmentId],
     queryFn: async () => {
       const data = await getTreatmentDetails({ treatmentId })
-      return data as TreatmentDetails
+      return data as unknown as TreatmentDetails
     },
     enabled: open,
   })

@@ -25,8 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { FileUpload } from '@/components/file-upload'
 import { uploadFileTransaction } from '@/api/upload-file'
-import { FileUpload } from '@/components/file-upload'
-import { uploadFileTransaction } from '@/api/upload-file'
+
 import { InstallmentPreviewDialog, InstallmentItem } from '@/components/installment-preview-dialog'
 import {
   ResponsiveDialogContent,
