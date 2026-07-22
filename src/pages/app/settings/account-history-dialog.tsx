@@ -270,10 +270,10 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                             <p>Nenhuma movimentação encontrada.</p>
                         </div>
                     ) : (
-                        <div className="relative py-8 sm:px-0">
+                        <div className="relative py-8">
                             {/* Saldo Atual (Top node) */}
-                            <div className="relative z-20 mb-8 flex w-full sm:justify-center">
-                                <div className="sm:mx-auto ml-6 sm:ml-0 -translate-x-1/2 sm:translate-x-0 bg-primary/10 border-2 border-primary/20 shadow-sm rounded-full px-6 py-2 text-base font-black text-primary">
+                            <div className="relative z-20 mb-8 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
+                                <div className="-translate-x-1/2 sm:translate-x-0 bg-primary/10 border-2 border-primary/20 shadow-sm rounded-full px-6 py-2 text-base font-black text-primary whitespace-nowrap">
                                     Saldo Atual: R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
                             </div>
@@ -322,12 +322,14 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                         isAdjustment ? "border-amber-500/20" : isIncome ? "border-emerald-500/20" : "border-rose-500/20",
                                                         !isRightSide && "sm:text-right"
                                                     )}>
-                                                        <span className="font-bold text-foreground text-sm sm:text-base">
-                                                            {isGroupedByDay ? 'Resumo do Dia' : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
+                                                        <span className="font-bold text-foreground text-sm sm:text-base capitalize">
+                                                            {isGroupedByDay 
+                                                                ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
+                                                                : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
                                                         </span>
                                                         <span className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">
                                                             {isGroupedByDay 
-                                                                ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
+                                                                ? 'Resumo do Dia'
                                                                 : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
                                                         </span>
                                                     </div>
@@ -335,8 +337,8 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                             </div>
 
                                             {/* The Balance Pill BEFORE this transaction (Older Balance) */}
-                                            <div className="relative z-20 my-1 flex w-full sm:justify-center">
-                                                <div className="sm:mx-auto ml-6 sm:ml-0 -translate-x-1/2 sm:translate-x-0 bg-background border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-extrabold text-foreground flex items-center gap-2">
+                                            <div className="relative z-20 my-1 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
+                                                <div className="-translate-x-1/2 sm:translate-x-0 bg-background border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-extrabold text-foreground flex items-center gap-2 whitespace-nowrap">
                                                     <span className="opacity-50 font-mono text-xs">
                                                         {isLastItem ? 'SALDO INICIAL' : 'SALDO'}
                                                     </span>
