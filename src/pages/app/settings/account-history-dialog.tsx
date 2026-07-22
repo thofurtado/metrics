@@ -427,19 +427,19 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                 {/* Horizontal Connector Line (Desktop) */}
                                                 <div className={cn(
                                                     "hidden sm:block absolute top-1/2 -translate-y-1/2 h-px z-10 w-8 sm:w-12 transition-all duration-700 opacity-70 group-hover:opacity-100 group-hover:w-16",
-                                                    isRightSide ? "left-[50%] bg-gradient-to-r" : "right-[50%] bg-gradient-to-l",
-                                                    isAdjustment ? "from-amber-500/80 to-transparent group-hover:from-amber-400" :
-                                                    isIncome ? "from-emerald-500/80 to-transparent group-hover:from-emerald-400" :
-                                                               "from-rose-500/80 to-transparent group-hover:from-rose-400"
+                                                    isRightSide ? "left-[50%]" : "right-[50%]",
+                                                    isAdjustment ? "bg-amber-500/80 group-hover:bg-amber-400" :
+                                                    isIncome ? "bg-emerald-500/80 group-hover:bg-emerald-400" :
+                                                               "bg-rose-500/80 group-hover:bg-rose-400"
                                                 )} />
 
                                                 {/* Horizontal Connector Line (Mobile) */}
                                                 <div className={cn(
-                                                    "sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 bg-gradient-to-r transition-all duration-700 opacity-70 group-hover:opacity-100 group-hover:w-10",
+                                                    "sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 transition-all duration-700 opacity-70 group-hover:opacity-100 group-hover:w-10",
                                                     "left-6",
-                                                    isAdjustment ? "from-amber-500/80 to-transparent group-hover:from-amber-400" :
-                                                    isIncome ? "from-emerald-500/80 to-transparent group-hover:from-emerald-400" :
-                                                               "from-rose-500/80 to-transparent group-hover:from-rose-400"
+                                                    isAdjustment ? "bg-amber-500/80 group-hover:bg-amber-400" :
+                                                    isIncome ? "bg-emerald-500/80 group-hover:bg-emerald-400" :
+                                                               "bg-rose-500/80 group-hover:bg-rose-400"
                                                 )} />
 
                                                 {/* The Math Label ON the line */}
@@ -455,7 +455,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                         isIncome ? "bg-emerald-100 text-emerald-700 border-emerald-400 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-600" 
                                                                  : "bg-rose-100 text-rose-700 border-rose-400 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-600"
                                                     )}>
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                                                        <div data-html2canvas-ignore="true" className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent -translate-x-full animate-shimmer" />
                                                         <span className="relative z-10 tracking-tight">{sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                     </div>
                                                 </div>
@@ -466,7 +466,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                         {/* Left side (Expense) */}
                                                         <div className="w-full sm:w-1/2 sm:mr-auto flex justify-start sm:justify-end pl-16 sm:pl-0 sm:pr-12 relative">
                                                             {/* Mobile Connector */}
-                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-gradient-to-r from-rose-500/80 to-transparent" />
+                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-rose-500/80" />
                                                             {/* Card Content */}
                                                             <div className={cn(
                                                                 "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[260px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
@@ -491,7 +491,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                         {/* Right side (Income) */}
                                                         <div className="w-full sm:w-1/2 sm:ml-auto flex justify-start pl-16 sm:pl-12 relative">
                                                             {/* Mobile Connector */}
-                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-gradient-to-r from-emerald-500/80 to-transparent" />
+                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-6 left-6 bg-emerald-500/80" />
                                                             {/* Card Content */}
                                                             <div className={cn(
                                                                 "flex flex-col p-3 rounded-xl bg-white dark:bg-card/80 border shadow-md w-full max-w-[260px] sm:max-w-[280px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg",
