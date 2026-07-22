@@ -289,14 +289,21 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     ) : (
                         <div className="relative py-8">
                             {/* Saldo Atual (Top node) */}
-                            <div className="relative z-20 mb-8 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
-                                <div className={cn(
-                                    "-translate-x-1/2 sm:translate-x-0 border-[3px] shadow-lg rounded-full px-8 py-2 text-base font-black whitespace-nowrap transition-all duration-500 hover:scale-105",
-                                    account?.balance && account.balance < 0 
-                                        ? "bg-indigo-50 text-indigo-600 border-indigo-400 dark:bg-indigo-950/80 dark:text-indigo-400 dark:border-indigo-700/50 shadow-[0_0_20px_rgba(99,102,241,0.15)]" 
-                                        : "bg-blue-50 text-blue-600 border-blue-400 dark:bg-blue-950/80 dark:text-blue-400 dark:border-blue-700/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                                )}>
-                                    R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            <div className="relative z-20 mb-8 flex flex-col w-full items-start sm:items-center pl-6 sm:pl-0">
+                                <div className="flex flex-col items-center -translate-x-1/2 sm:translate-x-0 group">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                                        Saldo Atual
+                                    </span>
+                                    <div className={cn(
+                                        "text-2xl sm:text-3xl font-black tabular-nums tracking-tighter transition-all duration-300 group-hover:scale-105",
+                                        account?.balance && account.balance < 0 ? "text-indigo-600 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"
+                                    )}>
+                                        R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </div>
+                                    <div className={cn(
+                                        "w-2.5 h-2.5 rounded-full mt-3 shadow-md",
+                                        account?.balance && account.balance < 0 ? "bg-indigo-500 shadow-indigo-500/40" : "bg-blue-500 shadow-blue-500/40"
+                                    )} />
                                 </div>
                             </div>
 
@@ -448,13 +455,19 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
                                             {/* The Balance Pill BEFORE this transaction (Older Balance) */}
                                             <div className="relative z-20 my-1 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
-                                                <div className={cn(
-                                                    "-translate-x-1/2 sm:translate-x-0 bg-background border-2 shadow-sm rounded-full px-6 py-2 text-sm font-extrabold flex items-center gap-2 whitespace-nowrap transition-all duration-500 hover:scale-105",
-                                                    olderBalance < 0 
-                                                        ? "border-indigo-400 text-indigo-600 dark:text-indigo-400 dark:border-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.1)] hover:shadow-[0_0_20px_rgba(99,102,241,0.2)]" 
-                                                        : "border-blue-400 text-blue-600 dark:text-blue-400 dark:border-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
-                                                )}>
-                                                    <span>R$ {olderBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                <div className="flex flex-col items-center -translate-x-1/2 sm:translate-x-0 group cursor-default">
+                                                    <div className={cn(
+                                                        "w-2 h-2 rounded-full mb-1.5 transition-transform duration-300 group-hover:scale-150 shadow-sm",
+                                                        olderBalance < 0 ? "bg-indigo-400 shadow-indigo-500/30" : "bg-blue-400 shadow-blue-500/30"
+                                                    )} />
+                                                    <span className={cn(
+                                                        "text-[11px] sm:text-xs font-black tracking-wider transition-colors duration-300",
+                                                        olderBalance < 0 
+                                                            ? "text-indigo-600/70 dark:text-indigo-400/70 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" 
+                                                            : "text-blue-600/70 dark:text-blue-400/70 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                                                    )}>
+                                                        R$ {olderBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
