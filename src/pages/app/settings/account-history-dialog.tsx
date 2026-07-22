@@ -41,7 +41,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         }
     }, [account?.id, accountsData, isPillsInitialized])
 
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
         queryKey: ['account-history', account?.id, selectedAccountIds],
         queryFn: async ({ pageParam }) => {
             if (account!.id === 'all') {
