@@ -6,7 +6,7 @@ export interface GetTransactionsQuery {
   description?: string | null
   value?: number | null
   sectorId?: string | null
-  accountId?: string | null
+  accountId?: string | string[] | null
   status?: string | null
   toDate?: string | null
   fromDate?: string | null

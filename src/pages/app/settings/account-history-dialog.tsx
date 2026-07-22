@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { getAccounts } from '@/api/get-accounts'
+import { getTransactions } from '@/api/get-transactions'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import html2canvas from 'html2canvas'
@@ -20,9 +22,49 @@ interface AccountHistoryDialogProps {
 
 export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPDF }: AccountHistoryDialogProps) {
     const [isGroupedByDay, setIsGroupedByDay] = useState(false)
+    const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
+    const [isPillsInitialized, setIsPillsInitialized] = useState(false)
+
+    const { data: accountsData } = useQuery({
+        queryKey: ['accounts'],
+        queryFn: getAccounts,
+        enabled: isOpen && account?.id === 'all',
+    })
+
+    useEffect(() => {
+        if (account?.id === 'all' && accountsData?.accounts && !isPillsInitialized) {
+            setSelectedAccountIds(accountsData.accounts.map(a => a.id))
+            setIsPillsInitialized(true)
+        } else if (account?.id !== 'all') {
+            setIsPillsInitialized(false)
+            setSelectedAccountIds([])
+        }
+    }, [account?.id, accountsData, isPillsInitialized])
+
     const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-        queryKey: ['account-history', account?.id],
-        queryFn: ({ pageParam }) => getAccountHistory({ accountId: account!.id, page: pageParam as number, limit: 20 }),
+        queryKey: ['account-history', account?.id, selectedAccountIds],
+        queryFn: async ({ pageParam }) => {
+            if (account!.id === 'all') {
+                const res = await getTransactions({ accountId: selectedAccountIds.length > 0 ? selectedAccountIds : undefined, page: pageParam as number, perPage: 20 })
+                return {
+                    account: { id: 'all', name: 'Histórico Geral', balance: 0 },
+                    history: res.transactions.transactions.map(t => ({
+                        id: t.id,
+                        type: 'transaction',
+                        description: t.description || 'Transação',
+                        operation: t.operation,
+                        value: t.totalValue ?? t.amount,
+                        date: t.data_vencimento.toString(),
+                        created_at: t.data_emissao ? t.data_emissao.toString() : new Date().toISOString()
+                    })),
+                    totalCount: res.transactions.totalCount,
+                    totalPages: Math.ceil(res.transactions.totalCount / res.transactions.perPage),
+                    currentPage: res.transactions.pageIndex
+                }
+            } else {
+                return getAccountHistory({ accountId: account!.id, page: pageParam as number, limit: 20 })
+            }
+        },
         initialPageParam: 1,
         getNextPageParam: (lastPage) => {
             if (lastPage.currentPage < lastPage.totalPages) {
@@ -30,7 +72,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
             }
             return undefined
         },
-        enabled: !!account && isOpen,
+        enabled: !!account && isOpen && (account.id !== 'all' || isPillsInitialized),
     })
 
     const timelineRef = useRef<HTMLDivElement>(null)
@@ -125,7 +167,13 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
     const { historyWithBalance, initialBalance } = (() => {
         if (!data || !account) return { historyWithBalance: [], initialBalance: account?.balance || 0 }
+        
         let currentBalance = account.balance
+        if (account.id === 'all' && accountsData?.accounts) {
+            currentBalance = accountsData.accounts
+                .filter(a => selectedAccountIds.includes(a.id))
+                .reduce((acc, curr) => acc + curr.balance, 0)
+        }
         
         const allHistory = data.pages.flatMap((page) => page.history)
 
@@ -213,11 +261,33 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
             <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b">
                     <div className="flex items-center justify-between pr-12">
-                        <div>
+                        <div className="w-full">
                             <DialogTitle className="text-xl">Histórico da Conta</DialogTitle>
                             <DialogDescription>
                                 {account?.name}
                             </DialogDescription>
+                            {account?.id === 'all' && accountsData?.accounts && (
+                                <div className="mt-4 flex flex-wrap gap-2 pr-4">
+                                    {accountsData.accounts.map(acc => {
+                                        const isSelected = selectedAccountIds.includes(acc.id)
+                                        return (
+                                            <button 
+                                                key={acc.id} 
+                                                onClick={() => setSelectedAccountIds(prev => isSelected ? prev.filter(id => id !== acc.id) : [...prev, acc.id])}
+                                                className={cn(
+                                                    "px-3 py-1.5 text-xs font-semibold rounded-full transition-all border shadow-sm flex items-center gap-2", 
+                                                    isSelected 
+                                                        ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:scale-105" 
+                                                        : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-105"
+                                                )}
+                                            >
+                                                <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-muted-foreground")} />
+                                                {acc.name}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
                         <div className="hidden sm:flex items-center gap-2">
                             <div className="flex bg-muted/50 p-1 rounded-lg mr-2 border border-border/50">

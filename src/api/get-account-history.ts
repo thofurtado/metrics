@@ -31,33 +31,6 @@ interface GetAccountHistoryQuery {
 }
 
 export async function getAccountHistory({ accountId, page = 1, limit = 20 }: GetAccountHistoryQuery) {
-  if (accountId === 'all') {
-    const { getTransactions } = await import('./get-transactions')
-    const response = await getTransactions({ page, perPage: limit })
-    
-    const history: AccountHistoryItem[] = response.transactions.transactions.map((t) => ({
-      id: t.id,
-      type: 'transaction',
-      description: t.description || 'Transação',
-      operation: t.operation,
-      value: t.amount,
-      date: t.data_emissao.toString(),
-      created_at: t.data_emissao.toString(),
-    }))
-
-    return {
-      account: {
-        id: 'all',
-        name: 'Visão Consolidada (Todas as Contas)',
-        balance: 0
-      },
-      history,
-      totalCount: response.transactions.totalCount,
-      totalPages: Math.ceil(response.transactions.totalCount / response.transactions.perPage),
-      currentPage: response.transactions.pageIndex
-    } as GetAccountHistoryResponse
-  }
-
   const response = await api.get<GetAccountHistoryResponse>(`/account/${accountId}/history`, {
     params: {
       page,
