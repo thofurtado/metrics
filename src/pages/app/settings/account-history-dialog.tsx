@@ -177,6 +177,19 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         }
     }, [isOpen])
 
+    // Auto-scroll to bottom when first page loads
+    useEffect(() => {
+        if (isOpen && data?.pages.length === 1 && !isFetchingNextPage) {
+            const viewport = document.getElementById('timeline-scroll-container')
+            if (viewport) {
+                // Use a slight timeout to ensure render is complete
+                setTimeout(() => {
+                    viewport.scrollTop = viewport.scrollHeight
+                }, 100)
+            }
+        }
+    }, [isOpen, data?.pages.length, isFetchingNextPage])
+
     const { historyWithBalance, initialBalance } = (() => {
         if (!data || !account) return { historyWithBalance: [], initialBalance: account?.balance || 0 }
         
@@ -384,26 +397,25 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         </div>
                     ) : (
                         <div className="relative py-8">
-                            {/* Saldo Atual (Top node) */}
-                            <div className="relative z-20 mb-8 flex flex-col w-full items-start sm:items-center pl-6 sm:pl-0">
-                                <div className="flex flex-col items-center -translate-x-1/2 sm:translate-x-0 group">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                                        Saldo Atual
-                                    </span>
-                                    <div className={cn(
-                                        "text-2xl sm:text-3xl font-black tabular-nums tracking-tighter transition-all duration-300 group-hover:scale-105",
-                                        account?.balance && account.balance < 0 ? "text-indigo-600 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"
-                                    )}>
-                                        R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </div>
-                                    <div className={cn(
-                                        "w-2.5 h-2.5 rounded-full mt-3 shadow-md",
-                                        account?.balance && account.balance < 0 ? "bg-indigo-500 shadow-indigo-500/40" : "bg-blue-500 shadow-blue-500/40"
-                                    )} />
+                            {hasNextPage && (
+                                <div ref={observerRef} className="flex justify-center py-6 relative z-30">
+                                    {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
                                 </div>
-                            </div>
+                            )}
 
-                            <div className="flex flex-col">
+                            {/* Saldo Inicial (Top node now, when all loaded) */}
+                            {!hasNextPage && historyWithBalance.length > 0 && (
+                                <div className="relative z-20 mb-2 flex flex-col w-full items-start sm:items-center pl-6 sm:pl-0">
+                                    <div className="flex flex-col items-center -translate-x-1/2 sm:translate-x-0 group">
+                                        <div className="w-2.5 h-2.5 rounded-full mb-3 shadow-md bg-slate-300 dark:bg-slate-600" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                                            Saldo Inicial (Fim do Histórico)
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col-reverse">
                                 {historyWithBalance.map((item) => {
                                     const isIncome = item.operation === 'income'
                                     const isAdjustment = item.type === 'adjustment'
@@ -575,12 +587,25 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                     )
                                 })}
                             </div>
-                            
-                            {hasNextPage && (
-                                <div ref={observerRef} className="flex justify-center py-6">
-                                    {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />}
+
+                            {/* Saldo Atual (Bottom node now) */}
+                            <div className="relative z-20 mt-2 flex flex-col w-full items-start sm:items-center pl-6 sm:pl-0">
+                                <div className="flex flex-col items-center -translate-x-1/2 sm:translate-x-0 group">
+                                    <div className={cn(
+                                        "w-3 h-3 rounded-full mb-3 shadow-md",
+                                        account?.balance && account.balance < 0 ? "bg-indigo-500 shadow-indigo-500/40" : "bg-blue-500 shadow-blue-500/40"
+                                    )} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                                        Saldo Atual
+                                    </span>
+                                    <div className={cn(
+                                        "text-2xl sm:text-3xl font-black tabular-nums tracking-tighter transition-all duration-300 group-hover:scale-105",
+                                        account?.balance && account.balance < 0 ? "text-indigo-600 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"
+                                    )}>
+                                        R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     )}
                     </div>
