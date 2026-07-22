@@ -186,7 +186,7 @@ export function Permissions() {
 
       {/* DIALOG DE CRIAÇÃO E EDIÇÃO */}
       <Dialog open={isCreating || selectedUser !== null} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="w-full sm:max-w-[550px] h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isCreating ? 'Cadastrar Novo Usuário' : 'Editar Usuário'}</DialogTitle>
             <DialogDescription>
@@ -195,7 +195,7 @@ export function Permissions() {
           </DialogHeader>
           
           <div className="grid gap-5 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome Completo</Label>
                 <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="João Silva" />
@@ -206,7 +206,7 @@ export function Permissions() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">{isCreating ? 'Senha de Acesso' : 'Nova Senha (opcional)'}</Label>
                 <Input id="password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder={isCreating ? '******' : 'Deixe em branco para não alterar'} />
