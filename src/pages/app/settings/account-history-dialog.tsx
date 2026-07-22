@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, Download, Loader2 } from 'lucide-react'
+import { FileText, Download, Loader2, ArrowDownRight, ArrowUpRight, ArrowRightLeft } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -192,6 +192,13 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background-color: hsl(var(--border)); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--muted-foreground) / 0.5); }
+                @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .animate-shimmer {
+                    animation: shimmer 2s infinite linear;
+                }
             `}</style>
             <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b">
@@ -273,7 +280,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         <div className="relative py-8">
                             {/* Saldo Atual (Top node) */}
                             <div className="relative z-20 mb-8 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
-                                <div className="-translate-x-1/2 sm:translate-x-0 bg-primary/10 border-2 border-primary/20 shadow-sm rounded-full px-6 py-2 text-base font-black text-primary whitespace-nowrap">
+                                <div className={cn(
+                                    "-translate-x-1/2 sm:translate-x-0 border-2 shadow-lg rounded-full px-6 py-2 text-base font-black whitespace-nowrap transition-all duration-500 hover:scale-105",
+                                    account?.balance && account.balance < 0 
+                                        ? "bg-rose-500/5 text-rose-500 border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.15)]" 
+                                        : "bg-emerald-500/5 text-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+                                )}>
                                     Saldo Atual: R$ {account?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
                             </div>
@@ -299,46 +311,85 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                 {/* Vertical Line */}
                                                 <div className="absolute left-6 sm:left-1/2 top-0 bottom-0 w-0.5 bg-border/60 sm:-translate-x-1/2" />
                                                 
+                                                {/* Horizontal Connector Line (Desktop) */}
+                                                <div className={cn(
+                                                    "hidden sm:block absolute top-1/2 -translate-y-1/2 h-px z-10 w-12 sm:w-16 transition-all duration-700 opacity-50 group-hover:opacity-100 group-hover:w-20",
+                                                    isRightSide ? "left-[50%] bg-gradient-to-r" : "right-[50%] bg-gradient-to-l",
+                                                    isAdjustment ? "from-amber-500/50 to-transparent group-hover:from-amber-400" :
+                                                    isIncome ? "from-emerald-500/50 to-transparent group-hover:from-emerald-400" :
+                                                               "from-rose-500/50 to-transparent group-hover:from-rose-400"
+                                                )} />
+
+                                                {/* Horizontal Connector Line (Mobile) */}
+                                                <div className={cn(
+                                                    "sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-8 bg-gradient-to-r transition-all duration-700 opacity-50 group-hover:opacity-100 group-hover:w-12",
+                                                    "left-6",
+                                                    isAdjustment ? "from-amber-500/50 to-transparent group-hover:from-amber-400" :
+                                                    isIncome ? "from-emerald-500/50 to-transparent group-hover:from-emerald-400" :
+                                                               "from-rose-500/50 to-transparent group-hover:from-rose-400"
+                                                )} />
+
                                                 {/* The Math Label ON the line */}
                                                 <div className="absolute left-6 sm:left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20">
                                                     <div className={cn(
-                                                        "px-3 py-1 rounded-full text-xs sm:text-sm font-black tabular-nums border-2 shadow-sm whitespace-nowrap",
-                                                        isAdjustment ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800" :
-                                                        isIncome ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800" 
-                                                                 : "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950 dark:text-rose-400 dark:border-rose-800"
+                                                        "px-3 py-1 rounded-full text-xs sm:text-sm font-black tabular-nums border-2 shadow-sm whitespace-nowrap relative overflow-hidden group-hover:scale-110 transition-transform duration-300",
+                                                        isAdjustment ? "bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-950/80 dark:text-amber-400 dark:border-amber-700/50" :
+                                                        isIncome ? "bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-400 dark:border-emerald-700/50" 
+                                                                 : "bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-950/80 dark:text-rose-400 dark:border-rose-700/50"
                                                     )}>
-                                                        {sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                                                        <span className="relative z-10">{sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                     </div>
                                                 </div>
 
                                                 {/* The Card Branching off */}
                                                 <div className={cn(
                                                     "w-full sm:w-1/2 flex relative z-10",
-                                                    isRightSide ? "sm:ml-auto justify-start pl-20 sm:pl-12" : "sm:mr-auto sm:justify-end pl-20 sm:pl-0 sm:pr-12"
+                                                    isRightSide ? "sm:ml-auto justify-start pl-20 sm:pl-16" : "sm:mr-auto sm:justify-end pl-20 sm:pl-0 sm:pr-16"
                                                 )}>
                                                     {/* Card Content */}
                                                     <div className={cn(
-                                                        "flex flex-col p-4 rounded-2xl bg-card/60 backdrop-blur-md border shadow-sm w-full max-w-[280px] sm:max-w-xs transition-all hover:bg-card hover:shadow-md",
-                                                        isAdjustment ? "border-amber-500/20" : isIncome ? "border-emerald-500/20" : "border-rose-500/20",
+                                                        "flex flex-col p-4 rounded-2xl bg-card/60 backdrop-blur-xl border-2 shadow-md w-full max-w-[280px] sm:max-w-xs transition-all duration-300 hover:bg-card/90 hover:-translate-y-1 hover:shadow-lg",
+                                                        isAdjustment ? "border-amber-500/20 hover:border-amber-500/40 hover:shadow-amber-500/10" : 
+                                                        isIncome ? "border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-emerald-500/10" : 
+                                                                   "border-rose-500/20 hover:border-rose-500/40 hover:shadow-rose-500/10",
                                                         !isRightSide && "sm:text-right"
                                                     )}>
-                                                        <span className="font-bold text-foreground text-sm sm:text-base capitalize">
-                                                            {isGroupedByDay 
-                                                                ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
-                                                                : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
-                                                        </span>
-                                                        <span className="text-[11px] font-bold text-muted-foreground mt-1 uppercase tracking-wider">
-                                                            {isGroupedByDay 
-                                                                ? 'Resumo do Dia'
-                                                                : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
-                                                        </span>
+                                                        <div className={cn("flex items-center gap-3", !isRightSide && "sm:flex-row-reverse")}>
+                                                            <div className={cn(
+                                                                "p-2 rounded-xl flex-shrink-0",
+                                                                isAdjustment ? "bg-amber-500/10 text-amber-500" :
+                                                                isIncome ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                            )}>
+                                                                {isAdjustment ? <ArrowRightLeft className="w-4 h-4" /> :
+                                                                 isIncome ? <ArrowDownRight className="w-4 h-4" /> : 
+                                                                 <ArrowUpRight className="w-4 h-4" />}
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0 flex-1">
+                                                                <span className="font-bold text-foreground text-sm sm:text-base capitalize truncate">
+                                                                    {isGroupedByDay 
+                                                                        ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
+                                                                        : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
+                                                                    {isGroupedByDay 
+                                                                        ? 'Resumo do Dia'
+                                                                        : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* The Balance Pill BEFORE this transaction (Older Balance) */}
                                             <div className="relative z-20 my-1 flex w-full justify-start sm:justify-center pl-6 sm:pl-0">
-                                                <div className="-translate-x-1/2 sm:translate-x-0 bg-background border-2 border-border shadow-sm rounded-full px-5 py-2 text-sm font-extrabold text-foreground flex items-center gap-2 whitespace-nowrap">
+                                                <div className={cn(
+                                                    "-translate-x-1/2 sm:translate-x-0 bg-background border-2 shadow-sm rounded-full px-5 py-2 text-sm font-extrabold flex items-center gap-2 whitespace-nowrap transition-all duration-500 hover:scale-105",
+                                                    olderBalance < 0 
+                                                        ? "border-rose-500/20 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.1)] hover:shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:border-rose-500/40" 
+                                                        : "border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:border-emerald-500/40"
+                                                )}>
                                                     <span className="opacity-50 font-mono text-xs">
                                                         {isLastItem ? 'SALDO INICIAL' : 'SALDO'}
                                                     </span>
