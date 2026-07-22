@@ -152,7 +152,13 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col p-0">
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: hsl(var(--border)); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--muted-foreground) / 0.5); }
+            `}</style>
+            <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="px-6 py-4 border-b">
                     <div className="flex items-center justify-between pr-12">
                         <div>
@@ -246,59 +252,73 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                             
                                     return (
                                         <div key={item.id} className={cn(
-                                            "relative flex w-full group",
+                                            "relative flex w-full group items-center py-4",
                                             "sm:w-1/2",
-                                            isRightSide ? "sm:ml-auto pl-14 sm:pl-10" : "sm:mr-auto pl-14 sm:pr-10 sm:pl-0"
+                                            isRightSide ? "sm:ml-auto pl-12 sm:pl-10" : "sm:mr-auto pl-12 sm:pr-10 sm:pl-0"
                                         )}>
                                             {/* Dot */}
                                             <div className={cn(
-                                                "absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full ring-4 ring-background z-20 transition-transform group-hover:scale-125",
+                                                "absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full ring-4 ring-background z-20 transition-transform group-hover:scale-125 flex items-center justify-center",
                                                 "left-6 -translate-x-1/2", 
-                                                isRightSide ? "sm:-left-1.5 sm:translate-x-0" : "sm:left-auto sm:-right-1.5 sm:translate-x-0"
+                                                isRightSide ? "sm:-left-2 sm:translate-x-0" : "sm:left-auto sm:-right-2 sm:translate-x-0"
                                             )}
-                                            style={{ backgroundColor: isAdjustment ? '#fbbf24' : isIncome ? '#10b981' : '#f43f5e' }} />
-                                            
-                                            {/* Connector Line */}
+                                            style={{ backgroundColor: isAdjustment ? '#fbbf24' : isIncome ? '#10b981' : '#f43f5e' }}>
+                                                <div className="w-1.5 h-1.5 bg-background rounded-full opacity-50" />
+                                            </div>
+
+                                            {/* Balance Pill (Desktop only) */}
                                             <div className={cn(
-                                                "hidden sm:block absolute top-1/2 -translate-y-1/2 h-0.5 bg-border/60 z-10 transition-colors group-hover:bg-border",
-                                                isRightSide ? "left-0 w-10" : "right-0 w-10"
+                                                "hidden sm:flex absolute w-full items-center",
+                                                isRightSide ? "left-0 justify-start pr-10 -translate-x-full" : "right-0 justify-end pl-10 translate-x-full"
+                                            )}>
+                                                <div className="text-[11px] font-mono font-bold text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-border/50 shadow-sm flex items-center gap-2">
+                                                    <span className="opacity-50">SALDO</span>
+                                                    <span className="text-foreground/80">R$ {item.runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Connector Line (Desktop) */}
+                                            <div className={cn(
+                                                "hidden sm:block absolute top-1/2 -translate-y-1/2 h-px bg-border/60 z-10 transition-colors group-hover:bg-border w-6",
+                                                isRightSide ? "left-2" : "right-2"
                                             )} />
+
+                                            {/* Connector Line (Mobile) */}
+                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px bg-border/60 z-10 left-6 w-6" />
 
                                             {/* Card */}
                                             <div className={cn(
-                                                "w-full border p-4 rounded-2xl shadow-sm group-hover:shadow-md transition-all relative z-10",
-                                                cardBgClass,
-                                                isRightSide ? "" : "sm:text-right"
+                                                "flex flex-col p-5 sm:p-6 rounded-3xl bg-card/40 backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:bg-card/60 hover:border-border transition-all w-full max-w-sm relative overflow-hidden group/card",
+                                                isRightSide ? "mr-auto" : "ml-auto"
                                             )}>
+                                                {/* Background Glow */}
                                                 <div className={cn(
-                                                    "flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 sm:items-center",
-                                                    isRightSide ? "" : "sm:flex-row-reverse"
-                                                )}>
-                                                    <div>
-                                                        <p className="font-bold text-foreground text-sm sm:text-base">
-                                                            {isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação'}
-                                                        </p>
-                                                        <p className="text-[10px] sm:text-[11px] font-bold text-muted-foreground mt-1 tracking-wider uppercase opacity-80">
-                                                            {format(new Date(item.date), "dd 'de' MMM, HH:mm", { locale: ptBR })}
-                                                        </p>
+                                                   "absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-10 group-hover/card:opacity-30 transition-opacity",
+                                                   isAdjustment ? "bg-amber-500" : isIncome ? "bg-emerald-500" : "bg-rose-500"
+                                                )} />
+                                                
+                                                <div className="relative z-10 flex flex-col">
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black opacity-70">
+                                                            {format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
+                                                        </span>
+                                                        <div className="sm:hidden text-[10px] font-mono font-bold text-muted-foreground bg-background/50 px-2 py-1 rounded-full border border-border/50">
+                                                            R$ {item.runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </div>
                                                     </div>
-                                                    
-                                                    <div className={cn(
-                                                        "flex flex-col items-start",
-                                                        isRightSide ? "sm:items-end" : "sm:items-start"
+
+                                                    <span className={cn(
+                                                        "text-2xl sm:text-3xl font-black tracking-tighter tabular-nums drop-shadow-sm",
+                                                        isAdjustment ? "text-amber-500 dark:text-amber-400" :
+                                                        isIncome ? "text-emerald-500 dark:text-emerald-400" :
+                                                        "text-rose-500 dark:text-rose-400"
                                                     )}>
-                                                        <p className={cn(
-                                                            "font-black text-lg tabular-nums tracking-tighter",
-                                                            isAdjustment ? "text-amber-600 dark:text-amber-400" :
-                                                            isIncome ? "text-emerald-600 dark:text-emerald-400" :
-                                                            "text-rose-600 dark:text-rose-400"
-                                                        )}>
-                                                            {sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </p>
-                                                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-black opacity-60 tabular-nums">
-                                                            Saldo: R$ {item.runningBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </p>
-                                                    </div>
+                                                        {sign} R$ {displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+
+                                                    <span className="text-sm font-bold text-foreground/90 mt-2">
+                                                        {isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
