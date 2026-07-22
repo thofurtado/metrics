@@ -47,7 +47,13 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
         queryFn: async ({ pageParam }) => {
             if (account!.id === 'all') {
                 try {
-                    const res = await getTransactions({ accountId: selectedAccountIds.length > 0 ? selectedAccountIds.join(',') : undefined, page: pageParam as number, perPage: 20 })
+                    const res = await getTransactions({ 
+                        accountId: selectedAccountIds.length > 0 ? selectedAccountIds.join(',') : undefined, 
+                        page: pageParam as number, 
+                        perPage: 20,
+                        sortBy: 'data_vencimento',
+                        sortDirection: 'desc'
+                    })
                     return {
                     account: { id: 'all', name: 'Histórico Geral', balance: 0 },
                     history: res.data.transactions.transactions.map(t => ({
@@ -411,6 +417,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
                                             Saldo Inicial (Fim do Histórico)
                                         </span>
+                                        <div className={cn(
+                                            "text-2xl sm:text-3xl font-black tabular-nums tracking-tighter transition-all duration-300 group-hover:scale-105",
+                                            initialBalance < 0 ? "text-indigo-600 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"
+                                        )}>
+                                            R$ {initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </div>
                                     </div>
                                 </div>
                             )}
