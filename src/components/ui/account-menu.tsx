@@ -91,12 +91,6 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
             </DropdownMenuItem>
           </DialogTrigger>
 
-          {profile?.role === 'ADMIN' && (
-            <DropdownMenuItem onClick={() => navigate('/settings/accounts')}>
-              <Settings className="ml-5 h-4" /> <span>Configurações</span>
-            </DropdownMenuItem>
-          )}
-
           <DropdownMenuItem
             asChild
             className="text-rose-500 dark:text-rose-400"

@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { signOut } from '@/api/sign-out'
+import { getProfile } from '@/api/get-profile'
+import { useQuery } from '@tanstack/react-query'
 import {
   Boxes,
   PiggyBank,
   Users,
   Pyramid,
-  LogOut,
+  Settings,
   Menu,
   ChevronLeft,
   ChevronRight,
@@ -30,14 +30,10 @@ export function Sidebar() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const { isCollapsed, toggleSidebar } = useSidebar()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  
-  const { mutateAsync: signOutFn, isPending: isSigningOut } = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => {
-      queryClient.clear()
-      navigate('/sign-in', { replace: true })
-    },
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+    staleTime: Infinity,
   })
 
   const menuItems = [
@@ -161,17 +157,18 @@ export function Sidebar() {
               <ModeToggle />
             </div>
 
-            <button 
-              onClick={() => signOutFn()}
-              disabled={isSigningOut}
-              className={cn(
-                  "flex items-center gap-3 transition-all duration-200 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl w-full disabled:opacity-50",
-                  collapsed ? "justify-center p-3" : "px-4 py-3 text-sm font-manrope font-bold"
-              )}
-            >
-              <LogOut className="h-4 w-4" />
-              {!collapsed && <span>Encerrar Sessão</span>}
-            </button>
+            {profile?.role === 'ADMIN' && (
+              <Link 
+                to="/settings/accounts"
+                className={cn(
+                    "flex items-center gap-3 transition-all duration-200 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl w-full",
+                    collapsed ? "justify-center p-3" : "px-4 py-3 text-sm font-manrope font-bold"
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                {!collapsed && <span>Configurações</span>}
+              </Link>
+            )}
           </div>
         </div>
       </div>
