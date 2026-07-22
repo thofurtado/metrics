@@ -264,36 +264,16 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                 }
             `}</style>
             <DialogContent className="sm:max-w-[800px] max-h-[85vh] flex flex-col p-0">
-                <DialogHeader className="px-6 py-4 border-b">
-                    <div className="flex items-center justify-between pr-12">
-                        <div className="w-full">
+                <DialogHeader className="px-6 py-4 border-b shrink-0">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex flex-col">
                             <DialogTitle className="text-xl">Histórico da Conta</DialogTitle>
                             <DialogDescription>
                                 {account?.name}
                             </DialogDescription>
-                            {account?.id === 'all' && accountsData?.accounts && (
-                                <div className="mt-4 flex flex-wrap gap-2 pr-4">
-                                    {accountsData.accounts.map(acc => {
-                                        const isSelected = selectedAccountIds.includes(acc.id)
-                                        return (
-                                            <button 
-                                                key={acc.id} 
-                                                onClick={() => setSelectedAccountIds(prev => isSelected ? prev.filter(id => id !== acc.id) : [...prev, acc.id])}
-                                                className={cn(
-                                                    "px-3 py-1.5 text-xs font-semibold rounded-full transition-all border shadow-sm flex items-center gap-2", 
-                                                    isSelected 
-                                                        ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:scale-105" 
-                                                        : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground hover:scale-105"
-                                                )}
-                                            >
-                                                <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-muted-foreground")} />
-                                                {acc.name}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            )}
                         </div>
+                        </div>
+
                         <div className="hidden sm:flex items-center gap-2">
                             <div className="flex bg-muted/50 p-1 rounded-lg mr-2 border border-border/50">
                                 <button
@@ -333,7 +313,39 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     </div>
                 </DialogHeader>
 
-                <div 
+                {account?.id === 'all' && accountsData?.accounts && (
+                    <div className="bg-muted/20 border-b border-border/40 py-3 px-6 shrink-0">
+                        <div className="flex items-center gap-3 overflow-x-auto pb-1 custom-scrollbar">
+                            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 shrink-0">
+                                Contas
+                            </span>
+                            <div className="h-4 w-px bg-border/50 mx-1 shrink-0" />
+                            {accountsData.accounts.map(acc => {
+                                const isSelected = selectedAccountIds.includes(acc.id)
+                                return (
+                                    <button 
+                                        key={acc.id} 
+                                        onClick={() => setSelectedAccountIds(prev => isSelected ? prev.filter(id => id !== acc.id) : [...prev, acc.id])}
+                                        className={cn(
+                                            "relative flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all overflow-hidden shrink-0",
+                                            isSelected 
+                                                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]" 
+                                                : "bg-background hover:bg-muted text-muted-foreground border border-border hover:border-primary/50 hover:text-foreground hover:shadow-sm"
+                                        )}
+                                    >
+                                        {isSelected && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
+                                        )}
+                                        <div className={cn("w-2 h-2 rounded-full shadow-inner", isSelected ? "bg-primary-foreground/90" : "bg-muted-foreground/40")} />
+                                        <span className="whitespace-nowrap">{acc.name}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                <div  
                     id="timeline-scroll-container"
                     className="flex-1 min-h-0 overflow-y-auto relative custom-scrollbar"
                 >
