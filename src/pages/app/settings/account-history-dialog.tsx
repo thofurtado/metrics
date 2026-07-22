@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft, AlertTriangle } from 'lucide-react'
+import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft, AlertTriangle, Filter } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
+import { toast } from 'sonner'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@/api/get-accounts'
 import { getTransactions } from '@/api/get-transactions'
@@ -84,6 +85,9 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
 
     const handleExportImage = async () => {
         if (!timelineRef.current || !account) return
+        
+        const toastId = toast.loading('Gerando imagem da timeline...')
+        
         try {
             const element = timelineRef.current
             const canvas = await html2canvas(element, {
@@ -100,8 +104,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
             link.download = `timeline_${account.name.replace(/\s+/g, '_').toLowerCase()}.png`
             link.href = image
             link.click()
-        } catch (error) {
+            
+            toast.success('Imagem exportada com sucesso!', { id: toastId })
+        } catch (error: any) {
             console.error('Erro ao exportar imagem:', error)
+            toast.error(`Erro ao exportar: ${error?.message || 'Falha desconhecida'}`, { id: toastId })
         }
     }
 
