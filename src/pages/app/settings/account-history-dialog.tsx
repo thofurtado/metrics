@@ -49,7 +49,7 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                     const res = await getTransactions({ accountId: selectedAccountIds.length > 0 ? selectedAccountIds.join(',') : undefined, page: pageParam as number, perPage: 20 })
                     return {
                     account: { id: 'all', name: 'Histórico Geral', balance: 0 },
-                    history: res.transactions.transactions.map(t => ({
+                    history: res.data.transactions.transactions.map(t => ({
                         id: t.id,
                         type: 'transaction',
                         description: t.description || 'Transação',
@@ -58,9 +58,9 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         date: t.data_vencimento.toString(),
                         created_at: t.data_emissao ? t.data_emissao.toString() : new Date().toISOString()
                     })),
-                    totalCount: res.transactions.totalCount,
-                    totalPages: Math.ceil(res.transactions.totalCount / res.transactions.perPage),
-                    currentPage: res.transactions.pageIndex
+                    totalCount: res.data.transactions.totalCount,
+                    totalPages: Math.ceil(res.data.transactions.totalCount / res.data.transactions.perPage),
+                    currentPage: res.data.transactions.pageIndex
                 }
                 } catch (error) {
                     console.error("Error fetching transactions for all accounts:", error)
