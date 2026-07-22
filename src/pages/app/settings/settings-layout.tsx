@@ -6,8 +6,8 @@ export function SettingsLayout() {
     return (
         <div className="flex flex-col gap-4 p-8 pt-6">
             <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-            <div className="grid grid-cols-5 gap-6">
-                <aside className="-mx-4 lg:w-1/5">
+            <div className="flex flex-col lg:flex-row gap-8">
+                <aside className="w-full lg:w-64 flex-shrink-0">
                     <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1">
                         <NavLink
                             to="/settings/modules"
@@ -85,7 +85,7 @@ export function SettingsLayout() {
                         </NavLink>
                     </nav>
                 </aside>
-                <div className="col-span-3 lg:col-span-4 lg:border-l pl-6">
+                <div className="flex-1 min-w-0 lg:border-l lg:pl-8">
                     <Outlet />
                 </div>
             </div>

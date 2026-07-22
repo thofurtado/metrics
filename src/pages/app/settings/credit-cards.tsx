@@ -68,10 +68,10 @@ export function CreditCards() {
                 </Button>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                 {isLoading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-40 rounded-xl border bg-card p-6 shadow-sm">
+                        <div key={i} className="h-40 rounded-xl border bg-white/90 dark:bg-card/60 p-6 shadow-sm">
                             <Skeleton className="h-6 w-1/3 mb-4" />
                             <Skeleton className="h-4 w-2/3 mb-8" />
                             <Skeleton className="h-8 w-1/2" />
@@ -82,17 +82,17 @@ export function CreditCards() {
                         return (
                             <div
                                 key={card.id}
-                                className="group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20 aspect-video flex flex-col justify-between"
+                                className="group relative overflow-hidden rounded-2xl border bg-white/90 dark:bg-card/60 backdrop-blur-xl p-6 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 hover:bg-white dark:hover:bg-card/90 min-h-[200px] flex flex-col justify-between"
                             >
-                                <div className="flex items-start justify-between">
-                                    <div className="space-y-1.5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-1.5 min-w-0 flex-1">
+                                        <div className="flex items-center gap-3">
+                                            <div className="rounded-xl bg-primary/10 p-2.5 text-primary flex-shrink-0">
                                                 <CreditCard className="h-5 w-5" />
                                             </div>
-                                            <h3 className="font-semibold text-lg tracking-tight">{card.name}</h3>
+                                            <h3 className="font-semibold text-lg tracking-tight truncate" title={card.name}>{card.name}</h3>
                                         </div>
-                                        <p className="text-sm text-muted-foreground line-clamp-1 pl-1">
+                                        <p className="text-sm text-muted-foreground line-clamp-2 pl-1">
                                             {card.bank} {card.last_four_digits && `• final ${card.last_four_digits}`}
                                         </p>
                                     </div>
@@ -100,7 +100,7 @@ export function CreditCards() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="-mr-2 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+                                        className="-mr-2 -mt-2 opacity-50 sm:opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
                                         onClick={() => handleDelete(card.id)}
                                         title="Remover Cartão"
                                     >
@@ -138,12 +138,12 @@ export function CreditCards() {
                 {!isLoading && (
                     <button 
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex h-full min-h-[160px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/5 p-6 transition-all hover:bg-muted/10 hover:border-primary/50 text-muted-foreground hover:text-primary"
+                        className="flex h-full min-h-[200px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-white/50 dark:bg-muted/10 p-6 transition-all duration-300 hover:bg-white dark:hover:bg-muted/30 hover:border-primary/50 text-muted-foreground hover:text-primary hover:-translate-y-1 hover:shadow-lg"
                     >
-                        <div className="rounded-full bg-background p-3 shadow-sm">
+                        <div className="rounded-xl bg-background p-4 shadow-sm group-hover:scale-110 transition-transform">
                             <Plus className="h-6 w-6" />
                         </div>
-                        <span className="font-medium">Adicionar Novo Cartão</span>
+                        <span className="font-semibold tracking-wide">Adicionar Novo Cartão</span>
                     </button>
                 )}
             </div>

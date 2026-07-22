@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FileText, Download, Loader2, ArrowDownRight, ArrowUpRight, ArrowRightLeft } from 'lucide-react'
+import { FileText, Download, Loader2, ArrowDownRight, ArrowUpLeft, ArrowRightLeft } from 'lucide-react'
 import { AccountHistoryItem, getAccountHistory } from '@/api/get-account-history'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -154,9 +154,15 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
             
             for (const item of processedHistory) {
                 const dateKey = format(new Date(item.date), 'yyyy-MM-dd')
-                const itemNetValue = item.type === 'adjustment' 
-                      ? (item.value >= 0 ? item.value : -Math.abs(item.value))
-                      : (item.operation === 'income' ? item.value : -item.value)
+                let income = 0
+                let expense = 0
+                if (item.type === 'adjustment') {
+                    if (item.value >= 0) income += item.value
+                    else expense += Math.abs(item.value)
+                } else {
+                    if (item.operation === 'income') income += item.value
+                    else expense += item.value
+                }
                       
                 if (!currentGroup || currentGroup.dateKey !== dateKey) {
                     if (currentGroup) grouped.push(currentGroup)
@@ -166,10 +172,14 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                         date: item.date,
                         description: 'Resumo Diário',
                         runningBalance: item.runningBalance,
-                        netValue: itemNetValue
+                        totalIncome: income,
+                        totalExpense: expense,
+                        netValue: income - expense
                     }
                 } else {
-                    currentGroup.netValue += itemNetValue
+                    currentGroup.totalIncome += income
+                    currentGroup.totalExpense += expense
+                    currentGroup.netValue += (income - expense)
                 }
             }
             if (currentGroup) grouped.push(currentGroup)
@@ -342,44 +352,98 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                     </div>
                                                 </div>
 
-                                                {/* The Card Branching off */}
-                                                <div className={cn(
-                                                    "w-full sm:w-1/2 flex relative z-10",
-                                                    isRightSide ? "sm:ml-auto justify-start pl-20 sm:pl-16" : "sm:mr-auto sm:justify-end pl-20 sm:pl-0 sm:pr-16"
-                                                )}>
-                                                    {/* Card Content */}
-                                                    <div className={cn(
-                                                        "flex flex-col p-4 rounded-2xl bg-card/60 backdrop-blur-xl border-2 shadow-md w-full max-w-[280px] sm:max-w-xs transition-all duration-300 hover:bg-card/90 hover:-translate-y-1 hover:shadow-lg",
-                                                        isAdjustment ? "border-amber-500/20 hover:border-amber-500/40 hover:shadow-amber-500/10" : 
-                                                        isIncome ? "border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-emerald-500/10" : 
-                                                                   "border-rose-500/20 hover:border-rose-500/40 hover:shadow-rose-500/10",
-                                                        !isRightSide && "sm:text-right"
-                                                    )}>
-                                                        <div className={cn("flex items-center gap-3", !isRightSide && "sm:flex-row-reverse")}>
+                                                {/* The Card(s) Branching off */}
+                                                {(item as any).totalIncome > 0 && (item as any).totalExpense > 0 && isGroupedByDay ? (
+                                                    <div className="w-full flex flex-col sm:flex-row relative z-10 gap-4 sm:gap-0 mt-16 sm:mt-0">
+                                                        {/* Left side (Expense) */}
+                                                        <div className="w-full sm:w-1/2 sm:mr-auto flex justify-start sm:justify-end pl-20 sm:pl-0 sm:pr-16 relative">
+                                                            {/* Mobile Connector */}
+                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-8 left-6 bg-gradient-to-r from-rose-500/50 to-transparent" />
+                                                            {/* Card Content */}
                                                             <div className={cn(
-                                                                "p-2 rounded-xl flex-shrink-0",
-                                                                isAdjustment ? "bg-amber-500/10 text-amber-500" :
-                                                                isIncome ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                                "flex flex-col p-4 rounded-2xl bg-white/90 dark:bg-card/60 backdrop-blur-xl border-2 shadow-md w-full max-w-[280px] sm:max-w-xs transition-all duration-300 hover:bg-white dark:hover:bg-card/90 hover:-translate-y-1 hover:shadow-lg",
+                                                                "border-rose-500/20 hover:border-rose-500/40 hover:shadow-rose-500/10",
+                                                                "sm:text-right"
                                                             )}>
-                                                                {isAdjustment ? <ArrowRightLeft className="w-4 h-4" /> :
-                                                                 isIncome ? <ArrowDownRight className="w-4 h-4" /> : 
-                                                                 <ArrowUpRight className="w-4 h-4" />}
+                                                                <div className={cn("flex items-center gap-3", "sm:flex-row-reverse")}>
+                                                                    <div className="p-2 rounded-xl flex-shrink-0 bg-rose-500/10 text-rose-500">
+                                                                        <ArrowDownRight className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                                        <span className="font-bold text-slate-800 dark:text-foreground text-sm sm:text-base capitalize truncate">
+                                                                            Saídas do Dia
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-rose-500 mt-0.5 uppercase tracking-wider">
+                                                                            - R$ {(item as any).totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex flex-col min-w-0 flex-1">
-                                                                <span className="font-bold text-foreground text-sm sm:text-base capitalize truncate">
-                                                                    {isGroupedByDay 
-                                                                        ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
-                                                                        : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
-                                                                </span>
-                                                                <span className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
-                                                                    {isGroupedByDay 
-                                                                        ? 'Resumo do Dia'
-                                                                        : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
-                                                                </span>
+                                                        </div>
+                                                        {/* Right side (Income) */}
+                                                        <div className="w-full sm:w-1/2 sm:ml-auto flex justify-start pl-20 sm:pl-16 relative">
+                                                            {/* Mobile Connector */}
+                                                            <div className="sm:hidden absolute top-1/2 -translate-y-1/2 h-px z-10 w-8 left-6 bg-gradient-to-r from-emerald-500/50 to-transparent" />
+                                                            {/* Card Content */}
+                                                            <div className={cn(
+                                                                "flex flex-col p-4 rounded-2xl bg-white/90 dark:bg-card/60 backdrop-blur-xl border-2 shadow-md w-full max-w-[280px] sm:max-w-xs transition-all duration-300 hover:bg-white dark:hover:bg-card/90 hover:-translate-y-1 hover:shadow-lg",
+                                                                "border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-emerald-500/10"
+                                                            )}>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="p-2 rounded-xl flex-shrink-0 bg-emerald-500/10 text-emerald-500">
+                                                                        <ArrowUpLeft className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                                        <span className="font-bold text-slate-800 dark:text-foreground text-sm sm:text-base capitalize truncate">
+                                                                            Entradas do Dia
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-emerald-500 mt-0.5 uppercase tracking-wider">
+                                                                            + R$ {(item as any).totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
+                                                ) : (
+                                                    <div className={cn(
+                                                        "w-full sm:w-1/2 flex relative z-10",
+                                                        isRightSide ? "sm:ml-auto justify-start pl-20 sm:pl-16" : "sm:mr-auto sm:justify-end pl-20 sm:pl-0 sm:pr-16"
+                                                    )}>
+                                                        {/* Card Content */}
+                                                        <div className={cn(
+                                                            "flex flex-col p-4 rounded-2xl bg-white/90 dark:bg-card/60 backdrop-blur-xl border-2 shadow-md w-full max-w-[280px] sm:max-w-xs transition-all duration-300 hover:bg-white dark:hover:bg-card/90 hover:-translate-y-1 hover:shadow-lg",
+                                                            isAdjustment ? "border-amber-500/20 hover:border-amber-500/40 hover:shadow-amber-500/10" : 
+                                                            isIncome ? "border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-emerald-500/10" : 
+                                                                       "border-rose-500/20 hover:border-rose-500/40 hover:shadow-rose-500/10",
+                                                            !isRightSide && "sm:text-right"
+                                                        )}>
+                                                            <div className={cn("flex items-center gap-3", !isRightSide && "sm:flex-row-reverse")}>
+                                                                <div className={cn(
+                                                                    "p-2 rounded-xl flex-shrink-0",
+                                                                    isAdjustment ? "bg-amber-500/10 text-amber-500" :
+                                                                    isIncome ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                                )}>
+                                                                    {isAdjustment ? <ArrowRightLeft className="w-4 h-4" /> :
+                                                                     isIncome ? <ArrowUpLeft className="w-4 h-4" /> : 
+                                                                     <ArrowDownRight className="w-4 h-4" />}
+                                                                </div>
+                                                                <div className="flex flex-col min-w-0 flex-1">
+                                                                    <span className="font-bold text-slate-800 dark:text-foreground text-sm sm:text-base capitalize truncate">
+                                                                        {isGroupedByDay 
+                                                                            ? format(new Date(item.date), "dd 'de' MMMM", { locale: ptBR })
+                                                                            : (isAdjustment ? 'Ajuste de Saldo' : item.description || 'Transação')}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
+                                                                        {isGroupedByDay 
+                                                                            ? (isIncome ? 'Total de Entradas' : 'Total de Saídas')
+                                                                            : format(new Date(item.date), "dd MMM, HH:mm", { locale: ptBR })}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* The Balance Pill BEFORE this transaction (Older Balance) */}

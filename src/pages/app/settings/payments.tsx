@@ -215,10 +215,10 @@ export function Payments() {
                 </Select>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                 {isLoading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-32 rounded-xl border bg-card p-6 shadow-sm flex flex-col justify-between">
+                        <div key={i} className="h-32 rounded-xl border bg-white/90 dark:bg-card/60 p-6 shadow-sm flex flex-col justify-between">
                             <div className="flex items-center gap-4">
                                 <Skeleton className="h-10 w-10 rounded-full" />
                                 <div className="space-y-2">
@@ -237,7 +237,7 @@ export function Payments() {
                         return (
                             <div
                                 key={payment.id}
-                                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/20"
+                                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-white/90 dark:bg-card/60 backdrop-blur-xl p-6 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 hover:bg-white dark:hover:bg-card/90 min-h-[200px]"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
@@ -247,8 +247,8 @@ export function Payments() {
                                         )}>
                                             {IsCash ? <Banknote className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold tracking-tight">{payment.name}</h3>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold tracking-tight text-lg truncate" title={payment.name}>{payment.name}</h3>
                                             <div className="flex items-center gap-2 mt-1">
                                                 {linkedAccount ? (
                                                     <Badge variant="outline" className="text-xs bg-muted/50 font-normal">

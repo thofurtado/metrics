@@ -135,7 +135,7 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                         {/* Card: Mercadorias */}
                         <ModuleCard
                             icon={<Package className="h-6 w-6 text-white" />}
@@ -247,7 +247,7 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                         <label className={cn(
                             "cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-muted/50",
                             form.watch('financial_management_profile') === 'ANALYTICAL'
@@ -352,7 +352,7 @@ export function ModulesSettings() {
                         </h2>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
                         {/* Card: Atendimentos */}
                         <ModuleCard
                             icon={<ClipboardList className="h-6 w-6 text-white" />}
@@ -467,8 +467,8 @@ function ModuleCard({ icon, color, title, description, isActive, control, childr
 }) {
     return (
         <div className={cn(
-            "relative group overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md h-fit",
-            isActive ? "border-muted-foreground/20" : "border-transparent opacity-80"
+            "relative group overflow-hidden rounded-2xl border bg-white/90 dark:bg-card/60 backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:bg-white dark:hover:bg-card/90 min-h-[200px] flex flex-col justify-between",
+            isActive ? "border-primary/20 hover:border-primary/40" : "border-transparent opacity-80"
         )}>
             <div className="p-6 pb-4">
                 <div className="flex items-start justify-between">
@@ -476,8 +476,8 @@ function ModuleCard({ icon, color, title, description, isActive, control, childr
                         <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-colors", isActive ? color : "bg-muted")}>
                             {isActive ? icon : <div className="grayscale opacity-50">{icon}</div>}
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-lg leading-none tracking-tight">{title}</h3>
+                        <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-lg leading-none tracking-tight truncate" title={title}>{title}</h3>
                             <div className="flex items-center gap-2 mt-1.5">
                                 <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
                                     isActive

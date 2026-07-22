@@ -145,21 +145,23 @@ export function Permissions() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
         {users?.map(user => (
-          <Card key={user.id} className="relative group hover:shadow-md transition-shadow flex flex-col justify-between">
-            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-minsk-600" onClick={() => openEditModal(user)}>
+          <Card key={user.id} className="relative group overflow-hidden rounded-2xl border bg-white/90 dark:bg-card/60 backdrop-blur-xl shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-minsk-500/40 hover:bg-white dark:hover:bg-card/90 min-h-[200px] flex flex-col justify-between">
+            <div className="absolute top-4 right-4 flex gap-2 opacity-50 sm:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-minsk-600 bg-background/50 hover:bg-background/80" onClick={() => openEditModal(user)}>
                 <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => handleDelete(user.id)} disabled={isDeleting}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 bg-background/50 hover:bg-background/80" onClick={() => handleDelete(user.id)} disabled={isDeleting}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
             
-            <CardContent className="pt-6">
-              <div className="font-semibold text-lg pr-16">{user.name}</div>
-              <div className="text-sm text-muted-foreground mb-1">{user.email}</div>
+            <CardContent className="pt-6 flex flex-col h-full">
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-lg pr-16 truncate" title={user.name}>{user.name}</div>
+                <div className="text-sm text-muted-foreground mb-1 truncate" title={user.email}>{user.email}</div>
+              </div>
               <Badge variant="outline" className={user.role === 'ADMIN' ? 'text-amber-600 border-amber-600/30 bg-amber-500/10 mb-4' : 'text-slate-500 mb-4'}>
                 {user.role === 'ADMIN' ? 'Administrador' : 'Membro'}
               </Badge>
