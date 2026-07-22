@@ -193,6 +193,14 @@ export function Accounts() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="shadow-sm hover:shadow-md transition-all active:scale-95 text-foreground bg-background"
+                        onClick={() => setSelectedAccountForHistory({ id: 'all', name: 'Visão Consolidada (Todas as Contas)', balance: generalBalance })}
+                    >
+                        <FileText className="mr-2 h-5 w-5" /> Ver Histórico Geral
+                    </Button>
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button size="lg" className="shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:to-primary transition-all active:scale-95">
