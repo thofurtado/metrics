@@ -279,7 +279,6 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                 {account?.name}
                             </DialogDescription>
                         </div>
-                        </div>
 
                         <div className="hidden sm:flex items-center gap-2">
                             <div className="flex bg-muted/50 p-1 rounded-lg mr-2 border border-border/50">
