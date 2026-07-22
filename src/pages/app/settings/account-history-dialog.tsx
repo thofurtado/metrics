@@ -425,7 +425,12 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                 )} />
 
                                                 {/* The Math Label ON the line */}
-                                                <div className="absolute left-6 sm:left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20">
+                                                <div className="absolute left-6 sm:left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+                                                    {(item as any).totalIncome > 0 && (item as any).totalExpense > 0 && isGroupedByDay && (
+                                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 bg-background px-2 py-0.5 rounded-full shadow-sm border border-border/50">
+                                                            {format(new Date(item.date), "dd 'de' MMM", { locale: ptBR })}
+                                                        </span>
+                                                    )}
                                                     <div className={cn(
                                                         "px-4 py-1.5 rounded-full text-xs sm:text-sm font-black tabular-nums border-[3px] shadow-lg whitespace-nowrap relative overflow-hidden group-hover:scale-110 transition-transform duration-300",
                                                         isAdjustment ? "bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-600" :
@@ -455,11 +460,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                                         <ArrowDownRight className="w-4 h-4" />
                                                                     </div>
                                                                     <div className="flex flex-col min-w-0 flex-1">
-                                                                        <span className="font-extrabold text-slate-800 dark:text-foreground text-sm sm:text-base capitalize truncate">
-                                                                            Saídas do Dia
-                                                                        </span>
-                                                                        <span className="text-xs font-black text-rose-500 mt-0.5 uppercase tracking-wide">
+                                                                        <span className="font-extrabold text-rose-500 text-sm sm:text-base capitalize truncate tracking-tight">
                                                                             - R$ {(item as any).totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-black text-muted-foreground mt-0.5 uppercase tracking-wider">
+                                                                            Total de Saídas
                                                                         </span>
                                                                     </div>
                                                                 </div>
@@ -479,11 +484,11 @@ export function AccountHistoryDialog({ isOpen, onOpenChange, account, onExportPD
                                                                         <ArrowUpLeft className="w-4 h-4" />
                                                                     </div>
                                                                     <div className="flex flex-col min-w-0 flex-1">
-                                                                        <span className="font-extrabold text-slate-800 dark:text-foreground text-sm sm:text-base capitalize truncate">
-                                                                            Entradas do Dia
-                                                                        </span>
-                                                                        <span className="text-xs font-black text-emerald-500 mt-0.5 uppercase tracking-wide">
+                                                                        <span className="font-extrabold text-emerald-500 text-sm sm:text-base capitalize truncate tracking-tight">
                                                                             + R$ {(item as any).totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-black text-muted-foreground mt-0.5 uppercase tracking-wider">
+                                                                            Total de Entradas
                                                                         </span>
                                                                     </div>
                                                                 </div>
