@@ -25,6 +25,7 @@ const formSchema = z.object({
     merchandise: z.boolean(),
     financial: z.boolean(),
     treatments: z.boolean(),
+    cashier: z.boolean(),
     hr_module: z.boolean(),
     cestaBasicaValue: z.coerce.number().min(0),
     financial_management_profile: z.enum(['ANALYTICAL', 'OPERATIONAL']),
@@ -43,6 +44,7 @@ export function ModulesSettings() {
             merchandise: true,
             financial: true,
             treatments: true,
+            cashier: false,
             hr_module: false,
             cestaBasicaValue: 0,
             financial_management_profile: 'ANALYTICAL',
@@ -57,6 +59,7 @@ export function ModulesSettings() {
                 merchandise: modules.merchandise,
                 financial: modules.financial,
                 treatments: modules.treatments,
+                cashier: modules.cashier ?? false,
                 hr_module: modules.hr_module ?? false,
                 cestaBasicaValue: modules.cestaBasicaValue ?? 0,
                 financial_management_profile: modules.financial_management_profile ?? 'ANALYTICAL',
@@ -85,6 +88,7 @@ export function ModulesSettings() {
     const merchandise = form.watch('merchandise')
     const financial = form.watch('financial')
     const treatments = form.watch('treatments')
+    const cashier = form.watch('cashier')
     const hr_module = form.watch('hr_module')
     const dashboardCards = form.watch('dashboard_cards') || {}
 
