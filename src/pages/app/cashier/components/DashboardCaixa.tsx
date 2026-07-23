@@ -1,6 +1,6 @@
 "use client"
 import { useState } from 'react';
-import { Anchor, Plus, Clock, Trash2, Download, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calculator, Plus, Clock, Trash2, Download, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { exportarRelatorioGeralPDF } from '../utils/exportGeralPDF';
 import { exportarGeralCSV } from '../utils/exportGeralCSV';
 import { exportarParaCSV } from '../utils/exportCSV';
@@ -74,11 +74,11 @@ export function DashboardCaixa({ lotes, onCriarNovo, onSelecionar, onApagar }: D
                 <header className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                     <div className="flex items-center gap-4">
                         <div className="bg-zinc-900 p-3 rounded-2xl text-white shadow-xl">
-                            <Anchor size={32} />
+                            <Calculator size={32} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black uppercase tracking-tighter leading-none">Marujo</h1>
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Conferência</span>
+                            <h1 className="text-2xl font-black uppercase tracking-tighter leading-none">Metrics</h1>
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Caixa PDV</span>
                         </div>
                     </div>
 
