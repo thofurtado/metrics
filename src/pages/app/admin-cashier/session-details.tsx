@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/utils/format-currency'
+import { formatCurrency } from '@/lib/utils'
 
 export function AdminCashierSessionDetails() {
   const { id } = useParams<{ id: string }>()
