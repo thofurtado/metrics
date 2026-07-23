@@ -55,7 +55,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     const totalCompromissos = despesaPagaMes + aPagarMes + despesaVencida
     const safeCompromissos = totalCompromissos > 0 ? totalCompromissos : 1
 
-    // Pendência de Caixa Restante
+    // Pendência de Caixa Restante e Porcentagem Quitada
     const pendenciaRestante = aPagarMes + despesaVencida
     const pctQuitado = totalCompromissos > 0 ? (despesaPagaMes / totalCompromissos) * 100 : 100
 
@@ -65,19 +65,19 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
 
     const segmentsCompromissos = [
         { 
-            label: 'Quitado este mês', 
+            label: 'Pago Mês', 
             value: despesaPagaMes, 
             pct: (despesaPagaMes / safeCompromissos) * 100, 
             color: 'bg-emerald-500' 
         },
         { 
-            label: 'A Pagar no Mês', 
+            label: 'A Pagar Mês', 
             value: aPagarMes, 
             pct: (aPagarMes / safeCompromissos) * 100, 
             color: 'bg-amber-400' 
         },
         { 
-            label: 'Vencido / Atrasado', 
+            label: 'Vencido', 
             value: despesaVencida, 
             pct: (despesaVencida / safeCompromissos) * 100, 
             color: 'bg-rose-500' 
@@ -86,11 +86,31 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
 
     return (
         <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
-            <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
+            {/* Header: Título + Badge de Saldo em Carteira */}
+            <CardHeader className="flex flex-row items-center justify-between pb-3 sm:pb-4 gap-2 flex-wrap">
                 <CardTitle className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 font-manrope tracking-tight">
                     <Wallet className="h-4 w-4 text-indigo-600" />
                     Saúde Financeira e Ponto de Equilíbrio
                 </CardTitle>
+
+                {/* Badge de Saldo em Carteira (Topo) */}
+                {!isLoading && (
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700/60 shadow-xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Em Carteira:</span>
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            {formatCurrency(saldoDisponivel)}
+                        </span>
+                        {temCoberturaTotal ? (
+                            <span title="Caixa Positivo para cobrir débitos pendentes" className="flex items-center text-emerald-600 dark:text-emerald-400">
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                            </span>
+                        ) : (
+                            <span title="Atenção: Déficit de Caixa para cobrir pendências" className="flex items-center text-rose-600 dark:text-rose-400">
+                                <ShieldAlert className="h-3.5 w-3.5" />
+                            </span>
+                        )}
+                    </div>
+                )}
             </CardHeader>
 
             <CardContent className="flex-1 space-y-4">
@@ -157,29 +177,35 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     </div>
                 </div>
 
-                {/* Corpo: Painel de Compromissos & Saúde de Caixa */}
-                <div className="space-y-4 py-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center justify-between">
+                {/* Bloco Central: Gestão de Compromissos (Débitos) */}
+                <div className="space-y-3 py-3.5 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                             <Target className="h-4 w-4 text-indigo-600" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Gestão de Compromissos (Débitos)</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Gestão de Compromissos (Débitos)</span>
                         </div>
-                        {isLoading ? (
-                            <div className="h-5 w-20 bg-slate-200 animate-pulse rounded-full" />
-                        ) : (
-                            <span className={cn(
-                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                                pctQuitado >= 100 
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
-                                    : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
-                            )}>
-                                {pctQuitado.toFixed(0)}% Quitados
-                            </span>
+                        
+                        {!isLoading && (
+                            <div className="flex items-center gap-2">
+                                {/* Total de Débitos destacado no topo do bloco */}
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40">
+                                    Total: {formatCurrency(totalCompromissos)}
+                                </span>
+                                {/* Badge de % Quitado */}
+                                <span className={cn(
+                                    "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                    pctQuitado >= 100 
+                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
+                                        : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
+                                )}>
+                                    {pctQuitado.toFixed(0)}% Quitados
+                                </span>
+                            </div>
                         )}
                     </div>
                     
                     {/* Barra Tríplice de Compromissos (Pago vs A Pagar vs Vencido) */}
-                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner flex">
+                    <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner flex relative">
                         {!isLoading && segmentsCompromissos.map((seg, i) => (
                             seg.value > 0 && (
                                 <div
@@ -192,53 +218,23 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         ))}
                     </div>
                     
-                    {/* Legenda Explicativa da Barra */}
+                    {/* Legenda Explicativa Limpa e Direta */}
                     {!isLoading && (
-                        <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-slate-500 border-b border-slate-200/60 dark:border-slate-800 pb-3">
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-slate-500 pt-0.5">
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                                <span>Pago Mês: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(despesaPagaMes)}</strong></span>
+                                <span>Pago Mês: <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{formatCurrency(despesaPagaMes)}</strong></span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-                                <span>A Pagar Mês: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(aPagarMes)}</strong></span>
+                                <span>A Pagar Mês: <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{formatCurrency(aPagarMes)}</strong></span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-                                <span>Vencido: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(despesaVencida)}</strong></span>
+                                <span>Vencido: <strong className="text-slate-800 dark:text-slate-200 tabular-nums">{formatCurrency(despesaVencida)}</strong></span>
                             </div>
                         </div>
                     )}
-
-                    {/* Resumo de Cobertura de Caixa */}
-                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 pt-1">
-                        <div className="flex flex-col items-start gap-1">
-                            <span className="opacity-70">Em Carteira (Saldo)</span>
-                            <span className="text-emerald-600 dark:text-emerald-400 tabular-nums text-xs font-black">
-                                {isLoading ? "---" : formatCurrency(saldoDisponivel)}
-                            </span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1 border-x border-slate-200 dark:border-slate-800 px-4">
-                            <span className="opacity-70">Status de Cobertura</span>
-                            {isLoading ? (
-                                <span className="text-slate-400">---</span>
-                            ) : temCoberturaTotal ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-[11px] font-extrabold">
-                                    <ShieldCheck className="h-3.5 w-3.5" /> Caixa Positivo
-                                </span>
-                            ) : (
-                                <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 text-[11px] font-extrabold">
-                                    <ShieldAlert className="h-3.5 w-3.5" /> Déficit
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                            <span className="opacity-70">Total Débitos</span>
-                            <span className="text-rose-600 dark:text-rose-500 tabular-nums text-xs font-black">
-                                {isLoading ? "---" : formatCurrency(totalCompromissos)}
-                            </span>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Base: Restante das métricas em Grid */}
