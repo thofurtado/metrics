@@ -65,7 +65,7 @@ export async function createEntry(data: { type: 'INCOME' | 'EXPENSE'; amount: nu
 }
 
 export async function getSessions() {
-  const response = await api.get<CashierSession[]>('/api/cashier/session')
+  const response = await api.get<CashierSession[]>('/api/cashier/sessions')
   return response.data
 }
 

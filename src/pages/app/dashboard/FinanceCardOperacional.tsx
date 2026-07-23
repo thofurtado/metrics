@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type ComponentProps } from 'react'
-import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target } from 'lucide-react'
+import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target, ShieldCheck, ShieldAlert } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -38,34 +38,50 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
 
     const isLoading = isLoadingOp || isLoadingFin
 
-    const totalDespesasMes = opData?.totalDespesasMes ?? 0
-    const despesasPagasMes = opData?.despesasPagasMes ?? 0
-    const totalVencido = opData?.totalVencido ?? 0
     const projecao14Dias = opData?.projecao14Dias ?? 0
     const receitaAcumulada = opData?.receitaAcumulada ?? 0
     const ticketMedio = opData?.ticketMedio ?? 0
     const numEntradas = opData?.numEntradas ?? 0
     const totalJurosPagos = opData?.totalJurosPagos ?? 0
 
-    // Dados Financeiros
+    // Dados Financeiros Claros
     const saldoDisponivel = financeData?.saldoDisponivel ?? 0
-    const aReceber = financeData?.aReceber ?? 0
-    const recebido = (financeData?.receita ?? 0) - aReceber
-    const receitaVencida = financeData?.receitaVencida ?? 0
-    const aPagar = financeData?.aPagar ?? 0
-    const pago = (financeData?.despesa ?? 0) - aPagar
+    const aPagarMes = financeData?.aPagar ?? 0
+    const despesaDoMes = financeData?.despesa ?? 0
+    const despesaPagaMes = Math.max(0, despesaDoMes - aPagarMes)
     const despesaVencida = financeData?.despesaVencida ?? 0
 
-    const volumeTotal = recebido + aReceber + receitaVencida + pago + aPagar + despesaVencida
-    const safeVolume = volumeTotal > 0 ? volumeTotal : 1
+    // Total de Compromissos = Despesas Pagas no Mês + A Pagar no Mês + Vencidos de Meses Anteriores
+    const totalCompromissos = despesaPagaMes + aPagarMes + despesaVencida
+    const safeCompromissos = totalCompromissos > 0 ? totalCompromissos : 1
 
-    const segments = [
-        { label: 'Recebido', value: recebido, pct: (recebido / safeVolume) * 100, color: 'bg-emerald-500' },
-        { label: 'A Receber', value: aReceber, pct: (aReceber / safeVolume) * 100, color: 'bg-emerald-300' },
-        { label: 'Receita Vencida', value: receitaVencida, pct: (receitaVencida / safeVolume) * 100, color: 'bg-amber-400' },
-        { label: 'Pago', value: pago, pct: (pago / safeVolume) * 100, color: 'bg-indigo-500' },
-        { label: 'A Pagar', value: aPagar, pct: (aPagar / safeVolume) * 100, color: 'bg-sky-400' },
-        { label: 'Despesa Vencida', value: despesaVencida, pct: (despesaVencida / safeVolume) * 100, color: 'bg-rose-500' },
+    // Pendência de Caixa Restante
+    const pendenciaRestante = aPagarMes + despesaVencida
+    const pctQuitado = totalCompromissos > 0 ? (despesaPagaMes / totalCompromissos) * 100 : 100
+
+    // Cobertura de Caixa (Saldo em Carteira vs Pendências)
+    const saldoAposPendencias = saldoDisponivel - pendenciaRestante
+    const temCoberturaTotal = saldoAposPendencias >= 0
+
+    const segmentsCompromissos = [
+        { 
+            label: 'Quitado este mês', 
+            value: despesaPagaMes, 
+            pct: (despesaPagaMes / safeCompromissos) * 100, 
+            color: 'bg-emerald-500' 
+        },
+        { 
+            label: 'A Pagar no Mês', 
+            value: aPagarMes, 
+            pct: (aPagarMes / safeCompromissos) * 100, 
+            color: 'bg-amber-400' 
+        },
+        { 
+            label: 'Vencido / Atrasado', 
+            value: despesaVencida, 
+            pct: (despesaVencida / safeCompromissos) * 100, 
+            color: 'bg-rose-500' 
+        },
     ]
 
     return (
@@ -73,7 +89,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
             <CardHeader className="flex flex-row items-center justify-between pb-4 sm:pb-6">
                 <CardTitle className="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 font-manrope tracking-tight">
                     <Wallet className="h-4 w-4 text-indigo-600" />
-                    Fluxo e Saúde Financeira
+                    Saúde Financeira e Ponto de Equilíbrio
                 </CardTitle>
             </CardHeader>
 
@@ -123,8 +139,8 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                             ) : (
                                 <div className="flex items-baseline gap-1 overflow-hidden">
                                     <span className="text-sm font-bold text-slate-500 shrink-0">R$</span>
-                                    <span className="text-xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter truncate" title={formatCurrency(totalDespesasMes)}>
-                                        {formatCurrency(totalDespesasMes, true)}
+                                    <span className="text-xl font-black text-slate-800 dark:text-slate-200 block tabular-nums tracking-tighter truncate" title={formatCurrency(despesaDoMes)}>
+                                        {formatCurrency(despesaDoMes, true)}
                                     </span>
                                 </div>
                             )}
@@ -132,7 +148,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                         {/* Sub-indicadores da Despesa */}
                         {!isLoading && (
                             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
-                                <div className="flex items-center gap-1.5 focus-within:ring-2">
+                                <div className="flex items-center gap-1.5">
                                     <span className="text-[9px] font-bold text-slate-500 uppercase">Juros Pagos:</span>
                                     <span className="text-sm font-black text-rose-600 dark:text-rose-400">{formatCurrency(totalJurosPagos)}</span>
                                 </div>
@@ -141,52 +157,85 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     </div>
                 </div>
 
-                {/* Corpo: Barra de Progresso (Ponto de Equilíbrio) */}
+                {/* Corpo: Painel de Compromissos & Saúde de Caixa */}
                 <div className="space-y-4 py-4 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Target className="h-4 w-4 text-indigo-600" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Volume do Mês</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Gestão de Compromissos (Débitos)</span>
                         </div>
                         {isLoading ? (
-                            <div className="h-5 w-16 bg-slate-200 animate-pulse rounded-full" />
+                            <div className="h-5 w-20 bg-slate-200 animate-pulse rounded-full" />
                         ) : (
-                            <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                                {formatCurrency(volumeTotal)}
+                            <span className={cn(
+                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                pctQuitado >= 100 
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
+                                    : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
+                            )}>
+                                {pctQuitado.toFixed(0)}% Quitados
                             </span>
                         )}
                     </div>
                     
-                    <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner flex">
-                        {!isLoading && segments.map((seg, i) => (
+                    {/* Barra Tríplice de Compromissos (Pago vs A Pagar vs Vencido) */}
+                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner flex">
+                        {!isLoading && segmentsCompromissos.map((seg, i) => (
                             seg.value > 0 && (
                                 <div
                                     key={i}
-                                    title={`${seg.label}: ${formatCurrency(seg.value)}`}
-                                    className={`${seg.color} h-full transition-all duration-1000 ease-in-out cursor-pointer hover:opacity-80 hover:scale-y-110`}
+                                    title={`${seg.label}: ${formatCurrency(seg.value)} (${seg.pct.toFixed(1)}%)`}
+                                    className={`${seg.color} h-full transition-all duration-1000 ease-in-out cursor-pointer hover:opacity-85 hover:scale-y-110`}
                                     style={{ width: `${seg.pct}%` }}
                                 />
                             )
                         ))}
                     </div>
                     
+                    {/* Legenda Explicativa da Barra */}
+                    {!isLoading && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-slate-500 border-b border-slate-200/60 dark:border-slate-800 pb-3">
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span>Pago Mês: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(despesaPagaMes)}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+                                <span>A Pagar Mês: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(aPagarMes)}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                                <span>Vencido: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(despesaVencida)}</strong></span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Resumo de Cobertura de Caixa */}
                     <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 pt-1">
                         <div className="flex flex-col items-start gap-1">
-                            <span className="opacity-70">Liquidado</span>
-                            <span className="text-emerald-600 dark:text-emerald-500 tabular-nums">
-                                {isLoading ? "---" : formatCurrency(recebido + pago)}
-                            </span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1 border-x border-slate-200 dark:border-slate-800 px-4">
-                            <span className="opacity-70">Em Carteira</span>
-                            <span className="text-indigo-600 dark:text-indigo-400 tabular-nums font-extrabold text-xs">
+                            <span className="opacity-70">Em Carteira (Saldo)</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 tabular-nums text-xs font-black">
                                 {isLoading ? "---" : formatCurrency(saldoDisponivel)}
                             </span>
                         </div>
+                        <div className="flex flex-col items-center gap-1 border-x border-slate-200 dark:border-slate-800 px-4">
+                            <span className="opacity-70">Status de Cobertura</span>
+                            {isLoading ? (
+                                <span className="text-slate-400">---</span>
+                            ) : temCoberturaTotal ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-[11px] font-extrabold">
+                                    <ShieldCheck className="h-3.5 w-3.5" /> Caixa Positivo
+                                </span>
+                            ) : (
+                                <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 text-[11px] font-extrabold">
+                                    <ShieldAlert className="h-3.5 w-3.5" /> Déficit
+                                </span>
+                            )}
+                        </div>
                         <div className="flex flex-col items-end gap-1">
                             <span className="opacity-70">Total Débitos</span>
-                            <span className="text-rose-600 dark:text-rose-500 tabular-nums">
-                                {isLoading ? "---" : formatCurrency(pago + aPagar + despesaVencida)}
+                            <span className="text-rose-600 dark:text-rose-500 tabular-nums text-xs font-black">
+                                {isLoading ? "---" : formatCurrency(totalCompromissos)}
                             </span>
                         </div>
                     </div>
@@ -207,7 +256,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                             <div className="h-6 w-20 bg-rose-200 animate-pulse rounded"></div>
                         ) : (
                             <span className="text-xl font-black text-rose-600 block tabular-nums">
-                                {formatCurrency(totalVencido)}
+                                {formatCurrency(despesaVencida)}
                             </span>
                         )}
                     </div>
@@ -243,4 +292,3 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
         </Card>
     )
 }
-
