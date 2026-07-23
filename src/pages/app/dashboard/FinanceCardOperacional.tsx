@@ -5,6 +5,7 @@ import { Wallet, TrendingUp, AlertTriangle, CalendarClock, Target } from 'lucide
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { getOperationalSummary } from '@/api/get-operational-summary'
+import { getFinanceMetrics } from '@/api/get-finance-metrics'
 import { OverdueTransactionsModal } from './overdue-transactions-modal'
 import { UpcomingTransactionsModal } from './upcoming-transactions-modal'
 
@@ -25,10 +26,17 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
     const [isUpcomingModalOpen, setIsUpcomingModalOpen] = useState(false)
 
-    const { data: opData, isLoading } = useQuery({
+    const { data: opData, isLoading: isLoadingOp } = useQuery({
         queryFn: () => getOperationalSummary({ month, year }),
         queryKey: ['metrics', 'operational-summary', month, year],
     })
+
+    const { data: financeData, isLoading: isLoadingFin } = useQuery({
+        queryFn: () => getFinanceMetrics({ month, year }),
+        queryKey: ['metrics', 'finance-metrics', month, year],
+    })
+
+    const isLoading = isLoadingOp || isLoadingFin
 
     const totalDespesasMes = opData?.totalDespesasMes ?? 0
     const despesasPagasMes = opData?.despesasPagasMes ?? 0
@@ -39,10 +47,26 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     const numEntradas = opData?.numEntradas ?? 0
     const totalJurosPagos = opData?.totalJurosPagos ?? 0
 
-    // Cálculo da porcentagem para a barra de progresso (evitando NaN/Infinity)
-    const progressPercentage = totalDespesasMes > 0
-        ? Math.min((despesasPagasMes / totalDespesasMes) * 100, 100)
-        : 0
+    // Dados Financeiros
+    const saldoDisponivel = financeData?.saldoDisponivel ?? 0
+    const recebido = financeData?.receita ?? 0
+    const aReceber = financeData?.aReceber ?? 0
+    const receitaVencida = financeData?.receitaVencida ?? 0
+    const pago = financeData?.despesa ?? 0
+    const aPagar = financeData?.aPagar ?? 0
+    const despesaVencida = financeData?.despesaVencida ?? 0
+
+    const volumeTotal = recebido + aReceber + receitaVencida + pago + aPagar + despesaVencida
+    const safeVolume = volumeTotal > 0 ? volumeTotal : 1
+
+    const segments = [
+        { label: 'Recebido', value: recebido, pct: (recebido / safeVolume) * 100, color: 'bg-emerald-500' },
+        { label: 'A Receber', value: aReceber, pct: (aReceber / safeVolume) * 100, color: 'bg-emerald-300' },
+        { label: 'Receita Vencida', value: receitaVencida, pct: (receitaVencida / safeVolume) * 100, color: 'bg-amber-400' },
+        { label: 'Pago', value: pago, pct: (pago / safeVolume) * 100, color: 'bg-indigo-500' },
+        { label: 'A Pagar', value: aPagar, pct: (aPagar / safeVolume) * 100, color: 'bg-sky-400' },
+        { label: 'Despesa Vencida', value: despesaVencida, pct: (despesaVencida / safeVolume) * 100, color: 'bg-rose-500' },
+    ]
 
     return (
         <Card className={cn("col-span-1 flex flex-col", className)} {...props}>
@@ -122,40 +146,47 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Target className="h-4 w-4 text-indigo-600" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Equilíbrio do Mês</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-600">Volume do Mês</span>
                         </div>
                         {isLoading ? (
                             <div className="h-5 w-16 bg-slate-200 animate-pulse rounded-full" />
                         ) : (
-                            <span className={cn(
-                                "px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                                progressPercentage >= 100 
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" 
-                                    : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                            )}>
-                                {progressPercentage.toFixed(0)}% Pago
+                            <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                {formatCurrency(volumeTotal)}
                             </span>
                         )}
                     </div>
                     
-                    <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                        <div
-                            className="bg-indigo-600 h-full transition-all duration-1000 ease-in-out"
-                            style={{ width: `${isLoading ? 0 : progressPercentage}%` }}
-                        />
+                    <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner flex">
+                        {!isLoading && segments.map((seg, i) => (
+                            seg.value > 0 && (
+                                <div
+                                    key={i}
+                                    title={`${seg.label}: ${formatCurrency(seg.value)}`}
+                                    className={`${seg.color} h-full transition-all duration-1000 ease-in-out cursor-pointer hover:opacity-80 hover:scale-y-110`}
+                                    style={{ width: `${seg.pct}%` }}
+                                />
+                            )
+                        ))}
                     </div>
                     
-                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
-                        <div className="flex items-center gap-2">
-                            <span>Liquidado:</span>
-                            <span className="text-indigo-600 tabular-nums">
-                                {isLoading ? "---" : formatCurrency(despesasPagasMes)}
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 pt-1">
+                        <div className="flex flex-col items-start gap-1">
+                            <span className="opacity-70">Liquidado</span>
+                            <span className="text-emerald-600 dark:text-emerald-500 tabular-nums">
+                                {isLoading ? "---" : formatCurrency(recebido + pago)}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span>Total:</span>
-                            <span className="text-slate-800 dark:text-slate-200 tabular-nums">
-                                {isLoading ? "---" : formatCurrency(totalDespesasMes)}
+                        <div className="flex flex-col items-center gap-1 border-x border-slate-200 dark:border-slate-800 px-4">
+                            <span className="opacity-70">Em Carteira</span>
+                            <span className="text-indigo-600 dark:text-indigo-400 tabular-nums font-extrabold text-xs">
+                                {isLoading ? "---" : formatCurrency(saldoDisponivel)}
+                            </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="opacity-70">Total Débitos</span>
+                            <span className="text-rose-600 dark:text-rose-500 tabular-nums">
+                                {isLoading ? "---" : formatCurrency(pago + aPagar + despesaVencida)}
                             </span>
                         </div>
                     </div>
