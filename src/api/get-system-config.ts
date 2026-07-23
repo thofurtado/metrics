@@ -5,6 +5,7 @@ export interface SystemConfig {
     merchandise: boolean
     financial: boolean
     treatments: boolean
+    cashier: boolean
     hr_module: boolean
     cestaBasicaValue: number
     financial_management_profile: 'ANALYTICAL' | 'OPERATIONAL'

@@ -40,6 +40,7 @@ export function Sidebar() {
     { name: 'Mercadoria', path: '/items', icon: Boxes, access: hasAccess('items') },
     { name: 'Atendimento', path: '/treatments', icon: ClipboardList, access: hasAccess('service') },
     { name: 'Financeiro', path: '/transactions', icon: PiggyBank, access: hasAccess('finance') },
+    { name: 'Caixa / PDV', path: '/cashier', icon: Wallet, access: hasAccess('cashier') },
     { name: 'RH', path: '/hr', icon: Users, access: hasAccess('hr') },
   ].filter((item) => item.access)
 

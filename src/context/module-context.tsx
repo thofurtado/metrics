@@ -26,6 +26,7 @@ export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasica
     financial:    'finance',
     treatments:   'service',
     hr_module:    'hr',
+    cashier:      'cashier',
 }
 
 type ActiveSystemSlug = string

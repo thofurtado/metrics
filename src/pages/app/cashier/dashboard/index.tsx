@@ -11,6 +11,7 @@ export function CashierDashboard() {
     const dataAtual = new Date()
 
     const [saldoAbertura, setSaldoAbertura] = useState('0.00')
+    const [periodo, setPeriodo] = useState('Almoço')
     const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
     const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
 
@@ -65,7 +66,7 @@ export function CashierDashboard() {
 
     const handleCriar = async () => {
         try {
-            await openSessionFn({ initial_balance: parseFloat(saldoAbertura) || 0 })
+            await openSessionFn({ initial_balance: parseFloat(saldoAbertura) || 0, period: periodo })
         } catch (error) {
             alert('Erro ao abrir caixa.')
         }
@@ -101,6 +102,13 @@ export function CashierDashboard() {
                             <Plus size={14} className="text-blue-600" /> Abrir Novo Caixa
                         </h2>
                         <div className="space-y-4">
+                            <div>
+                                <label className="text-[9px] font-bold text-zinc-400 uppercase ml-2 mb-1 block">Período</label>
+                                <select value={periodo} onChange={e => setPeriodo(e.target.value)} className="w-full border rounded-xl p-3 font-bold bg-zinc-50 border-zinc-100 outline-none">
+                                    <option value="Almoço">Almoço</option>
+                                    <option value="Jantar">Jantar</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-[9px] font-bold text-zinc-400 uppercase ml-2 mb-1 block text-green-600">Abertura em Dinheiro</label>
                                 <input type="number" step="0.01" value={saldoAbertura} onChange={e => setSaldoAbertura(e.target.value)} className="w-full border rounded-xl p-3 font-mono font-bold bg-zinc-50 border-zinc-100 outline-none text-green-700" />

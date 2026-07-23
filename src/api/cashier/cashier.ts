@@ -49,7 +49,7 @@ export async function getActiveSession() {
   return response.data
 }
 
-export async function openSession(data: { initial_balance: number; machine_ids?: number[] }) {
+export async function openSession(data: { initial_balance: number; period?: string; machine_ids?: number[] }) {
   const response = await api.post<CashierSession>('/api/cashier/session/open', data)
   return response.data
 }

@@ -217,6 +217,25 @@ export function ModulesSettings() {
                             </div>
                         </ModuleCard>
 
+                        {/* Card: Caixa / PDV */}
+                        <ModuleCard
+                            icon={<DollarSign className="h-6 w-6 text-white" />}
+                            color="bg-purple-600"
+                            title="Caixa / PDV"
+                            description="Gestão de frente de caixa, PDV e conferência."
+                            isActive={cashier}
+                            control={
+                                <Switch
+                                    checked={cashier}
+                                    onCheckedChange={(val) => form.setValue('cashier', val, { shouldDirty: true })}
+                                />
+                            }
+                        >
+                            <div className="mt-4 pt-4 border-t border-dashed">
+                                <p className="text-[10px] text-muted-foreground italic">Controle de abertura/fechamento e sangrias.</p>
+                            </div>
+                        </ModuleCard>
+
                         {/* Card: Recursos Humanos */}
                         <ModuleCard
                             icon={<Users className="h-6 w-6 text-white" />}
