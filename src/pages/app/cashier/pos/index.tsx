@@ -203,9 +203,9 @@ function POSInterface({ session }: { session: any }) {
                 <label className="text-sm font-medium">Categoria</label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                  </SelectContent>
+                    <SelectContent>
+                      {categories?.categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                    </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
