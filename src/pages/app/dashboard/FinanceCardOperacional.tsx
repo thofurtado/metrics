@@ -49,7 +49,7 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
     const aPagarMes = financeData?.aPagar ?? 0
     const despesaDoMes = financeData?.despesa ?? 0
     const despesaPagaMes = Math.max(0, despesaDoMes - aPagarMes)
-    const despesaVencida = financeData?.despesaVencida ?? 0
+    const despesaVencida = opData?.totalVencido ?? financeData?.despesaVencida ?? 0
 
     // Total de Compromissos = Despesas Pagas no Mês + A Pagar no Mês + Vencidos de Meses Anteriores
     const totalCompromissos = despesaPagaMes + aPagarMes + despesaVencida
