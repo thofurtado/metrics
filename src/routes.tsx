@@ -37,9 +37,8 @@ import { HRDashboard } from './pages/hr/dashboard'
 import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
 import { PayrollHistory } from './pages/hr/payroll/history'
 
-import { CashierPOS } from './pages/app/cashier/pos'
-import { AdminCashierSessions } from './pages/app/admin-cashier/sessions'
-import { AdminCashierSessionDetails } from './pages/app/admin-cashier/session-details'
+import { CashierDashboard } from './pages/app/cashier/dashboard'
+import { CashierSessionDetails } from './pages/app/cashier/session/[id]'
 import { PaymentConfig } from './pages/app/admin-cashier/payment-config'
 
 export const router = createBrowserRouter([
@@ -139,24 +138,16 @@ export const router = createBrowserRouter([
             path: 'cashier',
             element: (
               <ModuleGuard module="financial">
-                <CashierPOS />
+                <CashierDashboard />
               </ModuleGuard>
             )
           },
           {
-            path: 'admin/cashier/sessions',
+            path: 'cashier/session/:id',
             element: (
-              <AdminGuard>
-                <AdminCashierSessions />
-              </AdminGuard>
-            )
-          },
-          {
-            path: 'admin/cashier/sessions/:id',
-            element: (
-              <AdminGuard>
-                <AdminCashierSessionDetails />
-              </AdminGuard>
+              <ModuleGuard module="financial">
+                <CashierSessionDetails />
+              </ModuleGuard>
             )
           },
           {
