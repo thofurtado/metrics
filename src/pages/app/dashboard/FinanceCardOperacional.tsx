@@ -49,11 +49,11 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
 
     // Dados Financeiros
     const saldoDisponivel = financeData?.saldoDisponivel ?? 0
-    const recebido = financeData?.receita ?? 0
     const aReceber = financeData?.aReceber ?? 0
+    const recebido = (financeData?.receita ?? 0) - aReceber
     const receitaVencida = financeData?.receitaVencida ?? 0
-    const pago = financeData?.despesa ?? 0
     const aPagar = financeData?.aPagar ?? 0
+    const pago = (financeData?.despesa ?? 0) - aPagar
     const despesaVencida = financeData?.despesaVencida ?? 0
 
     const volumeTotal = recebido + aReceber + receitaVencida + pago + aPagar + despesaVencida
