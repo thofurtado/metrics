@@ -212,3 +212,4 @@ export function FinanceCardOperacional({ className, month, year, ...props }: Fin
         </Card>
     )
 }
+
