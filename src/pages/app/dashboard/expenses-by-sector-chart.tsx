@@ -87,7 +87,7 @@ export function ExpensesBySectorChart({ className, month, year }: { className?: 
   const smallSectors = hasData ? monthExpenseBySector.filter(item => (item.amount / totalAmount) < 0.07) : []
 
   return (
-    <Card className={cn("col-span-1 border-none bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-visible", className)}>
+    <Card className={cn("col-span-1 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-visible", className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-6">
         <CardTitle className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-3 font-manrope uppercase tracking-widest">
           <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg">
