@@ -173,7 +173,7 @@ export async function updatePaymentCondition(id: number, data: any) {
   const response = await api.put(`/api/conditions/${id}`, data)
   return response.data
 }
-export async function deletePaymentCondition(id: number) {
-  const response = await api.delete(`/api/conditions/${id}`)
+export async function getMonthlyCashAudit() {
+  const response = await api.get('/api/cashier/monthly-audit')
   return response.data
 }
