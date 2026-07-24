@@ -64,18 +64,20 @@ export function CashierSessionDetails() {
         return 'pendente'
     }
 
+    const FORMAS_CASA = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta']
+
     const mappedLancamentos = (entries || []).map((e: any) => {
         return {
             id: e.id,
             isSaida: e.is_withdrawal || false,
             valor: e.amount,
             formaPagamento: e.payment_method || 'Dinheiro',
+            origin: e.origin || 'Mesa',
+            identification: e.identification || '',
             mesa: e.origin === 'Mesa' ? (e.identification || '') : '',
-            origin: e.origin || '',
             banco: e.bank || 'CAIXA',
             conferido: false,
-            identificacao: e.identification || '',
-            consumidorCasa: '',
+            consumidorCasa: FORMAS_CASA.includes(e.payment_method) ? (e.identification || '') : '',
             valorCaixinha: e.is_tip ? e.amount : 0
         }
     })
@@ -88,26 +90,90 @@ export function CashierSessionDetails() {
         lancamentos: mappedLancamentos,
     }
 
-    const calculatedSummary = () => {
-        let totalEntradas = 0
-        let totalSaidas = 0
-        for (const e of entries || []) {
-            if (e.is_withdrawal) {
-                totalSaidas += e.amount
-            } else {
-                totalEntradas += e.amount
+    const computeResumo = (sessionObj: any, entriesList: any[]) => {
+        const BANCOS_DIGITAIS = ['SAFRA', 'PAGBANK', 'CIELO', 'IFOOD', 'STONE']
+
+        const res: any = {
+            GERAL: {
+                entradas: 0,
+                totalCaixinha: 0,
+                saldo: 0,
+            },
+            CAIXA: {
+                saldoAbertura: sessionObj.initial_balance || 0,
+                entradasDinheiro: 0,
+                totalSaidas: 0,
+            },
+            CASA: {
+                Funcionário: 0,
+                'Pró-labore': 0,
+                Cortesia: 0,
+                Permuta: 0,
+                total: 0,
+            },
+        }
+
+        for (const banco of BANCOS_DIGITAIS) {
+            res[banco] = {
+                PIX: 0,
+                Débito: 0,
+                Crédito: 0,
+                Voucher: 0,
+                caixinha: 0,
+                total: 0,
             }
         }
-        const saldoFinal = (session.initial_balance || 0) + totalEntradas - totalSaidas
-        return {
-            totalEntradas,
-            totalSaidas,
-            saldoFinal,
-            diferenca: 0
+
+        for (const entry of entriesList || []) {
+            const amount = Number(entry.amount || 0)
+            const method = (entry.payment_method || '').trim()
+            const bank = (entry.bank || '').toUpperCase().trim()
+
+            if (entry.is_withdrawal) {
+                res.CAIXA.totalSaidas += amount
+                continue
+            }
+
+            if (entry.is_tip) {
+                res.GERAL.totalCaixinha += amount
+            }
+
+            res.GERAL.entradas += amount
+
+            // Se for Dinheiro ou banco CAIXA
+            if (method.toLowerCase() === 'dinheiro' || bank === 'CAIXA') {
+                res.CAIXA.entradasDinheiro += amount
+            }
+            // Se for Consumo Interno / Conta Casa
+            else if (FORMAS_CASA.includes(method)) {
+                if (res.CASA[method] !== undefined) {
+                    res.CASA[method] += amount
+                }
+                res.CASA.total += amount
+            }
+            // Se for banco digital (SAFRA, PAGBANK, CIELO, IFOOD, STONE)
+            else if (res[bank]) {
+                let formaKey = method
+                if (method.toUpperCase() === 'PIX') formaKey = 'PIX'
+                else if (method.toLowerCase().includes('débito') || method.toLowerCase().includes('debito')) formaKey = 'Débito'
+                else if (method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')) formaKey = 'Crédito'
+                else if (method.toLowerCase().includes('voucher')) formaKey = 'Voucher'
+
+                if (res[bank][formaKey] !== undefined) {
+                    res[bank][formaKey] += amount
+                }
+                if (entry.is_tip) {
+                    res[bank].caixinha += amount
+                }
+                res[bank].total += amount
+            }
         }
+
+        res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
+        return res
     }
 
-    const resumoLote = summary && Object.keys(summary).length > 0 ? summary : calculatedSummary()
+    const resumoLote = summary && Object.keys(summary).length > 0 && summary.GERAL ? summary : computeResumo(session, entries)
 
     const handleAlterarStatus = async (novoStatus: string) => {
         if (!isAdmin) return

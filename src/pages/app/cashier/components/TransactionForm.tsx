@@ -71,13 +71,22 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     // Avança para o próximo campo com base no estado atual da forma de pagamento
     const advanceFromForma = (formaSelecionada: string) => {
+        setForma(formaSelecionada);
+
         if (formaSelecionada === 'Dinheiro') {
             setBanco('CAIXA');
-            submitBtnRef.current?.focus();
+            setTimeout(() => {
+                submitBtnRef.current?.focus();
+            }, 60);
         } else if (formasContaCasa.includes(formaSelecionada)) {
-            consumidorInputRef.current?.focus();
+            setBanco('CONTA DA CASA');
+            setTimeout(() => {
+                consumidorInputRef.current?.focus();
+            }, 100);
         } else {
-            bancoSelectRef.current?.focus();
+            setTimeout(() => {
+                bancoSelectRef.current?.focus();
+            }, 60);
         }
     };
 
@@ -86,7 +95,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         const item = FORMAS_PAGAMENTO.find(f => f.key === e.key);
         if (item) {
             e.preventDefault();
-            setForma(item.name);
             advanceFromForma(item.name);
             return;
         }
@@ -134,7 +142,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             banco: banco,
             origin: tipo === 'saida' ? '' : tipoOrigem,
             mesa: tipo === 'saida' ? '' : (tipoOrigem === 'Mesa' ? numOrigem : ''),
-            identificacao: tipo === 'saida' ? identificacao : (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem),
+            identificacao: tipo === 'saida' ? identificacao : numOrigem,
             consumidorCasa: isContaCasa ? consumidorCasa : '',
             isCaixinha: tipo === 'saida' ? false : isCaixinha,
             isSaida: tipo === 'saida'
@@ -260,11 +268,17 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         ref={formaSelectRef}
                                         value={forma}
                                         onChange={e => {
-                                            setForma(e.target.value);
                                             advanceFromForma(e.target.value);
                                         }}
+                                        onFocus={() => {
+                                            try {
+                                                formaSelectRef.current?.showPicker();
+                                            } catch (e) {
+                                                // NAVEGADORES SEM SUPORTE IGNORAM
+                                            }
+                                        }}
                                         onKeyDown={handleFormaKeyDown}
-                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-zinc-50/50"
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-zinc-50/50 cursor-pointer"
                                     >
                                         {FORMAS_PAGAMENTO.map(f => (
                                             <option key={f.key} value={f.name}>

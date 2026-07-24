@@ -50,6 +50,23 @@ export function DetalheLote({
         return bancos.sort();
     }, [loteAtivo.lancamentos]);
 
+    const renderOrigemLabel = (l: any) => {
+        const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão');
+        const num = l.identification || l.mesa || '';
+        const cleanNum = num.replace(/^M\s+|^Mesa\s+|^Balcão\s+|^Delivery\s+/i, '').trim();
+
+        if (origin === 'Mesa') {
+            return cleanNum ? `Mesa ${cleanNum}` : 'Mesa';
+        }
+        if (origin === 'Delivery') {
+            return cleanNum ? `Delivery ${cleanNum}` : 'Delivery';
+        }
+        if (origin === 'Balcão') {
+            return cleanNum ? `Balcão ${cleanNum}` : 'Balcão';
+        }
+        return cleanNum ? `${origin} ${cleanNum}` : origin;
+    };
+
     const sangrias = [...loteAtivo.lancamentos.filter((l: any) => l.isSaida)].reverse();
 
     const tabs = [
@@ -346,7 +363,7 @@ export function DetalheLote({
                                                                 className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                             />
                                                         </td>
-                                                        <td className="p-4 font-bold"> {l.mesa ? `M ${l.mesa}` : 'Balcão'}</td>
+                                                        <td className="p-4 font-bold">{renderOrigemLabel(l)}</td>
                                                         <td className="p-4 font-black text-[9px] text-zinc-400 uppercase">
                                                             {l.consumidorCasa || l.banco}
                                                         </td>
