@@ -76,6 +76,16 @@ export async function createEntry(data: CreateEntryParams) {
   return response.data
 }
 
+export async function deleteEntry(id: string) {
+  const response = await api.delete('/api/cashier/entry/' + id)
+  return response.data
+}
+
+export async function updateEntry(data: { id: string; amount?: number; payment_method?: string; bank?: string; identification?: string }) {
+  const response = await api.put<CashierEntry>('/api/cashier/entry/' + data.id, data)
+  return response.data
+}
+
 export async function getSessions() {
   const response = await api.get<CashierSession[]>('/api/cashier/sessions')
   return response.data

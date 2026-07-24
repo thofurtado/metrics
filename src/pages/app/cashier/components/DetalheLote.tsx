@@ -1,6 +1,6 @@
 "use client"
 import { useState, useMemo } from 'react';
-import { ArrowLeft, ShoppingBag, Trash2, Wallet2, Printer, Edit2, Check, X, Filter, CheckCircle2, AlertCircle, Clock, User, Eye, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Trash2, Wallet2, Printer, Edit2, Check, X, Filter, CheckCircle2, AlertCircle, Clock, User, Eye, ChevronUp, PlusCircle } from 'lucide-react';
 import { SummaryCards } from './SummaryCards';
 import { TransactionForm } from './TransactionForm';
 import { CaixinhasTable } from './CaixinhasTable';
@@ -68,6 +68,7 @@ export function DetalheLote({
     };
 
     const sangrias = [...loteAtivo.lancamentos.filter((l: any) => l.isSaida)].reverse();
+    const suprimentos = [...loteAtivo.lancamentos.filter((l: any) => l.isSuprimento || l.formaPagamento === 'Suprimento')].reverse();
 
     const tabs = [
         { id: 'Todas', label: 'Todas' },
@@ -80,7 +81,7 @@ export function DetalheLote({
     ];
 
     const vendasFiltradas = useMemo(() => {
-        let items = loteAtivo.lancamentos.filter((l: any) => !l.isSaida);
+        let items = loteAtivo.lancamentos.filter((l: any) => !l.isSaida && !l.isSuprimento && l.formaPagamento !== 'Suprimento' && !l.isCaixinha);
 
         // Filtro por Aba
         if (activeTab === 'Dinheiro') {
@@ -325,7 +326,7 @@ export function DetalheLote({
                                                                 className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                             />
                                                         </td>
-                                                        <td className="p-2"><input type="text" value={dadosEdicao.mesa || ''} onChange={e => setDadosEdicao({ ...dadosEdicao, mesa: e.target.value })} className="w-full px-2 py-1 border border-blue-300 rounded text-sm font-bold" /></td>
+                                                        <td className="p-2"><input type="text" disabled value={renderOrigemLabel(l)} className="w-full px-2 py-1 border border-zinc-200 rounded text-xs font-bold bg-zinc-100 text-zinc-600 cursor-not-allowed" /></td>
                                                         <td className="p-2">
                                                             <select value={dadosEdicao.banco} onChange={e => setDadosEdicao({ ...dadosEdicao, banco: e.target.value })} className="w-full px-2 py-1 border border-blue-300 rounded text-[9px] font-bold">
                                                                 <option value="CAIXA">CAIXA</option>
@@ -405,34 +406,61 @@ export function DetalheLote({
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 px-2 text-red-400 uppercase font-black text-[10px]">
-                        <Wallet2 size={14} /> Sangrias
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* SANAGRIAS */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-2 text-red-500 uppercase font-black text-[10px]">
+                            <Wallet2 size={14} /> Sangrias (Retiradas)
+                        </div>
+                        <div className="bg-red-50/30 rounded-[1.5rem] border border-red-100 overflow-hidden shadow-sm">
+                            <table className="w-full text-left text-sm">
+                                <tbody className="divide-y divide-red-100">
+                                    {sangrias.length === 0 ? (
+                                        <tr><td className="p-6 text-center text-zinc-400 text-xs italic font-medium">Nenhuma sangria registrada</td></tr>
+                                    ) : (
+                                        sangrias.map((l: any) => (
+                                            <tr key={l.id}>
+                                                <td className="p-4 italic font-bold text-red-900 text-xs">{l.identificacao || 'Sangria'}</td>
+                                                <td className="p-4 text-right font-mono font-black text-red-600">R$ -{l.valor.toFixed(2)}</td>
+                                                <td className="p-4 w-12 text-right">
+                                                    <button onClick={() => onRemoverLancamento(l.id)} className="text-red-300 hover:text-red-600 p-1" title="Excluir sangria"><Trash2 size={18} /></button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div className="bg-red-50/30 rounded-[1.5rem] border border-red-100 overflow-hidden shadow-sm">
-                        <table className="w-full text-left text-sm">
-                            <tbody className="divide-y divide-red-100">
-                                {sangrias.length === 0 ? (
-                                    <tr><td className="p-8 text-center text-zinc-400 text-xs italic font-medium">Nenhuma sangria registrada</td></tr>
-                                ) : (
-                                    sangrias.map((l: any) => (
-                                        <tr key={l.id}>
-                                            <td className="p-4 italic font-bold text-red-900 text-xs">{l.identificacao}</td>
-                                            <td className="p-4 text-right font-mono font-black text-red-600">R$ -{l.valor.toFixed(2)}</td>
-                                            <td className="p-4 w-12 text-right">
-                                                <button onClick={() => onRemoverLancamento(l.id)} className="text-red-200 hover:text-red-600 p-2"><Trash2 size={18} /></button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+
+                    {/* SUPRIMENTOS */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-2 text-emerald-600 uppercase font-black text-[10px]">
+                            <PlusCircle size={14} /> Suprimentos (Aportes)
+                        </div>
+                        <div className="bg-emerald-50/30 rounded-[1.5rem] border border-emerald-100 overflow-hidden shadow-sm">
+                            <table className="w-full text-left text-sm">
+                                <tbody className="divide-y divide-emerald-100">
+                                    {suprimentos.length === 0 ? (
+                                        <tr><td className="p-6 text-center text-zinc-400 text-xs italic font-medium">Nenhum suprimento registrado</td></tr>
+                                    ) : (
+                                        suprimentos.map((l: any) => (
+                                            <tr key={l.id}>
+                                                <td className="p-4 italic font-bold text-emerald-900 text-xs">{l.identificacao || 'Suprimento'}</td>
+                                                <td className="p-4 text-right font-mono font-black text-emerald-600">R$ +{l.valor.toFixed(2)}</td>
+                                                <td className="p-4 w-12 text-right">
+                                                    <button onClick={() => onRemoverLancamento(l.id)} className="text-emerald-300 hover:text-red-500 p-1" title="Excluir suprimento"><Trash2 size={18} /></button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-
-
-                <CaixinhasTable lancamentos={loteAtivo.lancamentos} />
+                <CaixinhasTable lancamentos={loteAtivo.lancamentos} onRemoverLancamento={onRemoverLancamento} />
             </div>
         </div>
     );

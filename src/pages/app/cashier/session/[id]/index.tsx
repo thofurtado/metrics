@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSessionDetails, auditSession, createEntry } from '@/api/cashier/cashier'
+import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { DetalheLote } from '../../components/DetalheLote'
 
@@ -205,6 +205,44 @@ export function CashierSessionDetails() {
         }
     }
 
+    const { mutateAsync: removeEntry } = useMutation({
+        mutationFn: deleteEntry,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }
+    })
+
+    const { mutateAsync: editEntry } = useMutation({
+        mutationFn: updateEntry,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }
+    })
+
+    const handleRemoverLancamento = async (entryId: string) => {
+        try {
+            await removeEntry(entryId)
+        } catch (err: any) {
+            console.error('Erro ao remover lançamento:', err)
+            alert('Erro ao remover lançamento do caixa.')
+        }
+    }
+
+    const handleEditarLancamento = async (entryId: string, dados: any) => {
+        try {
+            await editEntry({
+                id: entryId,
+                amount: dados.valor,
+                payment_method: dados.formaPagamento,
+                bank: dados.banco,
+                identification: dados.identificacao || dados.mesa
+            })
+        } catch (err: any) {
+            console.error('Erro ao editar lançamento:', err)
+            alert('Erro ao editar lançamento no caixa.')
+        }
+    }
+
     return (
         <div className="relative">
             <DetalheLote
@@ -212,8 +250,8 @@ export function CashierSessionDetails() {
                 resumoLote={resumoLote}
                 onVoltar={handleVoltar}
                 onAdicionarLancamento={handleAdicionarLancamento}
-                onRemoverLancamento={() => {}}
-                onEditarLancamento={() => {}}
+                onRemoverLancamento={handleRemoverLancamento}
+                onEditarLancamento={handleEditarLancamento}
                 onEditarAbertura={() => {}}
                 onAlterarStatus={handleAlterarStatus}
                 isAdmin={isAdmin}
