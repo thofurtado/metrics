@@ -125,8 +125,6 @@ export function CashierSessionDetails() {
     }
 
     const computeResumo = (sessionObj: any, entriesList: any[]) => {
-        const BANCOS_DIGITAIS = ['SAFRA', 'PAGBANK', 'CIELO', 'IFOOD', 'STONE']
-
         const res: any = {
             GERAL: {
                 entradas: 0,
@@ -139,24 +137,11 @@ export function CashierSessionDetails() {
                 totalSaidas: 0,
             },
             CASA: {
-                Funcionário: 0,
-                'Pró-labore': 0,
-                Cortesia: 0,
-                Permuta: 0,
                 total: 0,
             },
         }
 
-        for (const banco of BANCOS_DIGITAIS) {
-            res[banco] = {
-                PIX: 0,
-                Débito: 0,
-                Crédito: 0,
-                Voucher: 0,
-                caixinha: 0,
-                total: 0,
-            }
-        }
+        const padraoCasa = ['funcionário', 'pró-labore', 'cortesia', 'permuta', 'a prazo']
 
         for (const entry of entriesList || []) {
             const amount = Number(entry.amount || 0)
@@ -178,15 +163,27 @@ export function CashierSessionDetails() {
             if (method.toLowerCase() === 'dinheiro' || bank === 'CAIXA') {
                 res.CAIXA.entradasDinheiro += amount
             }
-            // Se for Consumo Interno / Conta Casa
-            else if (FORMAS_CASA.includes(method)) {
-                if (res.CASA[method] !== undefined) {
-                    res.CASA[method] += amount
+            // Se for Consumo Interno / Conta Casa / Identificador
+            else if (bank === 'CONTA DA CASA' || padraoCasa.some(p => method.toLowerCase().includes(p))) {
+                if (res.CASA[method] === undefined) {
+                    res.CASA[method] = 0
                 }
+                res.CASA[method] += amount
                 res.CASA.total += amount
             }
-            // Se for banco digital (SAFRA, PAGBANK, CIELO, IFOOD, STONE)
-            else if (res[bank]) {
+            // Se for Maquininha / Banco digital (SAFRA, STONE, NUBANK, PAGBANK, CIELO, IFOOD, etc.)
+            else if (bank) {
+                if (!res[bank]) {
+                    res[bank] = {
+                        PIX: 0,
+                        Débito: 0,
+                        Crédito: 0,
+                        Voucher: 0,
+                        caixinha: 0,
+                        total: 0,
+                    }
+                }
+
                 let formaKey = method
                 if (method.toUpperCase() === 'PIX') formaKey = 'PIX'
                 else if (method.toLowerCase().includes('débito') || method.toLowerCase().includes('debito')) formaKey = 'Débito'
@@ -195,7 +192,10 @@ export function CashierSessionDetails() {
 
                 if (res[bank][formaKey] !== undefined) {
                     res[bank][formaKey] += amount
+                } else {
+                    res[bank][formaKey] = amount
                 }
+
                 if (entry.is_tip) {
                     res[bank].caixinha += amount
                 }
