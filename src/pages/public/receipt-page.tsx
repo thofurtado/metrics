@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { api, API_BASE_URL } from '@/lib/axios';
 
+import { ImageZoomViewer } from '@/components/image-zoom-viewer';
+
 // Utilizando API_BASE_URL para montar URL do arquivo
 const BASE_URL = API_BASE_URL || '';
 
@@ -176,11 +178,11 @@ export function ReceiptPage() {
                             ) : (
                                 <div className="rounded-xl overflow-hidden border shadow-sm">
                                     {isImage ? (
-                                        <div className="bg-muted p-2">
-                                            <img 
+                                        <div className="bg-muted h-[600px] w-full">
+                                            <ImageZoomViewer 
                                                 src={fullAttachmentUrl} 
                                                 alt="Comprovante" 
-                                                className="w-full max-h-[600px] object-contain rounded-lg"
+                                                containerClassName="w-full h-full"
                                             />
                                         </div>
                                     ) : (

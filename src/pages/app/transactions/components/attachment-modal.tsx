@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Share2, Download, ExternalLink } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/axios'
 import { toast } from 'sonner'
+import { ImageZoomViewer } from '@/components/image-zoom-viewer'
 
 interface AttachmentModalProps {
   open: boolean
@@ -56,7 +57,7 @@ export function AttachmentModal({ open, onOpenChange, attachmentUrl, description
         </DialogHeader>
 
         <div className="flex-1 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-auto p-4 sm:p-6 flex items-center justify-center">
+          <div className="flex-1 overflow-hidden flex items-center justify-center relative">
             {isPdf ? (
               <iframe 
                 src={finalUrl} 
@@ -64,10 +65,10 @@ export function AttachmentModal({ open, onOpenChange, attachmentUrl, description
                 title="Comprovante PDF"
               />
             ) : (
-              <img 
+              <ImageZoomViewer 
                 src={finalUrl} 
                 alt="Comprovante" 
-                className="max-w-full max-h-full object-contain rounded-xl shadow-sm"
+                containerClassName="w-full h-full"
               />
             )}
           </div>

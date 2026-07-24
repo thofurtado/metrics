@@ -6,6 +6,7 @@ import { FileText, Link as LinkIcon, Plus, Trash2, ChevronLeft, ChevronRight, X 
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { ImageZoomViewer } from '@/components/image-zoom-viewer'
 
 interface PendingReceiptsModalProps {
   open: boolean
@@ -270,10 +271,10 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
                       </div>
                     </>
                   ) : (
-                    <img
+                    <ImageZoomViewer
                       src={`${API_BASE_URL}${activeReceipt.url}`}
                       alt={activeReceipt.description}
-                      className="max-h-[60vh] max-w-[50vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+                      containerClassName="h-[60vh] max-w-[70vw] w-full"
                     />
                   )}
                 </div>
