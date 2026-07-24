@@ -30,8 +30,13 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
   const { mutateAsync: signOutFn, isPending: isSigningOut } = useMutation({
     mutationFn: signOut,
     onSuccess: () => {
+      const isCashier = profile?.role === 'CASHIER'
       queryClient.clear()
-      navigate('/sign-in', { replace: true })
+      if (isCashier) {
+        navigate('/cashier/sign-in', { replace: true })
+      } else {
+        navigate('/sign-in', { replace: true })
+      }
     },
   })
 

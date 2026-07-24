@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft,
@@ -163,11 +163,7 @@ export function CashierDashboard() {
   }
 
   if ((!token || !profile) && !isLoadingProfile) {
-    return (
-      <div className="relative min-h-[calc(100vh-6rem)]">
-        <CashierLoginDialog />
-      </div>
-    )
+    return <Navigate to="/cashier/sign-in" replace />
   }
 
   return (

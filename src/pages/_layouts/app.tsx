@@ -36,9 +36,9 @@ export function AppLayout() {
         if (isAxiosError(error)) {
           const status = error.response?.status
           if (status === 401) {
-            // Se estiver na rota de cashier, mantem na rota para exibir o dialog de login do caixa
+            // Se estiver na rota de cashier, redireciona para a tela de login exclusiva do caixa
             if (location.pathname.startsWith('/cashier')) {
-              navigate('/cashier', { replace: true })
+              navigate('/cashier/sign-in', { replace: true })
             } else {
               navigate('/sign-in', { replace: true })
             }

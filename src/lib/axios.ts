@@ -72,8 +72,8 @@ api.interceptors.response.use(
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname
           if (currentPath.startsWith('/cashier')) {
-            if (currentPath !== '/cashier') {
-              window.location.href = '/cashier'
+            if (currentPath !== '/cashier/sign-in') {
+              window.location.href = '/cashier/sign-in'
             }
           } else {
             window.location.href = '/sign-in'
