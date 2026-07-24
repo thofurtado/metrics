@@ -303,10 +303,10 @@ export function DetalheLote({
           {onConferirECaixaConferido && (
             <button
               onClick={onConferirECaixaConferido}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-emerald-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
             >
               <CheckCircle2 size={18} />
-              <span>Caixa Conferido</span>
+              <span>Enviar p/ Conferência</span>
             </button>
           )}
 

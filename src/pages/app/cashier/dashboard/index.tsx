@@ -8,7 +8,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Calendar
+  Calendar,
+  User,
 } from 'lucide-react'
 
 import { getSessions, openSession } from '@/api/cashier/cashier'
@@ -103,6 +104,9 @@ export function CashierDashboard() {
   const sessionsFiltradas = useMemo(() => {
     return sessions
       .filter((s: any) => {
+        if (profile?.role === 'CASHIER' && s.user_id !== profile.id) {
+          return false
+        }
         if (!s.opened_at) return false
         const d = new Date(s.opened_at)
         const monthBRT = parseInt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'numeric' }).format(d), 10) - 1
@@ -110,7 +114,7 @@ export function CashierDashboard() {
         return monthBRT === mesVisualizacao && yearBRT === anoVisualizacao
       })
       .sort((a: any, b: any) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
-  }, [sessions, mesVisualizacao, anoVisualizacao])
+  }, [sessions, mesVisualizacao, anoVisualizacao, profile])
 
   const handleCriar = async () => {
     try {
@@ -132,9 +136,15 @@ export function CashierDashboard() {
             <CheckCircle2 size={11} /> Conferido
           </span>
         )
-      case 'CLOSED':
+      case 'PENDING':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+            <Clock size={11} /> Enviado P/ Conferência
+          </span>
+        )
+      case 'CLOSED':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <AlertCircle size={11} /> Fechado
           </span>
         )
@@ -297,13 +307,19 @@ export function CashierDashboard() {
                   {/* Linha Principal Unificada: Data, Período, Valores em Razão e Status */}
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     {/* Identificação do Caixa */}
-                    <div className="flex items-center gap-2 min-w-[170px]">
+                    <div className="flex flex-wrap items-center gap-2 min-w-[200px]">
                       <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                         {formatDateBRT(s.opened_at)}
                       </span>
                       <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                         {getPeriodoBRT(s.opened_at, s.period)}
                       </span>
+                      {s.operator_name && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <User size={11} />
+                          {s.operator_name}
+                        </span>
+                      )}
                     </div>
 
                     {/* Resumo Financeiro Compacto em Linha */}
