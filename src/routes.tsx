@@ -154,7 +154,7 @@ export const router = createBrowserRouter([
           {
             path: 'cashier',
             element: (
-              <ModuleGuard module="financial">
+              <ModuleGuard module="cashier">
                 <CashierDashboard />
               </ModuleGuard>
             ),
@@ -162,7 +162,7 @@ export const router = createBrowserRouter([
           {
             path: 'cashier/session/:id',
             element: (
-              <ModuleGuard module="financial">
+              <ModuleGuard module="cashier">
                 <CashierSessionDetails />
               </ModuleGuard>
             ),

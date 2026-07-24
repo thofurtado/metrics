@@ -71,7 +71,7 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
     queryFn: getSystemConfig,
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: isLoggedIn,
+    enabled: true,
   })
 
   // Nível 2: módulos do usuário logado — SEMPRE do banco via /me
@@ -115,6 +115,9 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
     if (isLoading) return false
     if (profileData?.role === 'ADMIN') {
       return instanceSlugs.includes(slug)
+    }
+    if (profileData?.role === 'CASHIER') {
+      return slug === 'cashier'
     }
     return instanceSlugs.includes(slug) && userSlugs.includes(slug)
   }
