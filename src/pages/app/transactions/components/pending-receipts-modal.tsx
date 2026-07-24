@@ -312,11 +312,11 @@ export function PendingReceiptsModal({
                 </button>
 
                 {/* Imagem / PDF */}
-                <div className="flex max-h-[60vh] w-full max-w-[70vw] flex-1 select-none items-center justify-center overflow-hidden">
+                <div className="flex h-[75vh] md:h-[80vh] w-full max-w-[85vw] flex-1 select-none items-center justify-center overflow-hidden">
                   {activeReceipt.url.endsWith('.pdf') ? (
                     <>
                       {/* Desktop View: Embed PDF inside a gorgeous iframe */}
-                      <div className="hidden h-[55vh] w-full max-w-4xl md:block">
+                      <div className="hidden h-[75vh] w-full max-w-4xl md:block">
                         <iframe
                           src={`${API_BASE_URL}${activeReceipt.url}#toolbar=0`}
                           className="h-full w-full rounded-2xl border border-white/10 bg-white"
@@ -344,7 +344,7 @@ export function PendingReceiptsModal({
                     <ImageZoomViewer
                       src={`${API_BASE_URL}${activeReceipt.url}`}
                       alt={activeReceipt.description}
-                      containerClassName="h-[60vh] max-w-[70vw] w-full"
+                      containerClassName="h-full w-full"
                     />
                   )}
                 </div>

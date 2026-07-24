@@ -24,7 +24,7 @@ export function ImageZoomViewer({
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Reset zoom ao trocar de imagem
+  // Reset zoom e posição ao trocar de imagem
   useEffect(() => {
     setScale(1)
     setPosition({ x: 0, y: 0 })
@@ -50,26 +50,35 @@ export function ImageZoomViewer({
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
 
-    // Suaviza o zoom pelo scroll
-    const delta = e.deltaY < 0 ? 0.25 : -0.25
-    setScale((prev) => {
-      const next = Math.min(Math.max(prev + delta, 1), 5)
-      if (next === 1) setPosition({ x: 0, y: 0 })
-      return next
-    })
+    // Se segurar Ctrl/Cmd ou se o zoom já estiver ampliado, faz zoom
+    if (e.ctrlKey || e.metaKey) {
+      const delta = e.deltaY < 0 ? 0.25 : -0.25
+      setScale((prev) => {
+        const next = Math.min(Math.max(prev + delta, 1), 5)
+        if (next === 1) setPosition({ x: 0, y: 0 })
+        return next
+      })
+      return
+    }
+
+    // Scroll comum do mouse faz pan vertical (arrasta a imagem para cima e para baixo)
+    // Isso permite navegar por comprovantes compridos com facilidade total!
+    const scrollSpeed = 1.2
+    setPosition((prev) => ({
+      x: prev.x,
+      y: prev.y - e.deltaY * scrollSpeed,
+    }))
   }
 
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (scale <= 1) return
     e.preventDefault()
     setIsDragging(true)
-    // Captura os eventos de ponteiro para que o arraste continue mesmo fora do container
     e.currentTarget.setPointerCapture(e.pointerId)
     dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y }
   }
 
   const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!isDragging || scale <= 1) return
+    if (!isDragging) return
     e.preventDefault()
     setPosition({
       x: e.clientX - dragStart.current.x,
@@ -80,7 +89,9 @@ export function ImageZoomViewer({
   const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return
     setIsDragging(false)
-    e.currentTarget.releasePointerCapture(e.pointerId)
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch (err) {}
   }
 
   const handleDoubleClick = () => {
@@ -100,7 +111,7 @@ export function ImageZoomViewer({
       className={`relative flex h-full min-h-0 w-full min-w-0 select-none flex-col items-center justify-center overflow-hidden ${containerClassName}`}
     >
       {/* Controles Flutuantes de Zoom */}
-      <div className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/75 p-1.5 shadow-xl backdrop-blur-md">
+      <div className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/80 p-1.5 shadow-2xl backdrop-blur-md">
         <Button
           type="button"
           variant="ghost"
@@ -128,9 +139,8 @@ export function ImageZoomViewer({
           variant="ghost"
           size="icon"
           onClick={handleReset}
-          disabled={scale === 1 && position.x === 0 && position.y === 0}
           className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white"
-          title="Resetar Zoom"
+          title="Resetar Posição / Zoom"
         >
           <RotateCcw className="h-3.5 w-3.5" />
         </Button>
@@ -149,13 +159,11 @@ export function ImageZoomViewer({
         </Button>
       </div>
 
-      {/* Dica visual quando com zoom ativado */}
-      {scale > 1 && (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-md animate-in fade-in">
-          <Move className="h-3.5 w-3.5 text-blue-400" />
-          <span>Arraste para mover • Duplo clique para resetar</span>
-        </div>
-      )}
+      {/* Dica visual de navegação */}
+      <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/10 bg-black/75 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-xl backdrop-blur-md animate-in fade-in">
+        <Move className="h-3.5 w-3.5 text-blue-400" />
+        <span>Roda do mouse rola a imagem • Arraste para mover • Duplo clique para zoom</span>
+      </div>
 
       {/* Container da Imagem com Pan/Zoom */}
       <div
@@ -166,7 +174,7 @@ export function ImageZoomViewer({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
-        className={`flex h-full min-h-0 w-full min-w-0 touch-none items-center justify-center overflow-hidden p-2 ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+        className={`flex h-full min-h-0 w-full min-w-0 touch-none items-center justify-center overflow-hidden p-4 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       >
         <div
           style={{
