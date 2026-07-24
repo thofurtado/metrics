@@ -24,9 +24,14 @@ export function CashierSignIn() {
 
   const { mutateAsync: login, isPending: isLoggingIn } = useMutation({
     mutationFn: signIn,
-    onSuccess: () => {
-      if (selectedUser) {
-        localStorage.setItem('metrics.lastUserId', selectedUser.id)
+    onSuccess: (data: any) => {
+      if (data?.data?.token) {
+        localStorage.setItem('token', data.data.token)
+        localStorage.setItem('refreshToken', data.data.refreshToken)
+        if (selectedUser) {
+          localStorage.setItem('metrics.lastUserId', selectedUser.id)
+        }
+        window.dispatchEvent(new Event('auth-change'))
       }
       queryClient.invalidateQueries({ queryKey: ['profile'] })
       queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
