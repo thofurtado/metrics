@@ -44,6 +44,14 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         { key: '9', name: 'Permuta', display: '9 - Permuta' },
     ];
 
+    const BANCOS_NUMERADOS = [
+        { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
+        { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
+        { key: '3', name: 'CIELO', display: '3 - CIELO' },
+        { key: '4', name: 'IFOOD', display: '4 - IFOOD' },
+        { key: '5', name: 'STONE', display: '5 - STONE' },
+    ];
+
     const formatCurrency = (value: string) => {
         const digits = value.replace(/\D/g, '');
         const amount = Number(digits) / 100;
@@ -69,7 +77,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         }
     }, [forma, tipo]);
 
-    // Avança para o próximo campo com base no estado atual da forma de pagamento
+    // Avança para o próximo campo com base na forma de pagamento selecionada
     const advanceFromForma = (formaSelecionada: string) => {
         setForma(formaSelecionada);
 
@@ -82,12 +90,24 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setBanco('CONTA DA CASA');
             setTimeout(() => {
                 consumidorInputRef.current?.focus();
+                consumidorInputRef.current?.select();
             }, 100);
         } else {
             setTimeout(() => {
                 bancoSelectRef.current?.focus();
-            }, 60);
+                try {
+                    bancoSelectRef.current?.showPicker();
+                } catch (e) {}
+            }, 80);
         }
+    };
+
+    // Avança a partir da seleção do Banco
+    const advanceFromBanco = (bancoSelecionado: string) => {
+        setBanco(bancoSelecionado);
+        setTimeout(() => {
+            submitBtnRef.current?.focus();
+        }, 60);
     };
 
     const handleFormaKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
@@ -101,6 +121,20 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         if (e.key === 'Enter') {
             e.preventDefault();
             advanceFromForma(forma);
+        }
+    };
+
+    const handleBancoKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
+        const item = BANCOS_NUMERADOS.find(b => b.key === e.key);
+        if (item) {
+            e.preventDefault();
+            advanceFromBanco(item.name);
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            advanceFromBanco(banco);
         }
     };
 
@@ -124,6 +158,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         if (e.key === 'Enter') {
             e.preventDefault();
             formaSelectRef.current?.focus();
+            try {
+                formaSelectRef.current?.showPicker();
+            } catch (err) {}
         }
     };
 
@@ -142,11 +179,12 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             banco: (tipo === 'sangria' || tipo === 'suprimento') ? 'CAIXA' : banco,
             origin: tipo === 'venda' ? tipoOrigem : '',
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
-            identificacao: tipo === 'venda' ? numOrigem : (tipo === 'caixinha' ? paraQuem : identificacao),
+            identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? consumidorCasa : '',
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
-            isSuprimento: tipo === 'suprimento'
+            isSuprimento: tipo === 'suprimento',
+            type: tipo === 'sangria' ? 'WITHDRAWAL' : tipo === 'suprimento' ? 'ADDITION' : tipo === 'caixinha' ? 'TIP' : 'SALE'
         });
 
         setTipo('venda');
@@ -334,9 +372,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         onFocus={() => {
                                             try {
                                                 formaSelectRef.current?.showPicker();
-                                            } catch (e) {
-                                                // ignore
-                                            }
+                                            } catch (e) {}
                                         }}
                                         onKeyDown={handleFormaKeyDown}
                                         className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
@@ -381,23 +417,23 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                             ref={bancoSelectRef}
                                             disabled={forma === 'Dinheiro'}
                                             value={banco}
-                                            onChange={e => setBanco(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    submitBtnRef.current?.focus();
+                                            onChange={e => advanceFromBanco(e.target.value)}
+                                            onFocus={() => {
+                                                if (forma !== 'Dinheiro') {
+                                                    try {
+                                                        bancoSelectRef.current?.showPicker();
+                                                    } catch (e) {}
                                                 }
                                             }}
-                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500"
+                                            onKeyDown={handleBancoKeyDown}
+                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
                                         >
                                             {forma === 'Dinheiro' ? <option value="CAIXA">CAIXA</option> :
-                                                <>
-                                                    <option value="SAFRA">SAFRA</option>
-                                                    <option value="PAGBANK">PAGBANK</option>
-                                                    <option value="CIELO">CIELO</option>
-                                                    <option value="IFOOD">IFOOD</option>
-                                                    <option value="STONE">STONE</option>
-                                                </>
+                                                BANCOS_NUMERADOS.map(b => (
+                                                    <option key={b.key} value={b.name}>
+                                                        {b.display}
+                                                    </option>
+                                                ))
                                             }
                                         </select>
                                     </div>

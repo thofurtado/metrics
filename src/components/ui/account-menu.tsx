@@ -40,15 +40,20 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           {isCollapsed ? (
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-colors ring-1 ring-border/50">
+            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary ring-1 ring-border/50 transition-colors hover:bg-primary/20">
               {isLoadingProfile ? (
                 <Skeleton className="h-10 w-10 rounded-full" />
+              ) : profile?.name ? (
+                profile.name.trim().split(/\s+/).length === 1 ? (
+                  profile.name.trim().substring(0, 2).toUpperCase()
+                ) : (
+                  (
+                    profile.name.trim().split(/\s+/)[0][0] +
+                    profile.name.trim().split(/\s+/).pop()![0]
+                  ).toUpperCase()
+                )
               ) : (
-                profile?.name ? (
-                  profile.name.trim().split(/\s+/).length === 1 
-                    ? profile.name.trim().substring(0, 2).toUpperCase() 
-                    : (profile.name.trim().split(/\s+/)[0][0] + profile.name.trim().split(/\s+/).pop()![0]).toUpperCase()
-                ) : 'User'
+                'User'
               )}
             </button>
           ) : (
@@ -58,8 +63,10 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
             >
               {isLoadingProfile ? (
                 <Skeleton className="h-4 w-32" />
+              ) : profile?.name ? (
+                profile.name.trim().split(/\s+/)[0]
               ) : (
-                profile?.name ? profile.name.trim().split(/\s+/)[0] : 'User'
+                'User'
               )}
               <ChevronDown className="h-4 w-4" />
             </Button>

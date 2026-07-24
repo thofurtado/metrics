@@ -13,7 +13,9 @@ export interface PrintDepartment {
 }
 
 export async function getPrintDepartments() {
-  const response = await api.get<{ departments: PrintDepartment[] }>('/print-departments')
+  const response = await api.get<{ departments: PrintDepartment[] }>(
+    '/print-departments',
+  )
   return response.data
 }
 

@@ -16,6 +16,8 @@ export interface ExtractTransactionResponse {
 }
 
 export async function extractTransaction({ code }: ExtractTransactionRequest) {
-  const response = await api.post<ExtractTransactionResponse>('/extract', { code })
+  const response = await api.post<ExtractTransactionResponse>('/extract', {
+    code,
+  })
   return response.data
 }

@@ -1,16 +1,15 @@
-
 import { api } from '@/lib/axios'
 
 export interface AdjustAccountBalanceParams {
-    id: string
-    newBalance: number
+  id: string
+  newBalance: number
 }
 
 export async function adjustAccountBalance({
-    id,
-    newBalance,
+  id,
+  newBalance,
 }: AdjustAccountBalanceParams) {
-    await api.patch(`/account/${id}/adjust-balance`, {
-        newBalance,
-    })
+  await api.patch(`/account/${id}/adjust-balance`, {
+    newBalance,
+  })
 }

@@ -1,12 +1,13 @@
-import { Link } from 'react-router-dom'
 import { Blocks, Headset, PiggyBank, Pyramid, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+import { useModules } from '@/context/module-context'
 
 import { NavLink } from './nav-link'
 import { ModeToggle } from './theme/theme-toogle'
 import { AccountMenu } from './ui/account-menu'
 import { MobileAccountMenu } from './ui/mobile-account-menu' // Importe o novo componente
 import { Separator } from './ui/separator'
-import { useModules } from '@/context/module-context'
 
 export function Header() {
   const { hasAccess } = useModules()
@@ -14,7 +15,11 @@ export function Header() {
     <div className="border-b">
       <div className="flex h-16 items-center gap-6 px-6">
         {/* Logo - sempre visível em todas as telas */}
-        <Link to="/" aria-label="Início" className="flex items-center gap-2 text-foreground font-semibold">
+        <Link
+          to="/"
+          aria-label="Início"
+          className="flex items-center gap-2 font-semibold text-foreground"
+        >
           <Pyramid className="h-6 w-6" />
           <span className="hidden lg:inline-block">METRICS</span>
         </Link>
@@ -22,7 +27,6 @@ export function Header() {
         <Separator orientation="vertical" className="h-6" />
 
         <nav className="flex flex-1 items-center justify-between sm:justify-start sm:space-x-4 lg:space-x-6">
-
           {hasAccess('items') && (
             <NavLink to="/items">
               <Blocks className="h-5 w-5" />

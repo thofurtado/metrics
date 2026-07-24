@@ -80,25 +80,25 @@ export function SignUp() {
   return (
     <>
       <Helmet title="Cadastro" />
-      <div className="flex flex-col justify-center gap-6"> {/* Removido w[358px] */}
+      <div className="flex flex-col justify-center gap-6">
+        {' '}
+        {/* Removido w[358px] */}
         {/*
             Botão Fazer Login movido para o topo do formulário
         */}
         <div className="text-right">
-            <Link 
-                to="/sign-in"
-                className="text-minsk-500 hover:text-minsk-700 text-sm font-medium transition-colors"
-            >
-                Fazer Login
-            </Link>
+          <Link
+            to="/sign-in"
+            className="text-sm font-medium text-minsk-500 transition-colors hover:text-minsk-700"
+          >
+            Fazer Login
+          </Link>
         </div>
-
         <div className="flex flex-col gap-2 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-minsk-800">
             Cadastro de Usuário
           </h1>
         </div>
-
         <form onSubmit={handleSubmit(handleSignUp)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome:</Label>
@@ -113,19 +113,17 @@ export function SignUp() {
             <Input id="password" type="password" {...register('password')} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="passwordConfirmation">
-              Confirmação de Senha:
-            </Label>
+            <Label htmlFor="passwordConfirmation">Confirmação de Senha:</Label>
             <Input
               id="passwordConfirmation"
               type="password"
               {...register('passwordConfirmation')}
             />
           </div>
-          <Button 
-            disabled={isSubmitting} 
+          <Button
+            disabled={isSubmitting}
             // Botão com cores da marca
-            className="bg-minsk-600 hover:bg-minsk-700 w-full text-white transition-colors"
+            className="w-full bg-minsk-600 text-white transition-colors hover:bg-minsk-700"
           >
             Cadastrar
           </Button>

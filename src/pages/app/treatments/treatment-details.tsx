@@ -1,20 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
-import { useState, useRef } from 'react'
 import html2canvas from 'html2canvas'
-import { Share2, Download, User, Calendar, Clock, FileText, Activity, Layers, Package } from 'lucide-react'
+import {
+  Activity,
+  Calendar,
+  Clock,
+  Download,
+  FileText,
+  Layers,
+  Package,
+  Share2,
+  User,
+} from 'lucide-react'
+import { useRef, useState } from 'react'
 
 import { getTreatmentDetails } from '@/api/get-treatment-details'
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { TreatmentStatus } from '@/components/ui/treatment-status'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { TreatmentStatus } from '@/components/ui/treatment-status'
 
 dayjs.extend(duration)
 
@@ -39,7 +49,14 @@ interface Item {
 
 interface TreatmentDetailsData {
   id: string
-  status: 'pending' | 'in_progress' | 'on_hold' | 'resolved' | 'canceled' | 'follow_up' | 'in_workbench'
+  status:
+    | 'pending'
+    | 'in_progress'
+    | 'on_hold'
+    | 'resolved'
+    | 'canceled'
+    | 'follow_up'
+    | 'in_workbench'
   clients: {
     name: string
   }
@@ -74,7 +91,10 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   // ====================================================================
   // CÁLCULO DO TEMPO DE ATENDIMENTO
   // ====================================================================
-  const calculateDuration = (opening: string | Date, ending: string | Date | null) => {
+  const calculateDuration = (
+    opening: string | Date,
+    ending: string | Date | null,
+  ) => {
     const end = ending ? dayjs(ending) : dayjs()
     const start = dayjs(opening)
 
@@ -113,10 +133,9 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   const grandTotal = subtotal - totalDiscounts
 
   // Calculate Duration
-  const totalDuration = treatment ? calculateDuration(
-    treatment.opening_date,
-    treatment.ending_date,
-  ) : ''
+  const totalDuration = treatment
+    ? calculateDuration(treatment.opening_date, treatment.ending_date)
+    : ''
 
   // FUNÇÕES DE DOWNLOAD E COMPARTILHAMENTO
   const dataURLtoBlob = (dataurl: string, filename: string) => {
@@ -124,7 +143,7 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
     const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png'
     const bstr = atob(arr[1])
     let n = bstr.length
-    let u8arr = new Uint8Array(n)
+    const u8arr = new Uint8Array(n)
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n)
     }
@@ -137,7 +156,11 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
   ) => {
     e.stopPropagation()
 
-    if (!dialogContentRef.current || !treatment || !buttonsContainerRef.current) {
+    if (
+      !dialogContentRef.current ||
+      !treatment ||
+      !buttonsContainerRef.current
+    ) {
       console.error('Dados ou elementos não encontrados.')
       return
     }
@@ -165,7 +188,7 @@ export function TreatmentDetails({ treatmentId, open }: TreatmentDetailsProps) {
         backgroundColor: '#ffffff', // Ensure white background
         height: input.scrollHeight,
         width: input.scrollWidth,
-        ignoreElements: (element) => element.classList.contains('no-print') // Helper class to hide elements
+        ignoreElements: (element) => element.classList.contains('no-print'), // Helper class to hide elements
       })
 
       const filename = `atendimento_${treatment.id}_${dayjs().format(
@@ -194,7 +217,6 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
             title: `Atendimento ${treatment.id}`,
             text: resumo,
           })
-          return
         } else {
           // Fallback for sharing
           const link = document.createElement('a')
@@ -222,21 +244,23 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
     }
   }
 
-
   return (
     <DialogContent
       ref={dialogContentRef}
-      className={`bg-gray-50/95 transition-all duration-300 overflow-y-auto ${isExpanded
-        ? 'max-h-[95vh] w-[95vw] max-w-[1200px]'
-        : 'max-h-[85vh] w-[90vw] max-w-3xl'
-        } p-0 gap-0 border-0 shadow-2xl rounded-xl`}
+      className={`overflow-y-auto bg-gray-50/95 transition-all duration-300 ${
+        isExpanded
+          ? 'max-h-[95vh] w-[95vw] max-w-[1200px]'
+          : 'max-h-[85vh] w-[90vw] max-w-3xl'
+      } gap-0 rounded-xl border-0 p-0 shadow-2xl`}
       onEscapeKeyDown={() => setIsExpanded(false)}
     >
       {/* HEADER FIXO DO DIALOG */}
-      <div className="sticky top-0 z-20 bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-4 shadow-sm">
         <DialogHeader className="flex flex-col text-left">
-          <DialogTitle className="text-lg font-bold text-gray-800">Detalhes do Atendimento</DialogTitle>
-          <DialogDescription className="text-xs text-gray-500 font-mono">
+          <DialogTitle className="text-lg font-bold text-gray-800">
+            Detalhes do Atendimento
+          </DialogTitle>
+          <DialogDescription className="font-mono text-xs text-gray-500">
             Protocolo: {treatmentId}
           </DialogDescription>
         </DialogHeader>
@@ -244,62 +268,69 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
         <div ref={buttonsContainerRef} className="flex gap-2">
           <button
             onClick={(e) => handleShareOrDownload(e, true)}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            className="rounded-full p-2 text-gray-600 transition-colors hover:bg-gray-100"
             title="Compartilhar"
           >
-            <Share2 className="w-5 h-5" />
+            <Share2 className="h-5 w-5" />
           </button>
           <button
             onClick={(e) => handleShareOrDownload(e, false)}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            className="rounded-full p-2 text-gray-600 transition-colors hover:bg-gray-100"
             title="Baixar Imagem"
           >
-            <Download className="w-5 h-5" />
+            <Download className="h-5 w-5" />
           </button>
         </div>
       </div>
 
       {treatment ? (
-        <div className="p-6 space-y-6">
-
+        <div className="space-y-6 p-6">
           {/* 1. HEADER CARD PRINCIPAL */}
-          <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 w-full" />
+          <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-gray-100">
+            <div className="h-2 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
             <CardHeader className="pb-4">
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <Badge variant="outline" className="mb-2 bg-blue-50 text-blue-700 border-blue-200">
-                    {treatment.status === 'resolved' ? 'Finalizado' : 'Em Andamento'}
+                  <Badge
+                    variant="outline"
+                    className="mb-2 border-blue-200 bg-blue-50 text-blue-700"
+                  >
+                    {treatment.status === 'resolved'
+                      ? 'Finalizado'
+                      : 'Em Andamento'}
                   </Badge>
-                  <CardTitle className="text-2xl font-bold text-gray-900 leading-tight">
+                  <CardTitle className="text-2xl font-bold leading-tight text-gray-900">
                     {treatment.request}
                   </CardTitle>
                 </div>
                 <TreatmentStatus status={treatment.status} />
               </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-0">
+            <CardContent className="grid grid-cols-1 gap-6 pt-0 md:grid-cols-3">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
                   <User className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Cliente</p>
-                  <p className="font-semibold text-gray-900 line-clamp-1" title={treatment.clients.name}>
+                  <p
+                    className="line-clamp-1 font-semibold text-gray-900"
+                    title={treatment.clients.name}
+                  >
                     {treatment.clients.name}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Aberto em</p>
                   <p className="font-semibold text-gray-900">
                     {dayjs(treatment.opening_date).format('DD/MM/YYYY')}
-                    <span className="text-xs text-gray-400 ml-1 font-normal">
+                    <span className="ml-1 text-xs font-normal text-gray-400">
                       {dayjs(treatment.opening_date).format('HH:mm')}
                     </span>
                   </p>
@@ -307,7 +338,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-50 rounded-lg text-orange-600">
+                <div className="rounded-lg bg-orange-50 p-2 text-orange-600">
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
@@ -319,10 +350,9 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
           </Card>
 
           {/* 2. OBSERVATIONS & TIMELINE GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* Left Column: Observations & Items */}
-            <div className="md:col-span-2 space-y-6">
+            <div className="space-y-6 md:col-span-2">
               {/* Observações */}
               {treatment.observations && (
                 <Card className="border-l-4 border-l-yellow-400 shadow-sm">
@@ -333,7 +363,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
                       {treatment.observations}
                     </p>
                   </CardContent>
@@ -343,68 +373,90 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
               {/* Mercadorias / Items */}
               {treatment.items.length > 0 && (
                 <Card className="shadow-sm">
-                  <CardHeader className="pb-3 border-b bg-gray-50/50">
+                  <CardHeader className="border-b bg-gray-50/50 pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-gray-700">
                         <Package className="h-5 w-5" />
                         <h3 className="font-semibold">Itens e Serviços</h3>
                       </div>
-                      <Badge variant="secondary">{treatment.items.length} itens</Badge>
+                      <Badge variant="secondary">
+                        {treatment.items.length} itens
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y">
                       {treatment.items.map((item, idx) => (
-                        <div key={`${item.item_id}-${idx}`} className="grid grid-cols-12 gap-4 p-4 items-start hover:bg-gray-50 transition-colors">
+                        <div
+                          key={`${item.item_id}-${idx}`}
+                          className="grid grid-cols-12 items-start gap-4 p-4 transition-colors hover:bg-gray-50"
+                        >
                           <div className="col-span-6 flex flex-col font-medium text-gray-900">
                             <span>{item.items.name}</span>
                             {item.observations && (
-                              <span className="text-xs font-normal text-gray-500 mt-1 line-clamp-3" title={item.observations}>
+                              <span
+                                className="mt-1 line-clamp-3 text-xs font-normal text-gray-500"
+                                title={item.observations}
+                              >
                                 Obs: {item.observations}
                               </span>
                             )}
                           </div>
-                          <div className="col-span-2 text-center text-sm bg-gray-100 rounded-md py-1 text-gray-600">
+                          <div className="col-span-2 rounded-md bg-gray-100 py-1 text-center text-sm text-gray-600">
                             {item.quantity}x
                           </div>
                           <div className="col-span-4 flex flex-col items-end justify-center text-right">
-                            {(item.discount && item.discount > 0) ? (
+                            {item.discount && item.discount > 0 ? (
                               <>
                                 <span className="text-xs text-gray-400 line-through">
-                                  R$ {(item.quantity * item.salesValue).toFixed(2)}
+                                  R${' '}
+                                  {(item.quantity * item.salesValue).toFixed(2)}
                                 </span>
                                 <span className="font-bold text-green-600">
-                                  R$ {((item.quantity * item.salesValue) - item.discount).toFixed(2)}
+                                  R${' '}
+                                  {(
+                                    item.quantity * item.salesValue -
+                                    item.discount
+                                  ).toFixed(2)}
                                 </span>
-                                {item.discount >= (item.quantity * item.salesValue) && (
-                                  <Badge variant="outline" className="mt-1 text-[10px] bg-green-50 text-green-600 border-green-200 uppercase tracking-widest px-1 py-0 h-4">
+                                {item.discount >=
+                                  item.quantity * item.salesValue && (
+                                  <Badge
+                                    variant="outline"
+                                    className="mt-1 h-4 border-green-200 bg-green-50 px-1 py-0 text-[10px] uppercase tracking-widest text-green-600"
+                                  >
                                     100% OFF (Contrato)
                                   </Badge>
                                 )}
                               </>
                             ) : (
                               <span className="font-medium text-gray-900">
-                                R$ {(item.quantity * item.salesValue).toFixed(2)}
+                                R${' '}
+                                {(item.quantity * item.salesValue).toFixed(2)}
                               </span>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="bg-gray-50 p-4 border-t flex flex-col gap-2">
-                      <div className="flex justify-between items-center text-sm text-gray-500">
+                    <div className="flex flex-col gap-2 border-t bg-gray-50 p-4">
+                      <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>Subtotal</span>
                         <span>R$ {subtotal.toFixed(2)}</span>
                       </div>
                       {totalDiscounts > 0 && (
-                        <div className="flex justify-between items-center text-sm text-red-500 font-medium">
+                        <div className="flex items-center justify-between text-sm font-medium text-red-500">
                           <span>Descontos</span>
                           <span>- R$ {totalDiscounts.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-1">
-                        <span className="text-gray-600 font-medium">Total Geral</span>
-                        <span className="text-xl font-bold text-green-600">R$ {grandTotal.toFixed(2)}</span>
+                      <div className="mt-1 flex items-center justify-between border-t border-gray-200 pt-2">
+                        <span className="font-medium text-gray-600">
+                          Total Geral
+                        </span>
+                        <span className="text-xl font-bold text-green-600">
+                          R$ {grandTotal.toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -414,20 +466,24 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
 
             {/* Right Column: Vertical Timeline */}
             <div className="md:col-span-1">
-              <Card className="h-full shadow-sm border-0 bg-transparent shadow-none ring-0">
-                <div className="flex items-center gap-2 mb-4 text-gray-700 px-1">
+              <Card className="h-full border-0 bg-transparent shadow-none shadow-sm ring-0">
+                <div className="mb-4 flex items-center gap-2 px-1 text-gray-700">
                   <Activity className="h-5 w-5 text-indigo-500" />
-                  <h3 className="font-bold text-lg">Linha do Tempo</h3>
+                  <h3 className="text-lg font-bold">Linha do Tempo</h3>
                 </div>
 
-                <div className="relative pl-4 border-l-2 border-indigo-100 space-y-8 ml-2">
+                <div className="relative ml-2 space-y-8 border-l-2 border-indigo-100 pl-4">
                   {/* Evento Inicial */}
                   <div className="relative">
                     <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white bg-indigo-400 ring-2 ring-indigo-100"></div>
-                    <div className="bg-white p-3 rounded-lg border shadow-sm text-sm">
-                      <p className="font-semibold text-gray-800">Atendimento Iniciado</p>
-                      <span className="text-xs text-gray-400 block mt-1">
-                        {dayjs(treatment.opening_date).format('DD/MM/YYYY HH:mm')}
+                    <div className="rounded-lg border bg-white p-3 text-sm shadow-sm">
+                      <p className="font-semibold text-gray-800">
+                        Atendimento Iniciado
+                      </p>
+                      <span className="mt-1 block text-xs text-gray-400">
+                        {dayjs(treatment.opening_date).format(
+                          'DD/MM/YYYY HH:mm',
+                        )}
                       </span>
                     </div>
                   </div>
@@ -436,14 +492,14 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   {treatment.interactions.map((interaction, idx) => (
                     <div key={`${interaction.id}-${idx}`} className="relative">
                       <div className="absolute -left-[21px] top-3 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100"></div>
-                      <div className="bg-white p-4 rounded-lg border shadow-sm relative group hover:border-blue-200 transition-all">
-                        <div className="absolute -left-2 top-4 w-2 h-2 bg-white border-l border-b transform rotate-45"></div>
-                        <p className="text-gray-700 text-sm leading-relaxed mb-2">
+                      <div className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:border-blue-200">
+                        <div className="absolute -left-2 top-4 h-2 w-2 rotate-45 transform border-b border-l bg-white"></div>
+                        <p className="mb-2 text-sm leading-relaxed text-gray-700">
                           {interaction.description}
                         </p>
 
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-50 mt-2">
-                          <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <div className="mt-2 flex items-center justify-between border-t border-gray-50 pt-2">
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">
                             Atualização
                           </span>
                           <span className="text-xs text-gray-400">
@@ -452,7 +508,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                         </div>
                       </div>
                       {/* Data para referência de impressão */}
-                      <span className="sr-only p-print-date">
+                      <span className="p-print-date sr-only">
                         {dayjs(interaction.date).format('DD/MM/YYYY HH:mm')}
                       </span>
                     </div>
@@ -460,13 +516,11 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                 </div>
               </Card>
             </div>
-
           </div>
-
         </div>
       ) : (
         <div className="p-12 text-center text-gray-400">
-          <Layers className="h-12 w-12 mx-auto mb-3 opacity-20" />
+          <Layers className="mx-auto mb-3 h-12 w-12 opacity-20" />
           <p>Carregando informações...</p>
         </div>
       )}

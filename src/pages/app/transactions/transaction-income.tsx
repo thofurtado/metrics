@@ -4,36 +4,36 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   Calendar as CalendarIcon,
+  Camera,
   CircleCheckBig,
   ListChecks,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { Camera } from 'lucide-react'
 
 import { createTransaction } from '@/api/create-transaction'
 import { extractTransaction } from '@/api/extract-transaction'
 import { getAccounts } from '@/api/get-accounts'
 import { getSectors } from '@/api/get-sectors'
-
+import { uploadFileTransaction } from '@/api/upload-file'
+import { CameraScanner } from '@/components/camera-scanner'
 import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { CreateSectorDialog } from '@/components/create-sector-dialog'
-import { QuickAddSelect } from '@/components/ui/quick-add-select'
+import { ExtractionOverlay } from '@/components/extraction-overlay'
+import { FileUpload } from '@/components/file-upload'
+import {
+  InstallmentItem,
+  InstallmentPreviewDialog,
+} from '@/components/installment-preview-dialog'
+import {
+  ExtractedData,
+  ScannerConfirmationModal,
+} from '@/components/scanner-confirmation-modal'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { FileUpload } from '@/components/file-upload'
-import { uploadFileTransaction } from '@/api/upload-file'
-
-import { InstallmentPreviewDialog, InstallmentItem } from '@/components/installment-preview-dialog'
-import {
-  ResponsiveDialogContent,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-  ResponsiveDialogDescription,
-  ResponsiveDialogClose
-} from '@/components/ui/responsive-dialog'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import {
   Form,
   FormControl,
@@ -47,40 +47,57 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { QuickAddSelect } from '@/components/ui/quick-add-select'
+import {
+  ResponsiveDialogClose,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import { cn } from '@/lib/utils'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CameraScanner } from '@/components/camera-scanner'
-import { ScannerConfirmationModal, ExtractedData } from '@/components/scanner-confirmation-modal'
-import { ExtractionOverlay } from '@/components/extraction-overlay'
 
 // Schema para Receitas (income)
 const formSchema = z.object({
   data_vencimento: z.date({
-    required_error: "Vencimento é obrigatório",
+    required_error: 'Vencimento é obrigatório',
   }),
   data_emissao: z.date({
-    required_error: "Emissão é obrigatória",
+    required_error: 'Emissão é obrigatória',
   }),
   description: z.string().optional(),
   account: z.string().optional(),
   sector: z.string().optional(),
-  amount: z.string().min(1, "Valor é obrigatório").refine(
-    (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-    "Valor deve ser maior que zero"
-  ),
+  amount: z
+    .string()
+    .min(1, 'Valor é obrigatório')
+    .refine(
+      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+      'Valor deve ser maior que zero',
+    ),
   confirmed: z.boolean().default(false),
 
   // Installments
   installments_count: z.string().optional(),
   interval_frequency: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
 
-  custom_installments: z.array(z.object({
-    data_vencimento: z.date(),
-    data_emissao: z.date().optional(),
-    amount: z.number()
-  })).optional()
+  custom_installments: z
+    .array(
+      z.object({
+        data_vencimento: z.date(),
+        data_emissao: z.date().optional(),
+        amount: z.number(),
+      }),
+    )
+    .optional(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -118,8 +135,8 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
       amount: '',
       confirmed: false,
       installments_count: '',
-      interval_frequency: 'MONTHLY'
-    }
+      interval_frequency: 'MONTHLY',
+    },
   })
 
   useEffect(() => {
@@ -148,11 +165,14 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
-    }
+    },
   })
 
   const watchedAmount = useWatch({ control: form.control, name: 'amount' })
-  const watchedCount = useWatch({ control: form.control, name: 'installments_count' })
+  const watchedCount = useWatch({
+    control: form.control,
+    name: 'installments_count',
+  })
 
   const installmentPreview = (() => {
     if (activeTab === 'installment' && watchedAmount && watchedCount) {
@@ -167,10 +187,10 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
   })()
 
   function handleConfirmInstallments(installments: InstallmentItem[]) {
-    const cleanInstallments = installments.map(i => ({
+    const cleanInstallments = installments.map((i) => ({
       data_vencimento: i.date,
       data_emissao: new Date(),
-      amount: i.amount
+      amount: i.amount,
     }))
 
     form.setValue('custom_installments', cleanInstallments)
@@ -179,20 +199,24 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
   }
 
   async function onSubmit(data: FormSchemaType) {
-    if (activeTab === 'installment' && (!data.custom_installments || data.custom_installments.length === 0)) {
+    if (
+      activeTab === 'installment' &&
+      (!data.custom_installments || data.custom_installments.length === 0)
+    ) {
       setPreviewInstallmentsOpen(true)
       return
     }
 
     try {
       const isInstallment = activeTab === 'installment'
-      const cleanInstallments = isInstallment && data.custom_installments
-        ? data.custom_installments.map(i => ({
-          data_vencimento: i.data_vencimento,
-          data_emissao: data.data_emissao,
-          amount: i.amount
-        }))
-        : undefined
+      const cleanInstallments =
+        isInstallment && data.custom_installments
+          ? data.custom_installments.map((i) => ({
+              data_vencimento: i.data_vencimento,
+              data_emissao: data.data_emissao,
+              amount: i.amount,
+            }))
+          : undefined
 
       const transactionData = {
         operation: 'income' as const,
@@ -203,25 +227,27 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         description: data.description,
         sector: data.sector,
         confirmed: data.confirmed,
-        installments_count: isInstallment ? Number(data.installments_count) : undefined,
+        installments_count: isInstallment
+          ? Number(data.installments_count)
+          : undefined,
         interval_frequency: isInstallment ? data.interval_frequency : undefined,
-        custom_installments: cleanInstallments
+        custom_installments: cleanInstallments,
       }
 
       const response = await transaction(transactionData)
-      
-      const transactionId = response.data?.transaction?.id || response.data?.id;
+
+      const transactionId = response.data?.transaction?.id || response.data?.id
       if (receiptFile && activeTab === 'single' && transactionId) {
-         setIsUploading(true)
-         try {
-            await uploadFileTransaction(transactionId, receiptFile)
-            queryClient.invalidateQueries({ queryKey: ['transactions'] })
-         } catch(uploadErr) {
-            console.error('Erro no upload', uploadErr)
-            toast.error('Receita salva, mas falha ao enviar comprovante.')
-         } finally {
-            setIsUploading(false)
-         }
+        setIsUploading(true)
+        try {
+          await uploadFileTransaction(transactionId, receiptFile)
+          queryClient.invalidateQueries({ queryKey: ['transactions'] })
+        } catch (uploadErr) {
+          console.error('Erro no upload', uploadErr)
+          toast.error('Receita salva, mas falha ao enviar comprovante.')
+        } finally {
+          setIsUploading(false)
+        }
       }
 
       toast.success('Receita registrada com sucesso!')
@@ -235,7 +261,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         amount: '',
         confirmed: false,
         installments_count: '',
-        interval_frequency: 'MONTHLY'
+        interval_frequency: 'MONTHLY',
       })
       setActiveTab('single')
       setInstallmentValue('')
@@ -261,15 +287,21 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         setExtractedData(result.payload)
         setConfirmationOpen(true)
       } else {
-        toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
-          duration: 4000
-        })
+        toast.error(
+          'Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.',
+          {
+            duration: 4000,
+          },
+        )
       }
     } catch (error) {
       console.error(error)
-      toast.error('Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.', {
-        duration: 4000
-      })
+      toast.error(
+        'Não foi possível ler este código. Tente enquadrar melhor ou verifique a iluminação.',
+        {
+          duration: 4000,
+        },
+      )
     } finally {
       setIsExtracting(false)
     }
@@ -281,31 +313,31 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
       const count = parseInt(form.getValues('installments_count') || '1')
       setInstallmentValue((data.amount / count).toFixed(2))
     }
-    
+
     if (data.dueDate) {
       form.setValue('data_vencimento', new Date(data.dueDate))
     }
-    
+
     if (data.description) {
       form.setValue('description', data.description)
     }
-    
+
     setConfirmationOpen(false)
     toast.success(`Dados de ${data.type} aplicados ao formulário!`)
   }
 
   return (
     <ResponsiveDialogContent>
-      <ResponsiveDialogHeader className="px-6 pt-4 md:pt-6 pb-4 border-b border-border/50">
+      <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-4 md:pt-6">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
             <CircleCheckBig className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
           </div>
           <div>
-            <ResponsiveDialogTitle className="font-bold text-xl text-foreground leading-tight">
+            <ResponsiveDialogTitle className="text-xl font-bold leading-tight text-foreground">
               Nova Receita
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">
+            <ResponsiveDialogDescription className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
               Registre o recebimento de valores.
             </ResponsiveDialogDescription>
           </div>
@@ -314,37 +346,53 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
 
       <ExtractionOverlay isLoading={isExtracting} />
 
-      <div className="px-6 pb-40 pt-4 flex-1 overflow-y-auto scroll-smooth">
-        <Tabs value={activeTab} onValueChange={(v) => {
-          setActiveTab(v as any)
-          if (v === 'installment') {
-            form.setValue('confirmed', false)
-          } else if (v === 'single') {
-            form.setValue('confirmed', false)
-          }
-        }} className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-2 p-1.5 bg-muted/40 rounded-2xl h-auto">
-            <TabsTrigger value="single" className="text-sm font-bold py-3 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+      <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-40 pt-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => {
+            setActiveTab(v as any)
+            if (v === 'installment') {
+              form.setValue('confirmed', false)
+            } else if (v === 'single') {
+              form.setValue('confirmed', false)
+            }
+          }}
+          className="mb-6 w-full"
+        >
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-muted/40 p-1.5">
+            <TabsTrigger
+              value="single"
+              className="rounded-xl py-3 text-sm font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
               À Vista
             </TabsTrigger>
-            <TabsTrigger value="installment" className="text-sm font-bold py-3 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+            <TabsTrigger
+              value="installment"
+              className="rounded-xl py-3 text-sm font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
               Recorrente
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
         <Form {...form}>
-          <form 
-            onSubmit={form.handleSubmit(onSubmit)} 
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && (
-                e.target instanceof HTMLInputElement || 
-                e.target instanceof HTMLSelectElement || 
-                (e.target as HTMLElement).getAttribute('role') === 'combobox' ||
-                (e.target as HTMLElement).getAttribute('role') === 'switch'
-              )) {
+              if (
+                e.key === 'Enter' &&
+                (e.target instanceof HTMLInputElement ||
+                  e.target instanceof HTMLSelectElement ||
+                  (e.target as HTMLElement).getAttribute('role') ===
+                    'combobox' ||
+                  (e.target as HTMLElement).getAttribute('role') === 'switch')
+              ) {
                 e.preventDefault()
-                const inputs = Array.from(e.currentTarget.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])')) as HTMLElement[]
+                const inputs = Array.from(
+                  e.currentTarget.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])',
+                  ),
+                ) as HTMLElement[]
                 const index = inputs.indexOf(e.target as HTMLElement)
                 if (index > -1 && index < inputs.length - 1) {
                   const nextElement = inputs[index + 1]
@@ -355,25 +403,30 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
             className="flex flex-col gap-5"
           >
             {activeTab === 'single' ? (
-              <div className="grid gap-4 items-end grid-cols-1 sm:grid-cols-[1fr,200px]">
+              <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[1fr,200px]">
                 <FormField
                   control={form.control}
                   name="amount"
                   render={({ field }) => (
-                    <FormItem className="space-y-1.5 flex-1">
-                      <FormLabel className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
+                    <FormItem className="flex-1 space-y-1.5">
+                      <FormLabel className="ml-0.5 flex items-center text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                         <span>Valor da Receita</span>
-                        <span className="text-red-500 font-bold ml-1">*</span>
+                        <span className="ml-1 font-bold text-red-500">*</span>
                       </FormLabel>
-                      <div className="flex items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 md:py-3.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200 w-full">
-                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
+                      <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 transition-all duration-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 md:py-3.5">
+                        <span className="flex-shrink-0 select-none text-xl font-semibold text-slate-400 dark:text-slate-500">
+                          R$
+                        </span>
                         <FormControl>
                           <input
                             {...field}
                             onChange={(e) => {
                               field.onChange(e)
                               const val = parseFloat(e.target.value) || 0
-                              const count = parseInt(form.getValues('installments_count') || '1') || 1
+                              const count =
+                                parseInt(
+                                  form.getValues('installments_count') || '1',
+                                ) || 1
                               if (!isNaN(val) && !isNaN(count) && count > 0) {
                                 setInstallmentValue((val / count).toFixed(2))
                               } else {
@@ -384,7 +437,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                             inputMode="decimal"
                             step="0.01"
                             placeholder="0,00"
-                            className="w-full text-4xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none bg-transparent tabular-nums tracking-tight caret-emerald-500"
+                            className="w-full bg-transparent text-4xl font-extrabold tabular-nums tracking-tight text-slate-800 caret-emerald-500 placeholder:text-slate-200 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-700"
                             autoFocus
                           />
                         </FormControl>
@@ -393,7 +446,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="lg:hidden h-14 w-14 rounded-2xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 bg-emerald-50/50"
+                          className="h-14 w-14 rounded-2xl bg-emerald-50/50 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 lg:hidden"
                           onClick={handleOpenScanner}
                         >
                           <Camera className="h-7 w-7" />
@@ -407,8 +460,8 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between px-4 h-[72px] rounded-xl border border-border/60 bg-muted/20 space-y-0 sm:mb-0">
-                      <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight cursor-pointer">
+                    <FormItem className="flex h-[72px] flex-row items-center justify-between space-y-0 rounded-xl border border-border/60 bg-muted/20 px-4 sm:mb-0">
+                      <FormLabel className="cursor-pointer text-sm font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400">
                         {field.value ? '✓ Já Recebi' : 'A Receber'}
                       </FormLabel>
                       <FormControl>
@@ -420,7 +473,10 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                             if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                               e.preventDefault()
                               field.onChange(false)
-                            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                            } else if (
+                              e.key === 'ArrowRight' ||
+                              e.key === 'ArrowDown'
+                            ) {
                               e.preventDefault()
                               field.onChange(true)
                             }
@@ -432,8 +488,8 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-xl border border-dashed border-emerald-200/50 dark:border-emerald-900/30 relative mt-2">
-                <span className="absolute -top-3.5 left-4 bg-background px-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-100 rounded-full">
+              <div className="relative mt-2 grid grid-cols-1 gap-4 rounded-xl border border-dashed border-emerald-200/50 bg-emerald-50/30 p-5 dark:border-emerald-900/30 dark:bg-emerald-900/10 sm:grid-cols-2 lg:grid-cols-4">
+                <span className="absolute -top-3.5 left-4 rounded-full border border-emerald-100 bg-background px-2 text-[11px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                   Condição de Pagamento
                 </span>
 
@@ -442,23 +498,28 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   name="amount"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                         Valor Total <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400">
+                            R$
+                          </span>
                           <Input
                             {...field}
                             type="number"
                             inputMode="decimal"
                             step="0.01"
                             placeholder="0.00"
-                            className="h-12 pl-9 rounded-xl border-border/70 bg-background text-base font-medium"
+                            className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
                             onChange={(e) => {
                               field.onChange(e)
                               const val = parseFloat(e.target.value) || 0
-                              const count = parseInt(form.getValues('installments_count') || '1') || 1
+                              const count =
+                                parseInt(
+                                  form.getValues('installments_count') || '1',
+                                ) || 1
                               if (!isNaN(val) && !isNaN(count) && count > 0) {
                                 setInstallmentValue((val / count).toFixed(2))
                               } else {
@@ -473,24 +534,35 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 />
 
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Valor / Parcela</FormLabel>
+                  <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                    Valor / Parcela
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400">
+                        R$
+                      </span>
                       <Input
                         type="number"
                         step="0.01"
                         inputMode="decimal"
                         placeholder="0.00"
                         value={installmentValue}
-                        className="h-12 pl-9 rounded-xl border-border/70 bg-background text-base font-medium"
+                        className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
                         onChange={(e) => {
                           const val = e.target.value
                           setInstallmentValue(val)
                           const instVal = parseFloat(val) || 0
-                          const count = parseInt(form.getValues('installments_count') || '1') || 1
+                          const count =
+                            parseInt(
+                              form.getValues('installments_count') || '1',
+                            ) || 1
                           if (!isNaN(instVal) && !isNaN(count) && count > 0) {
-                            form.setValue('amount', (instVal * count).toFixed(2), { shouldValidate: true })
+                            form.setValue(
+                              'amount',
+                              (instVal * count).toFixed(2),
+                              { shouldValidate: true },
+                            )
                           }
                         }}
                       />
@@ -503,18 +575,21 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   name="installments_count"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Repetições</FormLabel>
+                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                        Repetições
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           type="number"
                           inputMode="numeric"
                           placeholder="12"
-                          className="h-12 rounded-xl border-border/70 bg-background text-base font-medium text-center"
+                          className="h-12 rounded-xl border-border/70 bg-background text-center text-base font-medium"
                           onChange={(e) => {
                             field.onChange(e)
                             const count = parseInt(e.target.value) || 1
-                            const total = parseFloat(form.getValues('amount') || '0') || 0
+                            const total =
+                              parseFloat(form.getValues('amount') || '0') || 0
                             if (!isNaN(total) && !isNaN(count) && count > 0) {
                               setInstallmentValue((total / count).toFixed(2))
                             }
@@ -530,10 +605,15 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   name="interval_frequency"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Frequência</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                        Frequência
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background font-medium text-base">
+                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -554,67 +634,88 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               name="description"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                  <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                     <span>Descrição / Observação</span>
-                    <span className="text-red-500 font-bold ml-1">*</span>
+                    <span className="ml-1 font-bold text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       placeholder="Ex: Venda de serviço, Consultoria..."
-                      className="h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500"
+                      className="h-14 rounded-2xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/30 md:h-12 md:rounded-xl"
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            <div className="border-t border-border/40 -mx-1" />
+            <div className="-mx-1 border-t border-border/40" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="data_emissao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                       <span>Emissão</span>
-                      <span className="text-red-500 font-bold ml-1">*</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
-                    <Popover modal={true} open={isEmissaoPopoverOpen} onOpenChange={setIsEmissaoPopoverOpen}>
+                    <Popover
+                      modal={true}
+                      open={isEmissaoPopoverOpen}
+                      onOpenChange={setIsEmissaoPopoverOpen}
+                    >
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             type="button"
                             className={cn(
-                              "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
-                              !field.value && "text-muted-foreground"
+                              'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
+                              !field.value && 'text-muted-foreground',
                             )}
                             onKeyDown={(e) => {
                               if (e.key === 'ArrowUp') {
                                 e.preventDefault()
-                                const d = field.value ? new Date(field.value) : new Date()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
                                 d.setDate(d.getDate() - 1)
                                 field.onChange(d)
                               } else if (e.key === 'ArrowDown') {
                                 e.preventDefault()
-                                const d = field.value ? new Date(field.value) : new Date()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
                                 d.setDate(d.getDate() + 1)
                                 field.onChange(d)
                               }
                             }}
                           >
-                            <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
-                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                            <CalendarIcon className="mr-2 h-5 w-5 flex-shrink-0 text-slate-400" />
+                            {field.value ? (
+                              format(field.value, 'dd/MM/yyyy')
+                            ) : (
+                              <span>Selecione</span>
+                            )}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
+                      <PopoverContent
+                        className="z-[9999] w-auto p-0"
+                        align="start"
+                        style={{ pointerEvents: 'auto' }}
+                      >
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) => { if (date) { field.onChange(date); setIsEmissaoPopoverOpen(false) } }}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date)
+                              setIsEmissaoPopoverOpen(false)
+                            }
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -628,44 +729,65 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 name="data_vencimento"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                       <span>Vencimento</span>
-                      <span className="text-red-500 font-bold ml-1">*</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
-                    <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <Popover
+                      modal={true}
+                      open={isPopoverOpen}
+                      onOpenChange={setIsPopoverOpen}
+                    >
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             type="button"
                             className={cn(
-                              "w-full justify-start text-left font-medium h-14 md:h-12 rounded-2xl md:rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-base",
-                              !field.value && "text-muted-foreground"
+                              'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
+                              !field.value && 'text-muted-foreground',
                             )}
                             onKeyDown={(e) => {
                               if (e.key === 'ArrowUp') {
                                 e.preventDefault()
-                                const d = field.value ? new Date(field.value) : new Date()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
                                 d.setDate(d.getDate() - 1)
                                 field.onChange(d)
                               } else if (e.key === 'ArrowDown') {
                                 e.preventDefault()
-                                const d = field.value ? new Date(field.value) : new Date()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
                                 d.setDate(d.getDate() + 1)
                                 field.onChange(d)
                               }
                             }}
                           >
-                            <CalendarIcon className="mr-2 h-5 w-5 text-slate-400 flex-shrink-0" />
-                            {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
+                            <CalendarIcon className="mr-2 h-5 w-5 flex-shrink-0 text-slate-400" />
+                            {field.value ? (
+                              format(field.value, 'dd/MM/yyyy')
+                            ) : (
+                              <span>Selecione</span>
+                            )}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
+                      <PopoverContent
+                        className="z-[9999] w-auto p-0"
+                        align="start"
+                        style={{ pointerEvents: 'auto' }}
+                      >
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) => { if (date) { field.onChange(date); setIsPopoverOpen(false) } }}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date)
+                              setIsPopoverOpen(false)
+                            }
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -675,17 +797,17 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               />
             </div>
 
-            <div className="border-t border-border/40 -mx-1" />
+            <div className="-mx-1 border-t border-border/40" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="sector"
                 render={({ field: { onChange, value, disabled } }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                       <span>Categoria</span>
-                      <span className="text-red-500 font-bold ml-1">*</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
                     <QuickAddSelect
                       value={value || ''}
@@ -712,9 +834,9 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                 name="account"
                 render={({ field: { onChange, value, disabled } }) => (
                   <FormItem className="space-y-1.5">
-                    <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                    <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
                       <span>Conta</span>
-                      <span className="text-red-500 font-bold ml-1">*</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
                     <QuickAddSelect
                       value={value || ''}
@@ -726,7 +848,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                       options={accounts?.accounts?.map((account) => ({
                         label: account.name,
                         value: account.id,
-                        balance: account.balance
+                        balance: account.balance,
                       }))}
                       quickAddLabel="Nova Conta"
                       onQuickAddClick={() => setCreateAccountOpen(true)}
@@ -736,22 +858,22 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               />
             </div>
 
-
-            
             {/* ─── FILE UPLOAD (Anexo) ─── */}
             {activeTab === 'single' && (
               <div className="mt-2">
-                <FormLabel className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest block mb-2">Comprovante</FormLabel>
+                <FormLabel className="mb-2 block text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                  Comprovante
+                </FormLabel>
                 <FileUpload onFileSelect={setReceiptFile} />
               </div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
+            <div className="mt-2 flex flex-col-reverse gap-3 border-t border-border/40 pt-4 sm:flex-row sm:justify-end">
               <ResponsiveDialogClose asChild>
                 <Button
                   variant="outline"
                   type="button"
-                  className="w-full sm:w-auto h-11 rounded-xl text-sm font-semibold border-border/70 text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                  className="h-11 w-full rounded-xl border-border/70 text-sm font-semibold text-slate-600 hover:bg-muted/50 hover:text-foreground dark:text-slate-400 sm:w-auto"
                 >
                   Cancelar
                 </Button>
@@ -759,15 +881,17 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
               <Button
                 type="submit"
                 disabled={isPending || isUploading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto h-11 rounded-xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.01] hover:bg-emerald-700 active:scale-[0.99] sm:w-auto"
               >
-                {isPending || isUploading ? 'Processando...' : (
-                  activeTab === 'installment' ? (
-                    <>
-                      <ListChecks className="w-4 h-4 mr-2" />
-                      Conferir Recorrência
-                    </>
-                  ) : 'Confirmar Receita'
+                {isPending || isUploading ? (
+                  'Processando...'
+                ) : activeTab === 'installment' ? (
+                  <>
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    Conferir Recorrência
+                  </>
+                ) : (
+                  'Confirmar Receita'
                 )}
               </Button>
             </div>
@@ -788,7 +912,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         <CreateSectorDialog
           open={createSectorOpen}
           onOpenChange={setCreateSectorOpen}
-          defaultType='in'
+          defaultType="in"
           onSuccess={(newSector) => {
             form.setValue('sector', newSector.id)
           }}
@@ -802,7 +926,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         />
 
         {scannerOpen && (
-          <CameraScanner 
+          <CameraScanner
             open={scannerOpen}
             onOpenChange={setScannerOpen}
             onScanSuccess={handleScanSuccess}

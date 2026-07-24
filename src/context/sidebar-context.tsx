@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
 
 interface SidebarContextType {
   isCollapsed: boolean
@@ -15,14 +21,19 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    localStorage.setItem('@metrics:sidebar-collapsed', JSON.stringify(isCollapsed))
+    localStorage.setItem(
+      '@metrics:sidebar-collapsed',
+      JSON.stringify(isCollapsed),
+    )
   }, [isCollapsed])
 
   const toggleSidebar = () => setIsCollapsed((prev: boolean) => !prev)
   const setCollapsed = (value: boolean) => setIsCollapsed(value)
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, toggleSidebar, setCollapsed }}>
+    <SidebarContext.Provider
+      value={{ isCollapsed, toggleSidebar, setCollapsed }}
+    >
       {children}
     </SidebarContext.Provider>
   )

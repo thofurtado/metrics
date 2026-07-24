@@ -61,12 +61,12 @@ export function TreatmentClientEquipment({
       brand: '',
       identification: '',
       details: '',
-    }
+    },
   })
 
   async function onSubmit(data: FormSchemaType) {
-    if (!clientId) return;
-    
+    if (!clientId) return
+
     const response = await equipment({
       client_id: clientId,
       identification: data.identification,
@@ -78,8 +78,8 @@ export function TreatmentClientEquipment({
       toast.success('Equipamento cadastrado', {
         position: 'top-center',
       })
-      form.reset();
-      clientRefetch();
+      form.reset()
+      clientRefetch()
     }
   }
 

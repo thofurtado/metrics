@@ -30,13 +30,20 @@ interface GetAccountHistoryQuery {
   limit?: number
 }
 
-export async function getAccountHistory({ accountId, page = 1, limit = 20 }: GetAccountHistoryQuery) {
-  const response = await api.get<GetAccountHistoryResponse>(`/account/${accountId}/history`, {
-    params: {
-      page,
-      limit,
+export async function getAccountHistory({
+  accountId,
+  page = 1,
+  limit = 20,
+}: GetAccountHistoryQuery) {
+  const response = await api.get<GetAccountHistoryResponse>(
+    `/account/${accountId}/history`,
+    {
+      params: {
+        page,
+        limit,
+      },
     },
-  })
+  )
 
   return response.data
 }

@@ -1,18 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus,
+  AlertTriangle,
+  Box,
+  CreditCard,
   Minus,
-  Trash2,
+  Package,
+  Plus,
   Search,
   ShoppingCart,
-  CreditCard,
-  Box,
+  Trash2,
   Wrench,
-  AlertTriangle,
-  Package,
 } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -23,25 +23,52 @@ import { getProducts } from '@/api/get-products'
 import { getServices } from '@/api/get-services'
 import { getTreatmentDetails } from '@/api/get-treatment-details'
 import { updateTreatmentItem } from '@/api/update-treatment-item'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { EmptyState } from '@/components/empty-state'
 import { ErrorBoundary } from '@/components/error-boundary'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { ProductItemDialog } from '../items/product-item-dialog'
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { TreatmentPaymentModal } from './treatment-payment-modal'
-
 import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 import { useModules } from '@/context/module-context'
-import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
+import { ProductItemDialog } from '../items/product-item-dialog'
+import { TreatmentPaymentModal } from './treatment-payment-modal'
 
 interface TreatmentDetails {
   id: string
@@ -94,7 +121,9 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   const [isContractMode, setIsContractMode] = useState(false)
 
   const [isCreateItemOpen, setIsCreateItemOpen] = useState(false)
-  const [createItemType, setCreateItemType] = useState<'PRODUCT' | 'SERVICE'>('PRODUCT')
+  const [createItemType, setCreateItemType] = useState<'PRODUCT' | 'SERVICE'>(
+    'PRODUCT',
+  )
 
   function handleOpenCreateItem(type: 'PRODUCT' | 'SERVICE') {
     setCreateItemType(type)
@@ -119,7 +148,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       quantity: '1',
       discount: '0',
       observations: '',
-    }
+    },
   })
 
   useEffect(() => {
@@ -176,29 +205,46 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       try {
         const promises = []
         if (isStockActive) {
-          promises.push(getProducts({ query: debouncedSearchTerm, active: true, perPage: 100 }))
+          promises.push(
+            getProducts({
+              query: debouncedSearchTerm,
+              active: true,
+              perPage: 100,
+            }),
+          )
         } else {
           promises.push(Promise.resolve({ data: { products: [] } }))
         }
 
         // Services always fetched (core)
-        promises.push(getServices({ query: debouncedSearchTerm, active: true, perPage: 100 }))
+        promises.push(
+          getServices({
+            query: debouncedSearchTerm,
+            active: true,
+            perPage: 100,
+          }),
+        )
 
         const [productsRes, servicesRes] = await Promise.all(promises)
 
-        const products = productsRes.data?.products?.map(p => ({
-          ...p,
-          type: 'PRODUCT',
-          isItem: true,
-          hasStock: !p.is_composite || (p.compositions?.every(c => (c.supply.stock >= c.quantity)) ?? true)
-        })) || []
+        const products =
+          productsRes.data?.products?.map((p) => ({
+            ...p,
+            type: 'PRODUCT',
+            isItem: true,
+            hasStock:
+              !p.is_composite ||
+              (p.compositions?.every((c) => c.supply.stock >= c.quantity) ??
+                true),
+          })) || []
 
-        const services = servicesRes.data?.services?.map(s => ({
-          ...s,
-          type: 'SERVICE',
-          isItem: false,
-          hasStock: true
-        })) || []
+        const services =
+          servicesRes.data?.services?.map((s) => ({
+            ...s,
+            type: 'SERVICE',
+            isItem: false,
+            hasStock: true,
+          })) || []
 
         return [...products, ...services]
       } catch (error) {
@@ -219,22 +265,30 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     mutationFn: deleteTreatmentItem,
   })
 
-  const filteredItems = items?.filter((item: any) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || []
+  const filteredItems =
+    items?.filter((item: any) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || []
 
   let subtotal = 0
   if (treatment) {
-    subtotal = (treatment.items || []).reduce((accumulator: number, item: any) => {
-      const quantity = item.quantity || 0
-      const value = item.salesValue || 0
-      const discount = item.discount || 0
-      const currentSubtotal = (quantity * value) - discount
-      return accumulator + currentSubtotal
-    }, 0)
+    subtotal = (treatment.items || []).reduce(
+      (accumulator: number, item: any) => {
+        const quantity = item.quantity || 0
+        const value = item.salesValue || 0
+        const discount = item.discount || 0
+        const currentSubtotal = quantity * value - discount
+        return accumulator + currentSubtotal
+      },
+      0,
+    )
   }
 
-  function calculateFinalValue(baseValue: number, quantity: number, discount: number) {
+  function calculateFinalValue(
+    baseValue: number,
+    quantity: number,
+    discount: number,
+  ) {
     const totalBeforeDiscount = baseValue * quantity
     const discountAmount = totalBeforeDiscount * (discount / 100)
     const finalPrice = totalBeforeDiscount - discountAmount
@@ -262,10 +316,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       }
 
       if (editingItemId) {
-        // Since backend doesn't have a PATCH route for treatment items, 
+        // Since backend doesn't have a PATCH route for treatment items,
         // we simulate the edit by deleting the old item and creating a new one.
         await DeleteTreatmentItem({ treatmentItemId: editingItemId })
-        
+
         const response = await treatmentItem({
           treatmentId,
           itemId: data.item,
@@ -275,29 +329,32 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           observations: data.observations || undefined,
         })
         const updatedItem = response.data.treatmentItem || response.data
-        
+
         if (updatedItem && updatedItem.id) {
-          queryClient.setQueryData(['treatment', treatmentId], (oldData: TreatmentDetails | undefined) => {
-            if (!oldData) return oldData
-            return {
-              ...oldData,
-              items: (oldData.items || []).map(i => {
-                if (i.id === editingItemId) {
-                  return {
-                    ...i,
-                    id: updatedItem.id, // Update to the new treatment item ID
-                    quantity,
-                    salesValue: unitSalesValue,
-                    discount: discountValue,
-                    observations: data.observations || ''
+          queryClient.setQueryData(
+            ['treatment', treatmentId],
+            (oldData: TreatmentDetails | undefined) => {
+              if (!oldData) return oldData
+              return {
+                ...oldData,
+                items: (oldData.items || []).map((i) => {
+                  if (i.id === editingItemId) {
+                    return {
+                      ...i,
+                      id: updatedItem.id, // Update to the new treatment item ID
+                      quantity,
+                      salesValue: unitSalesValue,
+                      discount: discountValue,
+                      observations: data.observations || '',
+                    }
                   }
-                }
-                return i
-              })
-            }
-          })
+                  return i
+                }),
+              }
+            },
+          )
         }
-        
+
         await itemRefetch()
         toast.success('Item atualizado com sucesso')
       } else {
@@ -316,7 +373,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         if (selectedItemDetails && createdItem && createdItem.id) {
           const newItem = {
             id: createdItem.id,
-            quantity: quantity,
+            quantity,
             salesValue: unitSalesValue,
             discount: discountValue,
             observations: data.observations || '',
@@ -324,17 +381,20 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             items: {
               name: selectedItemDetails.name,
               id: selectedItemDetails.id,
-              isItem: selectedItemDetails.isItem
-            }
+              isItem: selectedItemDetails.isItem,
+            },
           }
 
-          queryClient.setQueryData(['treatment', treatmentId], (oldData: TreatmentDetails | undefined) => {
-            if (!oldData) return oldData
-            return {
-              ...oldData,
-              items: [...(oldData.items || []), newItem]
-            }
-          })
+          queryClient.setQueryData(
+            ['treatment', treatmentId],
+            (oldData: TreatmentDetails | undefined) => {
+              if (!oldData) return oldData
+              return {
+                ...oldData,
+                items: [...(oldData.items || []), newItem],
+              }
+            },
+          )
         }
 
         await itemRefetch()
@@ -387,11 +447,17 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
   function onCartItemSelect(cartItem: any) {
     setEditingItemId(cartItem.id)
-    
+
     // Make sure 'item' is set to something so the form is valid and button is enabled
-    const productId = cartItem.product_id || cartItem.service_id || cartItem.supply_id || cartItem.item_id || cartItem.itemId || cartItem.id
+    const productId =
+      cartItem.product_id ||
+      cartItem.service_id ||
+      cartItem.supply_id ||
+      cartItem.item_id ||
+      cartItem.itemId ||
+      cartItem.id
     form.setValue('item', productId)
-    
+
     // Fallback if salesValue doesn't exist on the cart item
     const newSalesValue = cartItem.salesValue || 0
     setSalesValue(newSalesValue)
@@ -433,7 +499,11 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     const newQuantity = parseFloat(newQuantityString || '') || 0
     if (newQuantity > 0) {
       setItemQuantity(newQuantity)
-      const finalPrice = calculateFinalValue(salesValue, newQuantity, itemDiscount)
+      const finalPrice = calculateFinalValue(
+        salesValue,
+        newQuantity,
+        itemDiscount,
+      )
       setFinalSalesValue(finalPrice)
     }
   }
@@ -443,8 +513,14 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     const newDiscount = parseFloat(newDiscountString || '') || 0
     const clampedDiscount = Math.max(0, Math.min(100, newDiscount))
     setItemDiscount(clampedDiscount)
-    form.setValue('discount', newDiscountString ?? '0', { shouldValidate: true })
-    const finalPrice = calculateFinalValue(salesValue, itemQuantity, clampedDiscount)
+    form.setValue('discount', newDiscountString ?? '0', {
+      shouldValidate: true,
+    })
+    const finalPrice = calculateFinalValue(
+      salesValue,
+      itemQuantity,
+      clampedDiscount,
+    )
     setFinalSalesValue(finalPrice)
   }
 
@@ -473,7 +549,11 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     const newQuantity = Math.max(1, itemQuantity + amount)
     setItemQuantity(newQuantity)
     form.setValue('quantity', newQuantity.toString())
-    const finalPrice = calculateFinalValue(salesValue, newQuantity, itemDiscount)
+    const finalPrice = calculateFinalValue(
+      salesValue,
+      newQuantity,
+      itemDiscount,
+    )
     setFinalSalesValue(finalPrice)
   }
 
@@ -488,7 +568,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   return (
     <ErrorBoundary>
       <DialogContent
-        className="max-w-[100vw] h-[100dvh] sm:h-[95vh] p-0 sm:max-w-[95vw] md:max-w-5xl lg:max-w-7xl overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-950"
+        className="flex h-[100dvh] max-w-[100vw] flex-col overflow-hidden bg-slate-50 p-0 dark:bg-slate-950 sm:h-[95vh] sm:max-w-[95vw] md:max-w-5xl lg:max-w-7xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="hidden">
@@ -496,19 +576,23 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         </DialogHeader>
 
         {/* HEADER */}
-        <div className="flex-none p-4 border-b bg-white dark:bg-slate-900 shadow-sm z-20">
+        <div className="z-20 flex-none border-b bg-white p-4 shadow-sm dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <h2 className="text-xl font-bold text-minsk-900 dark:text-minsk-100 flex items-center gap-2">
+              <h2 className="flex items-center gap-2 text-xl font-bold text-minsk-900 dark:text-minsk-100">
                 <Package className="h-6 w-6 text-minsk-600" />
                 PDV do Atendimento
               </h2>
-              <p className="text-sm text-minsk-500 font-medium">Protocolo: # {treatmentId.slice(0, 8)}</p>
+              <p className="text-sm font-medium text-minsk-500">
+                Protocolo: # {treatmentId.slice(0, 8)}
+              </p>
             </div>
             {/* Total Badge visible on Desktop Header */}
             {isFinanceActive && (
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Total</span>
+              <div className="hidden flex-col items-end md:flex">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Total
+                </span>
                 <span className="text-2xl font-bold text-vida-loca-600">
                   R$ {subtotal.toFixed(2)}
                 </span>
@@ -518,14 +602,14 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         </div>
 
         {/* MOBILE TABS */}
-        <div className="flex md:hidden border-b bg-white dark:bg-slate-900 sticky top-0 z-10">
+        <div className="sticky top-0 z-10 flex border-b bg-white dark:bg-slate-900 md:hidden">
           <button
             onClick={() => setActiveTab('products')}
             className={cn(
-              "flex-1 py-3 text-sm font-semibold border-b-2 transition-all duration-200",
+              'flex-1 border-b-2 py-3 text-sm font-semibold transition-all duration-200',
               activeTab === 'products'
-                ? "border-minsk-500 text-minsk-600 bg-minsk-50/50"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? 'border-minsk-500 bg-minsk-50/50 text-minsk-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700',
             )}
           >
             Produtos & Serviços
@@ -533,10 +617,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           <button
             onClick={() => setActiveTab('cart')}
             className={cn(
-              "flex-1 py-3 text-sm font-semibold border-b-2 transition-all duration-200",
+              'flex-1 border-b-2 py-3 text-sm font-semibold transition-all duration-200',
               activeTab === 'cart'
-                ? "border-vida-loca-500 text-vida-loca-600 bg-vida-loca-50/50"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? 'border-vida-loca-500 bg-vida-loca-50/50 text-vida-loca-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700',
             )}
           >
             Carrinho ({treatment.items?.length || 0})
@@ -544,15 +628,16 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         </div>
 
         {/* MAIN CONTENT AREA */}
-        <div className="flex-1 overflow-hidden flex flex-col md:flex-row bg-slate-50/50">
-
+        <div className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 md:flex-row">
           {/* LEFT COLUMN: PRODUCTS & SERVICES */}
-          <div className={cn(
-            "flex-col w-full h-full md:w-[60%] lg:w-[65%] xl:w-[70%] bg-slate-50 dark:bg-slate-950 overflow-hidden",
-            activeTab === 'products' ? "flex" : "hidden md:flex"
-          )}>
+          <div
+            className={cn(
+              'h-full w-full flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 md:w-[60%] lg:w-[65%] xl:w-[70%]',
+              activeTab === 'products' ? 'flex' : 'hidden md:flex',
+            )}
+          >
             {/* Search Bar & Add Button */}
-            <div className="p-4 bg-white dark:bg-slate-900 border-b flex-none sticky top-0 z-10 flex gap-3 items-center">
+            <div className="sticky top-0 z-10 flex flex-none items-center gap-3 border-b bg-white p-4 dark:bg-slate-900">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <Input
@@ -560,34 +645,51 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                   placeholder="Buscar produtos ou serviços..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 text-base shadow-sm border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl w-full"
+                  className="h-12 w-full rounded-xl border-slate-200 bg-slate-50 pl-10 text-base shadow-sm transition-all focus:bg-white"
                 />
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-12 border-minsk-200 text-minsk-700 bg-minsk-50/50 hover:bg-minsk-50 rounded-xl px-4 flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    className="flex h-12 flex-shrink-0 items-center gap-2 rounded-xl border-minsk-200 bg-minsk-50/50 px-4 text-minsk-700 hover:bg-minsk-50"
+                  >
                     <Plus className="h-5 w-5" />
-                    <span className="hidden sm:inline font-semibold">Novo Item</span>
+                    <span className="hidden font-semibold sm:inline">
+                      Novo Item
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 z-[10100]">
-                  <DropdownMenuItem onClick={() => handleOpenCreateItem('PRODUCT')} className="cursor-pointer">
+                <DropdownMenuContent align="end" className="z-[10100] w-48">
+                  <DropdownMenuItem
+                    onClick={() => handleOpenCreateItem('PRODUCT')}
+                    className="cursor-pointer"
+                  >
                     Novo Produto
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleOpenCreateItem('SERVICE')} className="cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => handleOpenCreateItem('SERVICE')}
+                    className="cursor-pointer"
+                  >
                     Novo Serviço
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
-                <ProductItemDialog initialType={createItemType} onSuccess={handleCreateItemSuccess} />
+              <Dialog
+                open={isCreateItemOpen}
+                onOpenChange={setIsCreateItemOpen}
+              >
+                <ProductItemDialog
+                  initialType={createItemType}
+                  onSuccess={handleCreateItemSuccess}
+                />
               </Dialog>
             </div>
 
             {/* Grid */}
             <ScrollArea className="flex-1 p-2 sm:p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-24 md:pb-0">
+              <div className="grid grid-cols-2 gap-3 pb-24 sm:grid-cols-3 md:pb-0 lg:grid-cols-3 xl:grid-cols-4">
                 {isItemsLoading ? (
                   Array.from({ length: 12 }).map((_, i) => (
                     <Skeleton key={i} className="h-32 w-full rounded-xl" />
@@ -595,40 +697,61 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                 ) : (
                   <>
                     {filteredItems.map((item: any) => {
-                      const hasStock = item.hasStock !== false;
-                      const isSelected = form.watch('item') === item.id;
+                      const hasStock = item.hasStock !== false
+                      const isSelected = form.watch('item') === item.id
 
                       return (
                         <Card
                           key={item.id}
                           onClick={() => onItemSelect(item)}
                           className={cn(
-                            "cursor-pointer transition-all border-slate-200 shadow-sm hover:shadow-md hover:border-minsk-300 relative group overflow-hidden rounded-xl",
-                            isSelected && "ring-2 ring-minsk-500 border-minsk-500 bg-minsk-50/10",
-                            !hasStock && "opacity-70 grayscale-[0.5] bg-slate-100"
+                            'group relative cursor-pointer overflow-hidden rounded-xl border-slate-200 shadow-sm transition-all hover:border-minsk-300 hover:shadow-md',
+                            isSelected &&
+                              'border-minsk-500 bg-minsk-50/10 ring-2 ring-minsk-500',
+                            !hasStock &&
+                              'bg-slate-100 opacity-70 grayscale-[0.5]',
                           )}
                         >
-                          <CardContent className="p-3 flex flex-col h-full justify-between gap-2">
+                          <CardContent className="flex h-full flex-col justify-between gap-2 p-3">
                             <div>
-                              <div className="flex items-start justify-between gap-1 mb-1">
-                                <Badge variant="outline" className={cn(
-                                  "text-[10px] px-1.5 py-0 h-5 font-bold border-0",
-                                  item.isItem ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                                )}>
-                                  {item.isItem ? (isStockActive ? 'PROD' : 'ITEM') : 'SERV'}
+                              <div className="mb-1 flex items-start justify-between gap-1">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'h-5 border-0 px-1.5 py-0 text-[10px] font-bold',
+                                    item.isItem
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : 'bg-amber-100 text-amber-700',
+                                  )}
+                                >
+                                  {item.isItem
+                                    ? isStockActive
+                                      ? 'PROD'
+                                      : 'ITEM'
+                                    : 'SERV'}
                                 </Badge>
                                 {!hasStock && isStockActive && (
-                                  <Badge variant="destructive" className="text-[10px] px-1 h-5">Sem Estoque</Badge>
+                                  <Badge
+                                    variant="destructive"
+                                    className="h-5 px-1 text-[10px]"
+                                  >
+                                    Sem Estoque
+                                  </Badge>
                                 )}
                               </div>
-                              <h3 className="text-sm font-semibold leading-tight text-slate-800 dark:text-slate-100 line-clamp-2" title={item.name}>
+                              <h3
+                                className="line-clamp-2 text-sm font-semibold leading-tight text-slate-800 dark:text-slate-100"
+                                title={item.name}
+                              >
                                 {item.name}
                               </h3>
                             </div>
 
                             {isFinanceActive && (
-                              <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <p className="text-xs text-slate-400 font-medium">Valor Unit.</p>
+                              <div className="mt-auto border-t border-slate-100 pt-2 dark:border-slate-800">
+                                <p className="text-xs font-medium text-slate-400">
+                                  Valor Unit.
+                                </p>
                                 <p className="text-base font-bold text-slate-900 dark:text-white">
                                   R$ {item.price.toFixed(2)}
                                 </p>
@@ -639,8 +762,8 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       )
                     })}
                     {filteredItems.length === 0 && (
-                      <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400">
-                        <Search className="h-12 w-12 mb-3 opacity-20" />
+                      <div className="col-span-full flex flex-col items-center justify-center py-10 text-slate-400">
+                        <Search className="mb-3 h-12 w-12 opacity-20" />
                         <p>Nenhum item encontrado.</p>
                       </div>
                     )}
@@ -650,18 +773,21 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             </ScrollArea>
 
             {/* Add Item Form Area (Fixed at bottom on desktop, scrollable on mobile) */}
-            <div className="flex-none border-t bg-white dark:bg-slate-900 p-4 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)] z-20">
+            <div className="z-20 flex-none border-t bg-white p-4 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)] dark:bg-slate-900">
               <Form {...form}>
-                <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-4xl mx-auto">
-
+                <form
+                  ref={formRef}
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="mx-auto max-w-4xl space-y-4"
+                >
                   {/* Selected Item Display */}
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <Box className="h-5 w-5 text-slate-400 shrink-0" />
-                    <span className="text-sm font-medium text-slate-700 truncate flex-1">
-                      {editingItemId 
-                        ? `Editando o item: ${treatment?.items?.find(i => i.id === editingItemId)?.items?.name || ''}`
-                        : (items?.find((i: any) => i.id === form.watch('item'))?.name || 'Selecione um item acima')
-                      }
+                  <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <Box className="h-5 w-5 shrink-0 text-slate-400" />
+                    <span className="flex-1 truncate text-sm font-medium text-slate-700">
+                      {editingItemId
+                        ? `Editando o item: ${treatment?.items?.find((i) => i.id === editingItemId)?.items?.name || ''}`
+                        : items?.find((i: any) => i.id === form.watch('item'))
+                            ?.name || 'Selecione um item acima'}
                     </span>
                   </div>
 
@@ -670,11 +796,13 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     name="observations"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold text-slate-500 uppercase">Observações (Opcional)</FormLabel>
+                        <FormLabel className="text-xs font-bold uppercase text-slate-500">
+                          Observações (Opcional)
+                        </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Ex: Posição do cabo, destino da mercadoria..."
-                            className="bg-white border-slate-200 shadow-sm rounded-xl focus-visible:ring-minsk-500"
+                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-minsk-500"
                             {...field}
                             value={field.value || ''}
                           />
@@ -683,27 +811,40 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                     )}
                   />
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                  <div className="grid grid-cols-2 items-end gap-4 md:grid-cols-4">
                     {/* QTD */}
                     <FormField
                       control={form.control}
                       name="quantity"
                       render={({ field }) => (
                         <FormItem className="col-span-1">
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Qtd.</FormLabel>
-                          <div className="flex items-center h-12 border rounded-xl overflow-hidden bg-white focus-within:ring-2 ring-minsk-500/20 active:scale-[0.99] transition-all">
-                            <button type="button" onClick={() => adjustQuantity(-1)} className="h-full px-3 hover:bg-slate-50 text-slate-500">
+                          <FormLabel className="text-xs font-bold uppercase text-slate-500">
+                            Qtd.
+                          </FormLabel>
+                          <div className="flex h-12 items-center overflow-hidden rounded-xl border bg-white ring-minsk-500/20 transition-all focus-within:ring-2 active:scale-[0.99]">
+                            <button
+                              type="button"
+                              onClick={() => adjustQuantity(-1)}
+                              className="h-full px-3 text-slate-500 hover:bg-slate-50"
+                            >
                               <Minus className="h-4 w-4" />
                             </button>
                             <Input
                               id="quantity-input"
                               {...field}
                               type="number"
-                              className="h-full border-none shadow-none text-center font-bold text-lg p-0 focus-visible:ring-0"
-                              onChange={(e) => { field.onChange(e); onQuantityChange(e.target.value); }}
+                              className="h-full border-none p-0 text-center text-lg font-bold shadow-none focus-visible:ring-0"
+                              onChange={(e) => {
+                                field.onChange(e)
+                                onQuantityChange(e.target.value)
+                              }}
                               value={field.value ?? 1}
                             />
-                            <button type="button" onClick={() => adjustQuantity(1)} className="h-full px-3 hover:bg-slate-50 text-slate-500">
+                            <button
+                              type="button"
+                              onClick={() => adjustQuantity(1)}
+                              className="h-full px-3 text-slate-500 hover:bg-slate-50"
+                            >
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
@@ -718,13 +859,18 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                         name="discount"
                         render={({ field }) => (
                           <FormItem className="col-span-1">
-                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">Desc. (%)</FormLabel>
+                            <FormLabel className="text-xs font-bold uppercase text-slate-500">
+                              Desc. (%)
+                            </FormLabel>
                             <FormControl>
                               <Input
-                                className="h-12 border-slate-200 rounded-xl text-center font-bold text-red-500 text-lg shadow-sm"
+                                className="h-12 rounded-xl border-slate-200 text-center text-lg font-bold text-red-500 shadow-sm"
                                 type="number"
                                 {...field}
-                                onChange={(e) => { field.onChange(e); onDiscountChange(e.target.value); }}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  onDiscountChange(e.target.value)
+                                }}
                                 value={discountInputDisplay}
                                 onFocus={() => handleDiscountFocus(field.value)}
                                 onBlur={() => handleDiscountBlur(field.value)}
@@ -737,33 +883,46 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
                     {/* Contract Toggle */}
                     {isContractMode && isFinanceActive && (
-                      <div className="col-span-2 md:col-span-1 flex items-center justify-center h-12 bg-blue-50 rounded-xl border border-blue-100 px-2 lg:px-4">
+                      <div className="col-span-2 flex h-12 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-2 md:col-span-1 lg:px-4">
                         <div className="flex items-center gap-2">
-                          <Switch id="contract-mode" checked={isContractMode} onCheckedChange={setIsContractMode} className="data-[state=checked]:bg-blue-600" />
-                          <Label htmlFor="contract-mode" className="text-xs font-bold text-blue-700 cursor-pointer whitespace-nowrap">CONTRATO</Label>
+                          <Switch
+                            id="contract-mode"
+                            checked={isContractMode}
+                            onCheckedChange={setIsContractMode}
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                          <Label
+                            htmlFor="contract-mode"
+                            className="cursor-pointer whitespace-nowrap text-xs font-bold text-blue-700"
+                          >
+                            CONTRATO
+                          </Label>
                         </div>
                       </div>
                     )}
 
                     {/* Add/Save Button */}
-                    <div className="col-span-2 md:col-span-1 flex gap-2">
+                    <div className="col-span-2 flex gap-2 md:col-span-1">
                       <Button
                         type="submit"
                         disabled={!form.watch('item')}
                         className={cn(
-                          "h-12 w-full text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all text-base",
-                          editingItemId 
-                            ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" 
-                            : "bg-minsk-600 hover:bg-minsk-700 shadow-minsk-200"
+                          'h-12 w-full rounded-xl text-base font-bold text-white shadow-lg transition-all active:scale-95',
+                          editingItemId
+                            ? 'bg-amber-500 shadow-amber-200 hover:bg-amber-600'
+                            : 'bg-minsk-600 shadow-minsk-200 hover:bg-minsk-700',
                         )}
                       >
                         {editingItemId ? (
                           <>SALVAR</>
                         ) : (
-                          <><Plus className="mr-2 h-5 w-5" />ADICIONAR</>
+                          <>
+                            <Plus className="mr-2 h-5 w-5" />
+                            ADICIONAR
+                          </>
                         )}
                       </Button>
-                      
+
                       {editingItemId && (
                         <Button
                           type="button"
@@ -783,7 +942,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                             setDiscountInputDisplay('0')
                             searchInputRef.current?.focus()
                           }}
-                          className="h-12 w-12 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl flex items-center justify-center flex-shrink-0"
+                          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300"
                           title="Cancelar edição"
                         >
                           <Minus className="h-5 w-5" />
@@ -797,111 +956,150 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           </div>
 
           {/* RIGHT COLUMN: CART (STICKY ON DESKTOP) */}
-          <div className={cn(
-            "flex-col w-full h-full md:w-[40%] lg:w-[35%] xl:w-[30%] bg-white dark:bg-slate-900 border-l border-slate-200 shadow-xl z-30",
-            activeTab === 'cart' ? "flex" : "hidden md:flex"
-          )}>
+          <div
+            className={cn(
+              'z-30 h-full w-full flex-col border-l border-slate-200 bg-white shadow-xl dark:bg-slate-900 md:w-[40%] lg:w-[35%] xl:w-[30%]',
+              activeTab === 'cart' ? 'flex' : 'hidden md:flex',
+            )}
+          >
             {/* Header for Cart Desktop */}
-            <div className="hidden md:flex items-center justify-between p-4 border-b bg-slate-50/50">
-              <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
+            <div className="hidden items-center justify-between border-b bg-slate-50/50 p-4 md:flex">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
                 <ShoppingCart className="h-5 w-5 text-vida-loca-600" />
                 Carrinho
               </h3>
-              <Badge variant="secondary" className="bg-white border-slate-200 text-slate-600">
+              <Badge
+                variant="secondary"
+                className="border-slate-200 bg-white text-slate-600"
+              >
                 {treatment.items?.length || 0} itens
               </Badge>
             </div>
 
             {/* Cart List */}
             <ScrollArea className="flex-1 bg-slate-50/30">
-              <div className="p-4 space-y-3">
-              {(treatment.items || []).map((item) => (
-                <div 
-                  key={item.id} 
-                  onClick={() => onCartItemSelect(item)}
-                  className={cn(
-                    "relative group bg-white border rounded-xl p-3 shadow-sm transition-all cursor-pointer",
-                    editingItemId === item.id 
-                      ? "border-amber-400 ring-1 ring-amber-400 bg-amber-50/10" 
-                      : "border-slate-100 hover:shadow-md hover:border-slate-300"
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2 max-w-[85%]">
-                      <div className={cn("p-1.5 rounded-lg", item.items.isItem ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600")}>
-                        {item.items.isItem ? <Box className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+              <div className="space-y-3 p-4">
+                {(treatment.items || []).map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => onCartItemSelect(item)}
+                    className={cn(
+                      'group relative cursor-pointer rounded-xl border bg-white p-3 shadow-sm transition-all',
+                      editingItemId === item.id
+                        ? 'border-amber-400 bg-amber-50/10 ring-1 ring-amber-400'
+                        : 'border-slate-100 hover:border-slate-300 hover:shadow-md',
+                    )}
+                  >
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="flex max-w-[85%] items-center gap-2">
+                        <div
+                          className={cn(
+                            'rounded-lg p-1.5',
+                            item.items.isItem
+                              ? 'bg-blue-50 text-blue-600'
+                              : 'bg-amber-50 text-amber-600',
+                          )}
+                        >
+                          {item.items.isItem ? (
+                            <Box className="h-4 w-4" />
+                          ) : (
+                            <Wrench className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span
+                            className="line-clamp-1 text-sm font-semibold text-slate-800"
+                            title={item.items.name}
+                          >
+                            {item.items.name}
+                          </span>
+                          {item.observations && (
+                            <span
+                              className="mt-0.5 line-clamp-2 text-xs text-slate-500"
+                              title={item.observations}
+                            >
+                              Obs: {item.observations}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm text-slate-800 line-clamp-1" title={item.items.name}>
-                          {item.items.name}
-                        </span>
-                        {item.observations && (
-                          <span className="text-xs text-slate-500 line-clamp-2 mt-0.5" title={item.observations}>
-                            Obs: {item.observations}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 text-slate-300 transition-colors hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover Item?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deseja remover este item do atendimento?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onItemDelete(item.id)}
+                              className="bg-red-500"
+                            >
+                              Remover
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+
+                    <div className="flex items-end justify-between">
+                      <div className="text-xs font-medium text-slate-500">
+                        {item.quantity} x{' '}
+                        {isFinanceActive
+                          ? `R$ ${(item.salesValue || 0).toFixed(2)}`
+                          : 'Item'}
+                        {isFinanceActive && (item.discount || 0) > 0 && (
+                          <span className="block font-semibold text-red-500">
+                            Desc: -R$ {(item.discount || 0).toFixed(2)}
                           </span>
                         )}
                       </div>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button 
-                          onClick={(e) => e.stopPropagation()} 
-                          className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Remover Item?</AlertDialogTitle>
-                          <AlertDialogDescription>Deseja remover este item do atendimento?</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => onItemDelete(item.id)} className="bg-red-500">Remover</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-
-                  <div className="flex items-end justify-between">
-                    <div className="text-xs text-slate-500 font-medium">
-                      {item.quantity} x {isFinanceActive ? `R$ ${(item.salesValue || 0).toFixed(2)}` : 'Item'}
-                      {isFinanceActive && (item.discount || 0) > 0 && (
-                        <span className="block text-red-500 font-semibold">Desc: -R$ {(item.discount || 0).toFixed(2)}</span>
+                      {isFinanceActive && (
+                        <div className="text-right">
+                          <Badge
+                            className={cn(
+                              'pointer-events-none px-2 py-0.5 text-sm font-bold',
+                              item.salesValue === 0
+                                ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                                : 'bg-slate-900 text-white hover:bg-slate-800',
+                            )}
+                          >
+                            {item.salesValue === 0
+                              ? 'GRÁTIS'
+                              : `R$ ${(item.quantity * (item.salesValue || 0) - (item.discount || 0)).toFixed(2)}`}
+                          </Badge>
+                        </div>
                       )}
                     </div>
-                    {isFinanceActive && (
-                      <div className="text-right">
-                        <Badge className={cn(
-                          "text-sm font-bold px-2 py-0.5 pointer-events-none",
-                          item.salesValue === 0 ? "bg-green-100 text-green-700 hover:bg-green-100" : "bg-slate-900 text-white hover:bg-slate-800"
-                        )}>
-                          {item.salesValue === 0
-                            ? 'GRÁTIS'
-                            : `R$ ${((item.quantity * (item.salesValue || 0)) - (item.discount || 0)).toFixed(2)}`
-                          }
-                        </Badge>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
-              {treatment.items?.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10 opacity-60">
-                  <ShoppingCart className="h-12 w-12 mb-2" />
-                  <p className="text-sm">Carrinho vazio</p>
-                </div>
-              )}
+                ))}
+                {treatment.items?.length === 0 && (
+                  <div className="flex h-full flex-col items-center justify-center py-10 text-slate-400 opacity-60">
+                    <ShoppingCart className="mb-2 h-12 w-12" />
+                    <p className="text-sm">Carrinho vazio</p>
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
             {/* Sticky Footer Cart Actions */}
-            <div className="flex-none p-4 bg-white border-t space-y-3 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+            <div className="flex-none space-y-3 border-t bg-white p-4 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
               {isFinanceActive && (
-                <div className="flex justify-between items-end">
-                  <span className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Total a Pagar</span>
-                  <span className="text-3xl font-bold text-vida-loca-600 leading-none">
+                <div className="flex items-end justify-between">
+                  <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Total a Pagar
+                  </span>
+                  <span className="text-3xl font-bold leading-none text-vida-loca-600">
                     R$ {subtotal.toFixed(2)}
                   </span>
                 </div>
@@ -910,14 +1108,13 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
               <Button
                 onClick={() => setShowPayment(true)}
                 disabled={treatment.items.length === 0}
-                className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-xl shadow-lg shadow-emerald-200 active:scale-[0.98] transition-all"
+                className="h-14 w-full rounded-xl bg-emerald-500 text-lg font-bold text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600 active:scale-[0.98]"
               >
                 <CreditCard className="mr-2 h-5 w-5" />
                 {isFinanceActive ? 'FINALIZAR VENDA' : 'CONCLUIR ATENDIMENTO'}
               </Button>
             </div>
           </div>
-
         </div>
 
         {showPayment && (

@@ -1,14 +1,27 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Loader2, Undo2, CheckCircle2, MoreHorizontal, Scissors, Trash, Eye, Pencil, Paperclip } from 'lucide-react'
+import {
+  CheckCircle2,
+  Eye,
+  Loader2,
+  MoreHorizontal,
+  Paperclip,
+  Pencil,
+  Scissors,
+  Trash,
+  Undo2,
+} from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
-import { deleteTransaction } from '@/api/delete-transaction'
-import { updateStatusTransaction } from '@/api/update-transaction-status'
+import {
+  deleteFutureTransactions,
+  deleteTransaction,
+} from '@/api/delete-transaction'
+import { deleteTransactionGroup } from '@/api/delete-transaction-group'
 import { revertTransactionStatus } from '@/api/revert-transaction-status'
 import { updateTransactionChecked } from '@/api/update-transaction-checked'
-import { deleteTransactionGroup } from '@/api/delete-transaction-group'
-import { deleteFutureTransactions } from '@/api/delete-transaction'
+import { updateStatusTransaction } from '@/api/update-transaction-status'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,23 +34,23 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { TableCell, TableRow } from '@/components/ui/table'
-import { TreatmentDetails } from '../treatments/treatment-details'
-import { PaymentModal } from './payment-modal'
-import { toast } from 'sonner'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { TableCell, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { TransactionGroupDetailsDialog } from "./components/transaction-group-details-dialog"
-import { TransactionDetailsModal } from "./components/transaction-details-modal"
-import { CreditCardDetailsDialog } from "./components/credit-card-details-dialog"
+
+import { TreatmentDetails } from '../treatments/treatment-details'
 import { AttachmentModal } from './components/attachment-modal'
+import { CreditCardDetailsDialog } from './components/credit-card-details-dialog'
+import { TransactionDetailsModal } from './components/transaction-details-modal'
+import { TransactionGroupDetailsDialog } from './components/transaction-group-details-dialog'
+import { PaymentModal } from './payment-modal'
 
 // Interface de Transação Original do seu backend/query
 interface Transaction {
@@ -81,7 +94,9 @@ interface TransactionTableRowProps {
   customPrefix?: React.ReactNode
 }
 
-export function TransactionMobileCard({ transactions }: TransactionTableRowProps) {
+export function TransactionMobileCard({
+  transactions,
+}: TransactionTableRowProps) {
   const queryClient = useQueryClient()
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
@@ -138,25 +153,27 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
       if (transactions.transaction_group_id) {
-        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+        queryClient.invalidateQueries({
+          queryKey: ['transaction-group', transactions.transaction_group_id],
+        })
       }
       setOpenRevertAlert(false)
     },
     onError: () => {
       toast.error('Erro ao reverter pagamento.')
     },
-    onSettled: () => setLocalLoading(false)
+    onSettled: () => setLocalLoading(false),
   })
 
   async function handlePayment(payload: {
-    id: string;
-    amount: number;
-    interest?: number;
-    discount?: number;
-    data_vencimento: Date;
-    data_emissao?: Date;
-    remainingDate?: Date;
-    accountId?: string;
+    id: string
+    amount: number
+    interest?: number
+    discount?: number
+    data_vencimento: Date
+    data_emissao?: Date
+    remainingDate?: Date
+    accountId?: string
   }) {
     setLocalLoading(true)
     try {
@@ -166,21 +183,20 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       // 1. CHAMA A API APENAS UMA VEZ
       await switchTransactionStatus({
         id: transactions.id,
-        amount: amount,
+        amount,
         interest: payload.interest,
         discount: payload.discount,
-        data_vencimento: data_vencimento,
-        remainingDate: remainingDate,
-        accountId: accountId
+        data_vencimento,
+        remainingDate,
+        accountId,
       })
 
       toast.success(
         isPartialPayment
           ? 'Pagamento parcial processado com sucesso! Transação remanescente criada.'
-          : 'Pagamento processado com sucesso!'
+          : 'Pagamento processado com sucesso!',
       )
       setOpenPaymentModal(false)
-
     } catch (error) {
       console.error('Erro ao processar pagamento:', error)
       throw error
@@ -191,7 +207,9 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
       if (transactions.transaction_group_id) {
-        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+        queryClient.invalidateQueries({
+          queryKey: ['transaction-group', transactions.transaction_group_id],
+        })
       }
     }
   }
@@ -206,8 +224,8 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
 
   return (
     <>
-      <div 
-        className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all cursor-pointer"
+      <div
+        className="flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all active:scale-[0.98] dark:border-slate-800 dark:bg-slate-950"
         onClick={() => {
           if (transactions.isVirtual) {
             setOpenCreditCardDialog(true)
@@ -217,134 +235,148 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
           }
         }}
       >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className={cn(
-            "h-2 w-2 rounded-full",
-            transactions.confirmed ? "bg-emerald-500" : (transactions.operation === 'income' ? "bg-emerald-500/30" : "bg-rose-500")
-          )} />
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            {dayjs(transactions.data_vencimento).format('DD MMM')}
-          </span>
-          {transactions.attachment_url && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setOpenAttachmentModal(true)
-              }}
-              className="hover:bg-slate-100 p-0.5 rounded-full transition-colors"
-            >
-              <Paperclip className="h-3 w-3 text-slate-400" />
-            </button>
-          )}
-        </div>
-        <div className={cn(
-          "text-base font-black tabular-nums",
-          transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
-        )}>
-          <span className="text-sm font-bold opacity-60 mr-0.5">R$</span>
-          {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-0.5">
-        <span className="font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight flex items-center gap-2">
-          {transactions.description}
-          {transactions.treatment_id && (
-            <span 
-              onClick={(e) => {
-                e.stopPropagation()
-                setOpenTreatmentModal(true)
-              }}
-              className="px-1.5 py-0.5 rounded text-xs uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
-            >
-              O.S.
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                'h-2 w-2 rounded-full',
+                transactions.confirmed
+                  ? 'bg-emerald-500'
+                  : transactions.operation === 'income'
+                    ? 'bg-emerald-500/30'
+                    : 'bg-rose-500',
+              )}
+            />
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              {dayjs(transactions.data_vencimento).format('DD MMM')}
             </span>
-          )}
-        </span>
-        <div className="flex items-center gap-2">
-           <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            {transactions.accounts.name}
-          </span>
-          {transactions.sectors && (
-            <>
-              <span className="h-1 w-1 rounded-full bg-slate-300" />
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                {transactions.sectors.name}
+            {transactions.attachment_url && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenAttachmentModal(true)
+                }}
+                className="rounded-full p-0.5 transition-colors hover:bg-slate-100"
+              >
+                <Paperclip className="h-3 w-3 text-slate-400" />
+              </button>
+            )}
+          </div>
+          <div
+            className={cn(
+              'text-base font-black tabular-nums',
+              transactions.operation === 'income'
+                ? 'text-emerald-600'
+                : 'text-rose-600',
+            )}
+          >
+            <span className="mr-0.5 text-sm font-bold opacity-60">R$</span>
+            {(transactions.totalValue ?? transactions.amount).toLocaleString(
+              'pt-BR',
+              { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-2 truncate font-bold tracking-tight text-slate-800 dark:text-slate-100">
+            {transactions.description}
+            {transactions.treatment_id && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenTreatmentModal(true)
+                }}
+                className="cursor-pointer rounded bg-blue-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-blue-700 hover:bg-blue-200"
+              >
+                O.S.
               </span>
-            </>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              {transactions.accounts.name}
+            </span>
+            {transactions.sectors && (
+              <>
+                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  {transactions.sectors.name}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-1 flex items-center gap-2">
+          {transactions.isVirtual ? (
+            <Button
+              size="sm"
+              className="h-8 flex-1 rounded-lg bg-amber-600 text-xs font-black uppercase tracking-widest text-white hover:bg-amber-700"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenCreditCardDialog(true)
+              }}
+            >
+              Ver Fatura
+            </Button>
+          ) : transactions.confirmed ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 flex-1 rounded-lg border-slate-200 bg-slate-100 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenRevertAlert(true)
+              }}
+              disabled={localLoading}
+            >
+              {localLoading ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin text-slate-500" />
+              ) : (
+                <Undo2 className="mr-1 h-3 w-3" />
+              )}
+              Reverter
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className={cn(
+                'h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest text-white',
+                transactions.operation === 'income'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-rose-600 hover:bg-rose-700',
+              )}
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenPaymentModal(true)
+              }}
+              disabled={localLoading}
+            >
+              {localLoading ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin text-white" />
+              ) : (
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+              )}
+              {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
+            </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 flex-1 rounded-lg border-slate-200 text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDetailsMode('edit')
+              setOpenDetailsModal(true)
+            }}
+          >
+            Editar
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-1">
-        {transactions.isVirtual ? (
-          <Button 
-            size="sm"
-            className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-700 text-white"
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpenCreditCardDialog(true)
-            }}
-          >
-            Ver Fatura
-          </Button>
-        ) : transactions.confirmed ? (
-          <Button 
-            size="sm"
-            variant="outline"
-            className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700"
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpenRevertAlert(true)
-            }}
-            disabled={localLoading}
-          >
-            {localLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin mr-1 text-slate-500" />
-            ) : (
-              <Undo2 className="h-3 w-3 mr-1" />
-            )}
-            Reverter
-          </Button>
-        ) : (
-          <Button 
-            size="sm"
-            className={cn(
-              "h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest text-white",
-              transactions.operation === 'income' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
-            )}
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpenPaymentModal(true)
-            }}
-            disabled={localLoading}
-          >
-            {localLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin mr-1 text-white" />
-            ) : (
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-            )}
-            {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
-          </Button>
-        )}
-        <Button 
-          variant="outline"
-          size="sm"
-          className="h-8 flex-1 rounded-lg text-xs font-black uppercase tracking-widest border-slate-200 text-slate-800 dark:text-slate-200"
-          onClick={(e) => {
-            e.stopPropagation()
-            setDetailsMode('edit')
-            setOpenDetailsModal(true)
-          }}
-        >
-          Editar
-        </Button>
-      </div>
-
-      </div>
-
-       <PaymentModal
+      <PaymentModal
         open={openPaymentModal}
         onOpenChange={setOpenPaymentModal}
         transaction={paymentTransaction}
@@ -358,7 +390,7 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
         initialMode={detailsMode}
       />
 
-      <AttachmentModal 
+      <AttachmentModal
         open={openAttachmentModal}
         onOpenChange={setOpenAttachmentModal}
         attachmentUrl={transactions.attachment_url || null}
@@ -375,7 +407,10 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
 
       {transactions.treatment_id && (
         <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
-          <TreatmentDetails open={openTreatmentModal} treatmentId={transactions.treatment_id} />
+          <TreatmentDetails
+            open={openTreatmentModal}
+            treatmentId={transactions.treatment_id}
+          />
         </Dialog>
       )}
 
@@ -383,22 +418,32 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
       <AlertDialog open={openRevertAlert} onOpenChange={setOpenRevertAlert}>
         <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-extrabold tracking-tight">Reverter Pagamento?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-extrabold tracking-tight">
+              Reverter Pagamento?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja marcar esta transação como não paga? Isso afetará o saldo atual.
+              Deseja marcar esta transação como não paga? Isso afetará o saldo
+              atual.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={localLoading} className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel
+              disabled={localLoading}
+              className="rounded-xl font-bold"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault()
                 handleRevert()
-              }} 
-              disabled={localLoading} 
-              className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800"
+              }}
+              disabled={localLoading}
+              className="rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800"
             >
-              {localLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {localLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Sim, Reverter
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -408,7 +453,10 @@ export function TransactionMobileCard({ transactions }: TransactionTableRowProps
   )
 }
 
-export function TransactionTableRow({ transactions, customPrefix }: TransactionTableRowProps) {
+export function TransactionTableRow({
+  transactions,
+  customPrefix,
+}: TransactionTableRowProps) {
   const queryClient = useQueryClient()
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false)
@@ -504,7 +552,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onSettled: () => {
       setLocalLoading(false)
       setOpenDeleteAlert(false)
-    }
+    },
   })
 
   const { mutateAsync: DeleteGroup } = useMutation({
@@ -519,18 +567,18 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
     onSettled: () => {
       setLocalLoading(false)
       setOpenDeleteAlert(false)
-    }
+    },
   })
 
   async function handlePayment(payload: {
-    id: string;
-    amount: number;
-    interest?: number;
-    discount?: number;
-    data_vencimento: Date;
-    data_emissao?: Date;
-    remainingDate?: Date;
-    accountId?: string;
+    id: string
+    amount: number
+    interest?: number
+    discount?: number
+    data_vencimento: Date
+    data_emissao?: Date
+    remainingDate?: Date
+    accountId?: string
   }) {
     setLocalLoading(true)
     try {
@@ -540,21 +588,20 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       // 1. CHAMA A API APENAS UMA VEZ
       await switchTransactionStatus({
         id: transactions.id,
-        amount: amount,
+        amount,
         interest: payload.interest,
         discount: payload.discount,
-        data_vencimento: data_vencimento,
-        remainingDate: remainingDate,
-        accountId: accountId
+        data_vencimento,
+        remainingDate,
+        accountId,
       })
 
       toast.success(
         isPartialPayment
           ? 'Pagamento parcial processado com sucesso! Transação remanescente criada.'
-          : 'Pagamento processado com sucesso!'
+          : 'Pagamento processado com sucesso!',
       )
       setOpenPaymentModal(false)
-
     } catch (error) {
       console.error('Erro ao processar pagamento:', error)
       throw error
@@ -565,7 +612,9 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
       if (transactions.transaction_group_id) {
-        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+        queryClient.invalidateQueries({
+          queryKey: ['transaction-group', transactions.transaction_group_id],
+        })
       }
     }
   }
@@ -589,14 +638,16 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
       queryClient.invalidateQueries({ queryKey: ['treatments'] })
       queryClient.invalidateQueries({ queryKey: ['metrics'] })
       if (transactions.transaction_group_id) {
-        queryClient.invalidateQueries({ queryKey: ['transaction-group', transactions.transaction_group_id] })
+        queryClient.invalidateQueries({
+          queryKey: ['transaction-group', transactions.transaction_group_id],
+        })
       }
       setOpenRevertAlert(false)
     },
     onError: () => {
       toast.error('Erro ao reverter pagamento.')
     },
-    onSettled: () => setLocalLoading(false)
+    onSettled: () => setLocalLoading(false),
   })
 
   async function handleRevert() {
@@ -618,15 +669,17 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         return {
           ...old,
           transactions: transactionsArray.map((transaction: Transaction) =>
-            transaction.id === id
-              ? { ...transaction, checked }
-              : transaction,
+            transaction.id === id ? { ...transaction, checked } : transaction,
           ),
         }
       })
     },
     onSuccess: (_, { checked }) => {
-      toast.success(checked ? 'Transação marcada como conferida!' : 'Conferência removida com sucesso.')
+      toast.success(
+        checked
+          ? 'Transação marcada como conferida!'
+          : 'Conferência removida com sucesso.',
+      )
     },
     onError: () => {
       toast.error('Ocorreu um erro ao alterar a conferência.')
@@ -639,23 +692,32 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
   })
 
   return (
-    <TableRow className={cn(
-      "group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800",
-      transactions.checked && "bg-sky-500/5 hover:bg-sky-500/10 dark:bg-sky-500/5 dark:hover:bg-sky-500/10 border-l-4 border-l-sky-500/80 transition-all duration-300"
-    )}>
+    <TableRow
+      className={cn(
+        'group border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50',
+        transactions.checked &&
+          'border-l-4 border-l-sky-500/80 bg-sky-500/5 transition-all duration-300 hover:bg-sky-500/10 dark:bg-sky-500/5 dark:hover:bg-sky-500/10',
+      )}
+    >
       {customPrefix}
-      <TableCell className="w-[140px] text-center px-4 py-5">
+      <TableCell className="w-[140px] px-4 py-5 text-center">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
-          aria-label={transactions.isVirtual ? "Ver Fatura" : transactions.confirmed ? "Reverter Pagamento" : "Registrar pagamento"}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 w-[110px] text-xs font-black uppercase tracking-widest rounded-xl border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto ${
+          aria-label={
             transactions.isVirtual
-              ? 'bg-amber-600 text-white border-transparent hover:bg-amber-700 focus:ring-amber-600'
+              ? 'Ver Fatura'
               : transactions.confirmed
-              ? 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
-              : transactions.operation === 'income'
-              ? 'bg-emerald-600 text-white border-transparent hover:bg-emerald-700 focus:ring-emerald-600' // Receber
-              : 'bg-rose-600 text-white border-transparent hover:bg-rose-700 focus:ring-rose-600' // Pagar
+                ? 'Reverter Pagamento'
+                : 'Registrar pagamento'
+          }
+          className={`mx-auto inline-flex w-[110px] items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
+            transactions.isVirtual
+              ? 'border-transparent bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-600'
+              : transactions.confirmed
+                ? 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
+                : transactions.operation === 'income'
+                  ? 'border-transparent bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-600' // Receber
+                  : 'border-transparent bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-600' // Pagar
           }`}
           onClick={() => {
             if (transactions.isVirtual) {
@@ -708,52 +770,67 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         <AlertDialog open={openRevertAlert} onOpenChange={setOpenRevertAlert}>
           <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-extrabold tracking-tight">Reverter Pagamento?</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-extrabold tracking-tight">
+                Reverter Pagamento?
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                Deseja marcar esta transação como não paga? Isso afetará o saldo atual.
+                Deseja marcar esta transação como não paga? Isso afetará o saldo
+                atual.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={localLoading} className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRevert} disabled={localLoading} className="rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
+              <AlertDialogCancel
+                disabled={localLoading}
+                className="rounded-xl font-bold"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRevert}
+                disabled={localLoading}
+                className="rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800"
+              >
                 Sim, Reverter
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
       </TableCell>
 
       {/* (Rest of table) */}
 
-
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="text-center min-w-[120px] px-4 py-5">
+      <TableCell className="min-w-[120px] px-4 py-5 text-center">
         <div className="flex flex-col items-center gap-1">
-          <span className={cn(
-            "text-sm tracking-tight",
-            !transactions.confirmed && dayjs(transactions.data_vencimento).isBefore(dayjs().startOf('day')) 
-              ? "text-rose-600 font-black" 
-              : "font-bold text-slate-700 dark:text-slate-200"
-          )}>
+          <span
+            className={cn(
+              'text-sm tracking-tight',
+              !transactions.confirmed &&
+                dayjs(transactions.data_vencimento).isBefore(
+                  dayjs().startOf('day'),
+                )
+                ? 'font-black text-rose-600'
+                : 'font-bold text-slate-700 dark:text-slate-200',
+            )}
+          >
             {dayjs(`${transactions.data_vencimento}`).format('DD/MM/YYYY')}
           </span>
-          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest leading-none">
+          <span className="text-xs font-bold uppercase leading-none tracking-widest text-slate-400">
             {dayjs(`${transactions.data_emissao}`).format('DD/MM/YYYY')}
           </span>
         </div>
       </TableCell>
 
-      <TableCell className="px-6 py-5 font-bold text-slate-800 dark:text-slate-100 max-w-[200px] truncate tracking-tight">
+      <TableCell className="max-w-[200px] truncate px-6 py-5 font-bold tracking-tight text-slate-800 dark:text-slate-100">
         <div className="flex items-center gap-2">
           {transactions.description}
           {transactions.treatment_id && (
-            <span 
+            <span
               onClick={(e) => {
                 e.stopPropagation()
                 setOpenTreatmentModal(true)
               }}
-              className="px-1.5 py-0.5 rounded text-xs uppercase font-bold tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
+              className="cursor-pointer rounded bg-blue-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-blue-700 hover:bg-blue-200"
               title="Abrir Ordem de Serviço"
             >
               O.S.
@@ -762,27 +839,34 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         </div>
       </TableCell>
 
-      <TableCell className="text-center hidden lg:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
+      <TableCell className="hidden px-4 py-5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.supplier && transactions.supplier.name) || '-'}
       </TableCell>
 
-      <TableCell className="text-center hidden lg:table-cell px-4 py-5 text-xs font-bold uppercase tracking-widest text-slate-400">
+      <TableCell className="hidden px-4 py-5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="text-center hidden xl:table-cell px-4 py-5">
-        <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 border border-slate-200/50 dark:border-slate-700/50">
+      <TableCell className="hidden px-4 py-5 text-center xl:table-cell">
+        <span className="inline-flex items-center rounded-lg border border-slate-200/50 bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:border-slate-700/50 dark:bg-slate-800">
           {transactions.accounts.name}
         </span>
       </TableCell>
 
       {/* Célula de Valor */}
-      <TableCell className={cn(
-        "text-right font-black tabular-nums px-8 py-5 text-base",
-        transactions.operation === 'income' ? "text-emerald-600" : "text-rose-600"
-      )}>
-        <span className="text-sm font-bold opacity-60 mr-0.5">R$</span>
-        {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <TableCell
+        className={cn(
+          'px-8 py-5 text-right text-base font-black tabular-nums',
+          transactions.operation === 'income'
+            ? 'text-emerald-600'
+            : 'text-rose-600',
+        )}
+      >
+        <span className="mr-0.5 text-sm font-bold opacity-60">R$</span>
+        {(transactions.totalValue ?? transactions.amount).toLocaleString(
+          'pt-BR',
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+        )}
       </TableCell>
 
       <TableCell className="w-[120px] px-8 py-5">
@@ -790,77 +874,80 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           {transactions.attachment_url && (
             <button
               onClick={() => setOpenAttachmentModal(true)}
-              className="flex items-center justify-center h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400" 
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/50 bg-slate-100 text-slate-400 shadow-sm transition-colors hover:bg-slate-200 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
               title="Visualizar Comprovante"
               aria-label="Visualizar Comprovante"
             >
               <Paperclip className="h-4 w-4" />
             </button>
           )}
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 w-9 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+              <Button
+                variant="ghost"
+                className="h-9 w-9 rounded-xl p-0 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
                 <span className="sr-only">Opções</span>
                 <MoreHorizontal className="h-4 w-4 text-slate-400" />
               </Button>
             </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault()
-                setDetailsMode('view')
-                setOpenDetailsModal(true)
-              }}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Visualizar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault()
-                setDetailsMode('edit')
-                setOpenDetailsModal(true)
-              }}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            {transactions.transaction_group_id && (
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault()
-                  setOpenGroupDialog(true)
+                  setDetailsMode('view')
+                  setOpenDetailsModal(true)
                 }}
               >
-                <Scissors className="mr-2 h-4 w-4" />
-                Gerenciar Parcelamento
+                <Eye className="mr-2 h-4 w-4" />
+                Visualizar
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => setOpenDeleteAlert(true)}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Trash className="mr-2 h-4 w-4" />
-              Deletar
-            </DropdownMenuItem>
-            
-            {!transactions.isVirtual && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={transactions.checked}
-                  onCheckedChange={(checked) => {
-                    toggleChecked({ id: transactions.id, checked })
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  setDetailsMode('edit')
+                  setOpenDetailsModal(true)
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              {transactions.transaction_group_id && (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    setOpenGroupDialog(true)
                   }}
                 >
-                  Conferido
-                </DropdownMenuCheckboxItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Gerenciar Parcelamento
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => setOpenDeleteAlert(true)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                Deletar
+              </DropdownMenuItem>
+
+              {!transactions.isVirtual && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={transactions.checked}
+                    onCheckedChange={(checked) => {
+                      toggleChecked({ id: transactions.id, checked })
+                    }}
+                  >
+                    Conferido
+                  </DropdownMenuCheckboxItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* DIALOGS */}
         <AlertDialog open={openDeleteAlert} onOpenChange={setOpenDeleteAlert}>
@@ -868,38 +955,55 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
             <AlertDialogHeader>
               <AlertDialogTitle>Deletar Transação?</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja deletar permanentemente? Esta ação não pode ser desfeita.
+                Tem certeza que deseja deletar permanentemente? Esta ação não
+                pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className={transactions.transaction_group_id ? "flex-col sm:flex-col gap-2 items-stretch" : ""}>
+            <AlertDialogFooter
+              className={
+                transactions.transaction_group_id
+                  ? 'flex-col items-stretch gap-2 sm:flex-col'
+                  : ''
+              }
+            >
               {transactions.transaction_group_id ? (
                 <>
                   <AlertDialogAction
                     onClick={() => handleDelete(transactions.id)}
                     disabled={localLoading}
-                    className="bg-red-600 focus:ring-red-600 mb-0"
+                    className="mb-0 bg-red-600 focus:ring-red-600"
                   >
                     Apenas esta parcela
                   </AlertDialogAction>
                   <AlertDialogAction
-                    onClick={() => DeleteFutureTransactions({ id: transactions.id })}
+                    onClick={() =>
+                      DeleteFutureTransactions({ id: transactions.id })
+                    }
                     disabled={localLoading}
-                    className="bg-red-700 hover:bg-red-800 focus:ring-red-700 mb-0"
+                    className="mb-0 bg-red-700 hover:bg-red-800 focus:ring-red-700"
                   >
                     Esta e todas as futuras
                   </AlertDialogAction>
                   <AlertDialogAction
-                    onClick={() => DeleteGroup({ groupId: transactions.transaction_group_id! })}
+                    onClick={() =>
+                      DeleteGroup({
+                        groupId: transactions.transaction_group_id!,
+                      })
+                    }
                     disabled={localLoading}
-                    className="bg-red-950 hover:bg-red-900 focus:ring-red-950 mb-0"
+                    className="mb-0 bg-red-950 hover:bg-red-900 focus:ring-red-950"
                   >
                     Todo o Parcelamento
                   </AlertDialogAction>
-                  <AlertDialogCancel disabled={localLoading} className="mt-2">Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel disabled={localLoading} className="mt-2">
+                    Cancelar
+                  </AlertDialogCancel>
                 </>
               ) : (
                 <>
-                  <AlertDialogCancel disabled={localLoading}>Não</AlertDialogCancel>
+                  <AlertDialogCancel disabled={localLoading}>
+                    Não
+                  </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleDelete(transactions.id)}
                     disabled={localLoading}
@@ -930,7 +1034,7 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
           initialMode={detailsMode}
         />
 
-        <AttachmentModal 
+        <AttachmentModal
           open={openAttachmentModal}
           onOpenChange={setOpenAttachmentModal}
           attachmentUrl={transactions.attachment_url || null}
@@ -946,8 +1050,14 @@ export function TransactionTableRow({ transactions, customPrefix }: TransactionT
         )}
 
         {transactions.treatment_id && (
-          <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
-            <TreatmentDetails open={openTreatmentModal} treatmentId={transactions.treatment_id} />
+          <Dialog
+            open={openTreatmentModal}
+            onOpenChange={setOpenTreatmentModal}
+          >
+            <TreatmentDetails
+              open={openTreatmentModal}
+              treatmentId={transactions.treatment_id}
+            />
           </Dialog>
         )}
       </TableCell>

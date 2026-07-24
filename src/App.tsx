@@ -6,11 +6,10 @@ import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 
 import { ThemeProvider } from './components/theme/theme-provider'
-import { queryClient } from './lib/react-query'
-import { router } from './routes'
-
 import { ModuleProvider } from './context/module-context'
 import { SidebarProvider } from './context/sidebar-context'
+import { queryClient } from './lib/react-query'
+import { router } from './routes'
 
 export function App() {
   return (

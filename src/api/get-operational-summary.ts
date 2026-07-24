@@ -1,25 +1,28 @@
 import { api } from '@/lib/axios'
 
 export interface OperationalSummary {
-    saldoDisponivel: number
-    totalVencido: number
-    projecao14Dias: number
-    receitaAcumulada: number
-    ticketMedio: number
-    numEntradas: number
-    totalDespesasMes: number
-    despesasPagasMes: number
-    totalJurosPagos: number
+  saldoDisponivel: number
+  totalVencido: number
+  projecao14Dias: number
+  receitaAcumulada: number
+  ticketMedio: number
+  numEntradas: number
+  totalDespesasMes: number
+  despesasPagasMes: number
+  totalJurosPagos: number
 }
 
 interface GetOperationalSummaryParams {
-    month: number
-    year: number
+  month: number
+  year: number
 }
 
-export async function getOperationalSummary({ month, year }: GetOperationalSummaryParams) {
-    const response = await api.get<OperationalSummary>('/dashboard/operacional', {
-        params: { month, year },
-    })
-    return response.data
+export async function getOperationalSummary({
+  month,
+  year,
+}: GetOperationalSummaryParams) {
+  const response = await api.get<OperationalSummary>('/dashboard/operacional', {
+    params: { month, year },
+  })
+  return response.data
 }

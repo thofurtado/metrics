@@ -1,11 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { api, API_BASE_URL } from '@/lib/axios'
-import { FileText, Link as LinkIcon, Plus, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { toast } from 'sonner'
-import { useState, useEffect } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Link as LinkIcon,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+
+import { ImageZoomViewer } from '@/components/image-zoom-viewer'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { api, API_BASE_URL } from '@/lib/axios'
 
 interface PendingReceiptsModalProps {
   open: boolean
@@ -14,9 +30,16 @@ interface PendingReceiptsModalProps {
   onCreateNew: (receipt: any) => void
 }
 
-export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onCreateNew }: PendingReceiptsModalProps) {
+export function PendingReceiptsModal({
+  open,
+  onOpenChange,
+  onLinkToExisting,
+  onCreateNew,
+}: PendingReceiptsModalProps) {
   const queryClient = useQueryClient()
-  const [activeReceiptIndex, setActiveReceiptIndex] = useState<number | null>(null)
+  const [activeReceiptIndex, setActiveReceiptIndex] = useState<number | null>(
+    null,
+  )
 
   const { data: receiptsData, isLoading } = useQuery({
     queryKey: ['pending-receipts'],
@@ -24,7 +47,7 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
       const response = await api.get('/uploads/receipts?per_page=100')
       return response.data
     },
-    enabled: open
+    enabled: open,
   })
 
   const { mutateAsync: deleteReceipt, isPending: isDeleting } = useMutation({
@@ -37,10 +60,13 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
     },
     onError: () => {
       toast.error('Erro ao descartar comprovante.')
-    }
+    },
   })
 
-  const activeReceipt = activeReceiptIndex !== null ? receiptsData?.receipts?.[activeReceiptIndex] : null
+  const activeReceipt =
+    activeReceiptIndex !== null
+      ? receiptsData?.receipts?.[activeReceiptIndex]
+      : null
 
   const handlePrev = () => {
     if (!receiptsData?.receipts?.length) return
@@ -95,7 +121,11 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
   useEffect(() => {
     if (activeReceiptIndex !== null && receiptsData?.receipts) {
       if (activeReceiptIndex >= receiptsData.receipts.length) {
-        setActiveReceiptIndex(receiptsData.receipts.length > 0 ? receiptsData.receipts.length - 1 : null)
+        setActiveReceiptIndex(
+          receiptsData.receipts.length > 0
+            ? receiptsData.receipts.length - 1
+            : null,
+        )
       }
     }
   }, [receiptsData, activeReceiptIndex])
@@ -112,213 +142,256 @@ export function PendingReceiptsModal({ open, onOpenChange, onLinkToExisting, onC
       <DialogContent className="max-w-3xl rounded-3xl p-6">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-2xl font-black text-slate-800">Comprovantes Rápidos</DialogTitle>
+            <DialogTitle className="text-2xl font-black text-slate-800">
+              Comprovantes Rápidos
+            </DialogTitle>
             {receiptsData?.receipts?.length > 0 && (
-              <span className="flex h-6 px-2.5 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 animate-in zoom-in duration-300">
+              <span className="flex h-6 items-center justify-center rounded-full border border-slate-200/50 bg-slate-100 px-2.5 text-xs font-bold text-slate-700 duration-300 animate-in zoom-in dark:border-slate-700/50 dark:bg-slate-800 dark:text-slate-300">
                 {receiptsData.receipts.length}
               </span>
             )}
           </div>
           <DialogDescription>
-            Aqui estão os comprovantes enviados pelo celular que ainda não foram vinculados a nenhuma despesa.
+            Aqui estão os comprovantes enviados pelo celular que ainda não foram
+            vinculados a nenhuma despesa.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6 max-h-[60vh] overflow-y-auto">
-          {isLoading && <div className="col-span-full text-center text-sm text-slate-500 py-10">Carregando comprovantes...</div>}
-          
-          {!isLoading && receiptsData?.receipts?.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <FileText className="w-12 h-12 mb-4 text-slate-300" />
-              <p className="font-semibold">Nenhum comprovante pendente</p>
-              <p className="text-xs">Eles aparecerão aqui quando você enviar pelo celular.</p>
+        <div className="mt-6 grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto sm:grid-cols-2 md:grid-cols-3">
+          {isLoading && (
+            <div className="col-span-full py-10 text-center text-sm text-slate-500">
+              Carregando comprovantes...
             </div>
           )}
 
-          {!isLoading && receiptsData?.receipts?.map((receipt: any, index: number) => (
-            <div key={receipt.filename} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col">
-              <div 
-                className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setActiveReceiptIndex(index)}
-              >
-                {receipt.url.endsWith('.pdf') ? (
-                  <FileText className="w-16 h-16 text-slate-400" />
-                ) : (
-                  <img src={`${API_BASE_URL}${receipt.url}`} alt={receipt.description} className="w-full h-full object-contain p-2" />
-                )}
-                <div className="absolute top-2 right-2 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <Button 
-                    variant="destructive" 
-                    size="icon" 
-                    className="w-8 h-8 rounded-full shadow-lg"
-                    onClick={() => deleteReceipt(receipt.filename)}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="p-4 flex flex-col flex-1">
-                <p className="text-xs text-slate-500 mb-1">{new Date(receipt.date).toLocaleString('pt-BR')}</p>
-                <p className="font-bold text-slate-800 text-sm mb-2 line-clamp-2 flex-1" title={receipt.description}>
-                  {receipt.description}
-                </p>
-                {receipt.value != null && (
-                  <p className="text-sm font-bold text-emerald-600 mb-4">
-                    {Number(receipt.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
-                )}
-                
-                <div className="flex gap-2 mt-auto">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-xs px-0 font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
-                    onClick={() => {
-                      onOpenChange(false)
-                      onLinkToExisting(receipt)
-                    }}
-                  >
-                    <LinkIcon className="w-3 h-3 mr-1" />
-                    Vincular
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="flex-1 text-xs px-0 font-bold bg-slate-900 text-white hover:bg-slate-800"
-                    onClick={() => {
-                      onOpenChange(false)
-                      onCreateNew(receipt)
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Criar Despesa
-                  </Button>
-                </div>
-              </div>
+          {!isLoading && receiptsData?.receipts?.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-slate-500">
+              <FileText className="mb-4 h-12 w-12 text-slate-300" />
+              <p className="font-semibold">Nenhum comprovante pendente</p>
+              <p className="text-xs">
+                Eles aparecerão aqui quando você enviar pelo celular.
+              </p>
             </div>
-          ))}
+          )}
+
+          {!isLoading &&
+            receiptsData?.receipts?.map((receipt: any, index: number) => (
+              <div
+                key={receipt.filename}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div
+                  className="relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden bg-slate-100 transition-opacity hover:opacity-90"
+                  onClick={() => setActiveReceiptIndex(index)}
+                >
+                  {receipt.url.endsWith('.pdf') ? (
+                    <FileText className="h-16 w-16 text-slate-400" />
+                  ) : (
+                    <img
+                      src={`${API_BASE_URL}${receipt.url}`}
+                      alt={receipt.description}
+                      className="h-full w-full object-contain p-2"
+                    />
+                  )}
+                  <div
+                    className="absolute right-2 top-2 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8 rounded-full shadow-lg"
+                      onClick={() => deleteReceipt(receipt.filename)}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="mb-1 text-xs text-slate-500">
+                    {new Date(receipt.date).toLocaleString('pt-BR')}
+                  </p>
+                  <p
+                    className="mb-2 line-clamp-2 flex-1 text-sm font-bold text-slate-800"
+                    title={receipt.description}
+                  >
+                    {receipt.description}
+                  </p>
+                  {receipt.value != null && (
+                    <p className="mb-4 text-sm font-bold text-emerald-600">
+                      {Number(receipt.value).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      })}
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-slate-200 px-0 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                      onClick={() => {
+                        onOpenChange(false)
+                        onLinkToExisting(receipt)
+                      }}
+                    >
+                      <LinkIcon className="mr-1 h-3 w-3" />
+                      Vincular
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-slate-900 px-0 text-xs font-bold text-white hover:bg-slate-800"
+                      onClick={() => {
+                        onOpenChange(false)
+                        onCreateNew(receipt)
+                      }}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Criar Despesa
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
         </div>
       </DialogContent>
 
       {/* Lightbox Modal em Tela Cheia */}
       {activeReceiptIndex !== null && activeReceipt && (
-        <DialogPrimitive.Root open={true} onOpenChange={(open) => { if (!open) setActiveReceiptIndex(null) }}>
+        <DialogPrimitive.Root
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setActiveReceiptIndex(null)
+          }}
+        >
           <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-[9998] bg-black/85 backdrop-blur-sm" />
-            <DialogPrimitive.Content className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-6 animate-in fade-in duration-200 outline-none">
+            <DialogPrimitive.Content className="fixed inset-0 z-[9999] flex flex-col justify-between bg-slate-950/95 p-6 outline-none backdrop-blur-md duration-200 animate-in fade-in">
               {/* Header do Lightbox */}
-              <div className="flex items-center justify-between w-full max-w-7xl mx-auto border-b border-white/10 pb-4">
-                <div className="text-white flex-1 mr-4">
-                  <span className="text-xs text-slate-400 font-medium block mb-1">
+              <div className="mx-auto flex w-full max-w-7xl items-center justify-between border-b border-white/10 pb-4">
+                <div className="mr-4 flex-1 text-white">
+                  <span className="mb-1 block text-xs font-medium text-slate-400">
                     {new Date(activeReceipt.date).toLocaleString('pt-BR')}
                   </span>
-                  <h3 className="font-bold text-lg md:text-xl line-clamp-1 text-white" title={activeReceipt.description}>
+                  <h3
+                    className="line-clamp-1 text-lg font-bold text-white md:text-xl"
+                    title={activeReceipt.description}
+                  >
                     {activeReceipt.description}
                   </h3>
                   {activeReceipt.value != null && (
-                    <span className="text-emerald-400 font-bold text-sm block mt-1">
-                      {Number(activeReceipt.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <span className="mt-1 block text-sm font-bold text-emerald-400">
+                      {Number(activeReceipt.value).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      })}
                     </span>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full w-10 h-10 transition-colors"
+                  className="h-10 w-10 rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
                   onClick={() => setActiveReceiptIndex(null)}
                 >
-                  <X className="w-6 h-6" />
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
 
               {/* Área Central - Imagem e Setas */}
-              <div className="flex-1 flex items-center justify-between w-full max-w-7xl mx-auto my-4 gap-4 px-2">
+              <div className="mx-auto my-4 flex w-full max-w-7xl flex-1 items-center justify-between gap-4 px-2">
                 {/* Seta Esquerda */}
                 <button
-                  className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+                  className="shrink-0 rounded-full border border-white/10 bg-white/5 p-3 text-white backdrop-blur-md transition-all hover:bg-white/15 active:scale-95"
                   onClick={handlePrev}
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="h-6 w-6" />
                 </button>
 
                 {/* Imagem / PDF */}
-                <div className="max-h-[60vh] max-w-[70vw] flex items-center justify-center select-none flex-1 overflow-hidden w-full">
+                <div className="flex max-h-[60vh] w-full max-w-[70vw] flex-1 select-none items-center justify-center overflow-hidden">
                   {activeReceipt.url.endsWith('.pdf') ? (
                     <>
                       {/* Desktop View: Embed PDF inside a gorgeous iframe */}
-                      <div className="hidden md:block w-full h-[55vh] max-w-4xl">
+                      <div className="hidden h-[55vh] w-full max-w-4xl md:block">
                         <iframe
                           src={`${API_BASE_URL}${activeReceipt.url}#toolbar=0`}
-                          className="w-full h-full rounded-2xl border border-white/10 bg-white"
+                          className="h-full w-full rounded-2xl border border-white/10 bg-white"
                           title="Visualização do PDF"
                         />
                       </div>
-                      
+
                       {/* Mobile View: Fallback to the card & button */}
-                      <div className="block md:hidden flex flex-col items-center justify-center text-slate-400 p-6 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm max-w-md w-full text-center">
-                        <FileText className="w-16 h-16 text-slate-300 mb-4" />
-                        <span className="text-white font-semibold text-base">Documento PDF</span>
+                      <div className="block flex w-full max-w-md flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-slate-400 backdrop-blur-sm md:hidden">
+                        <FileText className="mb-4 h-16 w-16 text-slate-300" />
+                        <span className="text-base font-semibold text-white">
+                          Documento PDF
+                        </span>
                         <a
                           href={`${API_BASE_URL}${activeReceipt.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-4 px-5 py-2.5 bg-white hover:bg-slate-200 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-white/5"
+                          className="mt-4 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-slate-950 shadow-lg shadow-white/5 transition-all hover:bg-slate-200"
                         >
                           Abrir PDF
                         </a>
                       </div>
                     </>
                   ) : (
-                    <img
+                    <ImageZoomViewer
                       src={`${API_BASE_URL}${activeReceipt.url}`}
                       alt={activeReceipt.description}
-                      className="max-h-[60vh] max-w-[50vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+                      containerClassName="h-[60vh] max-w-[70vw] w-full"
                     />
                   )}
                 </div>
 
                 {/* Seta Direita */}
                 <button
-                  className="bg-white/5 hover:bg-white/15 active:scale-95 text-white p-3 rounded-full backdrop-blur-md transition-all border border-white/10 shrink-0"
+                  className="shrink-0 rounded-full border border-white/10 bg-white/5 p-3 text-white backdrop-blur-md transition-all hover:bg-white/15 active:scale-95"
                   onClick={handleNext}
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="h-6 w-6" />
                 </button>
               </div>
 
               {/* Rodapé - Ações */}
-              <div className="w-full max-w-2xl mx-auto flex flex-col md:flex-row gap-3 items-center justify-center border-t border-white/10 pt-6">
+              <div className="mx-auto flex w-full max-w-2xl flex-col items-center justify-center gap-3 border-t border-white/10 pt-6 md:flex-row">
                 <Button
                   variant="outline"
-                  className="w-full md:flex-1 font-bold border-white/20 text-white hover:bg-white/10 bg-transparent py-6 rounded-2xl text-sm transition-all"
+                  className="w-full rounded-2xl border-white/20 bg-transparent py-6 text-sm font-bold text-white transition-all hover:bg-white/10 md:flex-1"
                   onClick={() => {
                     onOpenChange(false)
                     onLinkToExisting(activeReceipt)
                     setActiveReceiptIndex(null)
                   }}
                 >
-                  <LinkIcon className="w-4 h-4 mr-2" />
+                  <LinkIcon className="mr-2 h-4 w-4" />
                   Vincular a Despesa
                 </Button>
                 <Button
-                  className="w-full md:flex-1 font-bold bg-white text-slate-950 hover:bg-slate-100 py-6 rounded-2xl text-sm transition-all"
+                  className="w-full rounded-2xl bg-white py-6 text-sm font-bold text-slate-950 transition-all hover:bg-slate-100 md:flex-1"
                   onClick={() => {
                     onOpenChange(false)
                     onCreateNew(activeReceipt)
                     setActiveReceiptIndex(null)
                   }}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Criar Nova Despesa
                 </Button>
                 <Button
                   variant="destructive"
-                  className="w-full md:w-auto font-bold bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white py-6 px-6 rounded-2xl text-sm transition-all"
-                  onClick={() => handleDeleteInFullscreen(activeReceipt.filename)}
+                  className="w-full rounded-2xl bg-red-500/20 px-6 py-6 text-sm font-bold text-red-200 transition-all hover:bg-red-600 hover:text-white md:w-auto"
+                  onClick={() =>
+                    handleDeleteInFullscreen(activeReceipt.filename)
+                  }
                   disabled={isDeleting}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Descartar
                 </Button>
               </div>

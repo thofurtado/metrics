@@ -49,13 +49,26 @@ export async function getActiveSession() {
   return response.data
 }
 
-export async function openSession(data: { initial_balance: number; period?: string; machine_ids?: number[] }) {
-  const response = await api.post<CashierSession>('/api/cashier/session/open', data)
+export async function openSession(data: {
+  initial_balance: number
+  period?: string
+  machine_ids?: number[]
+}) {
+  const response = await api.post<CashierSession>(
+    '/api/cashier/session/open',
+    data,
+  )
   return response.data
 }
 
-export async function closeSession(data: { reported_amounts: { payment_method_id: number; reported_amount: number }[]; notes?: string }) {
-  const response = await api.post<CashierSession>('/api/cashier/session/close', data)
+export async function closeSession(data: {
+  reported_amounts: { payment_method_id: number; reported_amount: number }[]
+  notes?: string
+}) {
+  const response = await api.post<CashierSession>(
+    '/api/cashier/session/close',
+    data,
+  )
   return response.data
 }
 
@@ -68,6 +81,8 @@ export interface CreateEntryParams {
   is_withdrawal?: boolean
   is_addition?: boolean
   is_tip?: boolean
+  is_checked?: boolean
+  type?: string
   identification?: string
 }
 
@@ -81,7 +96,14 @@ export async function deleteEntry(id: string) {
   return response.data
 }
 
-export async function updateEntry(data: { id: string; amount?: number; payment_method?: string; bank?: string; identification?: string }) {
+export async function updateEntry(data: {
+  id: string
+  amount?: number
+  payment_method?: string
+  bank?: string
+  identification?: string
+  is_checked?: boolean
+}) {
   const response = await api.put<CashierEntry>('/api/cashier/entry/' + data.id, data)
   return response.data
 }
@@ -92,12 +114,18 @@ export async function getSessions() {
 }
 
 export async function getSessionDetails(id: string) {
-  const response = await api.get<{ session: CashierSession; entries: CashierEntry[]; summary: any }>('/api/cashier/session/' + id)
+  const response = await api.get<{
+    session: CashierSession
+    entries: CashierEntry[]
+    summary: any
+  }>('/api/cashier/session/' + id)
   return response.data
 }
 
 export async function auditSession(id: string) {
-  const response = await api.post('/api/cashier/session/audit', { session_id: id })
+  const response = await api.post('/api/cashier/session/audit', {
+    session_id: id,
+  })
   return response.data
 }
 

@@ -49,7 +49,7 @@ function nextBusinessDay(date: Date, holidayStrings: string[]): Date {
 export function calculateCreditCardDueDate(
   purchaseDate: Date,
   card: Pick<CreditCard, 'closing_day' | 'due_day'>,
-  holidays: string[] = []
+  holidays: string[] = [],
 ): DueDateResult {
   const purchaseDay = purchaseDate.getDate()
   const purchaseMonth = purchaseDate.getMonth() // 0-indexed
@@ -83,7 +83,15 @@ export function calculateCreditCardDueDate(
   const daysInMonth = new Date(billingYear, billingMonth + 1, 0).getDate()
   const effectiveDueDay = Math.min(card.due_day, daysInMonth)
 
-  const baseDueDate = new Date(billingYear, billingMonth, effectiveDueDay, 12, 0, 0, 0)
+  const baseDueDate = new Date(
+    billingYear,
+    billingMonth,
+    effectiveDueDay,
+    12,
+    0,
+    0,
+    0,
+  )
   const finalDueDate = nextBusinessDay(baseDueDate, holidays)
 
   const billingMonthLabel = `${String(billingMonth + 1).padStart(2, '0')}/${billingYear}`

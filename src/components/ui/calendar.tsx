@@ -1,7 +1,7 @@
+import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import * as React from 'react'
 import { DayPicker } from 'react-day-picker'
-import { ptBR } from 'date-fns/locale'
 
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -55,10 +55,10 @@ function Calendar({
       }}
       components={{
         IconLeft: ({ ...props }) => (
-          <ChevronLeft className="text-minsk-800 h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 text-minsk-800" />
         ),
         IconRight: ({ ...props }) => (
-          <ChevronRight className="text-minsk-800 h-4 w-4 font-semibold" />
+          <ChevronRight className="h-4 w-4 font-semibold text-minsk-800" />
         ),
       }}
       {...props}

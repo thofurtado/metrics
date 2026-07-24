@@ -12,6 +12,8 @@ export interface BalanceProjectionResponse {
 }
 
 export async function getBalanceProjectionData() {
-  const response = await api.get<BalanceProjectionResponse>('/balance-projection')
+  const response = await api.get<BalanceProjectionResponse>(
+    '/balance-projection',
+  )
   return response.data
 }

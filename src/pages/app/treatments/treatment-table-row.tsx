@@ -1,18 +1,18 @@
-import { } from '@radix-ui/react-dialog'
+import {} from '@radix-ui/react-dialog'
 import dayjs from 'dayjs'
-import { NotebookPen, Eye, Shapes } from 'lucide-react'
+import { Eye, NotebookPen, Shapes } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { TreatmentStatus } from '@/components/ui/treatment-status'
+import { useModules } from '@/context/module-context'
 
 import { TreatmentDetails } from './treatment-details'
 import { TreatmentInteraction } from './treatment-interaction'
 import { TreatmentItems } from './treatment-items'
 import { TreatmentPaymentModal } from './treatment-payment-modal'
-import { useModules } from '@/context/module-context'
 
 export interface TreatmentTableRowProps {
   treatments: {
@@ -25,13 +25,13 @@ export interface TreatmentTableRowProps {
     equipment_id: string | null
     request: string
     status:
-    | 'pending'
-    | 'in_progress'
-    | 'on_hold'
-    | 'resolved'
-    | 'canceled'
-    | 'follow_up'
-    | 'in_workbench'
+      | 'pending'
+      | 'in_progress'
+      | 'on_hold'
+      | 'resolved'
+      | 'canceled'
+      | 'follow_up'
+      | 'in_workbench'
     amount: number
     observations: string | null
     clients: {
@@ -57,14 +57,21 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
   const [isInteractionsOpen, setIsInteractionsOpen] = useState(false)
   const [isItemsOpen, setIsItemsOpen] = useState(false)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-  const [pendingInteraction, setPendingInteraction] = useState<{ interactionData: any, processFn: () => void } | null>(null)
+  const [pendingInteraction, setPendingInteraction] = useState<{
+    interactionData: any
+    processFn: () => void
+  } | null>(null)
 
   return (
-    <TableRow className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-slate-100 dark:border-slate-800">
-      <TableCell className="pl-8 py-5">
+    <TableRow className="group border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50">
+      <TableCell className="py-5 pl-8">
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 w-9 p-0 rounded-xl border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-9 rounded-xl border-slate-200 p-0 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            >
               <Eye className="h-4 w-4" />
               <span className="sr-only">Detalhes do Atendimento</span>
             </Button>
@@ -72,7 +79,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <TreatmentDetails open={isDetailsOpen} treatmentId={treatments.id} />
         </Dialog>
       </TableCell>
-      <TableCell className="py-5 text-[11px] font-bold uppercase tracking-widest text-slate-400 leading-none">
+      <TableCell className="py-5 text-[11px] font-bold uppercase leading-none tracking-widest text-slate-400">
         {dias > 1 ? `${dias} dias` : `${dias} dia`}
       </TableCell>
       <TableCell className="py-5">
@@ -83,18 +90,21 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
         {treatments.contact}
       </TableCell>
       <TableCell className="py-5">
-        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight truncate max-w-[150px]">
-           {treatments.clients.name}
+        <div className="max-w-[150px] truncate text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          {treatments.clients.name}
         </div>
       </TableCell>
-      <TableCell className="py-5 px-6">
-        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm tracking-tight line-clamp-1 max-w-[120px] sm:max-w-none" title={treatments.request}>
+      <TableCell className="px-6 py-5">
+        <div
+          className="line-clamp-1 max-w-[120px] text-sm font-bold tracking-tight text-slate-700 dark:text-slate-200 sm:max-w-none"
+          title={treatments.request}
+        >
           {treatments.request}
         </div>
       </TableCell>
       {/* Valor - Oculto apenas no mobile */}
-      <TableCell className="hidden sm:table-cell py-5 text-right font-black text-slate-900 dark:text-slate-50 tabular-nums text-base pr-8">
-        <span className="text-[10px] font-bold text-slate-400 mr-0.5">R$</span>
+      <TableCell className="hidden py-5 pr-8 text-right text-base font-black tabular-nums text-slate-900 dark:text-slate-50 sm:table-cell">
+        <span className="mr-0.5 text-[10px] font-bold text-slate-400">R$</span>
         {treatments.amount.toLocaleString('pt-BR', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
@@ -108,7 +118,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
                 disabled={['canceled', 'resolved'].includes(treatments.status)}
                 variant="outline"
                 size="sm"
-                className="h-9 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                className="h-9 rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
               >
                 <Shapes className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Itens</span>
@@ -123,7 +133,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
             size="sm"
             disabled
             title="Módulo de Mercadorias ou Financeiro desativado"
-            className="opacity-50 h-9 rounded-xl"
+            className="h-9 rounded-xl opacity-50"
           >
             <Shapes className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Itens</span>
@@ -135,7 +145,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
           <DialogTrigger asChild>
             <Button
               disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="h-9 px-4 rounded-xl bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] shadow-sm hover:bg-slate-800 transition-all w-full sm:w-auto"
+              className="h-9 w-full rounded-xl bg-slate-900 px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-slate-800 sm:w-auto"
               size="sm"
             >
               <NotebookPen className="h-4 w-4 sm:mr-2" />
