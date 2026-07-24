@@ -12,7 +12,9 @@ import {
 } from 'lucide-react'
 
 import { getSessions, openSession } from '@/api/cashier/cashier'
+import { getProfile } from '@/api/get-profile'
 import { PageHeader } from '@/components/page-header'
+import { CashierLoginDialog } from '../components/cashier-login-dialog'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -24,9 +26,16 @@ export function CashierDashboard() {
   const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
 
+  const { data: profile, isLoading: isLoadingProfile, isError: isErrorProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+    retry: false,
+  })
+
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['cashier-sessions'],
     queryFn: getSessions,
+    enabled: !!profile,
   })
 
   const { mutateAsync: openSessionFn } = useMutation({
@@ -148,6 +157,14 @@ export function CashierDashboard() {
     if (m.includes('cortesia')) return { bg: 'bg-pink-50 text-pink-700 border-pink-200', icon: '🎁' }
     if (m.includes('permuta')) return { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: '🔄' }
     return { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: '💰' }
+  }
+
+  if (!profile && !isLoadingProfile) {
+    return (
+      <div className="relative min-h-[calc(100vh-6rem)]">
+        <CashierLoginDialog />
+      </div>
+    )
   }
 
   return (

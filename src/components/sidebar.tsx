@@ -68,8 +68,12 @@ export function Sidebar() {
       icon: Wallet,
       access: hasAccess('cashier'),
     },
-    { name: 'RH', path: '/hr', icon: Users, access: hasAccess('hr') },
-  ].filter((item) => item.access)
+  ].filter((item) => {
+    if (profile?.role === 'CASHIER') {
+      return item.path === '/cashier'
+    }
+    return item.access
+  })
 
   const NavContent = ({ mobile = false }: { mobile?: boolean }) => {
     const collapsed = !mobile && isCollapsed

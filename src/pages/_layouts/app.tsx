@@ -1,7 +1,9 @@
 import { isAxiosError } from 'axios'
 import { useEffect } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 
+import { getProfile } from '@/api/get-profile'
 import { Sidebar } from '@/components/sidebar'
 import { useSidebar } from '@/context/sidebar-context'
 import { api } from '@/lib/axios'
@@ -9,7 +11,23 @@ import { cn } from '@/lib/utils'
 
 export function AppLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isCollapsed } = useSidebar()
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+    retry: false,
+  })
+
+  // Restrição estrita de navegação para perfil CASHIER
+  useEffect(() => {
+    if (profile?.role === 'CASHIER') {
+      if (!location.pathname.startsWith('/cashier')) {
+        navigate('/cashier', { replace: true })
+      }
+    }
+  }, [profile, location.pathname, navigate])
 
   useEffect(() => {
     const interceptorId = api.interceptors.response.use(
@@ -18,7 +36,12 @@ export function AppLayout() {
         if (isAxiosError(error)) {
           const status = error.response?.status
           if (status === 401) {
-            navigate('/sign-in', { replace: true })
+            // Se estiver na rota de cashier, mantem na rota para exibir o dialog de login do caixa
+            if (location.pathname.startsWith('/cashier')) {
+              navigate('/cashier', { replace: true })
+            } else {
+              navigate('/sign-in', { replace: true })
+            }
           }
         }
         return Promise.reject(error)
@@ -28,7 +51,7 @@ export function AppLayout() {
     return () => {
       api.interceptors.response.eject(interceptorId)
     }
-  }, [navigate])
+  }, [navigate, location.pathname])
 
   return (
     <div className="flex min-h-screen bg-background font-manrope text-foreground antialiased">
