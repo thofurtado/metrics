@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, PointerEvent } from 'react'
 import { ZoomIn, ZoomOut, RotateCcw, ExternalLink, Move } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -14,8 +14,8 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-
+  const dragStart = useRef({ x: 0, y: 0 })
+  
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Reset zoom ao trocar de imagem
@@ -25,7 +25,7 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
   }, [src])
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.5, 4))
+    setScale(prev => Math.min(prev + 0.5, 5))
   }
 
   const handleZoomOut = () => {
@@ -43,33 +43,38 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
-
+    
+    // Suaviza o zoom pelo scroll
     const delta = e.deltaY < 0 ? 0.25 : -0.25
     setScale(prev => {
-      const next = Math.min(Math.max(prev + delta, 1), 4)
+      const next = Math.min(Math.max(prev + delta, 1), 5)
       if (next === 1) setPosition({ x: 0, y: 0 })
       return next
     })
   }
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (scale <= 1) return
     e.preventDefault()
     setIsDragging(true)
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+    // Captura os eventos de ponteiro para que o arraste continue mesmo fora do container
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y }
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!isDragging || scale <= 1) return
     e.preventDefault()
     setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y
     })
   }
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
     setIsDragging(false)
+    e.currentTarget.releasePointerCapture(e.pointerId)
   }
 
   const handleDoubleClick = () => {
@@ -93,7 +98,7 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
           variant="ghost"
           size="icon"
           onClick={handleZoomIn}
-          disabled={scale >= 4}
+          disabled={scale >= 5}
           className="w-8 h-8 rounded-full text-white hover:bg-white/20 hover:text-white"
           title="Aumentar Zoom (+)"
         >
@@ -148,23 +153,28 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
       <div
         ref={containerRef}
         onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
-        className={`w-full h-full flex items-center justify-center overflow-hidden p-2 ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+        className={`w-full h-full flex items-center justify-center overflow-hidden p-2 touch-none ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
       >
-        <img
-          src={src}
-          alt={alt}
-          draggable={false}
+        <div 
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+            transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+            transformOrigin: 'center center'
           }}
-          className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-shadow ${className}`}
-        />
+          className="flex items-center justify-center w-full h-full pointer-events-none"
+        >
+          <img
+            src={src}
+            alt={alt}
+            draggable={false}
+            className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-shadow pointer-events-auto ${className}`}
+          />
+        </div>
       </div>
     </div>
   )
