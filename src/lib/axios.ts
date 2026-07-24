@@ -70,7 +70,14 @@ api.interceptors.response.use(
         localStorage.clear()
         window.dispatchEvent(new Event('auth-change'))
         if (typeof window !== 'undefined') {
-          window.location.href = '/sign-in'
+          const currentPath = window.location.pathname
+          if (currentPath.startsWith('/cashier')) {
+            if (currentPath !== '/cashier') {
+              window.location.href = '/cashier'
+            }
+          } else {
+            window.location.href = '/sign-in'
+          }
         }
       }
 

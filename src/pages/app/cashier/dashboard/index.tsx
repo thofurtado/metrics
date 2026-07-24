@@ -26,10 +26,13 @@ export function CashierDashboard() {
   const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
 
-  const { data: profile, isLoading: isLoadingProfile, isError: isErrorProfile } = useQuery({
+  const token = localStorage.getItem('token')
+
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['profile'],
     queryFn: getProfile,
     retry: false,
+    enabled: !!token,
   })
 
   const { data: sessions = [], isLoading } = useQuery({
@@ -159,7 +162,7 @@ export function CashierDashboard() {
     return { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: '💰' }
   }
 
-  if (!profile && !isLoadingProfile) {
+  if ((!token || !profile) && !isLoadingProfile) {
     return (
       <div className="relative min-h-[calc(100vh-6rem)]">
         <CashierLoginDialog />
