@@ -1,6 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, ArrowLeft, TrendingDown, PlusCircle, Heart, CheckCircle2, UserCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useModules } from '@/context/module-context';
+import { getPOSMachines } from '@/api/pos-machines';
+import { getPaymentIdentifiers } from '@/api/payment-identifiers';
+import { getAccounts } from '@/api/get-accounts';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const { modules } = useModules();
@@ -9,6 +13,22 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [paraQuem, setParaQuem] = useState('');
     const [forma, setForma] = useState('Dinheiro');
     const [banco, setBanco] = useState('CAIXA');
+
+    // Buscar dados do banco
+    const { data: dbMachines } = useQuery({
+        queryKey: ['pos-machines'],
+        queryFn: getPOSMachines,
+    });
+
+    const { data: dbIdentifiers } = useQuery({
+        queryKey: ['payment-identifiers'],
+        queryFn: getPaymentIdentifiers,
+    });
+
+    const { data: dbAccounts } = useQuery({
+        queryKey: ['accounts'],
+        queryFn: getAccounts,
+    });
     
     const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
         const configured = modules?.cashier_default_origin;
@@ -47,29 +67,96 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const paraQuemInputRef = useRef<HTMLInputElement>(null);
     const submitBtnRef = useRef<HTMLButtonElement>(null);
 
-    const formasContaCasa = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta'];
-    const formasEletronicas = ['PIX', 'Débito', 'Crédito', 'Voucher'];
-    const isContaCasa = formasContaCasa.includes(forma) && tipo === 'venda';
+    // Monta lista dinâmica de FORMAS_PAGAMENTO
+    const FORMAS_PAGAMENTO = useMemo(() => {
+        const base = [
+            { key: '1', name: 'Dinheiro', display: '1 - Dinheiro' },
+            { key: '2', name: 'PIX', display: '2 - PIX' },
+            { key: '3', name: 'Débito', display: '3 - Débito' },
+            { key: '4', name: 'Crédito', display: '4 - Crédito' },
+            { key: '5', name: 'Voucher', display: '5 - Voucher' },
+        ];
 
-    const FORMAS_PAGAMENTO = [
-        { key: '1', name: 'Dinheiro', display: '1 - Dinheiro' },
-        { key: '2', name: 'PIX', display: '2 - PIX' },
-        { key: '3', name: 'Débito', display: '3 - Débito' },
-        { key: '4', name: 'Crédito', display: '4 - Crédito' },
-        { key: '5', name: 'Voucher', display: '5 - Voucher' },
-        { key: '6', name: 'Funcionário', display: '6 - Funcionário' },
-        { key: '7', name: 'Pró-labore', display: '7 - Pró-labore' },
-        { key: '8', name: 'Cortesia', display: '8 - Cortesia' },
-        { key: '9', name: 'Permuta', display: '9 - Permuta' },
-    ];
+        if (dbIdentifiers && dbIdentifiers.length > 0) {
+            dbIdentifiers.forEach((idItem, idx) => {
+                const numKey = (6 + idx).toString();
+                base.push({
+                    key: numKey,
+                    name: idItem.name,
+                    display: `${numKey} - ${idItem.name}`,
+                });
+            });
+        } else {
+            // Fallback padrão se ainda não carregou do banco
+            base.push(
+                { key: '6', name: 'Funcionário', display: '6 - Funcionário' },
+                { key: '7', name: 'Pró-labore', display: '7 - Pró-labore' },
+                { key: '8', name: 'Cortesia', display: '8 - Cortesia' },
+                { key: '9', name: 'Permuta', display: '9 - Permuta' }
+            );
+        }
 
-    const BANCOS_NUMERADOS = [
-        { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
-        { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
-        { key: '3', name: 'CIELO', display: '3 - CIELO' },
-        { key: '4', name: 'IFOOD', display: '4 - IFOOD' },
-        { key: '5', name: 'STONE', display: '5 - STONE' },
-    ];
+        return base;
+    }, [dbIdentifiers]);
+
+    // Identifica se a forma selecionada é Conta da Casa / Identificador (A Prazo ou Operacional)
+    const isContaCasa = useMemo(() => {
+        if (tipo !== 'venda') return false;
+        
+        // Verifica nos identificadores do banco
+        if (dbIdentifiers && dbIdentifiers.length > 0) {
+            const found = dbIdentifiers.find(i => i.name.toLowerCase() === forma.toLowerCase());
+            if (found) return true;
+        }
+
+        // Padrão fallback
+        const padraoContaCasa = ['funcionário', 'pró-labore', 'cortesia', 'permuta', 'a prazo'];
+        return padraoContaCasa.includes(forma.toLowerCase());
+    }, [forma, tipo, dbIdentifiers]);
+
+    // Funções utilitárias de normalização de categoria
+    const normalizeCategory = (str: string) =>
+        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+    // Monta lista dinâmica de BANCOS_NUMERADOS filtrados por modalidade
+    const BANCOS_NUMERADOS = useMemo(() => {
+        const formaNorm = normalizeCategory(forma);
+        
+        // Se houver maquininhas cadastradas no banco
+        if (dbMachines && dbMachines.length > 0) {
+            // Filtra maquininhas que possuem a taxa cadastrada para essa categoria
+            const matchingMachines = dbMachines.filter(m => {
+                if (!m.rates || m.rates.length === 0) return true; // Se não tem filtro de taxa, mostra
+                return m.rates.some(r => normalizeCategory(r.payment_category) === formaNorm);
+            });
+
+            const machinesToUse = matchingMachines.length > 0 ? matchingMachines : dbMachines;
+
+            return machinesToUse.map((m, idx) => ({
+                key: (idx + 1).toString(),
+                name: m.name,
+                display: `${idx + 1} - ${m.name}`
+            }));
+        }
+
+        // Fallback para contas bancárias gerais ou lista genérica
+        if (dbAccounts && dbAccounts.accounts && dbAccounts.accounts.length > 0) {
+            return dbAccounts.accounts.map((acc, idx) => ({
+                key: (idx + 1).toString(),
+                name: acc.name,
+                display: `${idx + 1} - ${acc.name}`
+            }));
+        }
+
+        // Fallback padrão fixo
+        return [
+            { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
+            { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
+            { key: '3', name: 'CIELO', display: '3 - CIELO' },
+            { key: '4', name: 'IFOOD', display: '4 - IFOOD' },
+            { key: '5', name: 'STONE', display: '5 - STONE' },
+        ];
+    }, [forma, dbMachines, dbAccounts]);
 
     const formatCurrency = (value: string) => {
         const digits = value.replace(/\D/g, '');
@@ -86,15 +173,20 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     useEffect(() => {
         if (tipo === 'venda') {
-            if (forma === 'Dinheiro') setBanco('CAIXA');
-            else if (formasContaCasa.includes(forma)) setBanco('CONTA DA CASA');
-            else if (formasEletronicas.includes(forma)) {
-                if (banco === 'CAIXA' || banco === 'CONTA DA CASA') setBanco('SAFRA');
+            if (forma === 'Dinheiro') {
+                setBanco('CAIXA');
+            } else if (isContaCasa) {
+                setBanco('CONTA DA CASA');
+            } else {
+                // Seleciona a primeira maquininha válida para aquela modalidade
+                if (BANCOS_NUMERADOS.length > 0 && (banco === 'CAIXA' || banco === 'CONTA DA CASA')) {
+                    setBanco(BANCOS_NUMERADOS[0].name);
+                }
             }
         } else {
             setBanco('CAIXA');
         }
-    }, [forma, tipo]);
+    }, [forma, tipo, isContaCasa, BANCOS_NUMERADOS]);
 
     // Avança para o próximo campo com base na forma de pagamento selecionada
     const advanceFromForma = (formaSelecionada: string) => {
@@ -105,7 +197,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setTimeout(() => {
                 submitBtnRef.current?.focus();
             }, 60);
-        } else if (formasContaCasa.includes(formaSelecionada) && tipo === 'venda') {
+        } else if (isContaCasa && tipo === 'venda') {
             setBanco('CONTA DA CASA');
             setTimeout(() => {
                 consumidorInputRef.current?.focus();
@@ -242,10 +334,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             icon: <PlusCircle size={18} />
         },
         caixinha: {
-            title: "Lançar Caixinha / Gorjeta",
+            title: "Lançar Gorjeta",
             cardStyle: "bg-purple-50/40 border-purple-200",
             btnStyle: "bg-purple-600 hover:bg-purple-700",
-            btnLabel: "Lançar Caixinha",
+            btnLabel: "Lançar Gorjeta",
             icon: <Heart size={18} fill="currentColor" />
         }
     };
@@ -253,91 +345,86 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const currentConfig = formConfig[tipo];
 
     return (
-        <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 px-1">
-                <h2 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
-                    {currentConfig.title}
-                </h2>
+        <div className={`p-4 md:p-6 rounded-3xl border shadow-xl transition-all relative ${currentConfig.cardStyle}`}>
+            {showTooltip && (
+                <div className="absolute top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-2">
+                    <CheckCircle2 size={16} /> Lançamento registrado com sucesso!
+                </div>
+            )}
 
-                {tipo === 'venda' ? (
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <button
-                            type="button"
-                            onClick={() => setTipo('sangria')}
-                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-red-50 text-red-600 border-red-200 hover:bg-red-100 active:scale-95 shadow-sm"
-                        >
-                            <TrendingDown size={14} /> Registrar Sangria
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setTipo('suprimento')}
-                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 active:scale-95 shadow-sm"
-                        >
-                            <PlusCircle size={14} /> Registrar Suprimento
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setTipo('caixinha')}
-                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 active:scale-95 shadow-sm"
-                        >
-                            <Heart size={14} fill="currentColor" /> Registrar Caixinha
-                        </button>
-                    </div>
-                ) : (
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                    <h3 className="font-black text-zinc-900 text-lg md:text-xl uppercase tracking-tight">{currentConfig.title}</h3>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-2xl overflow-x-auto max-w-full">
                     <button
                         type="button"
                         onClick={() => setTipo('venda')}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 active:scale-95 shadow-sm"
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'venda' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
                     >
-                        <ArrowLeft size={14} /> Voltar para Vendas
+                        Venda
                     </button>
-                )}
+                    <button
+                        type="button"
+                        onClick={() => setTipo('sangria')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'text-zinc-500 hover:text-red-600'}`}
+                    >
+                        Sangria
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTipo('suprimento')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-500 hover:text-emerald-600'}`}
+                    >
+                        Suprimento
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTipo('caixinha')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'caixinha' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-500 hover:text-purple-600'}`}
+                    >
+                        Gorjeta
+                    </button>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className={`p-4 md:p-5 rounded-[1.5rem] md:rounded-3xl border shadow-sm flex flex-col transition-colors relative ${currentConfig.cardStyle}`}>
-
-                {showTooltip && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase flex items-center gap-2 shadow-xl animate-in zoom-in duration-300 z-50">
-                        <span className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={12} /> Lançamento Realizado!</span>
-                    </div>
-                )}
-
-                <div className="flex flex-col md:flex-row items-stretch md:items-end gap-4">
-                    <div className="grid grid-cols-2 md:flex md:flex-row gap-4 flex-1">
-                        {/* VALOR TOTAL / GORJETA */}
-                        <div className="col-span-1 md:w-36">
-                            <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
-                                {tipo === 'caixinha' ? 'Valor Gorjeta' : 'Valor Total'}
-                            </label>
+            <form onSubmit={handleSubmit}>
+                <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 md:flex md:flex-wrap items-end gap-3 md:gap-4">
+                        {/* VALOR */}
+                        <div className="col-span-2 md:w-36">
+                            <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Valor (R$)</label>
                             <input
                                 ref={valorInputRef}
                                 type="text"
-                                inputMode="numeric"
                                 required
                                 value={valor}
                                 onChange={e => setValor(formatCurrency(e.target.value))}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        if (tipo === 'venda') origemInputRef.current?.focus();
-                                        else if (tipo === 'caixinha') paraQuemInputRef.current?.focus();
-                                        else identificacaoInputRef.current?.focus();
+                                        if (tipo === 'venda') {
+                                            origemInputRef.current?.focus();
+                                        } else if (tipo === 'caixinha') {
+                                            paraQuemInputRef.current?.focus();
+                                        } else {
+                                            identificacaoInputRef.current?.focus();
+                                        }
                                     }
                                 }}
                                 placeholder="0,00"
-                                className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-lg md:text-base font-black outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                             />
                         </div>
 
                         {tipo === 'venda' && (
                             <>
-                                {/* ORIGEM (MESA / BALCÃO / DELIVERY) */}
-                                <div className="col-span-1 md:w-36">
-                                    <div className="flex items-center justify-between mb-1 ml-1">
-                                        <label className="text-[9px] font-black uppercase text-zinc-400 block">
-                                            Origem
-                                        </label>
-                                        <div className="flex gap-1 text-[8px] font-extrabold uppercase">
+                                {/* ORIGEM DA VENDA (MESA, BALCÃO, DELIVERY) */}
+                                <div className="col-span-2 md:w-48">
+                                    <div className="flex items-center justify-between mb-1 px-1">
+                                        <label className="text-[9px] font-black uppercase text-zinc-400 block">Origem</label>
+                                        <div className="flex items-center gap-1 text-[9px]">
                                             <button
                                                 type="button"
                                                 tabIndex={-1}
@@ -381,7 +468,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                 </div>
 
                                 {/* FORMA DE PAGAMENTO */}
-                                <div className="col-span-2 md:w-48">
+                                <div className="col-span-2 md:w-56">
                                     <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
                                         Forma de Pagamento
                                     </label>
@@ -411,7 +498,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                 {isContaCasa && (
                                     <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2">
                                         <label className="text-[9px] font-black uppercase text-orange-500 block mb-1 ml-1 flex items-center gap-1">
-                                            <UserCircle size={10} /> Nome do Consumidor
+                                            <UserCircle size={10} /> Nome do Consumidor / Justificativa
                                         </label>
                                         <input
                                             ref={consumidorInputRef}
@@ -425,7 +512,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                     submitBtnRef.current?.focus();
                                                 }
                                             }}
-                                            placeholder="Quem consumiu?"
+                                            placeholder="Ex: João Silva, Permuta Bar, Consumo Diretoria..."
                                             className="w-full border-2 border-orange-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-700"
                                         />
                                     </div>
@@ -433,8 +520,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
                                 {/* BANCO / DESTINO */}
                                 {!isContaCasa && (
-                                    <div className="col-span-2 md:w-40">
-                                        <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Banco / Destino</label>
+                                    <div className="col-span-2 md:w-48">
+                                        <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Banco / Operadora</label>
                                         <select
                                             ref={bancoSelectRef}
                                             disabled={forma === 'Dinheiro'}
@@ -466,7 +553,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                         {tipo === 'caixinha' && (
                             <>
                                 <div className="col-span-2 md:flex-1">
-                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a caixinha?</label>
+                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
                                     <input
                                         ref={paraQuemInputRef}
                                         type="text"
