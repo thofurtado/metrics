@@ -75,6 +75,9 @@ export function DetalheLote({
   }, [loteAtivo.lancamentos])
 
   const renderOrigemLabel = (l: any) => {
+    if (formasCasa.includes(l.formaPagamento)) {
+      return 'Consumo Interno'
+    }
     const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão')
     const num = l.identification || l.mesa || ''
     const cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
@@ -235,7 +238,7 @@ export function DetalheLote({
               <h1 className="text-sm font-black uppercase leading-none md:text-xl">
                 {new Date(loteAtivo.dataReferencia).toLocaleDateString(
                   'pt-BR',
-                  { timeZone: 'UTC' },
+                  { timeZone: 'America/Sao_Paulo' },
                 )}
               </h1>
               {isAdmin && (
@@ -547,8 +550,8 @@ export function DetalheLote({
                             <td className="p-4 font-bold">
                               {renderOrigemLabel(l)}
                             </td>
-                            <td className="p-4 text-[9px] font-black uppercase text-zinc-400">
-                              {l.consumidorCasa || l.banco}
+                            <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
+                              {l.consumidorCasa || l.identificacao || l.identification || l.banco || '-'}
                             </td>
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
                               {l.formaPagamento}{' '}
