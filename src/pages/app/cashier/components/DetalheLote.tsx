@@ -420,7 +420,7 @@ export function DetalheLote({
                                     ) : (
                                         sangrias.map((l: any) => (
                                             <tr key={l.id}>
-                                                <td className="p-4 italic font-bold text-red-900 text-xs">{l.identificacao || 'Sangria'}</td>
+                                                <td className="p-4 italic font-bold text-red-900 text-xs">{l.identificacao || l.identification || 'Sangria'}</td>
                                                 <td className="p-4 text-right font-mono font-black text-red-600">R$ -{l.valor.toFixed(2)}</td>
                                                 <td className="p-4 w-12 text-right">
                                                     <button onClick={() => onRemoverLancamento(l.id)} className="text-red-300 hover:text-red-600 p-1" title="Excluir sangria"><Trash2 size={18} /></button>
@@ -446,7 +446,7 @@ export function DetalheLote({
                                     ) : (
                                         suprimentos.map((l: any) => (
                                             <tr key={l.id}>
-                                                <td className="p-4 italic font-bold text-emerald-900 text-xs">{l.identificacao || 'Suprimento'}</td>
+                                                <td className="p-4 italic font-bold text-emerald-900 text-xs">{l.identificacao || l.identification || 'Suprimento'}</td>
                                                 <td className="p-4 text-right font-mono font-black text-emerald-600">R$ +{l.valor.toFixed(2)}</td>
                                                 <td className="p-4 w-12 text-right">
                                                     <button onClick={() => onRemoverLancamento(l.id)} className="text-emerald-300 hover:text-red-500 p-1" title="Excluir suprimento"><Trash2 size={18} /></button>

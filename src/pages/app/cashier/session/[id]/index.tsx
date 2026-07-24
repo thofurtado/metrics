@@ -35,11 +35,25 @@ export function CashierSessionDetails() {
         }
     })
 
+    const { mutateAsync: removeEntry } = useMutation({
+        mutationFn: deleteEntry,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }
+    })
+
+    const { mutateAsync: editEntry } = useMutation({
+        mutationFn: updateEntry,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }
+    })
+
     if (isLoading) {
         return <div className="p-8 text-center text-zinc-500">Carregando detalhes do caixa...</div>
     }
 
-    if (!data) {
+    if (!data || !data.session) {
         return <div className="p-8 text-center text-zinc-500">Caixa não encontrado.</div>
     }
 
@@ -70,10 +84,14 @@ export function CashierSessionDetails() {
         return {
             id: e.id,
             isSaida: e.is_withdrawal || false,
+            isSuprimento: e.is_addition || false,
+            isCaixinha: e.is_tip || false,
             valor: e.amount,
             formaPagamento: e.payment_method || 'Dinheiro',
             origin: e.origin || 'Mesa',
             identification: e.identification || '',
+            identificacao: e.identification || '',
+            paraQuem: e.identification || '',
             mesa: e.origin === 'Mesa' ? (e.identification || '') : '',
             banco: e.bank || 'CAIXA',
             conferido: false,
@@ -196,6 +214,7 @@ export function CashierSessionDetails() {
                 payment_method: dados.formaPagamento || 'Dinheiro',
                 amount: dados.valor,
                 is_withdrawal: dados.isSaida || false,
+                is_addition: dados.isSuprimento || false,
                 is_tip: dados.isCaixinha || false,
                 identification: dados.identificacao || (dados.mesa ? `Mesa ${dados.mesa}` : '')
             })
@@ -204,20 +223,6 @@ export function CashierSessionDetails() {
             alert(err?.response?.data?.message || 'Erro ao adicionar lançamento no caixa.')
         }
     }
-
-    const { mutateAsync: removeEntry } = useMutation({
-        mutationFn: deleteEntry,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
-        }
-    })
-
-    const { mutateAsync: editEntry } = useMutation({
-        mutationFn: updateEntry,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
-        }
-    })
 
     const handleRemoverLancamento = async (entryId: string) => {
         try {
@@ -259,4 +264,3 @@ export function CashierSessionDetails() {
         </div>
     )
 }
-
