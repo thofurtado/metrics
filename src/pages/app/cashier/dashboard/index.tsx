@@ -41,6 +41,8 @@ export function CashierDashboard() {
     enabled: !!token,
   })
 
+  const isAdmin = profile?.role === 'ADMIN'
+
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['cashier-sessions'],
     queryFn: getSessions,
@@ -50,7 +52,7 @@ export function CashierDashboard() {
   const { data: monthlyAudit } = useQuery({
     queryKey: ['monthly-cash-audit'],
     queryFn: getMonthlyCashAudit,
-    enabled: !!profile,
+    enabled: !!profile && isAdmin,
   })
 
   const { mutateAsync: openSessionFn } = useMutation({
@@ -206,79 +208,82 @@ export function CashierDashboard() {
         description="Gerencie a abertura, fechamento e conferência de lotes de caixa."
       />
 
-      {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (CLICÁVEL) */}
-      <div
-        onClick={() => setModalAuditOpen(true)}
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/60 p-4 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20"
-      >
-        <Banknote
-          size={80}
-          className="absolute -right-4 -top-4 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
-        />
+      {/* PAINEL DE CONTROLE SUPERIOR (LADO A LADO) */}
+      <div className={`grid grid-cols-1 gap-3 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
+        {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (EXCLUSIVO ADMIN) */}
+        {isAdmin && (
+          <div
+            onClick={() => setModalAuditOpen(true)}
+            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-3.5 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-7 flex flex-col justify-between"
+          >
+            <Banknote
+              size={70}
+              className="absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
+            />
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black uppercase text-white shadow-sm">
-                <Banknote size={12} /> Saldo Físico do Mês
-              </span>
-              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                ({summary.totalCaixasMes} caixas registrados este mês)
-              </span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
+                    <Banknote size={10} /> Saldo Espécie
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                    ({summary.totalCaixasMes} caixas)
+                  </span>
+                </div>
+                <p className="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
+                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
+                </p>
+                <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <Eye size={11} /> Clique para auditoria comparativa
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5 border-t border-emerald-200/60 pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 dark:border-emerald-900/40">
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
+                    Abertura
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                    R$ {summary.totalAberturaInicial.toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
+                    + Vendas
+                  </span>
+                  <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    R$ {summary.totalVendasDinheiroMes.toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-red-500/80">
+                    - Sangrias
+                  </span>
+                  <span className="font-mono text-xs font-bold text-red-600">
+                    R$ {summary.totalSangriasMes.toFixed(2)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="text-3xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
-              R$ {summary.saldoFisicoAtualMes.toFixed(2)}
-            </p>
-            <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <Eye size={12} /> Clique para visualizar a auditoria comparativa caixa a caixa do mês
-            </p>
           </div>
+        )}
 
-          <div className="grid grid-cols-3 gap-3 border-t border-emerald-200/60 pt-3 md:border-l md:border-t-0 md:pl-6 md:pt-0 dark:border-emerald-900/40">
-            <div>
-              <span className="block text-[9px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                Abertura Inicial
-              </span>
-              <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">
-                R$ {summary.totalAberturaInicial.toFixed(2)}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[9px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                + Vendas Dinheiro
-              </span>
-              <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                R$ {summary.totalVendasDinheiroMes.toFixed(2)}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[9px] font-black uppercase text-red-500/80">
-                - Sangrias Depósito
-              </span>
-              <span className="font-mono text-sm font-bold text-red-600">
-                R$ {summary.totalSangriasMes.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Formulário Horizontal Compacto para Abrir Caixa */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-              <Plus size={14} />
+        {/* Formulário Horizontal Compacto para Abrir Caixa */}
+        <div className={`rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}>
+          <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
+            <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <Plus size={13} />
             </div>
             <span>Abrir Novo Caixa</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 flex-1 md:max-w-xl">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div>
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
               >
                 <option value="Almoço">Período: Almoço</option>
                 <option value="Jantar">Período: Jantar</option>
@@ -292,16 +297,16 @@ export function CashierDashboard() {
                 value={saldoAbertura}
                 onChange={(e) => setSaldoAbertura(e.target.value)}
                 placeholder="Abertura R$ 0.00"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
               />
             </div>
 
             <div>
               <button
                 onClick={handleCriar}
-                className="w-full h-[34px] rounded-lg bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
+                className="w-full h-[34px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1"
               >
-                <Plus size={14} /> Iniciar Expediente
+                <Plus size={13} /> Iniciar Expediente
               </button>
             </div>
           </div>
@@ -481,7 +486,7 @@ export function CashierDashboard() {
       </div>
 
       {/* MODAL DE AUDITORIA MENSAL COMPACTA DO DINHEIRO FÍSICO */}
-      {modalAuditOpen && (
+      {modalAuditOpen && isAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             {/* Cabecalho Modal */}
