@@ -36,14 +36,7 @@ export function POSMachinesSettings() {
   const [accountId, setAccountId] = useState<string>('none')
   
   // Rate Matrix State
-  const [rates, setRates] = useState<POSMachineRate[]>([
-    { payment_category: 'DEBITO', installments: 1, tax_percentage: 1.20 },
-    { payment_category: 'CREDITO', installments: 1, tax_percentage: 2.50 },
-    { payment_category: 'CREDITO', installments: 2, tax_percentage: 3.80 },
-    { payment_category: 'CREDITO', installments: 3, tax_percentage: 4.50 },
-    { payment_category: 'VOUCHER', installments: 1, tax_percentage: 4.20 },
-    { payment_category: 'PIX', installments: 1, tax_percentage: 0.90 },
-  ])
+  const [rates, setRates] = useState<POSMachineRate[]>([])
 
   // Simulator State
   const [simulatedAmount, setSimulatedAmount] = useState('100.00')
@@ -100,14 +93,7 @@ export function POSMachinesSettings() {
     setEditingId(null)
     setName('')
     setAccountId('none')
-    setRates([
-      { payment_category: 'DEBITO', installments: 1, tax_percentage: 1.20 },
-      { payment_category: 'CREDITO', installments: 1, tax_percentage: 2.50 },
-      { payment_category: 'CREDITO', installments: 2, tax_percentage: 3.80 },
-      { payment_category: 'CREDITO', installments: 3, tax_percentage: 4.50 },
-      { payment_category: 'VOUCHER', installments: 1, tax_percentage: 4.20 },
-      { payment_category: 'PIX', installments: 1, tax_percentage: 0.90 },
-    ])
+    setRates([])
     setIsModalOpen(true)
   }
 
@@ -122,11 +108,7 @@ export function POSMachinesSettings() {
             installments: r.installments,
             tax_percentage: r.tax_percentage,
           }))
-        : [
-            { payment_category: 'DEBITO', installments: 1, tax_percentage: 1.20 },
-            { payment_category: 'CREDITO', installments: 1, tax_percentage: 2.50 },
-            { payment_category: 'CREDITO', installments: 2, tax_percentage: 3.80 },
-          ]
+        : []
     )
     setIsModalOpen(true)
   }
@@ -145,7 +127,7 @@ export function POSMachinesSettings() {
   }
 
   const handleAddRateRow = () => {
-    setRates([...rates, { payment_category: 'CREDITO', installments: 6, tax_percentage: 5.50 }])
+    setRates([...rates, { payment_category: 'DÉBITO', installments: 1, tax_percentage: 0 }])
   }
 
   const handleRemoveRateRow = (index: number) => {

@@ -3,14 +3,20 @@ import { api } from '@/lib/axios'
 export interface PaymentIdentifier {
   id: string
   name: string
+  payment_method_id?: string | null
   is_correntista_debt: boolean
   is_stock_evasion: boolean
   active: boolean
   created_at: string
+  paymentMethod?: {
+    id: string
+    name: string
+  }
 }
 
 export interface CreatePaymentIdentifierParams {
   name: string
+  payment_method_id?: string | null
   is_correntista_debt?: boolean
   is_stock_evasion?: boolean
 }
@@ -18,6 +24,7 @@ export interface CreatePaymentIdentifierParams {
 export interface UpdatePaymentIdentifierParams {
   id: string
   name?: string
+  payment_method_id?: string | null
   is_correntista_debt?: boolean
   is_stock_evasion?: boolean
   active?: boolean

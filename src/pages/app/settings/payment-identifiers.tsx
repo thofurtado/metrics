@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Tag, ShieldCheck, Box, Clock, Trash2, Edit2, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Plus, Tag, ShieldCheck, Box, Clock, Trash2, Edit2, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -10,11 +10,19 @@ import {
   deletePaymentIdentifier,
   PaymentIdentifier,
 } from '@/api/payment-identifiers'
+import { getPayments } from '@/api/get-payments'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +39,7 @@ export function PaymentIdentifiersSettings() {
 
   // Form state
   const [name, setName] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState<string>('none')
   const [isCorrentistaDebt, setIsCorrentistaDebt] = useState(false)
   const [isStockEvasion, setIsStockEvasion] = useState(false)
 
@@ -39,18 +48,25 @@ export function PaymentIdentifiersSettings() {
     queryFn: getPaymentIdentifiers,
   })
 
+  const { data: payments } = useQuery({
+    queryKey: ['payments'],
+    queryFn: getPayments,
+  })
+
   const { mutateAsync: saveIdentifier, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (editingId) {
         return updatePaymentIdentifier({
           id: editingId,
           name,
+          payment_method_id: paymentMethodId === 'none' ? null : paymentMethodId,
           is_correntista_debt: isCorrentistaDebt,
           is_stock_evasion: isStockEvasion,
         })
       } else {
         return createPaymentIdentifier({
           name,
+          payment_method_id: paymentMethodId === 'none' ? null : paymentMethodId,
           is_correntista_debt: isCorrentistaDebt,
           is_stock_evasion: isStockEvasion,
         })
@@ -80,6 +96,7 @@ export function PaymentIdentifiersSettings() {
   const handleOpenCreate = () => {
     setEditingId(null)
     setName('')
+    setPaymentMethodId('none')
     setIsCorrentistaDebt(false)
     setIsStockEvasion(false)
     setIsModalOpen(true)
@@ -88,6 +105,7 @@ export function PaymentIdentifiersSettings() {
   const handleOpenEdit = (item: PaymentIdentifier) => {
     setEditingId(item.id)
     setName(item.name)
+    setPaymentMethodId(item.payment_method_id || 'none')
     setIsCorrentistaDebt(item.is_correntista_debt)
     setIsStockEvasion(item.is_stock_evasion)
     setIsModalOpen(true)
@@ -97,8 +115,26 @@ export function PaymentIdentifiersSettings() {
     setIsModalOpen(false)
     setEditingId(null)
     setName('')
+    setPaymentMethodId('none')
     setIsCorrentistaDebt(false)
     setIsStockEvasion(false)
+  }
+
+  const handlePaymentMethodSelect = (val: string) => {
+    setPaymentMethodId(val)
+    if (val === 'none') return
+
+    const selectedPay = payments?.find(p => p.id === val)
+    if (selectedPay) {
+      const pName = selectedPay.name.toLowerCase()
+      if (pName.includes('prazo') || pName.includes('fiado') || pName.includes('correntista')) {
+        setIsCorrentistaDebt(true)
+        setIsStockEvasion(false)
+      } else if (pName.includes('operacional') || pName.includes('evasão') || pName.includes('evasao') || pName.includes('pró-labore')) {
+        setIsStockEvasion(true)
+        setIsCorrentistaDebt(false)
+      }
+    }
   }
 
   return (
@@ -110,7 +146,7 @@ export function PaymentIdentifiersSettings() {
             Identificadores de Caixa & Estoque
           </h1>
           <p className="text-sm text-muted-foreground">
-            Cadastre justificativas para lançamentos **A Prazo** (Fiado/Funcionários) e **Operacionais** (Pró-labore, Cortesia, Quebra, Perda).
+            Cadastre justificativas vinculadas às Formas de Pagamento para **A Prazo** (Fiado/Funcionários) e **Operacionais** (Pró-labore, Cortesia, Quebra, Perda).
           </p>
         </div>
 
@@ -137,62 +173,76 @@ export function PaymentIdentifiersSettings() {
             Nenhum identificador cadastrado ainda. Clique em "Novo Identificador" para criar.
           </div>
         ) : (
-          identifiers?.map((item) => (
-            <div
-              key={item.id}
-              className="group relative flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md"
-            >
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-bold tracking-tight text-foreground">
-                    {item.name}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleOpenEdit(item)}
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => removeIdentifier(item.id)}
-                      className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+          identifiers?.map((item) => {
+            const linkedPayment = item.paymentMethod || payments?.find(p => p.id === item.payment_method_id)
+
+            return (
+              <div
+                key={item.id}
+                className="group relative flex flex-col justify-between rounded-2xl border bg-card p-6 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold tracking-tight text-foreground">
+                        {item.name}
+                      </h3>
+                      {linkedPayment ? (
+                        <Badge variant="outline" className="mt-1 bg-primary/5 text-primary border-primary/20 text-[10px]">
+                          <CreditCard className="mr-1 h-3 w-3" />
+                          {linkedPayment.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">Sem forma vinculada</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleOpenEdit(item)}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeIdentifier(item.id)}
+                        className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Badges explicativos de comportamento */}
+                  <div className="space-y-2 pt-2 border-t text-xs">
+                    {item.is_correntista_debt && (
+                      <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900">
+                        <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                        <span className="font-semibold">Venda A Prazo (Gera conta a receber)</span>
+                      </div>
+                    )}
+
+                    {item.is_stock_evasion && (
+                      <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900">
+                        <Box className="h-4 w-4 shrink-0 text-rose-600" />
+                        <span className="font-semibold">Evasão Operacional (Baixa estoque, R$ 0 no caixa, sem NFC-e)</span>
+                      </div>
+                    )}
+
+                    {!item.is_correntista_debt && !item.is_stock_evasion && (
+                      <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        <ShieldCheck className="h-4 w-4 shrink-0" />
+                        <span>Identificador Simples de Lançamento</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Badges explicativos de comportamento */}
-                <div className="space-y-2 pt-2 border-t text-xs">
-                  {item.is_correntista_debt && (
-                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900">
-                      <Clock className="h-4 w-4 shrink-0 text-amber-600" />
-                      <span className="font-semibold">Venda A Prazo (Gera conta a receber)</span>
-                    </div>
-                  )}
-
-                  {item.is_stock_evasion && (
-                    <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900">
-                      <Box className="h-4 w-4 shrink-0 text-rose-600" />
-                      <span className="font-semibold">Evasão Operacional (Baixa estoque, R$ 0 no caixa, sem NFC-e)</span>
-                    </div>
-                  )}
-
-                  {!item.is_correntista_debt && !item.is_stock_evasion && (
-                    <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      <ShieldCheck className="h-4 w-4 shrink-0" />
-                      <span>Identificador Simples de Lançamento</span>
-                    </div>
-                  )}
-                </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 
@@ -205,7 +255,7 @@ export function PaymentIdentifiersSettings() {
               {editingId ? 'Editar Identificador' : 'Novo Identificador'}
             </DialogTitle>
             <DialogDescription>
-              Defina o nome da justificativa e configure se ela afeta contas a receber ou apenas baixa de estoque operacional.
+              Defina o nome da justificativa, vincule à Forma de Pagamento e configure o comportamento no estoque e contas.
             </DialogDescription>
           </DialogHeader>
 
@@ -214,11 +264,31 @@ export function PaymentIdentifiersSettings() {
               <Label htmlFor="name">Nome do Identificador</Label>
               <Input
                 id="name"
-                placeholder="Ex: Funcionário, Pró-labore, Permuta, Quebra, Cortesia"
+                placeholder="Ex: Funcionário João, Pró-labore Patrão, Permuta, Quebra Prato, Cortesia VIP"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="h-11"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethodId">Forma de Pagamento Vinculada</Label>
+              <Select value={paymentMethodId} onValueChange={handlePaymentMethodSelect}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecione a forma de pagamento..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma (Genérico)</SelectItem>
+                  {payments?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Associa este identificador a uma forma de pagamento principal (ex: A Prazo ou Consumo Operacional).
+              </p>
             </div>
 
             {/* Checkbox A Prazo */}
