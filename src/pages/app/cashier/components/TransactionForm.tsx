@@ -9,8 +9,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [forma, setForma] = useState('Dinheiro');
     const [banco, setBanco] = useState('CAIXA');
     
-    // Origem: Mesa, Balcão ou Delivery
-    const [tipoOrigem, setTipoOrigem] = useState<'Mesa' | 'Balcão' | 'Delivery'>('Mesa');
+    const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
+        const saved = localStorage.getItem('cashier_default_origin')
+        if (saved === 'Balcão' || saved === 'Delivery' || saved === 'Mesa') {
+            return saved
+        }
+        return 'Mesa'
+    }
+
+    // Origem: Mesa, Balcão ou Delivery (carrega das configurações)
+    const [tipoOrigem, setTipoOrigem] = useState<'Mesa' | 'Balcão' | 'Delivery'>(getInitialOrigem);
     const [numOrigem, setNumOrigem] = useState('');
 
     const [identificacao, setIdentificacao] = useState('');
@@ -190,7 +198,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         setTipo('venda');
         setValor('');
         setParaQuem('');
-        setTipoOrigem('Mesa');
+        setTipoOrigem(getInitialOrigem());
         setNumOrigem('');
         setIdentificacao('');
         setConsumidorCasa('');
@@ -321,6 +329,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         <div className="flex gap-1 text-[8px] font-extrabold uppercase">
                                             <button
                                                 type="button"
+                                                tabIndex={-1}
                                                 onClick={() => setTipoOrigem('Mesa')}
                                                 className={`px-1 rounded ${tipoOrigem === 'Mesa' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                                 title="Mesa (Atalho: M)"
@@ -329,6 +338,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                             </button>
                                             <button
                                                 type="button"
+                                                tabIndex={-1}
                                                 onClick={() => setTipoOrigem('Balcão')}
                                                 className={`px-1 rounded ${tipoOrigem === 'Balcão' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                                 title="Balcão (Atalho: B)"
@@ -337,6 +347,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                             </button>
                                             <button
                                                 type="button"
+                                                tabIndex={-1}
                                                 onClick={() => setTipoOrigem('Delivery')}
                                                 className={`px-1 rounded ${tipoOrigem === 'Delivery' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                                 title="Delivery (Atalho: D)"

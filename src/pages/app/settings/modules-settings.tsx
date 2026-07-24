@@ -26,6 +26,7 @@ const formSchema = z.object({
   financial: z.boolean(),
   treatments: z.boolean(),
   cashier: z.boolean(),
+  cashier_default_origin: z.enum(['Mesa', 'Balcão', 'Delivery']).optional(),
   hr_module: z.boolean(),
   cestaBasicaValue: z.coerce.number().min(0),
   financial_management_profile: z.enum(['ANALYTICAL', 'OPERATIONAL']),
@@ -283,10 +284,23 @@ export function ModulesSettings() {
                 />
               }
             >
-              <div className="mt-4 border-t border-dashed pt-4">
-                <p className="text-[10px] italic text-muted-foreground">
-                  Controle de abertura/fechamento e sangrias.
-                </p>
+              <div className="mt-4 border-t border-dashed pt-4 space-y-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                  Origem Padrão dos Lançamentos no Caixa
+                </label>
+                <select
+                  value={form.watch('cashier_default_origin') || localStorage.getItem('cashier_default_origin') || 'Mesa'}
+                  onChange={(e) => {
+                    const val = e.target.value as 'Mesa' | 'Balcão' | 'Delivery'
+                    form.setValue('cashier_default_origin', val, { shouldDirty: true })
+                    localStorage.setItem('cashier_default_origin', val)
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <option value="Mesa">Mesa (Padrão)</option>
+                  <option value="Balcão">Balcão</option>
+                  <option value="Delivery">Delivery</option>
+                </select>
               </div>
             </ModuleCard>
 
