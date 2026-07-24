@@ -74,9 +74,24 @@ export function DetalheLote({
     return bancos.sort()
   }, [loteAtivo.lancamentos])
 
-  const sangrias = [
-    ...loteAtivo.lancamentos.filter((l: any) => l.isSaida),
-  ].reverse()
+  const renderOrigemLabel = (l: any) => {
+    const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão')
+    const num = l.identification || l.mesa || ''
+    const cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
+    if (origin === 'Mesa') {
+      return cleanNum ? `Mesa ${cleanNum}` : 'Mesa'
+    }
+    if (origin === 'Delivery') {
+      return cleanNum ? `Delivery ${cleanNum}` : 'Delivery'
+    }
+    if (origin === 'Balcão') {
+      return cleanNum ? `Balcão ${cleanNum}` : 'Balcão'
+    }
+    return cleanNum ? `${origin} ${cleanNum}` : origin
+  }
+
+  const sangrias = [...loteAtivo.lancamentos.filter((l: any) => l.isSaida)].reverse()
+  const suprimentos = [...loteAtivo.lancamentos.filter((l: any) => l.isSuprimento || l.formaPagamento === 'Suprimento')].reverse()
 
   const tabs = [
     { id: 'Todas', label: 'Todas' },
@@ -89,7 +104,7 @@ export function DetalheLote({
   ]
 
   const vendasFiltradas = useMemo(() => {
-    let items = loteAtivo.lancamentos.filter((l: any) => !l.isSaida)
+    let items = loteAtivo.lancamentos.filter((l: any) => !l.isSaida && !l.isSuprimento && l.formaPagamento !== 'Suprimento' && !l.isCaixinha)
 
     // Filtro por Aba
     if (activeTab === 'Dinheiro') {
@@ -518,10 +533,11 @@ export function DetalheLote({
                             <td className="p-4 text-center">
                               <input
                                 type="checkbox"
-                                checked={!!l.conferido}
+                                checked={!!l.conferido || !!l.is_checked}
                                 onChange={(e) =>
                                   onEditarLancamento(l.id, {
                                     ...l,
+                                    is_checked: e.target.checked,
                                     conferido: e.target.checked,
                                   })
                                 }
@@ -529,8 +545,7 @@ export function DetalheLote({
                               />
                             </td>
                             <td className="p-4 font-bold">
-                              {' '}
-                              {l.mesa ? `M ${l.mesa}` : 'Balcão'}
+                              {renderOrigemLabel(l)}
                             </td>
                             <td className="p-4 text-[9px] font-black uppercase text-zinc-400">
                               {l.consumidorCasa || l.banco}

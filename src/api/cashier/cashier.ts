@@ -72,15 +72,39 @@ export async function closeSession(data: {
   return response.data
 }
 
-export async function createEntry(data: {
-  type: 'INCOME' | 'EXPENSE'
+export interface CreateEntryParams {
+  session_id: string
+  origin?: string
+  bank?: string
+  payment_method: string
   amount: number
-  payment_method_id?: number
-  category_id?: number
-  description?: string
-  condition_id?: number
-}) {
+  is_withdrawal?: boolean
+  is_addition?: boolean
+  is_tip?: boolean
+  is_checked?: boolean
+  type?: string
+  identification?: string
+}
+
+export async function createEntry(data: CreateEntryParams) {
   const response = await api.post<CashierEntry>('/api/cashier/entry', data)
+  return response.data
+}
+
+export async function deleteEntry(id: string) {
+  const response = await api.delete('/api/cashier/entry/' + id)
+  return response.data
+}
+
+export async function updateEntry(data: {
+  id: string
+  amount?: number
+  payment_method?: string
+  bank?: string
+  identification?: string
+  is_checked?: boolean
+}) {
+  const response = await api.put<CashierEntry>('/api/cashier/entry/' + data.id, data)
   return response.data
 }
 

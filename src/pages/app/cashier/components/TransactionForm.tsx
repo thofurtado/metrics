@@ -1,302 +1,522 @@
-'use client'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Heart,
-  Plus,
-  TrendingDown,
-  User,
-  UserCircle,
-} from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+"use client"
+import { useState, useEffect, useRef } from 'react';
+import { Plus, ArrowLeft, TrendingDown, PlusCircle, Heart, CheckCircle2, UserCircle } from 'lucide-react';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
-  const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada')
-  const [valor, setValor] = useState('')
-  const [valorCaixinha, setValorCaixinha] = useState('')
-  const [paraQuem, setParaQuem] = useState('')
-  const [forma, setForma] = useState('Dinheiro')
-  const [banco, setBanco] = useState('CAIXA')
-  const [mesa, setMesa] = useState('')
-  const [identificacao, setIdentificacao] = useState('')
-  const [consumidorCasa, setConsumidorCasa] = useState('')
-  const [isCaixinha, setIsCaixinha] = useState(false)
+    const [tipo, setTipo] = useState<'venda' | 'sangria' | 'suprimento' | 'caixinha'>('venda');
+    const [valor, setValor] = useState('');
+    const [paraQuem, setParaQuem] = useState('');
+    const [forma, setForma] = useState('Dinheiro');
+    const [banco, setBanco] = useState('CAIXA');
+    
+    // Origem: Mesa, Balcão ou Delivery
+    const [tipoOrigem, setTipoOrigem] = useState<'Mesa' | 'Balcão' | 'Delivery'>('Mesa');
+    const [numOrigem, setNumOrigem] = useState('');
 
-  const [showTooltip, setShowTooltip] = useState(false)
-  const valorInputRef = useRef<HTMLInputElement>(null)
+    const [identificacao, setIdentificacao] = useState('');
+    const [consumidorCasa, setConsumidorCasa] = useState('');
 
-  const formasContaCasa = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta']
-  const formasEletronicas = ['PIX', 'Débito', 'Crédito', 'Voucher']
-  const isContaCasa = formasContaCasa.includes(forma) && tipo === 'entrada'
+    const [showTooltip, setShowTooltip] = useState(false);
 
-  const formatCurrency = (value: string) => {
-    const digits = value.replace(/\D/g, '')
-    const amount = Number(digits) / 100
-    return amount.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  }
+    // Refs para controle refinado do foco
+    const valorInputRef = useRef<HTMLInputElement>(null);
+    const origemInputRef = useRef<HTMLInputElement>(null);
+    const formaSelectRef = useRef<HTMLSelectElement>(null);
+    const consumidorInputRef = useRef<HTMLInputElement>(null);
+    const bancoSelectRef = useRef<HTMLSelectElement>(null);
+    const identificacaoInputRef = useRef<HTMLInputElement>(null);
+    const paraQuemInputRef = useRef<HTMLInputElement>(null);
+    const submitBtnRef = useRef<HTMLButtonElement>(null);
 
-  const parseCurrencyToFloat = (value: string) => {
-    return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0
-  }
+    const formasContaCasa = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta'];
+    const formasEletronicas = ['PIX', 'Débito', 'Crédito', 'Voucher'];
+    const isContaCasa = formasContaCasa.includes(forma) && tipo === 'venda';
 
-  useEffect(() => {
-    if (tipo === 'entrada') {
-      if (forma === 'Dinheiro') setBanco('CAIXA')
-      else if (formasContaCasa.includes(forma)) setBanco('CONTA DA CASA')
-      else if (formasEletronicas.includes(forma)) {
-        if (banco === 'CAIXA' || banco === 'CONTA DA CASA') setBanco('SAFRA')
-      }
-    } else {
-      setBanco('CAIXA')
-    }
-  }, [forma, tipo])
+    const FORMAS_PAGAMENTO = [
+        { key: '1', name: 'Dinheiro', display: '1 - Dinheiro' },
+        { key: '2', name: 'PIX', display: '2 - PIX' },
+        { key: '3', name: 'Débito', display: '3 - Débito' },
+        { key: '4', name: 'Crédito', display: '4 - Crédito' },
+        { key: '5', name: 'Voucher', display: '5 - Voucher' },
+        { key: '6', name: 'Funcionário', display: '6 - Funcionário' },
+        { key: '7', name: 'Pró-labore', display: '7 - Pró-labore' },
+        { key: '8', name: 'Cortesia', display: '8 - Cortesia' },
+        { key: '9', name: 'Permuta', display: '9 - Permuta' },
+    ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const valorNumerico = parseCurrencyToFloat(valor)
-    if (valorNumerico <= 0) return
+    const BANCOS_NUMERADOS = [
+        { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
+        { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
+        { key: '3', name: 'CIELO', display: '3 - CIELO' },
+        { key: '4', name: 'IFOOD', display: '4 - IFOOD' },
+        { key: '5', name: 'STONE', display: '5 - STONE' },
+    ];
 
-    onAdd({
-      valor: valorNumerico,
-      valorCaixinha: isCaixinha ? parseCurrencyToFloat(valorCaixinha) : 0,
-      paraQuem: isCaixinha ? paraQuem : '',
-      formaPagamento: tipo === 'saida' ? 'Sangria' : forma,
-      banco,
-      mesa: tipo === 'saida' ? '' : mesa,
-      identificacao: tipo === 'saida' ? identificacao : '',
-      consumidorCasa: isContaCasa ? consumidorCasa : '',
-      isCaixinha: tipo === 'saida' ? false : isCaixinha,
-      isSaida: tipo === 'saida',
-    })
+    const formatCurrency = (value: string) => {
+        const digits = value.replace(/\D/g, '');
+        const amount = Number(digits) / 100;
+        return amount.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    };
 
-    setValor('')
-    setValorCaixinha('')
-    setParaQuem('')
-    setMesa('')
-    setIdentificacao('')
-    setConsumidorCasa('')
-    setIsCaixinha(false)
+    const parseCurrencyToFloat = (value: string) => {
+        return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    };
 
-    setShowTooltip(true)
-    setTimeout(() => setShowTooltip(false), 2000)
-    valorInputRef.current?.focus()
-  }
+    useEffect(() => {
+        if (tipo === 'venda') {
+            if (forma === 'Dinheiro') setBanco('CAIXA');
+            else if (formasContaCasa.includes(forma)) setBanco('CONTA DA CASA');
+            else if (formasEletronicas.includes(forma)) {
+                if (banco === 'CAIXA' || banco === 'CONTA DA CASA') setBanco('SAFRA');
+            }
+        } else {
+            setBanco('CAIXA');
+        }
+    }, [forma, tipo]);
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col items-start justify-between gap-3 px-1 sm:flex-row sm:items-center">
-        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-          {tipo === 'entrada' ? 'Lançar Venda' : 'Lançar Sangria'}
-        </h2>
-        <button
-          type="button"
-          onClick={() => setTipo(tipo === 'entrada' ? 'saida' : 'entrada')}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl border px-6 py-3 text-[10px] font-black uppercase transition-all sm:w-auto ${
-            tipo === 'saida'
-              ? 'border-zinc-200 bg-zinc-100 text-zinc-600'
-              : 'border-red-100 bg-red-50 text-red-600 hover:bg-red-100'
-          }`}
-        >
-          {tipo === 'entrada' ? (
-            <>
-              <TrendingDown size={14} /> Registrar Sangria
-            </>
-          ) : (
-            <>
-              <ArrowLeft size={14} /> Voltar para Vendas
-            </>
-          )}
-        </button>
-      </div>
+    // Avança para o próximo campo com base na forma de pagamento selecionada
+    const advanceFromForma = (formaSelecionada: string) => {
+        setForma(formaSelecionada);
 
-      <form
-        onSubmit={handleSubmit}
-        className={`relative flex flex-col rounded-[1.5rem] border p-4 shadow-sm transition-colors md:rounded-3xl md:p-5 ${tipo === 'saida' ? 'border-red-100 bg-red-50/30' : 'border-zinc-200 bg-white'}`}
-      >
-        {showTooltip && (
-          <div className="absolute -top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-[10px] font-black uppercase text-white shadow-xl duration-300 animate-in zoom-in">
-            <span className="flex items-center gap-2 whitespace-nowrap">
-              <CheckCircle2 size={12} /> Lançamento Realizado!
-            </span>
-          </div>
-        )}
+        if (formaSelecionada === 'Dinheiro') {
+            setBanco('CAIXA');
+            setTimeout(() => {
+                submitBtnRef.current?.focus();
+            }, 60);
+        } else if (formasContaCasa.includes(formaSelecionada) && tipo === 'venda') {
+            setBanco('CONTA DA CASA');
+            setTimeout(() => {
+                consumidorInputRef.current?.focus();
+                consumidorInputRef.current?.select();
+            }, 100);
+        } else {
+            setTimeout(() => {
+                bancoSelectRef.current?.focus();
+                try {
+                    bancoSelectRef.current?.showPicker();
+                } catch (e) {}
+            }, 80);
+        }
+    };
 
-        <div className="flex flex-col items-stretch gap-4 md:flex-row md:items-end">
-          <div className="grid flex-1 grid-cols-2 gap-4 md:flex md:flex-row">
-            <div className="col-span-1 md:w-32">
-              <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
-                Valor Total
-              </label>
-              <input
-                ref={valorInputRef}
-                type="text"
-                inputMode="numeric"
-                required
-                value={valor}
-                onChange={(e) => setValor(formatCurrency(e.target.value))}
-                placeholder="0,00"
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
-              />
-            </div>
+    // Avança a partir da seleção do Banco
+    const advanceFromBanco = (bancoSelecionado: string) => {
+        setBanco(bancoSelecionado);
+        setTimeout(() => {
+            submitBtnRef.current?.focus();
+        }, 60);
+    };
 
-            {tipo === 'entrada' ? (
-              <>
-                <div className="col-span-1 md:w-24">
-                  <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
-                    Mesa
-                  </label>
-                  <input
-                    type="number"
-                    value={mesa}
-                    onChange={(e) => setMesa(e.target.value)}
-                    placeholder="Nº"
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
-                  />
-                </div>
-                <div className="col-span-2 md:w-44">
-                  <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
-                    Forma de Pagamento
-                  </label>
-                  <select
-                    value={forma}
-                    onChange={(e) => setForma(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 text-base font-bold outline-none md:p-3 md:text-sm"
-                  >
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="PIX">PIX</option>
-                    <option value="Débito">Débito</option>
-                    <option value="Crédito">Crédito</option>
-                    <option value="Voucher">Voucher</option>
-                    <option value="Funcionário">Funcionário</option>
-                    <option value="Pró-labore">Pró-labore</option>
-                    <option value="Cortesia">Cortesia</option>
-                    <option value="Permuta">Permuta</option>
-                  </select>
-                </div>
+    const handleFormaKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
+        const item = FORMAS_PAGAMENTO.find(f => f.key === e.key);
+        if (item) {
+            e.preventDefault();
+            advanceFromForma(item.name);
+            return;
+        }
 
-                {isContaCasa && (
-                  <div className="col-span-2 animate-in slide-in-from-left-2 md:flex-1">
-                    <label className="mb-1 ml-1 block flex items-center gap-1 text-[9px] font-black uppercase text-orange-500">
-                      <UserCircle size={10} /> Nome do Consumidor
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={consumidorCasa}
-                      onChange={(e) => setConsumidorCasa(e.target.value)}
-                      placeholder="Quem consumiu?"
-                      className="w-full rounded-xl border-2 border-orange-200 bg-orange-50/30 p-4 text-base font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500 md:p-3 md:text-sm"
-                    />
-                  </div>
-                )}
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            advanceFromForma(forma);
+        }
+    };
 
-                {!isContaCasa && (
-                  <div className="col-span-2 md:w-40">
-                    <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
-                      Banco / Destino
-                    </label>
-                    <select
-                      disabled={forma === 'Dinheiro'}
-                      value={banco}
-                      onChange={(e) => setBanco(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 text-base font-bold outline-none disabled:opacity-60 md:p-3 md:text-sm"
+    const handleBancoKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
+        const item = BANCOS_NUMERADOS.find(b => b.key === e.key);
+        if (item) {
+            e.preventDefault();
+            advanceFromBanco(item.name);
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            advanceFromBanco(banco);
+        }
+    };
+
+    const handleOrigemKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        const key = e.key.toLowerCase();
+        if (key === 'b') {
+            e.preventDefault();
+            setTipoOrigem('Balcão');
+            return;
+        }
+        if (key === 'd') {
+            e.preventDefault();
+            setTipoOrigem('Delivery');
+            return;
+        }
+        if (key === 'm') {
+            e.preventDefault();
+            setTipoOrigem('Mesa');
+            return;
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            formaSelectRef.current?.focus();
+            try {
+                formaSelectRef.current?.showPicker();
+            } catch (err) {}
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const valorNumerico = parseCurrencyToFloat(valor);
+        if (valorNumerico <= 0) return;
+
+        onAdd({
+            valor: valorNumerico,
+            valorCaixinha: tipo === 'caixinha' ? valorNumerico : 0,
+            paraQuem: tipo === 'caixinha' ? paraQuem : '',
+            formaPagamento: (tipo === 'sangria' || tipo === 'suprimento')
+                ? (tipo === 'sangria' ? 'Sangria' : 'Suprimento')
+                : forma,
+            banco: (tipo === 'sangria' || tipo === 'suprimento') ? 'CAIXA' : banco,
+            origin: tipo === 'venda' ? tipoOrigem : '',
+            mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
+            identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
+            consumidorCasa: (tipo === 'venda' && isContaCasa) ? consumidorCasa : '',
+            isCaixinha: tipo === 'caixinha',
+            isSaida: tipo === 'sangria',
+            isSuprimento: tipo === 'suprimento',
+            type: tipo === 'sangria' ? 'WITHDRAWAL' : tipo === 'suprimento' ? 'ADDITION' : tipo === 'caixinha' ? 'TIP' : 'SALE'
+        });
+
+        setTipo('venda');
+        setValor('');
+        setParaQuem('');
+        setTipoOrigem('Mesa');
+        setNumOrigem('');
+        setIdentificacao('');
+        setConsumidorCasa('');
+
+        setShowTooltip(true);
+        setTimeout(() => setShowTooltip(false), 2000);
+        setTimeout(() => valorInputRef.current?.focus(), 100);
+    };
+
+    const formConfig = {
+        venda: {
+            title: "Lançar Venda",
+            cardStyle: "bg-white border-zinc-200",
+            btnStyle: "bg-zinc-900 hover:bg-zinc-800",
+            btnLabel: "Adicionar",
+            icon: <Plus size={18} />
+        },
+        sangria: {
+            title: "Lançar Sangria",
+            cardStyle: "bg-red-50/40 border-red-200",
+            btnStyle: "bg-red-600 hover:bg-red-700",
+            btnLabel: "Lançar Sangria",
+            icon: <TrendingDown size={18} />
+        },
+        suprimento: {
+            title: "Lançar Suprimento",
+            cardStyle: "bg-emerald-50/40 border-emerald-200",
+            btnStyle: "bg-emerald-600 hover:bg-emerald-700",
+            btnLabel: "Lançar Suprimento",
+            icon: <PlusCircle size={18} />
+        },
+        caixinha: {
+            title: "Lançar Caixinha / Gorjeta",
+            cardStyle: "bg-purple-50/40 border-purple-200",
+            btnStyle: "bg-purple-600 hover:bg-purple-700",
+            btnLabel: "Lançar Caixinha",
+            icon: <Heart size={18} fill="currentColor" />
+        }
+    };
+
+    const currentConfig = formConfig[tipo];
+
+    return (
+        <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 px-1">
+                <h2 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
+                    {currentConfig.title}
+                </h2>
+
+                {tipo === 'venda' ? (
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={() => setTipo('sangria')}
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-red-50 text-red-600 border-red-200 hover:bg-red-100 active:scale-95 shadow-sm"
+                        >
+                            <TrendingDown size={14} /> Registrar Sangria
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTipo('suprimento')}
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 active:scale-95 shadow-sm"
+                        >
+                            <PlusCircle size={14} /> Registrar Suprimento
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTipo('caixinha')}
+                            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 active:scale-95 shadow-sm"
+                        >
+                            <Heart size={14} fill="currentColor" /> Registrar Caixinha
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setTipo('venda')}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all border bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 active:scale-95 shadow-sm"
                     >
-                      {forma === 'Dinheiro' ? (
-                        <option value="CAIXA">CAIXA</option>
-                      ) : (
-                        <>
-                          <option value="SAFRA">SAFRA</option>
-                          <option value="PAGBANK">PAGBANK</option>
-                          <option value="CIELO">CIELO</option>
-                          <option value="IFOOD">IFOOD</option>
-                          <option value="STONE">STONE</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
+                        <ArrowLeft size={14} /> Voltar para Vendas
+                    </button>
                 )}
-              </>
-            ) : (
-              <div className="col-span-2 flex-1">
-                <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
-                  Motivo / Identificação
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={identificacao}
-                  onChange={(e) => setIdentificacao(e.target.value)}
-                  placeholder="Ex: Gás, Limpeza, etc."
-                  className="w-full rounded-xl border border-red-200 bg-red-50/50 p-4 text-base font-bold outline-none focus:ring-2 focus:ring-red-500 md:p-3 md:text-sm"
-                />
-              </div>
-            )}
-          </div>
+            </div>
 
-          <div className="mt-2 flex flex-col items-center gap-4 md:mt-0 md:flex-row">
-            {tipo === 'entrada' && (
-              <label
-                className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-all md:w-auto ${isCaixinha ? 'border-pink-200 bg-pink-50' : 'border-zinc-100 bg-zinc-50'}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isCaixinha}
-                  onChange={(e) => setIsCaixinha(e.target.checked)}
-                  className="h-5 w-5 rounded-lg text-pink-600 focus:ring-0"
-                />
-                <span
-                  className={`text-[10px] font-black uppercase ${isCaixinha ? 'text-pink-600' : 'text-zinc-600'}`}
-                >
-                  Caixinha?
-                </span>
-              </label>
-            )}
-            <button
-              type="submit"
-              className={`flex h-auto w-full items-center justify-center gap-2 rounded-xl px-10 py-5 text-xs font-black uppercase text-white shadow-lg transition-all active:scale-95 md:h-[46px] md:w-auto md:py-3 md:text-[10px] ${tipo === 'saida' ? 'bg-red-600' : 'bg-zinc-900'}`}
-            >
-              <Plus size={18} />{' '}
-              {tipo === 'saida' ? 'Lançar Sangria' : 'Adicionar'}
-            </button>
-          </div>
+            <form onSubmit={handleSubmit} className={`p-4 md:p-5 rounded-[1.5rem] md:rounded-3xl border shadow-sm flex flex-col transition-colors relative ${currentConfig.cardStyle}`}>
+
+                {showTooltip && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase flex items-center gap-2 shadow-xl animate-in zoom-in duration-300 z-50">
+                        <span className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={12} /> Lançamento Realizado!</span>
+                    </div>
+                )}
+
+                <div className="flex flex-col md:flex-row items-stretch md:items-end gap-4">
+                    <div className="grid grid-cols-2 md:flex md:flex-row gap-4 flex-1">
+                        {/* VALOR TOTAL / GORJETA */}
+                        <div className="col-span-1 md:w-36">
+                            <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
+                                {tipo === 'caixinha' ? 'Valor Gorjeta' : 'Valor Total'}
+                            </label>
+                            <input
+                                ref={valorInputRef}
+                                type="text"
+                                inputMode="numeric"
+                                required
+                                value={valor}
+                                onChange={e => setValor(formatCurrency(e.target.value))}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (tipo === 'venda') origemInputRef.current?.focus();
+                                        else if (tipo === 'caixinha') paraQuemInputRef.current?.focus();
+                                        else identificacaoInputRef.current?.focus();
+                                    }
+                                }}
+                                placeholder="0,00"
+                                className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            />
+                        </div>
+
+                        {tipo === 'venda' && (
+                            <>
+                                {/* ORIGEM (MESA / BALCÃO / DELIVERY) */}
+                                <div className="col-span-1 md:w-36">
+                                    <div className="flex items-center justify-between mb-1 ml-1">
+                                        <label className="text-[9px] font-black uppercase text-zinc-400 block">
+                                            Origem
+                                        </label>
+                                        <div className="flex gap-1 text-[8px] font-extrabold uppercase">
+                                            <button
+                                                type="button"
+                                                onClick={() => setTipoOrigem('Mesa')}
+                                                className={`px-1 rounded ${tipoOrigem === 'Mesa' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                                title="Mesa (Atalho: M)"
+                                            >
+                                                Mesa
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setTipoOrigem('Balcão')}
+                                                className={`px-1 rounded ${tipoOrigem === 'Balcão' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                                title="Balcão (Atalho: B)"
+                                            >
+                                                Balcão
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setTipoOrigem('Delivery')}
+                                                className={`px-1 rounded ${tipoOrigem === 'Delivery' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                                title="Delivery (Atalho: D)"
+                                            >
+                                                Delivery
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            ref={origemInputRef}
+                                            type="text"
+                                            value={numOrigem}
+                                            onChange={e => setNumOrigem(e.target.value)}
+                                            onKeyDown={handleOrigemKeyDown}
+                                            placeholder={tipoOrigem === 'Mesa' ? "Nº Mesa" : tipoOrigem === 'Balcão' ? "Nº Balcão" : "Nº Delivery"}
+                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* FORMA DE PAGAMENTO */}
+                                <div className="col-span-2 md:w-48">
+                                    <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
+                                        Forma de Pagamento
+                                    </label>
+                                    <select
+                                        ref={formaSelectRef}
+                                        value={forma}
+                                        onChange={e => {
+                                            advanceFromForma(e.target.value);
+                                        }}
+                                        onFocus={() => {
+                                            try {
+                                                formaSelectRef.current?.showPicker();
+                                            } catch (e) {}
+                                        }}
+                                        onKeyDown={handleFormaKeyDown}
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                                    >
+                                        {FORMAS_PAGAMENTO.map(f => (
+                                            <option key={f.key} value={f.name}>
+                                                {f.display}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* CONSUMIDOR CONTA CASA */}
+                                {isContaCasa && (
+                                    <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2">
+                                        <label className="text-[9px] font-black uppercase text-orange-500 block mb-1 ml-1 flex items-center gap-1">
+                                            <UserCircle size={10} /> Nome do Consumidor
+                                        </label>
+                                        <input
+                                            ref={consumidorInputRef}
+                                            type="text"
+                                            required
+                                            value={consumidorCasa}
+                                            onChange={e => setConsumidorCasa(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    submitBtnRef.current?.focus();
+                                                }
+                                            }}
+                                            placeholder="Quem consumiu?"
+                                            className="w-full border-2 border-orange-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-700"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* BANCO / DESTINO */}
+                                {!isContaCasa && (
+                                    <div className="col-span-2 md:w-40">
+                                        <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Banco / Destino</label>
+                                        <select
+                                            ref={bancoSelectRef}
+                                            disabled={forma === 'Dinheiro'}
+                                            value={banco}
+                                            onChange={e => advanceFromBanco(e.target.value)}
+                                            onFocus={() => {
+                                                if (forma !== 'Dinheiro') {
+                                                    try {
+                                                        bancoSelectRef.current?.showPicker();
+                                                    } catch (e) {}
+                                                }
+                                            }}
+                                            onKeyDown={handleBancoKeyDown}
+                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                        >
+                                            {forma === 'Dinheiro' ? <option value="CAIXA">CAIXA</option> :
+                                                BANCOS_NUMERADOS.map(b => (
+                                                    <option key={b.key} value={b.name}>
+                                                        {b.display}
+                                                    </option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {tipo === 'caixinha' && (
+                            <>
+                                <div className="col-span-2 md:flex-1">
+                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a caixinha?</label>
+                                    <input
+                                        ref={paraQuemInputRef}
+                                        type="text"
+                                        required
+                                        value={paraQuem}
+                                        onChange={e => setParaQuem(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                formaSelectRef.current?.focus();
+                                            }
+                                        }}
+                                        placeholder="Ex: João, Cozinha, Garçons..."
+                                        className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    />
+                                </div>
+                                <div className="col-span-2 md:w-48">
+                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Forma de Pagamento</label>
+                                    <select
+                                        ref={formaSelectRef}
+                                        value={forma}
+                                        onChange={e => setForma(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                submitBtnRef.current?.focus();
+                                            }
+                                        }}
+                                        className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    >
+                                        <option value="Dinheiro">Dinheiro</option>
+                                        <option value="PIX">PIX</option>
+                                        <option value="Débito">Débito</option>
+                                        <option value="Crédito">Crédito</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        {(tipo === 'sangria' || tipo === 'suprimento') && (
+                            <div className="col-span-2 flex-1">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Motivo / Identificação</label>
+                                <input
+                                    ref={identificacaoInputRef}
+                                    type="text"
+                                    required
+                                    value={identificacao}
+                                    onChange={e => setIdentificacao(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            submitBtnRef.current?.focus();
+                                        }
+                                    }}
+                                    placeholder={tipo === 'sangria' ? "Ex: Gás, Limpeza, Retirada..." : "Ex: Troco inicial, Suprimento de caixa..."}
+                                    className={`w-full border rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white ${tipo === 'sangria' ? 'border-red-200 focus:ring-2 focus:ring-red-500' : 'border-emerald-200 focus:ring-2 focus:ring-emerald-500'}`}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center gap-4 mt-2 md:mt-0">
+                        <button
+                            ref={submitBtnRef}
+                            type="submit"
+                            className={`w-full md:w-auto px-10 py-5 md:py-3 h-auto md:h-[46px] flex items-center justify-center gap-2 text-white font-black uppercase text-xs md:text-[10px] rounded-xl transition-all shadow-lg active:scale-95 focus:ring-2 focus:ring-blue-600 outline-none ${currentConfig.btnStyle}`}
+                        >
+                            {currentConfig.icon} {currentConfig.btnLabel}
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
-
-        {tipo === 'entrada' && isCaixinha && (
-          <div className="mt-4 grid grid-cols-1 gap-4 border-t border-dashed border-pink-100 pt-4 animate-in fade-in slide-in-from-top-2 md:grid-cols-3">
-            <div>
-              <label className="mb-1 ml-1 block flex items-center gap-1 text-[9px] font-black uppercase text-pink-500">
-                <Heart size={8} fill="currentColor" /> Valor Gorjeta
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                required
-                value={valorCaixinha}
-                onChange={(e) =>
-                  setValorCaixinha(formatCurrency(e.target.value))
-                }
-                placeholder="0,00"
-                className="w-full rounded-xl border-2 border-pink-200 bg-white p-3 text-sm font-black text-pink-700 outline-none focus:ring-2 focus:ring-pink-500"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="mb-1 ml-1 block flex items-center gap-1 text-[9px] font-black uppercase text-zinc-400">
-                <User size={8} /> Para quem é a caixinha?
-              </label>
-              <input
-                type="text"
-                value={paraQuem}
-                onChange={(e) => setParaQuem(e.target.value)}
-                placeholder="Ex: João, Cozinha, Garçons..."
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        )}
-      </form>
-    </div>
-  )
+    );
 }
