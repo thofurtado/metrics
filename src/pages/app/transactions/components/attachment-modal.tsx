@@ -67,8 +67,8 @@ export function AttachmentModal({
           </div>
         </DialogHeader>
 
-        <div className="relative flex flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-900/50">
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+        <div className="flex flex-1 min-h-0 min-w-0 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden flex-col">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden flex items-center justify-center relative">
             {isPdf ? (
               <iframe
                 src={finalUrl}

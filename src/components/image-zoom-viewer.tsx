@@ -97,7 +97,7 @@ export function ImageZoomViewer({
 
   return (
     <div
-      className={`relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden ${containerClassName}`}
+      className={`relative flex h-full w-full min-h-0 min-w-0 select-none flex-col items-center justify-center overflow-hidden ${containerClassName}`}
     >
       {/* Controles Flutuantes de Zoom */}
       <div className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/75 p-1.5 shadow-xl backdrop-blur-md">
@@ -166,7 +166,7 @@ export function ImageZoomViewer({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
-        className={`flex h-full w-full touch-none items-center justify-center overflow-hidden p-2 ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+        className={`flex h-full w-full min-h-0 min-w-0 touch-none items-center justify-center overflow-hidden p-2 ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
       >
         <div
           style={{
@@ -174,7 +174,7 @@ export function ImageZoomViewer({
             transition: isDragging ? 'none' : 'transform 0.15s ease-out',
             transformOrigin: 'center center',
           }}
-          className="pointer-events-none flex h-full w-full items-center justify-center"
+          className="pointer-events-none flex h-full w-full min-h-0 min-w-0 items-center justify-center"
         >
           <img
             src={src}
