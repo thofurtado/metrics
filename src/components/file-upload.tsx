@@ -1,176 +1,188 @@
-import React, { useCallback, useState } from 'react';
-import { Upload, X, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/axios';
-import { Button } from './ui/button';
+import { FileText, Image as ImageIcon, Trash2, Upload, X } from 'lucide-react'
+import React, { useCallback, useState } from 'react'
+
+import { API_BASE_URL } from '@/lib/axios'
+
+import { Button } from './ui/button'
 
 interface FileUploadProps {
-  onFileSelect: (file: File | null) => void;
-  accept?: string;
-  maxSizeMB?: number;
-  currentFileUrl?: string | null;
-  publicReceiptUrl?: string | null;
-  readOnly?: boolean;
-  onRemoveExistingFile?: () => void;
+  onFileSelect: (file: File | null) => void
+  accept?: string
+  maxSizeMB?: number
+  currentFileUrl?: string | null
+  publicReceiptUrl?: string | null
+  readOnly?: boolean
+  onRemoveExistingFile?: () => void
 }
 
-export function FileUpload({ 
-  onFileSelect, 
-  accept = "image/jpeg,image/png,image/webp,application/pdf", 
+export function FileUpload({
+  onFileSelect,
+  accept = 'image/jpeg,image/png,image/webp,application/pdf',
   maxSizeMB = 10,
   currentFileUrl,
   publicReceiptUrl,
   readOnly = false,
   onRemoveExistingFile,
 }: FileUploadProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [dragActive, setDragActive] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string>('')
 
   const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
     }
-  }, []);
+  }, [])
 
   const validateAndSetFile = (file: File) => {
-    setErrorMsg('');
+    setErrorMsg('')
     if (file.size > maxSizeMB * 1024 * 1024) {
-      setErrorMsg(`O arquivo deve ter no máximo ${maxSizeMB}MB`);
-      return;
+      setErrorMsg(`O arquivo deve ter no máximo ${maxSizeMB}MB`)
+      return
     }
-    
+
     // Check if type matches our 'accept' list (rough validation)
-    const acceptedTypes = accept.split(',');
-    const isAccepted = acceptedTypes.some(type => {
+    const acceptedTypes = accept.split(',')
+    const isAccepted = acceptedTypes.some((type) => {
       // e.g. "image/*"
       if (type.endsWith('/*')) {
-        return file.type.startsWith(type.replace('/*', ''));
+        return file.type.startsWith(type.replace('/*', ''))
       }
-      return file.type === type.trim();
-    });
+      return file.type === type.trim()
+    })
 
     if (!isAccepted) {
-      setErrorMsg('Formato de arquivo não suportado');
-      return;
+      setErrorMsg('Formato de arquivo não suportado')
+      return
     }
 
-    setSelectedFile(file);
-    onFileSelect(file);
+    setSelectedFile(file)
+    onFileSelect(file)
 
     if (file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
     } else {
-      setPreviewUrl(null);
+      setPreviewUrl(null)
     }
-  };
+  }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0]);
+      validateAndSetFile(e.dataTransfer.files[0])
     }
-  }, []);
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
+    e.preventDefault()
     if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0]);
+      validateAndSetFile(e.target.files[0])
     }
-  };
+  }
 
   const clearFile = () => {
-    setSelectedFile(null);
+    setSelectedFile(null)
     if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+      URL.revokeObjectURL(previewUrl)
     }
-    setPreviewUrl(null);
-    onFileSelect(null);
-    setErrorMsg('');
-  };
+    setPreviewUrl(null)
+    onFileSelect(null)
+    setErrorMsg('')
+  }
 
   return (
     <div className="w-full space-y-2">
       {/* Exibe o arquivo existente, se houver + URL pública */}
       {currentFileUrl && !selectedFile && (
-         <div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg border border-border/50">
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Arquivo existente anexado</span>
-                {!readOnly && onRemoveExistingFile && (
-                    <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={onRemoveExistingFile}
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        title="Remover anexo"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                )}
-            </div>
-            <div className="flex gap-2">
-                <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      const finalUrl = currentFileUrl.startsWith('http') ? currentFileUrl : `${API_BASE_URL?.replace(/\/$/, '') || ''}${currentFileUrl.startsWith('/') ? '' : '/'}${currentFileUrl}`;
-                      window.open(finalUrl, '_blank')
-                    }}
-                    className="w-full text-xs"
-                >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Abrir arquivo
-                </Button>
-                {publicReceiptUrl && (
-                    <Button 
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => window.open(publicReceiptUrl, '_blank')}
-                        className="w-full text-xs"
-                    >
-                        <span>🔗 Compartilhar Comprovante</span>
-                    </Button>
-                )}
-            </div>
-         </div>
+        <div className="flex flex-col gap-2 rounded-lg border border-border/50 bg-muted/50 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">
+              Arquivo existente anexado
+            </span>
+            {!readOnly && onRemoveExistingFile && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onRemoveExistingFile}
+                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title="Remover anexo"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const finalUrl = currentFileUrl.startsWith('http')
+                  ? currentFileUrl
+                  : `${API_BASE_URL?.replace(/\/$/, '') || ''}${currentFileUrl.startsWith('/') ? '' : '/'}${currentFileUrl}`
+                window.open(finalUrl, '_blank')
+              }}
+              className="w-full text-xs"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Abrir arquivo
+            </Button>
+            {publicReceiptUrl && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => window.open(publicReceiptUrl, '_blank')}
+                className="w-full text-xs"
+              >
+                <span>🔗 Compartilhar Comprovante</span>
+              </Button>
+            )}
+          </div>
+        </div>
       )}
 
       {selectedFile ? (
-        <div className="relative flex items-center p-3 border rounded-lg bg-muted/30">
-          <div className="flex-shrink-0 mr-3">
+        <div className="relative flex items-center rounded-lg border bg-muted/30 p-3">
+          <div className="mr-3 flex-shrink-0">
             {previewUrl ? (
-              <img src={previewUrl} alt="Preview" className="w-12 h-12 object-cover rounded-md border" />
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-12 w-12 rounded-md border object-cover"
+              />
             ) : (
-              <div className="w-12 h-12 flex items-center justify-center bg-primary/10 rounded-md border">
-                <FileText className="w-6 h-6 text-primary" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-primary/10">
+                <FileText className="h-6 w-6 text-primary" />
               </div>
             )}
           </div>
           <div className="flex-1 truncate">
-            <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-            <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+            <p className="truncate text-sm font-medium">{selectedFile.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+            </p>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={clearFile}
-            className="p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive flex-shrink-0"
+            className="flex-shrink-0 rounded-full p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-      ) : (!readOnly && !currentFileUrl) ? (
-        <div 
-          className={`relative flex flex-col items-center justify-center w-full min-h-[120px] p-4 py-6 border-2 border-dashed rounded-xl transition-colors
+      ) : !readOnly && !currentFileUrl ? (
+        <div
+          className={`relative flex min-h-[120px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 py-6 transition-colors
             ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -181,23 +193,25 @@ export function FileUpload({
             type="file"
             accept={accept}
             onChange={handleChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
-          <div className="flex p-3 rounded-full bg-primary/10 mb-3">
-             <Upload className="w-6 h-6 text-primary" />
+          <div className="mb-3 flex rounded-full bg-primary/10 p-3">
+            <Upload className="h-6 w-6 text-primary" />
           </div>
-          <p className="text-sm font-medium text-foreground text-center">
+          <p className="text-center text-sm font-medium text-foreground">
             Clique ou arraste um arquivo
           </p>
-          <p className="text-xs text-muted-foreground mt-1 text-center">
+          <p className="mt-1 text-center text-xs text-muted-foreground">
             Suporta imagens ou PDF (máx. {maxSizeMB}MB)
           </p>
         </div>
       ) : null}
-      
+
       {errorMsg && (
-        <p className="text-xs text-destructive font-medium text-center">{errorMsg}</p>
+        <p className="text-center text-xs font-medium text-destructive">
+          {errorMsg}
+        </p>
       )}
     </div>
-  );
+  )
 }

@@ -31,7 +31,7 @@ export function TimePickerDemo({ date, setDate }: TimePickerDemoProps) {
         />
       </div>
       <div className="flex h-10 items-center">
-        <span className="text-xl text-gray-300 mb-1">:</span>
+        <span className="mb-1 text-xl text-gray-300">:</span>
       </div>
       <div className="grid gap-1 text-center">
         <Label htmlFor="minutes" className="text-xs">

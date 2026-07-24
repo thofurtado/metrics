@@ -9,6 +9,8 @@ export interface UserWithModules {
 }
 
 export async function getUsersWithModules() {
-  const response = await api.get<{ users: UserWithModules[] }>('/users-with-modules')
+  const response = await api.get<{ users: UserWithModules[] }>(
+    '/users-with-modules',
+  )
   return response.data.users
 }

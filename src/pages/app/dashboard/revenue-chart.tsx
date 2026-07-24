@@ -5,9 +5,9 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
 } from 'recharts'
 import colors from 'tailwindcss/colors'
 
@@ -23,7 +23,9 @@ import {
 // --------------------------------------------------------
 // FUNÇÃO DE PROCESSAMENTO DE DADOS (Agregação e Formatação)
 // --------------------------------------------------------
-function processChartData(data: { day: string; revenue: number }[] | undefined) {
+function processChartData(
+  data: { day: string; revenue: number }[] | undefined,
+) {
   if (!data) {
     return []
   }
@@ -39,14 +41,16 @@ function processChartData(data: { day: string; revenue: number }[] | undefined) 
     const formattedDay = `${dayOfMonth}-${month}`
 
     return {
-      day: day,
-      formattedDay: formattedDay,
-      revenue: revenue,
+      day,
+      formattedDay,
+      revenue,
     }
   })
 
   // Opcional: Garante que os dados estão ordenados por data original
-  finalData.sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
+  finalData.sort(
+    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+  )
 
   return finalData
 }
@@ -75,7 +79,11 @@ export function RevenueChart({ className }: { className?: string }) {
           <>
             {/* ResponsiveContainer garante que o gráfico ocupe 100% da largura do pai */}
             <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={chartData} style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }} margin={{ top: 10, right: 10, left: 16, bottom: 10 }}>
+              <LineChart
+                data={chartData}
+                style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}
+                margin={{ top: 10, right: 10, left: 16, bottom: 10 }}
+              >
                 <XAxis
                   dataKey="formattedDay"
                   axisLine={false}

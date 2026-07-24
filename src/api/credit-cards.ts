@@ -36,7 +36,10 @@ export async function createCreditCard(data: CreateCreditCardBody) {
   return response.data
 }
 
-export async function updateCreditCard(id: string, data: Partial<CreateCreditCardBody> & { active?: boolean }) {
+export async function updateCreditCard(
+  id: string,
+  data: Partial<CreateCreditCardBody> & { active?: boolean },
+) {
   const response = await api.put<CreditCard>(`/credit-cards/${id}`, data)
   return response.data
 }
@@ -46,6 +49,8 @@ export async function deleteCreditCard(id: string) {
 }
 
 export async function payCreditCardInvoice(id: string, month: string) {
-  const response = await api.patch<{ count: number }>(`/credit-cards/${id}/pay-invoice?month=${month}`)
+  const response = await api.patch<{ count: number }>(
+    `/credit-cards/${id}/pay-invoice?month=${month}`,
+  )
   return response.data
 }

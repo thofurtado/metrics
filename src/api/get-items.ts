@@ -55,7 +55,15 @@ export interface GetItemsQuery {
   signal?: AbortSignal
 }
 
-export async function getItems({ pageIndex, limit, name, display_id, type, below_min_stock, signal }: GetItemsQuery = {}) {
+export async function getItems({
+  pageIndex,
+  limit,
+  name,
+  display_id,
+  type,
+  below_min_stock,
+  signal,
+}: GetItemsQuery = {}) {
   const response = await api.get<GetItemsResponse>('/items', {
     params: {
       page: pageIndex || 1,
@@ -63,9 +71,9 @@ export async function getItems({ pageIndex, limit, name, display_id, type, below
       name,
       display_id,
       type,
-      below_min_stock
+      below_min_stock,
     },
-    signal
+    signal,
   })
 
   // Default values to prevent frontend crashes
@@ -77,9 +85,9 @@ export async function getItems({ pageIndex, limit, name, display_id, type, below
         meta: {
           pageIndex: pageIndex || 1,
           perPage: limit || 10,
-          totalCount: 0
-        }
-      }
+          totalCount: 0,
+        },
+      },
     }
   }
 

@@ -15,10 +15,13 @@ export interface FinanceMetricsFilters {
   year?: number
 }
 
-export async function getFinanceMetrics({ month, year }: FinanceMetricsFilters = {}): Promise<GetFinanceMetricsResponse> {
+export async function getFinanceMetrics({
+  month,
+  year,
+}: FinanceMetricsFilters = {}): Promise<GetFinanceMetricsResponse> {
   try {
     const response = await api.get('/summary', {
-      params: { month, year }
+      params: { month, year },
     })
     console.log('📊 Dados COMPLETOS recebidos da API:', response.data)
     console.log('📊 Estrutura do summary:', response.data.summary)
@@ -37,12 +40,11 @@ export async function getFinanceMetrics({ month, year }: FinanceMetricsFilters =
       aReceber: apiData.pendingIncome || 0,
       aPagar: apiData.pendingExpenses || 0,
       receitaVencida: apiData.overdueIncome || 0,
-      despesaVencida: apiData.overdueExpenses || 0
+      despesaVencida: apiData.overdueExpenses || 0,
     }
 
     console.log('🎯 Resultado final:', result)
     return result
-
   } catch (error) {
     console.error('❌ Erro na API financeira:', error)
     // Retorna dados vazios em caso de erro
@@ -53,7 +55,7 @@ export async function getFinanceMetrics({ month, year }: FinanceMetricsFilters =
       aReceber: 0,
       aPagar: 0,
       receitaVencida: 0,
-      despesaVencida: 0
+      despesaVencida: 0,
     }
   }
 }

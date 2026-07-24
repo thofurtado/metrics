@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
-    ArrowRightLeft,
-    Calendar as CalendarIcon,
-    ArrowRight,
+  ArrowRight,
+  ArrowRightLeft,
+  Calendar as CalendarIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -14,377 +14,413 @@ import { z } from 'zod'
 import { createTransaction } from '@/api/create-transaction'
 import { getAccounts } from '@/api/get-accounts'
 import { CreateAccountDialog } from '@/components/create-account-dialog'
-import { QuickAddSelect } from '@/components/ui/quick-add-select'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
-    ResponsiveDialogContent,
-    ResponsiveDialogHeader,
-    ResponsiveDialogTitle,
-    ResponsiveDialogDescription,
-    ResponsiveDialogClose
-} from '@/components/ui/responsive-dialog'
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from '@/components/ui/popover'
+import { QuickAddSelect } from '@/components/ui/quick-add-select'
+import {
+  ResponsiveDialogClose,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from '@/components/ui/responsive-dialog'
 import { cn } from '@/lib/utils'
 
 // Schema para Transferência
-const formSchema = z.object({
+const formSchema = z
+  .object({
     date: z.date({
-        required_error: "Data é obrigatória",
+      required_error: 'Data é obrigatória',
     }),
     description: z.string().optional(),
-    account_origin: z.string().min(1, "Conta de origem é obrigatória"),
-    account_destination: z.string().min(1, "Conta de destino é obrigatória"),
-    amount: z.string().min(1, "Valor é obrigatório").refine(
+    account_origin: z.string().min(1, 'Conta de origem é obrigatória'),
+    account_destination: z.string().min(1, 'Conta de destino é obrigatória'),
+    amount: z
+      .string()
+      .min(1, 'Valor é obrigatório')
+      .refine(
         (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-        "Valor deve ser maior que zero"
-    ),
-}).refine(data => data.account_origin !== data.account_destination, {
-    message: "A conta de destino deve ser diferente da origem",
-    path: ["account_destination"],
-})
+        'Valor deve ser maior que zero',
+      ),
+  })
+  .refine((data) => data.account_origin !== data.account_destination, {
+    message: 'A conta de destino deve ser diferente da origem',
+    path: ['account_destination'],
+  })
 
 type FormSchemaType = z.infer<typeof formSchema>
 
 export interface TransactionTransferProps {
-    open: boolean
+  open: boolean
 }
 
 export function TransactionTransfer({ open }: TransactionTransferProps) {
-    const queryClient = useQueryClient()
-    const [isPopoverOpen, setIsPopoverOpen] = useState(false)
-    const [createAccountTarget, setCreateAccountTarget] = useState<'origin' | 'destination' | null>(null)
+  const queryClient = useQueryClient()
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const [createAccountTarget, setCreateAccountTarget] = useState<
+    'origin' | 'destination' | null
+  >(null)
 
-    const form = useForm<FormSchemaType>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            date: new Date(),
-            description: '',
-            account_origin: localStorage.getItem('metrics-default-account') || '',
-            account_destination: '',
-            amount: '',
-        }
-    })
+  const form = useForm<FormSchemaType>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      date: new Date(),
+      description: '',
+      account_origin: localStorage.getItem('metrics-default-account') || '',
+      account_destination: '',
+      amount: '',
+    },
+  })
 
-    // Watch accounts for filtering
-    const originAccount = form.watch("account_origin")
+  // Watch accounts for filtering
+  const originAccount = form.watch('account_origin')
 
-    const { data: accounts } = useQuery({
-        queryKey: ['accounts'],
-        queryFn: () => getAccounts(),
-    })
+  const { data: accounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => getAccounts(),
+  })
 
-    const { mutateAsync: transaction, isPending } = useMutation({
-        mutationFn: createTransaction,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['accounts'] })
-            queryClient.invalidateQueries({ queryKey: ['transactions'] })
-            queryClient.invalidateQueries({ queryKey: ['metrics'] })
-        }
-    })
+  const { mutateAsync: transaction, isPending } = useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
+    },
+  })
 
-    // Dialogs handle mutation internally
+  // Dialogs handle mutation internally
 
-
-    useEffect(() => {
-        if (!open) {
-            form.reset({
-                date: new Date(),
-                description: '',
-                account_origin: localStorage.getItem('metrics-default-account') || '',
-                account_destination: '',
-                amount: '',
-            })
-        }
-    }, [open, form])
-
-    async function onSubmit(data: FormSchemaType) {
-        try {
-            const transactionData = {
-                operation: 'transfer' as const,
-                amount: Number(data.amount),
-                account: data.account_origin,
-                destination_account: data.account_destination,
-                date: data.date,
-                description: data.description || "Transferência entre contas",
-                confirmed: true, // Transferências são imediatas por padrão
-            }
-
-            await transaction(transactionData)
-            toast.success('Transferência realizada com sucesso!')
-        } catch (error) {
-            console.error('Erro ao realizar transferência:', error)
-            toast.error('Erro ao realizar transferência')
-        }
+  useEffect(() => {
+    if (!open) {
+      form.reset({
+        date: new Date(),
+        description: '',
+        account_origin: localStorage.getItem('metrics-default-account') || '',
+        account_destination: '',
+        amount: '',
+      })
     }
+  }, [open, form])
 
-    return (
-        <ResponsiveDialogContent>
-            {/* ─── HEADER ─── */}
-            <ResponsiveDialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-                        <ArrowRightLeft className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                        <ResponsiveDialogTitle className="font-bold text-xl text-foreground leading-tight">
-                            Transferência
-                        </ResponsiveDialogTitle>
-                        <ResponsiveDialogDescription className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">
-                            Mover valor entre suas contas bancárias.
-                        </ResponsiveDialogDescription>
-                    </div>
+  async function onSubmit(data: FormSchemaType) {
+    try {
+      const transactionData = {
+        operation: 'transfer' as const,
+        amount: Number(data.amount),
+        account: data.account_origin,
+        destination_account: data.account_destination,
+        date: data.date,
+        description: data.description || 'Transferência entre contas',
+        confirmed: true, // Transferências são imediatas por padrão
+      }
+
+      await transaction(transactionData)
+      toast.success('Transferência realizada com sucesso!')
+    } catch (error) {
+      console.error('Erro ao realizar transferência:', error)
+      toast.error('Erro ao realizar transferência')
+    }
+  }
+
+  return (
+    <ResponsiveDialogContent>
+      {/* ─── HEADER ─── */}
+      <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+            <ArrowRightLeft className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <ResponsiveDialogTitle className="text-xl font-bold leading-tight text-foreground">
+              Transferência
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+              Mover valor entre suas contas bancárias.
+            </ResponsiveDialogDescription>
+          </div>
+        </div>
+      </ResponsiveDialogHeader>
+
+      <div className="flex-1 overflow-y-auto px-6 pb-2 pt-6">
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            onKeyDown={(e) => {
+              if (
+                e.key === 'Enter' &&
+                (e.target instanceof HTMLInputElement ||
+                  e.target instanceof HTMLSelectElement ||
+                  (e.target as HTMLElement).getAttribute('role') ===
+                    'combobox' ||
+                  (e.target as HTMLElement).getAttribute('role') === 'switch')
+              ) {
+                e.preventDefault()
+                const inputs = Array.from(
+                  e.currentTarget.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])',
+                  ),
+                ) as HTMLElement[]
+                const index = inputs.indexOf(e.target as HTMLElement)
+                if (index > -1 && index < inputs.length - 1) {
+                  const nextElement = inputs[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }}
+            className="flex flex-col gap-6"
+          >
+            {/* ─── GRUPO 1: VALOR ─── */}
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="ml-0.5 flex items-center text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    <span>Valor da Transferência</span>
+                    <span className="ml-1 font-bold text-red-500">*</span>
+                  </FormLabel>
+                  <div className="mx-auto flex w-full items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-4 transition-all duration-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 sm:mx-0 sm:w-3/4">
+                    <span className="flex-shrink-0 select-none text-xl font-semibold text-slate-400 dark:text-slate-500">
+                      R$
+                    </span>
+                    <FormControl>
+                      <input
+                        {...field}
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="w-full bg-transparent text-4xl font-bold tabular-nums tracking-tight text-slate-800 caret-indigo-500 placeholder:text-slate-200 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-700"
+                        autoFocus
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {/* ─── GRUPO 2: DESCRIÇÃO / OBSERVAÇÃO ─── */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="flex items-center text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                    <span>Descrição / Observação</span>
+                    <span className="ml-1 font-bold text-red-500">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Ex: Reserva de emergência..."
+                      className="h-11 rounded-xl border-border/70 bg-background text-sm font-medium placeholder:text-muted-foreground/50 focus-visible:border-indigo-500 focus-visible:ring-indigo-500/30"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {/* ─── GRUPO 3: CONTAS (ORIGEM E DESTINO) ─── */}
+            <div className="relative mt-2 grid grid-cols-1 items-center gap-4 rounded-2xl border border-border/50 bg-muted/20 p-5 sm:grid-cols-2">
+              <span className="absolute -top-3 left-4 rounded-full border bg-background px-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Contas Envolvidas
+              </span>
+
+              {/* Origin */}
+              <FormField
+                control={form.control}
+                name="account_origin"
+                render={({ field: { onChange, value, disabled } }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      <span>De (Origem)</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
+                    </FormLabel>
+                    <QuickAddSelect
+                      value={value}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                      isLoading={!accounts}
+                      placeholder="Conta de saída"
+                      emptyMessage="Nenhuma conta encontrada"
+                      options={accounts?.accounts.map((account) => ({
+                        label: account.name,
+                        value: account.id,
+                      }))}
+                      quickAddLabel="Nova Conta"
+                      onQuickAddClick={() => setCreateAccountTarget('origin')}
+                    />
+                  </FormItem>
+                )}
+              />
+
+              {/* Destination */}
+              <FormField
+                control={form.control}
+                name="account_destination"
+                render={({ field: { onChange, value, disabled } }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      <span>Para (Destino)</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
+                    </FormLabel>
+                    <QuickAddSelect
+                      value={value}
+                      onValueChange={onChange}
+                      disabled={disabled}
+                      isLoading={!accounts}
+                      placeholder="Conta de entrada"
+                      emptyMessage="Nenhuma conta encontrada"
+                      options={accounts?.accounts
+                        .filter((acc) => acc.id !== originAccount)
+                        .map((account) => ({
+                          label: account.name,
+                          value: account.id,
+                        }))}
+                      quickAddLabel="Nova Conta"
+                      onQuickAddClick={() =>
+                        setCreateAccountTarget('destination')
+                      }
+                    />
+                  </FormItem>
+                )}
+              />
+
+              <div className="pointer-events-none absolute left-1/2 top-1/2 mt-3 hidden -translate-x-1/2 -translate-y-1/2 sm:flex">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border bg-background shadow-sm">
+                  <ArrowRight className="h-3 w-3 text-indigo-500" />
                 </div>
-            </ResponsiveDialogHeader>
-
-            <div className="px-6 pb-2 pt-6 flex-1 overflow-y-auto">
-                <Form {...form}>
-                    <form 
-                        onSubmit={form.handleSubmit(onSubmit)} 
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && (
-                                e.target instanceof HTMLInputElement || 
-                                e.target instanceof HTMLSelectElement || 
-                                (e.target as HTMLElement).getAttribute('role') === 'combobox' ||
-                                (e.target as HTMLElement).getAttribute('role') === 'switch'
-                            )) {
-                                e.preventDefault()
-                                const inputs = Array.from(e.currentTarget.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])')) as HTMLElement[]
-                                const index = inputs.indexOf(e.target as HTMLElement)
-                                if (index > -1 && index < inputs.length - 1) {
-                                    const nextElement = inputs[index + 1]
-                                    if (nextElement) nextElement.focus()
-                                }
-                            }
-                        }}
-                        className="flex flex-col gap-6"
-                    >
-
-                        {/* ─── GRUPO 1: VALOR ─── */}
-                        <FormField
-                            control={form.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1.5">
-                                    <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-0.5 flex items-center">
-                                        <span>Valor da Transferência</span>
-                                        <span className="text-red-500 font-bold ml-1">*</span>
-                                    </FormLabel>
-                                    <div className="flex items-center gap-3 rounded-xl border-2 border-border/60 bg-background px-5 py-4 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all duration-200 w-full sm:w-3/4 mx-auto sm:mx-0">
-                                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 select-none">R$</span>
-                                        <FormControl>
-                                            <input
-                                                {...field}
-                                                type="number"
-                                                inputMode="decimal"
-                                                step="0.01"
-                                                placeholder="0,00"
-                                                className="text-4xl font-bold text-slate-800 dark:text-slate-100 placeholder:text-slate-200 dark:placeholder:text-slate-700 focus:outline-none w-full bg-transparent tabular-nums tracking-tight caret-indigo-500"
-                                                autoFocus
-                                            />
-                                        </FormControl>
-                                    </div>
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* ─── GRUPO 2: DESCRIÇÃO / OBSERVAÇÃO ─── */}
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem className="space-y-1.5">
-                                    <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
-                                        <span>Descrição / Observação</span>
-                                        <span className="text-red-500 font-bold ml-1">*</span>
-                                    </FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            {...field}
-                                            placeholder="Ex: Reserva de emergência..."
-                                            className="h-11 rounded-xl border-border/70 bg-background text-sm font-medium placeholder:text-muted-foreground/50 focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500"
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* ─── GRUPO 3: CONTAS (ORIGEM E DESTINO) ─── */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-muted/20 p-5 rounded-2xl border border-border/50 relative mt-2">
-                            <span className="absolute -top-3 left-4 bg-background px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border rounded-full">
-                                Contas Envolvidas
-                            </span>
-
-                            {/* Origin */}
-                            <FormField
-                                control={form.control}
-                                name="account_origin"
-                                render={({ field: { onChange, value, disabled } }) => (
-                                    <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                            <span>De (Origem)</span>
-                                            <span className="text-red-500 font-bold ml-1">*</span>
-                                        </FormLabel>
-                                        <QuickAddSelect
-                                            value={value}
-                                            onValueChange={onChange}
-                                            disabled={disabled}
-                                            isLoading={!accounts}
-                                            placeholder="Conta de saída"
-                                            emptyMessage="Nenhuma conta encontrada"
-                                            options={accounts?.accounts.map((account) => ({
-                                                label: account.name,
-                                                value: account.id,
-                                            }))}
-                                            quickAddLabel="Nova Conta"
-                                            onQuickAddClick={() => setCreateAccountTarget('origin')}
-                                        />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Destination */}
-                            <FormField
-                                control={form.control}
-                                name="account_destination"
-                                render={({ field: { onChange, value, disabled } }) => (
-                                    <FormItem className="space-y-1.5">
-                                        <FormLabel className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                            <span>Para (Destino)</span>
-                                            <span className="text-red-500 font-bold ml-1">*</span>
-                                        </FormLabel>
-                                        <QuickAddSelect
-                                            value={value}
-                                            onValueChange={onChange}
-                                            disabled={disabled}
-                                            isLoading={!accounts}
-                                            placeholder="Conta de entrada"
-                                            emptyMessage="Nenhuma conta encontrada"
-                                            options={accounts?.accounts
-                                                .filter(acc => acc.id !== originAccount)
-                                                .map((account) => ({
-                                                    label: account.name,
-                                                    value: account.id,
-                                                }))}
-                                            quickAddLabel="Nova Conta"
-                                            onQuickAddClick={() => setCreateAccountTarget('destination')}
-                                        />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 mt-3 pointer-events-none">
-                                <div className="h-8 w-8 rounded-full bg-background border flex items-center justify-center shadow-sm">
-                                    <ArrowRight className="h-3 w-3 text-indigo-500" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ─── GRUPO 4: DATA ─── */}
-                        <div className="grid grid-cols-1 gap-4">
-                            {/* Data */}
-                            <FormField
-                                control={form.control}
-                                name="date"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col gap-1.5">
-                                        <FormLabel className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center">
-                                            <span>Data</span>
-                                            <span className="text-red-500 font-bold ml-1">*</span>
-                                        </FormLabel>
-                                        <Popover modal={true} open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                        variant="outline"
-                                                        type="button"
-                                                        className={cn(
-                                                            "w-full justify-start text-left font-medium h-11 rounded-xl border-border/70 bg-background hover:bg-muted/30 hover:border-border transition-colors text-sm",
-                                                            !field.value && "text-muted-foreground"
-                                                        )}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'ArrowUp') {
-                                                                e.preventDefault()
-                                                                const d = field.value ? new Date(field.value) : new Date()
-                                                                d.setDate(d.getDate() - 1)
-                                                                field.onChange(d)
-                                                            } else if (e.key === 'ArrowDown') {
-                                                                e.preventDefault()
-                                                                const d = field.value ? new Date(field.value) : new Date()
-                                                                d.setDate(d.getDate() + 1)
-                                                                field.onChange(d)
-                                                            }
-                                                        }}
-                                                    >
-                                                        <CalendarIcon className="mr-2 h-4 w-4 text-slate-400 flex-shrink-0" />
-                                                        {field.value ? format(field.value, "dd/MM/yyyy") : <span>Selecione</span>}
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 z-[9999]" align="start" style={{ pointerEvents: 'auto' }}>
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-                                                    onSelect={(date) => { if (date) { field.onChange(date); setIsPopoverOpen(false) } }}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        {/* ─── AÇÕES ─── */}
-                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 mt-2 border-t border-border/40">
-                            <ResponsiveDialogClose asChild>
-                                <Button
-                                    variant="outline"
-                                    type="button"
-                                    className="w-full sm:w-auto h-11 rounded-xl text-sm font-semibold border-border/70 text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                                >
-                                    Cancelar
-                                </Button>
-                            </ResponsiveDialogClose>
-                            <Button
-                                type="submit"
-                                disabled={isPending}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto h-11 rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                            >
-                                {isPending ? 'Processando...' : 'Confirmar Transferência'}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-
-                <CreateAccountDialog
-                    open={!!createAccountTarget}
-                    onOpenChange={(open) => {
-                        if (!open) setCreateAccountTarget(null)
-                    }}
-                    onSuccess={(newAccount) => {
-                        if (newAccount.id && createAccountTarget) {
-                            if (createAccountTarget === 'origin') {
-                                form.setValue('account_origin', newAccount.id)
-                            } else {
-                                form.setValue('account_destination', newAccount.id)
-                            }
-                        }
-                    }}
-                />
+              </div>
             </div>
-        </ResponsiveDialogContent>
-    )
+
+            {/* ─── GRUPO 4: DATA ─── */}
+            <div className="grid grid-cols-1 gap-4">
+              {/* Data */}
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col gap-1.5">
+                    <FormLabel className="flex items-center text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                      <span>Data</span>
+                      <span className="ml-1 font-bold text-red-500">*</span>
+                    </FormLabel>
+                    <Popover
+                      modal={true}
+                      open={isPopoverOpen}
+                      onOpenChange={setIsPopoverOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            className={cn(
+                              'h-11 w-full justify-start rounded-xl border-border/70 bg-background text-left text-sm font-medium transition-colors hover:border-border hover:bg-muted/30',
+                              !field.value && 'text-muted-foreground',
+                            )}
+                            onKeyDown={(e) => {
+                              if (e.key === 'ArrowUp') {
+                                e.preventDefault()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
+                                d.setDate(d.getDate() - 1)
+                                field.onChange(d)
+                              } else if (e.key === 'ArrowDown') {
+                                e.preventDefault()
+                                const d = field.value
+                                  ? new Date(field.value)
+                                  : new Date()
+                                d.setDate(d.getDate() + 1)
+                                field.onChange(d)
+                              }
+                            }}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0 text-slate-400" />
+                            {field.value ? (
+                              format(field.value, 'dd/MM/yyyy')
+                            ) : (
+                              <span>Selecione</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="z-[9999] w-auto p-0"
+                        align="start"
+                        style={{ pointerEvents: 'auto' }}
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date)
+                              setIsPopoverOpen(false)
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* ─── AÇÕES ─── */}
+            <div className="mt-2 flex flex-col-reverse gap-3 border-t border-border/40 pt-4 sm:flex-row sm:justify-end">
+              <ResponsiveDialogClose asChild>
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="h-11 w-full rounded-xl border-border/70 text-sm font-semibold text-slate-600 hover:bg-muted/50 hover:text-foreground dark:text-slate-400 sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+              </ResponsiveDialogClose>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="h-11 w-full rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.01] hover:bg-indigo-700 active:scale-[0.99] sm:w-auto"
+              >
+                {isPending ? 'Processando...' : 'Confirmar Transferência'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+
+        <CreateAccountDialog
+          open={!!createAccountTarget}
+          onOpenChange={(open) => {
+            if (!open) setCreateAccountTarget(null)
+          }}
+          onSuccess={(newAccount) => {
+            if (newAccount.id && createAccountTarget) {
+              if (createAccountTarget === 'origin') {
+                form.setValue('account_origin', newAccount.id)
+              } else {
+                form.setValue('account_destination', newAccount.id)
+              }
+            }
+          }}
+        />
+      </div>
+    </ResponsiveDialogContent>
+  )
 }

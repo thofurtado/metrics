@@ -1,6 +1,7 @@
-"use client"
-import React, { useState, useRef, useEffect, PointerEvent } from 'react'
-import { ZoomIn, ZoomOut, RotateCcw, ExternalLink, Move } from 'lucide-react'
+'use client'
+import { ExternalLink, Move, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import React, { PointerEvent, useEffect, useRef, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 
 interface ImageZoomViewerProps {
@@ -10,12 +11,17 @@ interface ImageZoomViewerProps {
   containerClassName?: string
 }
 
-export function ImageZoomViewer({ src, alt = "Comprovante", className = "", containerClassName = "" }: ImageZoomViewerProps) {
+export function ImageZoomViewer({
+  src,
+  alt = 'Comprovante',
+  className = '',
+  containerClassName = '',
+}: ImageZoomViewerProps) {
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
-  
+
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Reset zoom ao trocar de imagem
@@ -25,11 +31,11 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
   }, [src])
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.5, 5))
+    setScale((prev) => Math.min(prev + 0.5, 5))
   }
 
   const handleZoomOut = () => {
-    setScale(prev => {
+    setScale((prev) => {
       const next = Math.max(prev - 0.5, 1)
       if (next === 1) setPosition({ x: 0, y: 0 })
       return next
@@ -43,10 +49,10 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
-    
+
     // Suaviza o zoom pelo scroll
     const delta = e.deltaY < 0 ? 0.25 : -0.25
-    setScale(prev => {
+    setScale((prev) => {
       const next = Math.min(Math.max(prev + delta, 1), 5)
       if (next === 1) setPosition({ x: 0, y: 0 })
       return next
@@ -67,7 +73,7 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
     e.preventDefault()
     setPosition({
       x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y
+      y: e.clientY - dragStart.current.y,
     })
   }
 
@@ -90,19 +96,21 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
   }
 
   return (
-    <div className={`relative flex flex-col items-center justify-center w-full h-full overflow-hidden select-none ${containerClassName}`}>
+    <div
+      className={`relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden ${containerClassName}`}
+    >
       {/* Controles Flutuantes de Zoom */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-black/75 backdrop-blur-md p-1.5 rounded-full border border-white/20 shadow-xl">
+      <div className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/75 p-1.5 shadow-xl backdrop-blur-md">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={handleZoomIn}
           disabled={scale >= 5}
-          className="w-8 h-8 rounded-full text-white hover:bg-white/20 hover:text-white"
+          className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white"
           title="Aumentar Zoom (+)"
         >
-          <ZoomIn className="w-4 h-4" />
+          <ZoomIn className="h-4 w-4" />
         </Button>
         <Button
           type="button"
@@ -110,10 +118,10 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
           size="icon"
           onClick={handleZoomOut}
           disabled={scale <= 1}
-          className="w-8 h-8 rounded-full text-white hover:bg-white/20 hover:text-white"
+          className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white"
           title="Diminuir Zoom (-)"
         >
-          <ZoomOut className="w-4 h-4" />
+          <ZoomOut className="h-4 w-4" />
         </Button>
         <Button
           type="button"
@@ -121,12 +129,12 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
           size="icon"
           onClick={handleReset}
           disabled={scale === 1 && position.x === 0 && position.y === 0}
-          className="w-8 h-8 rounded-full text-white hover:bg-white/20 hover:text-white"
+          className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white"
           title="Resetar Zoom"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="h-3.5 w-3.5" />
         </Button>
-        <span className="text-[10px] font-mono text-slate-200 font-bold px-1 min-w-[36px] text-center">
+        <span className="min-w-[36px] px-1 text-center font-mono text-[10px] font-bold text-slate-200">
           {Math.round(scale * 100)}%
         </span>
         <Button
@@ -134,17 +142,17 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
           variant="ghost"
           size="icon"
           onClick={handleOpenNewTab}
-          className="w-8 h-8 rounded-full text-white hover:bg-white/20 hover:text-white"
+          className="h-8 w-8 rounded-full text-white hover:bg-white/20 hover:text-white"
           title="Abrir imagem em nova guia"
         >
-          <ExternalLink className="w-4 h-4" />
+          <ExternalLink className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Dica visual quando com zoom ativado */}
       {scale > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-[11px] font-medium flex items-center gap-1.5 border border-white/10 pointer-events-none animate-in fade-in">
-          <Move className="w-3.5 h-3.5 text-blue-400" />
+        <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-md animate-in fade-in">
+          <Move className="h-3.5 w-3.5 text-blue-400" />
           <span>Arraste para mover • Duplo clique para resetar</span>
         </div>
       )}
@@ -158,21 +166,21 @@ export function ImageZoomViewer({ src, alt = "Comprovante", className = "", cont
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
-        className={`w-full h-full flex items-center justify-center overflow-hidden p-2 touch-none ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+        className={`flex h-full w-full touch-none items-center justify-center overflow-hidden p-2 ${scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
       >
-        <div 
+        <div
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
           }}
-          className="flex items-center justify-center w-full h-full pointer-events-none"
+          className="pointer-events-none flex h-full w-full items-center justify-center"
         >
           <img
             src={src}
             alt={alt}
             draggable={false}
-            className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl transition-shadow pointer-events-auto ${className}`}
+            className={`pointer-events-auto max-h-full max-w-full rounded-xl object-contain shadow-2xl transition-shadow ${className}`}
           />
         </div>
       </div>

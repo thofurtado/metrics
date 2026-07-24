@@ -1,149 +1,172 @@
-
 import { useQuery } from '@tanstack/react-query'
-import { createContext, ReactNode, useContext, useMemo, useSyncExternalStore } from 'react'
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from 'react'
 
-import { getSystemConfig, SystemConfig } from '@/api/get-system-config'
 import { getProfile } from '@/api/get-profile'
+import { getSystemConfig, SystemConfig } from '@/api/get-system-config'
 
 // Reactive localStorage token listener — re-renders consumers when token changes
 function subscribeToToken(callback: () => void) {
-    // Listen for storage events (cross-tab) and custom event (same-tab)
-    window.addEventListener('storage', callback)
-    window.addEventListener('auth-change', callback)
-    return () => {
-        window.removeEventListener('storage', callback)
-        window.removeEventListener('auth-change', callback)
-    }
+  // Listen for storage events (cross-tab) and custom event (same-tab)
+  window.addEventListener('storage', callback)
+  window.addEventListener('auth-change', callback)
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener('auth-change', callback)
+  }
 }
 
 function getTokenSnapshot() {
-    return localStorage.getItem('token')
+  return localStorage.getItem('token')
 }
 
 // Mapeamento canônico: chave do system_config → slug da tabela modules
-export const SYSTEM_CONFIG_TO_SLUG: Record<keyof Omit<SystemConfig, 'cestaBasicaValue' | 'financial_management_profile' | 'dashboard_cards'>, string> = {
-    merchandise:  'items',
-    financial:    'finance',
-    treatments:   'service',
-    hr_module:    'hr',
-    cashier:      'cashier',
+export const SYSTEM_CONFIG_TO_SLUG: Record<
+  keyof Omit<
+    SystemConfig,
+    'cestaBasicaValue' | 'financial_management_profile' | 'dashboard_cards'
+  >,
+  string
+> = {
+  merchandise: 'items',
+  financial: 'finance',
+  treatments: 'service',
+  hr_module: 'hr',
+  cashier: 'cashier',
 }
 
 type ActiveSystemSlug = string
 
 interface ModuleContextType {
-    systemConfig: SystemConfig
-    instanceSlugs: ActiveSystemSlug[]
-    // Slugs do usuário — agora buscados da API (fonte de verdade = banco)
-    userSlugs: string[]
-    // INTERSEÇÃO: instância ativa E usuário tem permissão
-    hasAccess: (slug: string) => boolean
-    // Para o Header (filtro de nível 1 apenas)
-    isModuleActive: (moduleName: keyof SystemConfig) => boolean
-    // Para Cards da Dashboard (Cascata: Módulo Pai Ativo -> Card Filho Ativo)
-    isCardVisible: (moduleName: keyof SystemConfig, cardSlug: string) => boolean
-    // Para o modal de permissões
-    availableForPermissions: ActiveSystemSlug[]
-    isLoading: boolean
-    modules: SystemConfig // Alias para compatibilidade
+  systemConfig: SystemConfig
+  instanceSlugs: ActiveSystemSlug[]
+  // Slugs do usuário — agora buscados da API (fonte de verdade = banco)
+  userSlugs: string[]
+  // INTERSEÇÃO: instância ativa E usuário tem permissão
+  hasAccess: (slug: string) => boolean
+  // Para o Header (filtro de nível 1 apenas)
+  isModuleActive: (moduleName: keyof SystemConfig) => boolean
+  // Para Cards da Dashboard (Cascata: Módulo Pai Ativo -> Card Filho Ativo)
+  isCardVisible: (moduleName: keyof SystemConfig, cardSlug: string) => boolean
+  // Para o modal de permissões
+  availableForPermissions: ActiveSystemSlug[]
+  isLoading: boolean
+  modules: SystemConfig // Alias para compatibilidade
 }
 
 const ModuleContext = createContext({} as ModuleContextType)
 
 export function ModuleProvider({ children }: { children: ReactNode }) {
-    const token = useSyncExternalStore(subscribeToToken, getTokenSnapshot)
-    const isLoggedIn = !!token
+  const token = useSyncExternalStore(subscribeToToken, getTokenSnapshot)
+  const isLoggedIn = !!token
 
-    // Nível 1: configuração da instância
-    const { data: systemConfig, isLoading: isLoadingConfig } = useQuery({
-        queryKey: ['system-config'],
-        queryFn: getSystemConfig,
-        staleTime: 1000 * 60 * 5,
-        retry: false,
-        enabled: isLoggedIn,
-    })
+  // Nível 1: configuração da instância
+  const { data: systemConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['system-config'],
+    queryFn: getSystemConfig,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+    enabled: isLoggedIn,
+  })
 
-    // Nível 2: módulos do usuário logado — SEMPRE do banco via /me
-    // staleTime: 0 garante que ao re-focar a aba ou navegar, repesca imediatamente
-    const { data: profileData, isLoading: isLoadingProfile } = useQuery({
-        queryKey: ['user-profile-modules'],
-        queryFn: getProfile,
-        staleTime: 0,
-        retry: false,
-        enabled: isLoggedIn,
-    })
+  // Nível 2: módulos do usuário logado — SEMPRE do banco via /me
+  // staleTime: 0 garante que ao re-focar a aba ou navegar, repesca imediatamente
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['user-profile-modules'],
+    queryFn: getProfile,
+    staleTime: 0,
+    retry: false,
+    enabled: isLoggedIn,
+  })
 
-    const isLoading = isLoadingConfig || isLoadingProfile
+  const isLoading = isLoadingConfig || isLoadingProfile
 
-    const safeConfig: SystemConfig = systemConfig || {
-        merchandise: true,
-        financial: true,
-        treatments: true,
-        hr_module: false,
-        cestaBasicaValue: 0,
-        financial_management_profile: 'ANALYTICAL',
-    }
+  const safeConfig: SystemConfig = systemConfig || {
+    merchandise: true,
+    financial: true,
+    treatments: true,
+    hr_module: false,
+    cestaBasicaValue: 0,
+    financial_management_profile: 'ANALYTICAL',
+  }
 
-    // Slugs que a INSTÂNCIA permite (nível 1)
-    const instanceSlugs = useMemo<string[]>(() => {
-        return (Object.entries(SYSTEM_CONFIG_TO_SLUG) as [keyof typeof SYSTEM_CONFIG_TO_SLUG, string][])
-            .filter(([key]) => !!safeConfig[key])
-            .map(([, slug]) => slug)
-    }, [safeConfig])
-
-    // Slugs do usuário (nível 2) — vindos do banco via /me, sempre frescos
-    const userSlugs: string[] = profileData?.modules ?? []
-
-    // INTERSEÇÃO: ambas as camadas devem liberar
-    function hasAccess(slug: string): boolean {
-        if (isLoading) return false
-        if (profileData?.role === 'ADMIN') {
-            return instanceSlugs.includes(slug)
-        }
-        return instanceSlugs.includes(slug) && userSlugs.includes(slug)
-    }
-
-    function isModuleActive(moduleName: keyof SystemConfig): boolean {
-        if (isLoadingConfig) return true
-        return !!(safeConfig[moduleName])
-    }
-
-    function isCardVisible(moduleName: keyof SystemConfig, cardSlug: string): boolean {
-        // Regra de Cascata: Se o módulo pai está desativado, o filho nunca aparece
-        if (!isModuleActive(moduleName)) return false
-
-        // Se estiver ativo, verifica o status granular no JSON
-        const cardsConfig = safeConfig.dashboard_cards?.[moduleName as string]
-        
-        // Se não houver config específica no JSON, assume "true" por padrão (legado)
-        if (!cardsConfig || cardsConfig[cardSlug] === undefined) return true
-
-        return cardsConfig[cardSlug] === true
-    }
-
-    const availableForPermissions = instanceSlugs
-
+  // Slugs que a INSTÂNCIA permite (nível 1)
+  const instanceSlugs = useMemo<string[]>(() => {
     return (
-        <ModuleContext.Provider value={{
-            systemConfig: safeConfig,
-            instanceSlugs,
-            userSlugs,
-            hasAccess,
-            isModuleActive,
-            isCardVisible,
-            availableForPermissions,
-            isLoading,
-            modules: safeConfig,
-        } as any}>
-            {children}
-        </ModuleContext.Provider>
+      Object.entries(SYSTEM_CONFIG_TO_SLUG) as [
+        keyof typeof SYSTEM_CONFIG_TO_SLUG,
+        string,
+      ][]
     )
+      .filter(([key]) => !!safeConfig[key])
+      .map(([, slug]) => slug)
+  }, [safeConfig])
+
+  // Slugs do usuário (nível 2) — vindos do banco via /me, sempre frescos
+  const userSlugs: string[] = profileData?.modules ?? []
+
+  // INTERSEÇÃO: ambas as camadas devem liberar
+  function hasAccess(slug: string): boolean {
+    if (isLoading) return false
+    if (profileData?.role === 'ADMIN') {
+      return instanceSlugs.includes(slug)
+    }
+    return instanceSlugs.includes(slug) && userSlugs.includes(slug)
+  }
+
+  function isModuleActive(moduleName: keyof SystemConfig): boolean {
+    if (isLoadingConfig) return true
+    return !!safeConfig[moduleName]
+  }
+
+  function isCardVisible(
+    moduleName: keyof SystemConfig,
+    cardSlug: string,
+  ): boolean {
+    // Regra de Cascata: Se o módulo pai está desativado, o filho nunca aparece
+    if (!isModuleActive(moduleName)) return false
+
+    // Se estiver ativo, verifica o status granular no JSON
+    const cardsConfig = safeConfig.dashboard_cards?.[moduleName as string]
+
+    // Se não houver config específica no JSON, assume "true" por padrão (legado)
+    if (!cardsConfig || cardsConfig[cardSlug] === undefined) return true
+
+    return cardsConfig[cardSlug] === true
+  }
+
+  const availableForPermissions = instanceSlugs
+
+  return (
+    <ModuleContext.Provider
+      value={
+        {
+          systemConfig: safeConfig,
+          instanceSlugs,
+          userSlugs,
+          hasAccess,
+          isModuleActive,
+          isCardVisible,
+          availableForPermissions,
+          isLoading,
+          modules: safeConfig,
+        } as any
+      }
+    >
+      {children}
+    </ModuleContext.Provider>
+  )
 }
 
 export function useModules() {
-    const context = useContext(ModuleContext)
-    if (!context) {
-        throw new Error('useModules must be used within a ModuleProvider')
-    }
-    return context
+  const context = useContext(ModuleContext)
+  if (!context) {
+    throw new Error('useModules must be used within a ModuleProvider')
+  }
+  return context
 }

@@ -18,13 +18,13 @@ export interface GetTreatmentsResponse {
     equipment_id: string | null
     request: string
     status:
-    | 'pending'
-    | 'in_progress'
-    | 'on_hold'
-    | 'resolved'
-    | 'canceled'
-    | 'follow_up'
-    | 'in_workbench'
+      | 'pending'
+      | 'in_progress'
+      | 'on_hold'
+      | 'resolved'
+      | 'canceled'
+      | 'follow_up'
+      | 'in_workbench'
     amount: number
     observations: string | null
     clients: {
@@ -69,7 +69,7 @@ export async function getTreatments({
         totalCount: 0,
         perPage: 10,
         pageIndex: page || 0,
-      }
+      },
     }
   }
 

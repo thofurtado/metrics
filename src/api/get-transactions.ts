@@ -60,9 +60,8 @@ export async function getTransactions({
   month,
   sortBy,
   sortDirection,
-  checked
+  checked,
 }: GetTransactionsQuery) {
-
   const response = await api.get<GetTransactionsResponse>('/transactions', {
     params: {
       page: page || 1,
@@ -79,7 +78,7 @@ export async function getTransactions({
       month,
       sortBy,
       sortDirection,
-      checked
+      checked,
     },
   })
 
@@ -89,12 +88,13 @@ export async function getTransactions({
       ...response,
       data: {
         transactions: {
-          transactions: [] as GetTransactionsResponse['transactions']['transactions'],
+          transactions:
+            [] as GetTransactionsResponse['transactions']['transactions'],
           totalCount: 0,
           pageIndex: 0,
           perPage: 6,
         },
-      } as GetTransactionsResponse
+      } as GetTransactionsResponse,
     }
   }
 

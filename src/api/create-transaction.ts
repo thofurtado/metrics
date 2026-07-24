@@ -14,11 +14,13 @@ export interface CreateTransactionBody {
   confirmed?: boolean | null
   installments_count?: number | null
   interval_frequency?: 'WEEKLY' | 'MONTHLY' | 'YEARLY' | null
-  custom_installments?: {
-    data_vencimento: Date
-    data_emissao?: Date
-    amount: number
-  }[] | null
+  custom_installments?:
+    | {
+        data_vencimento: Date
+        data_emissao?: Date
+        amount: number
+      }[]
+    | null
   credit_card_id?: string | null
   interest?: number | null
   discount?: number | null

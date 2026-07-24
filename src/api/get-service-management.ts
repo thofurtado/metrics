@@ -15,9 +15,12 @@ export interface ServiceMetricsFilters {
   year?: number
 }
 
-export async function getServiceMetrics({ month, year }: ServiceMetricsFilters = {}): Promise<GetServiceMetricsResponse> {
+export async function getServiceMetrics({
+  month,
+  year,
+}: ServiceMetricsFilters = {}): Promise<GetServiceMetricsResponse> {
   const response = await api.get('/service-management', {
-    params: { month, year }
+    params: { month, year },
   })
 
   const apiData = response.data.serviceData

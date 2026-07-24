@@ -9,7 +9,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 const BASE_URL = API_BASE_URL
 
 // Log para ajudar no debug se houver erro de conexão
-console.log('DEBUG: Conectando na API central:', BASE_URL);
+console.log('DEBUG: Conectando na API central:', BASE_URL)
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -25,12 +25,12 @@ api.interceptors.request.use((config) => {
   // Envia a URL de onde o cliente está acessando para o backend saber qual banco usar
   if (typeof window !== 'undefined') {
     let hostname = window.location.hostname
-    
+
     // Se o desenvolvedor estiver testando localmente, força um domínio de teste
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       hostname = 'marujo.metrics.dev.br' // Troque se quiser testar outro cliente localmente
     }
-    
+
     config.headers['x-tenant-domain'] = hostname
   }
 
@@ -43,7 +43,7 @@ api.interceptors.response.use(
   (error) => {
     // Se a requisição foi cancelada (ex: pelo React Query), ignora silenciosamente
     if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
-      return Promise.reject(error);
+      return Promise.reject(error)
     }
 
     const isDev = import.meta.env.DEV
@@ -54,12 +54,15 @@ api.interceptors.response.use(
 
       // Logs profissionais para desenvolvimento
       if (isDev) {
-        console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, {
-          status,
-          message,
-          data: error.response?.data,
-          code: error.code,
-        })
+        console.error(
+          `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}:`,
+          {
+            status,
+            message,
+            data: error.response?.data,
+            code: error.code,
+          },
+        )
       }
 
       // 401 Unauthorized: token inválido ou expirado → logout

@@ -2,9 +2,9 @@
 import { api } from '@/lib/axios'
 
 export interface UpdateItemStatusParams {
-    id: string
+  id: string
 }
 
 export async function updateItemStatus({ id }: UpdateItemStatusParams) {
-    await api.patch(`/items-management/${id}/status`)
+  await api.patch(`/items-management/${id}/status`)
 }

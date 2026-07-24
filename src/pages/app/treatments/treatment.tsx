@@ -2,17 +2,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
+  BetweenHorizonalStart,
   Building2,
   Calendar as CalendarIcon,
   FlagTriangleRight,
   NotebookText,
   UserPlus,
-  BetweenHorizonalStart,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-
-import { ClientSelectCombobox } from './client-select-combobox'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -47,6 +45,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { TimePickerDemo } from '@/components/ui/time-picker-demo'
 import { cn } from '@/lib/utils'
 
+import { ClientSelectCombobox } from './client-select-combobox'
 import { TreatmentClient } from './treatment-client'
 import { TreatmentClientEquipment } from './treatment-client-equipment'
 
@@ -63,8 +62,6 @@ const formSchema = z.object({
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
-
-
 
 export function Treatment() {
   const [openClientDialog, setOpenClientDialog] = useState(false)
@@ -130,13 +127,12 @@ export function Treatment() {
   return (
     <>
       <Helmet title="Cadastro de Atendimentos" />
-      <div className="flex flex-col gap-3 p-0 sm:p-4 w-full overflow-x-hidden">
-
-        <div className="flex flex-col gap-2 rounded-none sm:rounded-xl bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow">
+      <div className="flex w-full flex-col gap-3 overflow-x-hidden p-0 sm:p-4">
+        <div className="flex flex-col gap-2 rounded-none bg-gradient-to-r from-minsk-600 to-vida-loca-500 p-4 text-white shadow sm:rounded-xl">
           <h1 className="text-lg font-bold sm:text-xl">
             Cadastro de Atendimento
           </h1>
-          <p className="text-minsk-100 text-xs opacity-90">
+          <p className="text-xs text-minsk-100 opacity-90">
             Preencha os dados do atendimento
           </p>
         </div>
@@ -147,10 +143,12 @@ export function Treatment() {
             onSubmit={form.handleSubmit(onSubmit)}
           >
             {/* SEÇÃO 1: STATUS E TEMPO */}
-            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+            <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <FlagTriangleRight className="h-4 w-4 text-vida-loca-500" />
-                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Situação e Agendamento</h2>
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
+                  Situação e Agendamento
+                </h2>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -160,13 +158,18 @@ export function Treatment() {
                   name="status"
                   render={({ field: { onChange, value = 'pending' } }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Estado Atual</FormLabel>
+                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                        Estado Atual
+                      </FormLabel>
                       <Select
                         defaultValue="pending"
                         value={value || undefined}
                         onValueChange={onChange}
                         onOpenChange={(isOpen) => {
-                          if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                          if (isOpen)
+                            requestAnimationFrame(() =>
+                              (document.activeElement as HTMLElement)?.blur(),
+                            )
                         }}
                       >
                         <FormControl>
@@ -175,11 +178,21 @@ export function Treatment() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="pending">Pendente (Aguardando)</SelectItem>
-                          <SelectItem value="in_progress">Em Andamento</SelectItem>
-                          <SelectItem value="follow_up">Acompanhamento</SelectItem>
-                          <SelectItem value="in_workbench">Em Bancada</SelectItem>
-                          <SelectItem value="resolved">Resolvido (Concluído)</SelectItem>
+                          <SelectItem value="pending">
+                            Pendente (Aguardando)
+                          </SelectItem>
+                          <SelectItem value="in_progress">
+                            Em Andamento
+                          </SelectItem>
+                          <SelectItem value="follow_up">
+                            Acompanhamento
+                          </SelectItem>
+                          <SelectItem value="in_workbench">
+                            Em Bancada
+                          </SelectItem>
+                          <SelectItem value="resolved">
+                            Resolvido (Concluído)
+                          </SelectItem>
                           <SelectItem value="canceled">Cancelado</SelectItem>
                           <SelectItem value="on_hold">Em espera</SelectItem>
                         </SelectContent>
@@ -194,7 +207,9 @@ export function Treatment() {
                   name="openingDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Data de Abertura</FormLabel>
+                      <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                        Data de Abertura
+                      </FormLabel>
                       <Popover>
                         <FormControl>
                           <PopoverTrigger asChild>
@@ -236,10 +251,12 @@ export function Treatment() {
             </div>
 
             {/* SEÇÃO 2: CLIENTE E EQUIPAMENTO */}
-            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+            <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <Building2 className="h-4 w-4 text-vida-loca-500" />
-                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Cliente e Ativo</h2>
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
+                  Cliente e Ativo
+                </h2>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -249,8 +266,10 @@ export function Treatment() {
                     control={form.control}
                     name="client"
                     render={({ field: { onChange, value } }) => (
-                      <FormItem className="flex-1 w-full">
-                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Cliente Solicitante</FormLabel>
+                      <FormItem className="w-full flex-1">
+                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                          Cliente Solicitante
+                        </FormLabel>
                         <ClientSelectCombobox
                           value={value || ''}
                           onValueChange={(newValue) => {
@@ -263,13 +282,22 @@ export function Treatment() {
                       </FormItem>
                     )}
                   />
-                  <Dialog open={openClientDialog} onOpenChange={setOpenClientDialog}>
+                  <Dialog
+                    open={openClientDialog}
+                    onOpenChange={setOpenClientDialog}
+                  >
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 bg-vida-loca-50 text-vida-loca-600 border-vida-loca-200">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0 border-vida-loca-200 bg-vida-loca-50 text-vida-loca-600"
+                      >
                         <UserPlus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <TreatmentClient onClose={() => setOpenClientDialog(false)} />
+                    <TreatmentClient
+                      onClose={() => setOpenClientDialog(false)}
+                    />
                   </Dialog>
                 </div>
 
@@ -279,26 +307,45 @@ export function Treatment() {
                     control={form.control}
                     name="equipment_id"
                     render={({ field: { onChange, value } }) => (
-                      <FormItem className="flex-1 w-full">
-                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Equipamento / Ativo</FormLabel>
+                      <FormItem className="w-full flex-1">
+                        <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                          Equipamento / Ativo
+                        </FormLabel>
                         <Select
                           value={value || undefined}
                           onValueChange={onChange}
                           disabled={isEquipmentDisabled}
                           onOpenChange={(isOpen) => {
-                            if (isOpen) requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur())
+                            if (isOpen)
+                              requestAnimationFrame(() =>
+                                (document.activeElement as HTMLElement)?.blur(),
+                              )
                           }}
                         >
                           <FormControl>
-                            <SelectTrigger className={cn("h-10 w-full", isEquipmentDisabled && "bg-gray-50 opacity-70")}>
-                              <SelectValue placeholder={isEquipmentDisabled ? "Selecione um cliente..." : "Selecione o equipamento"} />
+                            <SelectTrigger
+                              className={cn(
+                                'h-10 w-full',
+                                isEquipmentDisabled && 'bg-gray-50 opacity-70',
+                              )}
+                            >
+                              <SelectValue
+                                placeholder={
+                                  isEquipmentDisabled
+                                    ? 'Selecione um cliente...'
+                                    : 'Selecione o equipamento'
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {clients?.data.clients
                               .find((client) => client.id === clientId)
                               ?.equipments.map((equipment) => (
-                                <SelectItem value={equipment.id} key={equipment.id}>
+                                <SelectItem
+                                  value={equipment.id}
+                                  key={equipment.id}
+                                >
                                   {`${equipment.type} - ${equipment.brand} - ${equipment.identification}`}
                                 </SelectItem>
                               ))}
@@ -307,7 +354,10 @@ export function Treatment() {
                       </FormItem>
                     )}
                   />
-                  <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+                  <Dialog
+                    open={isClientDialogOpen}
+                    onOpenChange={setIsClientDialogOpen}
+                  >
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
@@ -326,7 +376,6 @@ export function Treatment() {
                 </div>
               </div>
 
-
               {/* Contato Específico para este Atendimento (Toggle Opcional) */}
               {!showContact ? (
                 <div className="flex justify-end">
@@ -334,15 +383,18 @@ export function Treatment() {
                     type="button"
                     variant="link"
                     onClick={() => setShowContact(true)}
-                    className="text-xs text-minsk-500 underline h-auto p-0"
+                    className="h-auto p-0 text-xs text-minsk-500 underline"
                   >
-                    + Adicionar responsável pelo acompanhamento (se diferente do cliente)
+                    + Adicionar responsável pelo acompanhamento (se diferente do
+                    cliente)
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                  <div className="flex justify-between items-center">
-                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Responsável pelo Acompanhamento</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                      Responsável pelo Acompanhamento
+                    </FormLabel>
                     <Button
                       type="button"
                       variant="ghost"
@@ -351,7 +403,7 @@ export function Treatment() {
                         setShowContact(false)
                         form.setValue('contact', '')
                       }}
-                      className="h-6 px-2 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                      className="h-6 px-2 text-[10px] text-red-500 hover:bg-red-50 hover:text-red-600"
                     >
                       Remover
                     </Button>
@@ -377,10 +429,12 @@ export function Treatment() {
             </div>
 
             {/* SEÇÃO 3: DETALHES */}
-            <div className="space-y-4 rounded-xl bg-white p-4 shadow-sm border border-minsk-200 dark:bg-minsk-900 dark:border-minsk-700">
+            <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <NotebookText className="h-4 w-4 text-vida-loca-500" />
-                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">Detalhes da Solicitação</h2>
+                <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
+                  Detalhes da Solicitação
+                </h2>
               </div>
 
               <FormField
@@ -388,7 +442,9 @@ export function Treatment() {
                 name="request"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Assunto Principal *</FormLabel>
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                      Assunto Principal *
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -405,7 +461,9 @@ export function Treatment() {
                 name="observation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">Descrição Técnica / Observações</FormLabel>
+                    <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
+                      Descrição Técnica / Observações
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         {...field}
@@ -419,15 +477,14 @@ export function Treatment() {
             </div>
 
             {/* BOTÃO CADASTRAR */}
-            <div className="pt-2 sticky bottom-4 z-10">
+            <div className="sticky bottom-4 z-10 pt-2">
               <Button
                 type="submit"
-                className="h-12 w-full bg-gradient-to-r from-vida-loca-600 to-vida-loca-500 hover:to-vida-loca-600 text-white font-bold shadow-lg text-base rounded-xl transition-all active:scale-95"
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-vida-loca-600 to-vida-loca-500 text-base font-bold text-white shadow-lg transition-all hover:to-vida-loca-600 active:scale-95"
               >
                 Salvar Atendimento
               </Button>
             </div>
-
           </form>
         </Form>
       </div>

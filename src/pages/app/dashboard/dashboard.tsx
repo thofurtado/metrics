@@ -1,21 +1,19 @@
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { MonthPicker } from '@/components/MonthPicker'
+import { useModules } from '@/context/module-context'
+import { cn } from '@/lib/utils'
+
+import { AgendaPagamentosCard } from './AgendaPagamentosCard' // Card de Agenda (Fallback)
+import { BalanceProjectionChart } from './BalanceProjectionChart'
+// Os outros imports permanecem:
+import { ExpensesBySectorChart } from './expenses-by-sector-chart'
 // 1. IMPORTAÇÃO DOS CARDS
 import { FinanceCard } from './FinanceCard'
 import { FinanceCardOperacional } from './FinanceCardOperacional'
 import { InventoryCard } from './InventoryCard'
 import { MonthTreatmentAmountCard } from './TreatmentCard' // Card de Serviços
-import { AgendaPagamentosCard } from './AgendaPagamentosCard' // Card de Agenda (Fallback)
-
-// Os outros imports permanecem:
-import { ExpensesBySectorChart } from './expenses-by-sector-chart'
-import { BalanceProjectionChart } from './BalanceProjectionChart'
-
-
-import { useModules } from '@/context/module-context'
-import { MonthPicker } from '@/components/MonthPicker'
-import { cn } from '@/lib/utils'
 
 export function Dashboard() {
   const { isCardVisible, modules } = useModules()
@@ -32,12 +30,21 @@ export function Dashboard() {
   const showBalanceProjection = isCardVisible('financial', 'balance_projection')
 
   // Lógica de agrupamento dos 3 cards financeiros (se alinham de 4 em 4 ou de 6 em 6)
-  const financeGroupCount = [showFinanceSummary, showPaymentAgenda, showExpensesBySector].filter(Boolean).length
-  const financeSpan = financeGroupCount === 3 ? "lg:col-span-4" : financeGroupCount === 2 ? "lg:col-span-6" : "lg:col-span-12"
+  const financeGroupCount = [
+    showFinanceSummary,
+    showPaymentAgenda,
+    showExpensesBySector,
+  ].filter(Boolean).length
+  const financeSpan =
+    financeGroupCount === 3
+      ? 'lg:col-span-4'
+      : financeGroupCount === 2
+        ? 'lg:col-span-6'
+        : 'lg:col-span-12'
 
   // Lógica para OS e Inventário (topo) - Se ambos existirem, dividem a linha. Se apenas um, ocupa o topo.
   const topGroupCount = [showTreatment, showInventory].filter(Boolean).length
-  const topSpan = topGroupCount === 2 ? "lg:col-span-6" : "lg:col-span-12"
+  const topSpan = topGroupCount === 2 ? 'lg:col-span-6' : 'lg:col-span-12'
 
   return (
     <>
@@ -45,10 +52,9 @@ export function Dashboard() {
 
       {/* CONTAINER PRINCIPAL */}
       <div className="flex flex-col gap-8 p-0">
-
         {/* HEADER */}
         <div className="flex items-center justify-between">
-          <h1 className="font-manrope text-3xl sm:text-5xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100">
+          <h1 className="font-manrope text-3xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100 sm:text-5xl">
             Centro de Comando
           </h1>
 
@@ -56,66 +62,60 @@ export function Dashboard() {
         </div>
 
         {/* CONTAINER GRID UNIFICADO */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-12 grid-flow-row-dense">
-          
+        <div className="grid grid-flow-row-dense grid-cols-1 gap-6 md:grid-cols-12">
           {/* CARDS TOPO (OS e Inventário) */}
           {showTreatment && (
-            <MonthTreatmentAmountCard 
-              month={month} 
-              year={year} 
-              className={cn("md:col-span-6", topSpan)} 
+            <MonthTreatmentAmountCard
+              month={month}
+              year={year}
+              className={cn('md:col-span-6', topSpan)}
             />
           )}
 
           {showInventory && (
-            <InventoryCard 
-              month={month} 
-              year={year} 
-              className={cn("md:col-span-6", topSpan)} 
+            <InventoryCard
+              month={month}
+              year={year}
+              className={cn('md:col-span-6', topSpan)}
             />
           )}
 
           {/* GRUPO FINANCEIRO (Fluxo, Agenda e Despesas por Setor) */}
-          {showFinanceSummary && (
-            modules.financial_management_profile === 'OPERATIONAL' ? (
-              <FinanceCardOperacional 
-                month={month} 
-                year={year} 
-                className={cn("md:col-span-6", financeSpan)} 
+          {showFinanceSummary &&
+            (modules.financial_management_profile === 'OPERATIONAL' ? (
+              <FinanceCardOperacional
+                month={month}
+                year={year}
+                className={cn('md:col-span-6', financeSpan)}
               />
             ) : (
-              <FinanceCard 
-                month={month} 
-                year={year} 
-                className={cn("md:col-span-6", financeSpan)} 
+              <FinanceCard
+                month={month}
+                year={year}
+                className={cn('md:col-span-6', financeSpan)}
               />
-            )
-          )}
+            ))}
 
           {showPaymentAgenda && (
-            <AgendaPagamentosCard 
-              className={cn("md:col-span-6", financeSpan)} 
+            <AgendaPagamentosCard
+              className={cn('md:col-span-6', financeSpan)}
             />
           )}
 
           {showExpensesBySector && (
-            <ExpensesBySectorChart 
-              month={month} 
-              year={year} 
-              className={cn("md:col-span-6", financeSpan)} 
+            <ExpensesBySectorChart
+              month={month}
+              year={year}
+              className={cn('md:col-span-6', financeSpan)}
             />
           )}
 
           {/* BASE (Gráfico de Previsão de Saldo) */}
           {showBalanceProjection && (
-            <BalanceProjectionChart 
-              className="md:col-span-12 lg:col-span-12" 
-            />
+            <BalanceProjectionChart className="md:col-span-12 lg:col-span-12" />
           )}
-
         </div>
       </div>
     </>
   )
 }
-

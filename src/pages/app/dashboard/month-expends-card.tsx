@@ -15,12 +15,13 @@ export function MonthExpendsCard() {
     monthExpenseAmount && monthExpenseAmount.diffFromLastMonth !== null
 
   // 2. Definir o valor para exibição, formatado como moeda (BRL)
-  const formattedAmount = monthExpenseAmount?.monthExpenseAmount !== null
-    ? monthExpenseAmount?.monthExpenseAmount.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      })
-    : 'R$ 0,00'
+  const formattedAmount =
+    monthExpenseAmount?.monthExpenseAmount !== null
+      ? monthExpenseAmount?.monthExpenseAmount.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })
+      : 'R$ 0,00'
 
   // 3. Função para renderizar o texto de comparação/fallback
   const renderComparisonText = () => {
@@ -78,7 +79,7 @@ export function MonthExpendsCard() {
       <CardContent className="space-y-1">
         {monthExpenseAmount && (
           <>
-            <span className="text-2xl font-bold tracking-tight tabular-nums">
+            <span className="text-2xl font-bold tabular-nums tracking-tight">
               {formattedAmount}
             </span>
 

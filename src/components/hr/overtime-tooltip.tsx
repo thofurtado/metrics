@@ -1,10 +1,11 @@
+import { Info } from 'lucide-react'
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Info } from 'lucide-react'
 
 interface CalculationMemory {
   base_salary: number
@@ -20,7 +21,11 @@ interface OvertimeTooltipProps {
   calculatedValue: number
 }
 
-export function OvertimeTooltip({ memory, overtimeMinutes, calculatedValue }: OvertimeTooltipProps) {
+export function OvertimeTooltip({
+  memory,
+  overtimeMinutes,
+  calculatedValue,
+}: OvertimeTooltipProps) {
   if (!memory || overtimeMinutes <= 0) return null
 
   // Formatador de moeda
@@ -41,35 +46,46 @@ export function OvertimeTooltip({ memory, overtimeMinutes, calculatedValue }: Ov
   return (
     <TooltipProvider>
       <Tooltip delayDuration={300}>
-        <TooltipTrigger className="flex items-center gap-1 cursor-help hover:text-vida-loca-600 transition-colors">
+        <TooltipTrigger className="flex cursor-help items-center gap-1 transition-colors hover:text-vida-loca-600">
           <span>{formatCurrency(calculatedValue)}</span>
           <Info className="h-3.5 w-3.5 text-muted-foreground" />
         </TooltipTrigger>
-        <TooltipContent side="top" className="w-64 p-4 shadow-lg border border-border/50">
+        <TooltipContent
+          side="top"
+          className="w-64 border border-border/50 p-4 shadow-lg"
+        >
           <div className="space-y-3">
-            <h4 className="font-semibold text-sm border-b pb-2">Memória de Cálculo (HE)</h4>
-            
+            <h4 className="border-b pb-2 text-sm font-semibold">
+              Memória de Cálculo (HE)
+            </h4>
+
             <div className="space-y-1.5 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Salário Base:</span>
-                <span className="font-medium text-foreground">{formatCurrency(memory.base_salary)}</span>
+                <span className="font-medium text-foreground">
+                  {formatCurrency(memory.base_salary)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Divisor HR:</span>
-                <span className="font-medium text-foreground">{memory.divisor}</span>
+                <span className="font-medium text-foreground">
+                  {memory.divisor}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Valor Hora (Normal):</span>
-                <span className="font-medium text-foreground">{formatCurrency(memory.hourly_rate)}</span>
+                <span className="font-medium text-foreground">
+                  {formatCurrency(memory.hourly_rate)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Multiplicador (Taxa):</span>
                 <span className="font-medium text-foreground">
-                  {(memory.multiplier * 100) - 100}% ({memory.multiplier}x)
+                  {memory.multiplier * 100 - 100}% ({memory.multiplier}x)
                 </span>
               </div>
-              
-              <div className="border-t my-2 pt-2 flex justify-between font-semibold text-foreground">
+
+              <div className="my-2 flex justify-between border-t pt-2 font-semibold text-foreground">
                 <span>Total Horas Extras:</span>
                 <span>{formatMinutes(overtimeMinutes)}</span>
               </div>

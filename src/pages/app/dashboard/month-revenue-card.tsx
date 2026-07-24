@@ -12,9 +12,10 @@ export function MonthRevenueCard() {
 
   // VARIÁVEL AUXILIAR PARA VERIFICAR SE EXISTE DADO DE COMPARAÇÃO
   // Assumindo que 'null' (ou outro valor que não seja um número) indica ausência de dado.
-  const hasValidDiff = monthIncomeAmount &&
+  const hasValidDiff =
+    monthIncomeAmount &&
     monthIncomeAmount.diffFromLastMonth !== null &&
-    !isNaN(monthIncomeAmount.diffFromLastMonth);
+    !isNaN(monthIncomeAmount.diffFromLastMonth)
 
   return (
     <Card>
@@ -27,7 +28,7 @@ export function MonthRevenueCard() {
       <CardContent className="space-y-1">
         {monthIncomeAmount && (
           <>
-            <span className="text-2xl font-bold tracking-tight tabular-nums">
+            <span className="text-2xl font-bold tabular-nums tracking-tight">
               {monthIncomeAmount.monthIncomeAmount !== null
                 ? monthIncomeAmount.monthIncomeAmount.toLocaleString('pt-BR')
                 : '0'}
@@ -52,13 +53,15 @@ export function MonthRevenueCard() {
                   </span>
                 )}
               </p>
-            ) : monthIncomeAmount.monthIncomeAmount !== null && (
-              // Se não há dados de comparação, mas há receita neste mês, exibe uma mensagem alternativa
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-blue-700 dark:text-blue-500">
-                  Primeira receita do período
-                </span>
-              </p>
+            ) : (
+              monthIncomeAmount.monthIncomeAmount !== null && (
+                // Se não há dados de comparação, mas há receita neste mês, exibe uma mensagem alternativa
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-blue-700 dark:text-blue-500">
+                    Primeira receita do período
+                  </span>
+                </p>
+              )
             )}
 
             {/* O bloco original com o 'Este mês não possui entradas' só aparece se monthIncomeAmount.monthIncomeAmount for NULL */}
@@ -69,7 +72,6 @@ export function MonthRevenueCard() {
                 </span>
               </p>
             )}
-
           </>
         )}
       </CardContent>

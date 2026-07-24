@@ -49,17 +49,37 @@ export async function getActiveSession() {
   return response.data
 }
 
-export async function openSession(data: { initial_balance: number; period?: string; machine_ids?: number[] }) {
-  const response = await api.post<CashierSession>('/api/cashier/session/open', data)
+export async function openSession(data: {
+  initial_balance: number
+  period?: string
+  machine_ids?: number[]
+}) {
+  const response = await api.post<CashierSession>(
+    '/api/cashier/session/open',
+    data,
+  )
   return response.data
 }
 
-export async function closeSession(data: { reported_amounts: { payment_method_id: number; reported_amount: number }[]; notes?: string }) {
-  const response = await api.post<CashierSession>('/api/cashier/session/close', data)
+export async function closeSession(data: {
+  reported_amounts: { payment_method_id: number; reported_amount: number }[]
+  notes?: string
+}) {
+  const response = await api.post<CashierSession>(
+    '/api/cashier/session/close',
+    data,
+  )
   return response.data
 }
 
-export async function createEntry(data: { type: 'INCOME' | 'EXPENSE'; amount: number; payment_method_id?: number; category_id?: number; description?: string; condition_id?: number }) {
+export async function createEntry(data: {
+  type: 'INCOME' | 'EXPENSE'
+  amount: number
+  payment_method_id?: number
+  category_id?: number
+  description?: string
+  condition_id?: number
+}) {
   const response = await api.post<CashierEntry>('/api/cashier/entry', data)
   return response.data
 }
@@ -70,12 +90,18 @@ export async function getSessions() {
 }
 
 export async function getSessionDetails(id: string) {
-  const response = await api.get<{ session: CashierSession; entries: CashierEntry[]; summary: any }>('/api/cashier/session/' + id)
+  const response = await api.get<{
+    session: CashierSession
+    entries: CashierEntry[]
+    summary: any
+  }>('/api/cashier/session/' + id)
   return response.data
 }
 
 export async function auditSession(id: string) {
-  const response = await api.post('/api/cashier/session/audit', { session_id: id })
+  const response = await api.post('/api/cashier/session/audit', {
+    session_id: id,
+  })
   return response.data
 }
 

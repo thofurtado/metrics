@@ -11,10 +11,13 @@ export interface MonthIncomesAmountFilters {
   year?: number
 }
 
-export async function getMonthIncomesAmount({ month, year }: MonthIncomesAmountFilters = {}) {
+export async function getMonthIncomesAmount({
+  month,
+  year,
+}: MonthIncomesAmountFilters = {}) {
   const response = await api.get<GetMonthIncomesAmountResponse>(
     '/metrics/month-income-amount',
-    { params: { month, year } }
+    { params: { month, year } },
   )
   return response.data
 }

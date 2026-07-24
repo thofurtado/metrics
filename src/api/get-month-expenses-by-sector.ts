@@ -10,10 +10,13 @@ export interface MonthExpenseBySectorFilters {
   year?: number
 }
 
-export async function getMonthExpenseBySector({ month, year }: MonthExpenseBySectorFilters = {}) {
+export async function getMonthExpenseBySector({
+  month,
+  year,
+}: MonthExpenseBySectorFilters = {}) {
   const response = await api.get<GetMonthExpenseBySectorResponse[]>(
     '/metrics/month-expense-by-sector',
-    { params: { month, year } }
+    { params: { month, year } },
   )
 
   return response.data

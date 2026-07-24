@@ -19,7 +19,6 @@ export async function updateStatusTransaction({
   remainingDate,
   accountId,
 }: UpdateStatusTransactionParams) {
-
   // CORREÇÃO: Converter as datas para ISO string
   const payload = {
     amount,
@@ -30,19 +29,16 @@ export async function updateStatusTransaction({
     account_id: accountId, // Map accountId to account_id for backend
   }
 
-
-
   try {
-
     const response = await api.patch(`/switch-transaction/${id}`, payload)
-    console.log("✅ RESPOSTA DA API:", response.data)
+    console.log('✅ RESPOSTA DA API:', response.data)
     return response.data
   } catch (error: any) {
-    console.error("🔴 ERRO NA REQUISIÇÃO:", {
+    console.error('🔴 ERRO NA REQUISIÇÃO:', {
       message: error.message,
       status: error.response?.status,
       data: error.response?.data,
-      url: error.config?.url
+      url: error.config?.url,
     })
     throw error
   }

@@ -25,11 +25,14 @@ export interface MonthlySummaryResponse {
 }
 
 export async function getMonthlySummary(month: Date) {
-  const response = await api.get<MonthlySummaryResponse>('/transactions/monthly-summary', {
-    params: {
-      month: month.toISOString()
-    }
-  })
-  
+  const response = await api.get<MonthlySummaryResponse>(
+    '/transactions/monthly-summary',
+    {
+      params: {
+        month: month.toISOString(),
+      },
+    },
+  )
+
   return response.data
 }

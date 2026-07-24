@@ -1,4 +1,3 @@
-
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X } from 'lucide-react'
@@ -23,7 +22,11 @@ import {
   transactionFiltersSchema,
 } from './transaction-table-filters'
 
-export function TransactionTableFilters({ children }: { children?: React.ReactNode }) {
+export function TransactionTableFilters({
+  children,
+}: {
+  children?: React.ReactNode
+}) {
   const [searchParams, setSearchParams] = useSearchParams()
   const descriptionParam = searchParams.get('description')
   const valueParam = searchParams.get('value')
@@ -33,7 +36,10 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
   const typeParam = searchParams.get('type')
   const sortByParam = searchParams.get('sortBy')
   const sortDirectionParam = searchParams.get('sortDirection')
-  const combinedSortParam = sortByParam && sortDirectionParam ? `${sortByParam}-${sortDirectionParam}` : 'all'
+  const combinedSortParam =
+    sortByParam && sortDirectionParam
+      ? `${sortByParam}-${sortDirectionParam}`
+      : 'all'
   const checkedParam = searchParams.get('checked')
 
   const previousFilters = useRef({
@@ -44,11 +50,11 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
     supplierId: supplierIdParam ?? 'all',
     type: typeParam ?? 'all',
     sortBy: combinedSortParam,
-    checked: checkedParam ?? 'all'
+    checked: checkedParam ?? 'all',
   })
 
-  const { register, control, watch, reset } =
-    useForm<TransactionFiltersSchema>({
+  const { register, control, watch, reset } = useForm<TransactionFiltersSchema>(
+    {
       resolver: zodResolver(transactionFiltersSchema),
       defaultValues: {
         description: descriptionParam ?? '',
@@ -60,13 +66,22 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
         sortBy: combinedSortParam,
         checked: checkedParam ?? 'all',
       },
-    })
+    },
+  )
 
   const watchedFields = watch()
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const { description, value, sectorId, accountId, supplierId, type, checked } = watchedFields
+      const {
+        description,
+        value,
+        sectorId,
+        accountId,
+        supplierId,
+        type,
+        checked,
+      } = watchedFields
 
       const hasFiltersChanged =
         description !== previousFilters.current.description ||
@@ -89,10 +104,12 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           if (sectorId && sectorId !== 'all') state.set('sectorId', sectorId)
           else state.delete('sectorId')
 
-          if (accountId && accountId !== 'all') state.set('accountId', accountId)
+          if (accountId && accountId !== 'all')
+            state.set('accountId', accountId)
           else state.delete('accountId')
 
-          if (supplierId && supplierId !== 'all') state.set('supplierId', supplierId)
+          if (supplierId && supplierId !== 'all')
+            state.set('supplierId', supplierId)
           else state.delete('supplierId')
 
           if (type && type !== 'all') state.set('type', type)
@@ -102,7 +119,8 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           else state.delete('checked')
 
           if (watchedFields.sortBy && watchedFields.sortBy !== 'all') {
-            const [sortByStr, sortDirectionStr] = watchedFields.sortBy.split('-')
+            const [sortByStr, sortDirectionStr] =
+              watchedFields.sortBy.split('-')
             state.set('sortBy', sortByStr)
             state.set('sortDirection', sortDirectionStr)
           } else {
@@ -122,7 +140,7 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           supplierId: supplierId ?? 'all',
           type: type ?? 'all',
           sortBy: watchedFields.sortBy ?? 'all',
-          checked: checked ?? 'all'
+          checked: checked ?? 'all',
         }
       }
     }, 500)
@@ -130,9 +148,18 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
     return () => clearTimeout(timeoutId)
   }, [watchedFields, setSearchParams])
 
-  const { data: sectors } = useQuery({ queryKey: ['sectors'], queryFn: () => getSectors() })
-  const { data: accounts, isLoading: isLoadingAccounts } = useQuery({ queryKey: ['accounts'], queryFn: () => getAccounts() })
-  const { data: suppliers } = useQuery({ queryKey: ['suppliers'], queryFn: () => getSuppliers({ page: 1, perPage: 1000 }) })
+  const { data: sectors } = useQuery({
+    queryKey: ['sectors'],
+    queryFn: () => getSectors(),
+  })
+  const { data: accounts, isLoading: isLoadingAccounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => getAccounts(),
+  })
+  const { data: suppliers } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => getSuppliers({ page: 1, perPage: 1000 }),
+  })
 
   function handleClearFilter() {
     setSearchParams((state) => {
@@ -150,35 +177,58 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
     })
 
     reset({
-      description: '', value: '', sectorId: 'all', accountId: 'all', supplierId: 'all', type: 'all', sortBy: 'all', checked: 'all'
+      description: '',
+      value: '',
+      sectorId: 'all',
+      accountId: 'all',
+      supplierId: 'all',
+      type: 'all',
+      sortBy: 'all',
+      checked: 'all',
     })
 
     previousFilters.current = {
-      description: '', value: '', sectorId: 'all', accountId: 'all', supplierId: 'all', type: 'all', sortBy: 'all', checked: 'all'
+      description: '',
+      value: '',
+      sectorId: 'all',
+      accountId: 'all',
+      supplierId: 'all',
+      type: 'all',
+      sortBy: 'all',
+      checked: 'all',
     }
   }
 
-  const hasFilters = descriptionParam || valueParam || (sectorIdParam && sectorIdParam !== 'all') || (accountIdParam && accountIdParam !== 'all') || (supplierIdParam && supplierIdParam !== 'all') || (typeParam && typeParam !== 'all') || (sortByParam && sortByParam !== 'all') || (checkedParam && checkedParam !== 'all')
+  const hasFilters =
+    descriptionParam ||
+    valueParam ||
+    (sectorIdParam && sectorIdParam !== 'all') ||
+    (accountIdParam && accountIdParam !== 'all') ||
+    (supplierIdParam && supplierIdParam !== 'all') ||
+    (typeParam && typeParam !== 'all') ||
+    (sortByParam && sortByParam !== 'all') ||
+    (checkedParam && checkedParam !== 'all')
 
   return (
-    <div className="flex flex-col p-4 md:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-sm w-full gap-4 transition-all">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-center">
-        
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500/40 transition-all sm:col-span-2 lg:col-span-1">
-          <Search className="h-4 w-4 text-indigo-500 shrink-0" />
+    <div className="flex w-full flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900 md:p-6">
+      <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 transition-all focus-within:border-indigo-500/40 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50 sm:col-span-2 lg:col-span-1">
+          <Search className="h-4 w-4 shrink-0 text-indigo-500" />
           <input
             {...register('description')}
             placeholder="Buscar por descrição..."
-            className="bg-transparent border-none outline-none text-sm placeholder:text-slate-400 w-full font-semibold text-slate-700 dark:text-slate-200 min-w-0"
+            className="w-full min-w-0 border-none bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
           />
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500/40 transition-all">
-          <span className="text-xs text-indigo-500 uppercase font-black tracking-widest shrink-0">R$</span>
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 transition-all focus-within:border-indigo-500/40 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <span className="shrink-0 text-xs font-black uppercase tracking-widest text-indigo-500">
+            R$
+          </span>
           <input
             {...register('value')}
             placeholder="0,00"
-            className="bg-transparent border-none outline-none text-sm placeholder:text-slate-400 w-full font-bold text-slate-700 dark:text-slate-200 min-w-0"
+            className="w-full min-w-0 border-none bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
           />
         </div>
 
@@ -186,16 +236,36 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="type"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Tipo</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Tipo
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Todos</SelectItem>
-                  <SelectItem value="in" className="text-sm font-bold text-emerald-600">Entrada</SelectItem>
-                  <SelectItem value="out" className="text-sm font-bold text-rose-600">Saída</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Todos
+                  </SelectItem>
+                  <SelectItem
+                    value="in"
+                    className="text-sm font-bold text-emerald-600"
+                  >
+                    Entrada
+                  </SelectItem>
+                  <SelectItem
+                    value="out"
+                    className="text-sm font-bold text-rose-600"
+                  >
+                    Saída
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -206,16 +276,30 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="sectorId"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Setor</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Setor
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Setores" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Todos</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Todos
+                  </SelectItem>
                   {sectors?.data?.sectors?.map((sector) => (
-                    <SelectItem key={sector.id} value={sector.id} className={`text-sm font-bold ${sector.type === 'in' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    <SelectItem
+                      key={sector.id}
+                      value={sector.id}
+                      className={`text-sm font-bold ${sector.type === 'in' ? 'text-emerald-600' : 'text-rose-500'}`}
+                    >
                       {sector.name}
                     </SelectItem>
                   ))}
@@ -229,16 +313,32 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="accountId"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Conta</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled || isLoadingAccounts}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0">
-                  <SelectValue placeholder={isLoadingAccounts ? "..." : "Contas"} />
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Conta
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled || isLoadingAccounts}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
+                  <SelectValue
+                    placeholder={isLoadingAccounts ? '...' : 'Contas'}
+                  />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Todas</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Todas
+                  </SelectItem>
                   {accounts?.accounts?.map((account) => (
-                    <SelectItem key={account.id} value={account.id} className="text-sm font-bold text-slate-700">
+                    <SelectItem
+                      key={account.id}
+                      value={account.id}
+                      className="text-sm font-bold text-slate-700"
+                    >
                       {account.name}
                     </SelectItem>
                   ))}
@@ -252,21 +352,35 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="supplierId"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Fornec.</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0 truncate">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Fornec.
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 truncate border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Fornecedores" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Todos</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Todos
+                  </SelectItem>
                   {[...(suppliers?.suppliers || [])]
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id} className="text-sm font-bold">
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
+                      <SelectItem
+                        key={supplier.id}
+                        value={supplier.id}
+                        className="text-sm font-bold"
+                      >
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -277,16 +391,36 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="checked"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Status</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Status
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Auditoria" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Todos</SelectItem>
-                  <SelectItem value="true" className="text-sm font-bold text-sky-600">Conferidos</SelectItem>
-                  <SelectItem value="false" className="text-sm font-bold text-amber-600">Pendentes</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Todos
+                  </SelectItem>
+                  <SelectItem
+                    value="true"
+                    className="text-sm font-bold text-sky-600"
+                  >
+                    Conferidos
+                  </SelectItem>
+                  <SelectItem
+                    value="false"
+                    className="text-sm font-bold text-amber-600"
+                  >
+                    Pendentes
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -297,18 +431,48 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
           name="sortBy"
           control={control}
           render={({ field: { name, onChange, value, disabled } }) => (
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 py-1.5 pl-4 pr-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest hidden sm:inline shrink-0">Ordem</span>
-              <Select defaultValue="all" name={name} onValueChange={onChange} value={value} disabled={disabled}>
-                <SelectTrigger className="h-8 border-none bg-transparent shadow-none px-2 flex-1 text-sm font-semibold focus:ring-0 min-w-0">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+              <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:inline">
+                Ordem
+              </span>
+              <Select
+                defaultValue="all"
+                name={name}
+                onValueChange={onChange}
+                value={value}
+                disabled={disabled}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-none shadow-2xl">
-                  <SelectItem value="all" className="text-sm font-bold">Padrão</SelectItem>
-                  <SelectItem value="created_at-desc" className="text-sm font-bold">Lançamento (Novo)</SelectItem>
-                  <SelectItem value="created_at-asc" className="text-sm font-bold">Lançamento (Antigo)</SelectItem>
-                  <SelectItem value="data_vencimento-asc" className="text-sm font-bold">Vencimento (Prox)</SelectItem>
-                  <SelectItem value="data_vencimento-desc" className="text-sm font-bold">Vencimento (Dist)</SelectItem>
+                  <SelectItem value="all" className="text-sm font-bold">
+                    Padrão
+                  </SelectItem>
+                  <SelectItem
+                    value="created_at-desc"
+                    className="text-sm font-bold"
+                  >
+                    Lançamento (Novo)
+                  </SelectItem>
+                  <SelectItem
+                    value="created_at-asc"
+                    className="text-sm font-bold"
+                  >
+                    Lançamento (Antigo)
+                  </SelectItem>
+                  <SelectItem
+                    value="data_vencimento-asc"
+                    className="text-sm font-bold"
+                  >
+                    Vencimento (Prox)
+                  </SelectItem>
+                  <SelectItem
+                    value="data_vencimento-desc"
+                    className="text-sm font-bold"
+                  >
+                    Vencimento (Dist)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -316,21 +480,19 @@ export function TransactionTableFilters({ children }: { children?: React.ReactNo
         />
 
         {children && (
-          <div className="xl:col-span-1 md:col-span-2 w-full">
-            {children}
-          </div>
+          <div className="w-full md:col-span-2 xl:col-span-1">{children}</div>
         )}
 
         {hasFilters && (
-          <div className="flex items-center justify-end sm:justify-start w-full">
+          <div className="flex w-full items-center justify-end sm:justify-start">
             <Button
               onClick={handleClearFilter}
               type="button"
               variant="outline"
-              className="h-10 md:h-11 px-4 rounded-2xl hover:bg-rose-50 text-rose-600 hover:text-rose-700 border-rose-100 transition-colors shrink-0 font-bold w-full sm:w-auto"
+              className="h-10 w-full shrink-0 rounded-2xl border-rose-100 px-4 font-bold text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700 sm:w-auto md:h-11"
               title="Limpar Filtros"
             >
-              <X className="h-4 w-4 mr-2" />
+              <X className="mr-2 h-4 w-4" />
               Limpar Filtros
             </Button>
           </div>

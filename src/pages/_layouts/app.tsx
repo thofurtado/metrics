@@ -31,16 +31,16 @@ export function AppLayout() {
   }, [navigate])
 
   return (
-    <div className="flex min-h-screen bg-background font-manrope antialiased text-foreground">
+    <div className="flex min-h-screen bg-background font-manrope text-foreground antialiased">
       <Sidebar />
-      
-      <main 
+
+      <main
         className={cn(
-          "flex-1 flex flex-col min-h-screen w-full relative transition-[margin] duration-300 ease-in-out",
-          isCollapsed ? "lg:ml-[80px]" : "lg:ml-[260px]"
+          'relative flex min-h-screen w-full flex-1 flex-col transition-[margin] duration-300 ease-in-out',
+          isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]',
         )}
       >
-        <div className="flex flex-1 flex-col gap-8 p-6 md:p-10 lg:p-14 w-full mx-auto max-w-[1700px] mt-16 lg:mt-0">
+        <div className="mx-auto mt-16 flex w-full max-w-[1700px] flex-1 flex-col gap-8 p-6 md:p-10 lg:mt-0 lg:p-14">
           <Outlet />
         </div>
       </main>

@@ -1,29 +1,34 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Plus,
-  Trash2,
-  Banknote,
-  CreditCard,
   AlertCircle,
   ArrowRight,
-  Wallet
+  Banknote,
+  CreditCard,
+  Plus,
+  Trash2,
+  Wallet,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
 
 import { createPaymentEntry } from '@/api/create-payment-entry'
-import { getPayments } from '@/api/get-payments'
 import { finishTreatment } from '@/api/finish-treatment'
+import { getPayments } from '@/api/get-payments'
+import { getTreatmentDetails } from '@/api/get-treatment-details'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-import { getTreatmentDetails } from '@/api/get-treatment-details'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 interface PaymentModalProps {
   treatmentId: string
@@ -58,7 +63,7 @@ export function TreatmentPaymentModal({
   totalAmount,
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
 }: PaymentModalProps) {
   const safeTotalAmount = totalAmount || 0
   const valueInputRef = useRef<HTMLInputElement>(null)
@@ -72,9 +77,13 @@ export function TreatmentPaymentModal({
     enabled: isOpen,
   })
 
-  const defaultDescription = treatment ? `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}` : `O.S. #${treatmentId.slice(0, 8)}`
+  const defaultDescription = treatment
+    ? `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}`
+    : `O.S. #${treatmentId.slice(0, 8)}`
 
-  const [paymentMethodsData, setPaymentMethodsData] = useState<PaymentMethodItem[]>([])
+  const [paymentMethodsData, setPaymentMethodsData] = useState<
+    PaymentMethodItem[]
+  >([])
   const [currentPayment, setCurrentPayment] = useState<{
     paymentId: string
     amount: string
@@ -88,15 +97,15 @@ export function TreatmentPaymentModal({
     installments: 1,
     date: new Date().toISOString().split('T')[0],
     isPaid: true,
-    description: defaultDescription
+    description: defaultDescription,
   })
-  
+
   // Update description when treatment loads
   useEffect(() => {
     if (treatment && currentPayment.description.includes('O.S.')) {
-      setCurrentPayment(prev => ({
+      setCurrentPayment((prev) => ({
         ...prev,
-        description: `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}`
+        description: `O.S. #${treatmentId.slice(0, 8)} - ${treatment?.clients?.name || 'Cliente'}`,
       }))
     }
   }, [treatment, treatmentId])
@@ -121,28 +130,37 @@ export function TreatmentPaymentModal({
         installments: 1,
         date: new Date().toISOString().split('T')[0],
         isPaid: true,
-        description: defaultDescription
+        description: defaultDescription,
       })
     }
   }, [isOpen, safeTotalAmount])
 
   // Derived Calculations
-  const totalPaid = paymentMethodsData.reduce((acc, item) => acc + item.amount, 0)
+  const totalPaid = paymentMethodsData.reduce(
+    (acc, item) => acc + item.amount,
+    0,
+  )
   const remainingAmount = Math.max(0, safeTotalAmount - totalPaid)
-  const progressPercentage = safeTotalAmount > 0 ? Math.min(100, Math.round((totalPaid / safeTotalAmount) * 100)) : 100
+  const progressPercentage =
+    safeTotalAmount > 0
+      ? Math.min(100, Math.round((totalPaid / safeTotalAmount) * 100))
+      : 100
   const isFullyPaid = remainingAmount < 0.01
 
   // Helpers
-  const selectedPaymentMethodObj = availablePayments.find(p => p.id === currentPayment.paymentId)
-  const isCreditCard = selectedPaymentMethodObj?.name?.toLowerCase().includes('crédito') || false
+  const selectedPaymentMethodObj = availablePayments.find(
+    (p) => p.id === currentPayment.paymentId,
+  )
+  const isCreditCard =
+    selectedPaymentMethodObj?.name?.toLowerCase().includes('crédito') || false
   const maxInstallments = selectedPaymentMethodObj?.installment_limit || 1
 
   // Effects
   useEffect(() => {
     if (remainingAmount > 0 && !currentPayment.paymentId && !changeAlert) {
-      setCurrentPayment(prev => ({
+      setCurrentPayment((prev) => ({
         ...prev,
-        amount: remainingAmount.toFixed(2)
+        amount: remainingAmount.toFixed(2),
       }))
     }
   }, [remainingAmount, currentPayment.paymentId, changeAlert])
@@ -192,23 +210,23 @@ export function TreatmentPaymentModal({
       installments: isCreditCard ? currentPayment.installments : 1,
       date: currentPayment.date,
       isPaid: currentPayment.isPaid,
-      description: currentPayment.description
+      description: currentPayment.description,
     }
 
     setPaymentMethodsData([...paymentMethodsData, newItem])
 
     // Reset for next entry
     const newRemaining = Math.max(0, remainingAmount - amountToRegister)
-    setCurrentPayment(prev => ({
+    setCurrentPayment((prev) => ({
       ...prev,
       paymentId: '',
       amount: newRemaining > 0 ? newRemaining.toFixed(2) : '',
-      installments: 1
+      installments: 1,
     }))
   }
 
   const handleRemovePayment = (id: string) => {
-    setPaymentMethodsData(prev => prev.filter(item => item.id !== id))
+    setPaymentMethodsData((prev) => prev.filter((item) => item.id !== id))
     setChangeAlert(null)
   }
 
@@ -224,19 +242,19 @@ export function TreatmentPaymentModal({
     try {
       console.log('Enviando pagamentos:', paymentMethodsData)
 
-      const payloadPayments = paymentMethodsData.map(method => ({
+      const payloadPayments = paymentMethodsData.map((method) => ({
         payment_id: method.paymentId,
         amount: method.amount,
         occurrences: method.installments || 1,
         date: method.date ? `${method.date}T12:00:00.000Z` : undefined,
         is_paid: method.isPaid,
-        description: method.description
+        description: method.description,
       }))
 
       // Finalize treatment status and send payments to generate transactions
-      await finishTreatment({ 
-        treatmentId, 
-        payments: payloadPayments 
+      await finishTreatment({
+        treatmentId,
+        payments: payloadPayments,
       })
 
       toast.success('Venda finalizada com sucesso!')
@@ -245,7 +263,6 @@ export function TreatmentPaymentModal({
 
       // Navigate to the main list to prevent stale state
       navigate('/treatments')
-
     } catch (error) {
       console.error('Erro ao processar venda:', error)
       toast.error('Erro ao finalizar venda. Verifique o console.')
@@ -256,51 +273,62 @@ export function TreatmentPaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl h-[90vh] md:h-auto md:max-h-[90vh] flex flex-col">
-
+      <DialogContent className="flex h-[90vh] max-w-4xl flex-col gap-0 overflow-hidden border-none bg-background/95 p-0 shadow-2xl backdrop-blur-xl md:h-auto md:max-h-[90vh]">
         {/* HERO HEADER - PROGRESS & TOTAL */}
-        <div className="bg-primary/5 p-6 md:p-8 flex-shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-border/20">
+        <div className="relative flex-shrink-0 overflow-hidden bg-primary/5 p-6 md:p-8">
+          <div className="absolute left-0 top-0 h-1 w-full bg-border/20">
             <motion.div
               className="h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             />
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+          <div className="relative z-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <div className="space-y-1">
-              <DialogTitle className="text-xl font-medium text-muted-foreground flex items-center gap-2">
-                <Banknote className="w-5 h-5" />
+              <DialogTitle className="flex items-center gap-2 text-xl font-medium text-muted-foreground">
+                <Banknote className="h-5 w-5" />
                 Finalizar Venda
-                <span className="text-xs bg-muted/20 px-2 py-0.5 rounded-full border border-primary/10 select-all">
+                <span className="select-all rounded-full border border-primary/10 bg-muted/20 px-2 py-0.5 text-xs">
                   #{treatmentId.slice(0, 8)}
                 </span>
               </DialogTitle>
               <div>
-                <p className="text-4xl md:text-5xl font-bold tracking-tight text-foreground/90 tabular-nums">
+                <p className="text-4xl font-bold tabular-nums tracking-tight text-foreground/90 md:text-5xl">
                   {formatCurrency(remainingAmount)}
                 </p>
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mt-1">
-                  {remainingAmount > 0 ? "Falta Pagar" : "Total Pago ✓"}
+                <p className="mt-1 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                  {remainingAmount > 0 ? 'Falta Pagar' : 'Total Pago ✓'}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-2 bg-background/50 p-3 rounded-lg border border-border/10 backdrop-blur-sm shadow-sm w-full md:w-auto">
-              <div className="flex justify-between w-full md:w-48 text-sm">
+            <div className="flex w-full flex-col items-end gap-2 rounded-lg border border-border/10 bg-background/50 p-3 shadow-sm backdrop-blur-sm md:w-auto">
+              <div className="flex w-full justify-between text-sm md:w-48">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">{formatCurrency(safeTotalAmount)}</span>
-              </div>
-              <div className="flex justify-between w-full md:w-48 text-sm items-center">
-                <span className="text-muted-foreground">Desconto nos Itens</span>
-                <span className="font-medium text-red-500">
-                  {treatment?.items ? formatCurrency(treatment.items.reduce((acc: number, item: any) => acc + (item.discount || 0), 0)) : 'R$ 0,00'}
+                <span className="font-medium">
+                  {formatCurrency(safeTotalAmount)}
                 </span>
               </div>
-              <div className="w-full h-px bg-border/50 my-1" />
-              <div className="flex justify-between w-full md:w-48 text-base font-bold text-primary">
+              <div className="flex w-full items-center justify-between text-sm md:w-48">
+                <span className="text-muted-foreground">
+                  Desconto nos Itens
+                </span>
+                <span className="font-medium text-red-500">
+                  {treatment?.items
+                    ? formatCurrency(
+                        treatment.items.reduce(
+                          (acc: number, item: any) =>
+                            acc + (item.discount || 0),
+                          0,
+                        ),
+                      )
+                    : 'R$ 0,00'}
+                </span>
+              </div>
+              <div className="my-1 h-px w-full bg-border/50" />
+              <div className="flex w-full justify-between text-base font-bold text-primary md:w-48">
                 <span>Total a Pagar</span>
                 <span>{formatCurrency(safeTotalAmount)}</span>
               </div>
@@ -310,24 +338,36 @@ export function TreatmentPaymentModal({
 
         {/* MAIN BODY - SPLIT VIEW */}
         <div className="flex-1 overflow-y-auto bg-background">
-          <div className="grid grid-cols-1 md:grid-cols-12 h-full">
-
+          <div className="grid h-full grid-cols-1 md:grid-cols-12">
             {/* LEFT: INPUT AREA */}
-            <div className="md:col-span-7 flex flex-col p-6 md:p-8 space-y-6 md:border-r border-border/40">
-              
+            <div className="flex flex-col space-y-6 border-border/40 p-6 md:col-span-7 md:border-r md:p-8">
               {/* ITENS DO ATENDIMENTO */}
               {treatment?.items && treatment.items.length > 0 && (
-                <div className="space-y-3 pb-4 border-b border-border/40">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Itens do Atendimento</h3>
-                  <div className="max-h-[120px] overflow-y-auto space-y-2 pr-2">
+                <div className="space-y-3 border-b border-border/40 pb-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Itens do Atendimento
+                  </h3>
+                  <div className="max-h-[120px] space-y-2 overflow-y-auto pr-2">
                     {treatment.items.map((item: any) => (
-                      <div key={item.id} className="flex justify-between items-center text-sm p-2 bg-muted/20 rounded-lg">
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between rounded-lg bg-muted/20 p-2 text-sm"
+                      >
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{item.quantity}x {item.items?.name}</span>
-                          {item.discount > 0 && <span className="text-[10px] text-red-500 font-medium">Desc: {formatCurrency(item.discount)}</span>}
+                          <span className="font-medium text-foreground">
+                            {item.quantity}x {item.items?.name}
+                          </span>
+                          {item.discount > 0 && (
+                            <span className="text-[10px] font-medium text-red-500">
+                              Desc: {formatCurrency(item.discount)}
+                            </span>
+                          )}
                         </div>
                         <span className="font-bold text-slate-700">
-                          {formatCurrency((item.quantity * item.salesValue) - (item.discount || 0))}
+                          {formatCurrency(
+                            item.quantity * item.salesValue -
+                              (item.discount || 0),
+                          )}
                         </span>
                       </div>
                     ))}
@@ -336,14 +376,16 @@ export function TreatmentPaymentModal({
               )}
 
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Registrar Pagamento</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Registrar Pagamento
+                </h3>
                 {changeAlert !== null && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-full bg-yellow-100 px-3 py-1 text-xs font-bold text-yellow-800 shadow-sm"
                   >
-                    <AlertCircle className="w-3 h-3" />
+                    <AlertCircle className="h-3 w-3" />
                     TROCO: {formatCurrency(changeAlert)}
                   </motion.div>
                 )}
@@ -356,21 +398,35 @@ export function TreatmentPaymentModal({
                     <Select
                       value={currentPayment.paymentId}
                       onValueChange={(val) => {
-                        setCurrentPayment(prev => ({ ...prev, paymentId: val }))
+                        setCurrentPayment((prev) => ({
+                          ...prev,
+                          paymentId: val,
+                        }))
                       }}
                       disabled={isFullyPaid}
                     >
-                      <SelectTrigger className="h-14 text-lg bg-card shadow-sm border-input hover:border-primary/50 transition-colors">
+                      <SelectTrigger className="h-14 border-input bg-card text-lg shadow-sm transition-colors hover:border-primary/50">
                         <SelectValue placeholder="Selecione o método..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {availablePayments.map(p => (
-                          <SelectItem key={p.id} value={p.id} className="text-base py-3">
+                        {availablePayments.map((p) => (
+                          <SelectItem
+                            key={p.id}
+                            value={p.id}
+                            className="py-3 text-base"
+                          >
                             <div className="flex items-center gap-3">
-                              {p.name.toLowerCase().includes('crédito') ? <CreditCard className="w-5 h-5 text-blue-500 opacity-80" /> :
-                                p.name.toLowerCase().includes('débito') ? <CreditCard className="w-5 h-5 text-orange-500 opacity-80" /> :
-                                  p.name.toLowerCase().includes('pix') ? <div className="w-5 h-5 bg-teal-500/20 text-teal-600 rounded flex items-center justify-center text-[10px] font-bold">PIX</div> :
-                                    <Banknote className="w-5 h-5 text-green-600 opacity-80" />}
+                              {p.name.toLowerCase().includes('crédito') ? (
+                                <CreditCard className="h-5 w-5 text-blue-500 opacity-80" />
+                              ) : p.name.toLowerCase().includes('débito') ? (
+                                <CreditCard className="h-5 w-5 text-orange-500 opacity-80" />
+                              ) : p.name.toLowerCase().includes('pix') ? (
+                                <div className="flex h-5 w-5 items-center justify-center rounded bg-teal-500/20 text-[10px] font-bold text-teal-600">
+                                  PIX
+                                </div>
+                              ) : (
+                                <Banknote className="h-5 w-5 text-green-600 opacity-80" />
+                              )}
                               <span className="font-medium">{p.name}</span>
                             </div>
                           </SelectItem>
@@ -379,24 +435,41 @@ export function TreatmentPaymentModal({
                     </Select>
                   </div>
 
-                  <div className={cn("col-span-2 transition-all", isCreditCard ? "md:col-span-1" : "md:col-span-2")}>
+                  <div
+                    className={cn(
+                      'col-span-2 transition-all',
+                      isCreditCard ? 'md:col-span-1' : 'md:col-span-2',
+                    )}
+                  >
                     <div className="relative">
                       <Label className="sr-only">Valor</Label>
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-lg">R$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                        R$
+                      </span>
                       <Input
                         ref={valueInputRef}
                         type="number"
                         inputMode="decimal" // Better mobile keyboard
                         value={currentPayment.amount}
-                        onChange={e => setCurrentPayment(prev => ({ ...prev, amount: e.target.value }))}
-                        className="h-14 pl-12 text-xl font-bold bg-card shadow-sm transition-all focus:ring-2 ring-primary/20"
+                        onChange={(e) =>
+                          setCurrentPayment((prev) => ({
+                            ...prev,
+                            amount: e.target.value,
+                          }))
+                        }
+                        className="h-14 bg-card pl-12 text-xl font-bold shadow-sm ring-primary/20 transition-all focus:ring-2"
                         placeholder="0.00"
                         disabled={isFullyPaid}
                       />
                       {remainingAmount > 0 && !isFullyPaid && (
                         <button
-                          onClick={() => setCurrentPayment(prev => ({ ...prev, amount: remainingAmount.toFixed(2) }))}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors"
+                          onClick={() =>
+                            setCurrentPayment((prev) => ({
+                              ...prev,
+                              amount: remainingAmount.toFixed(2),
+                            }))
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase text-primary transition-colors hover:bg-primary/20"
                         >
                           Restante
                         </button>
@@ -409,24 +482,36 @@ export function TreatmentPaymentModal({
                     {isCreditCard && (
                       <motion.div
                         initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
+                        animate={{ opacity: 1, width: 'auto' }}
                         exit={{ opacity: 0, width: 0 }}
                         className="col-span-1"
                       >
                         <Select
                           value={String(currentPayment.installments)}
-                          onValueChange={val => setCurrentPayment(prev => ({ ...prev, installments: Number(val) }))}
+                          onValueChange={(val) =>
+                            setCurrentPayment((prev) => ({
+                              ...prev,
+                              installments: Number(val),
+                            }))
+                          }
                           disabled={isFullyPaid}
                         >
                           <SelectTrigger className="h-14 bg-card shadow-sm">
                             <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground text-sm uppercase font-bold">Parcelas:</span>
+                              <span className="text-sm font-bold uppercase text-muted-foreground">
+                                Parcelas:
+                              </span>
                               <SelectValue placeholder="1x" />
                             </div>
                           </SelectTrigger>
                           <SelectContent>
-                            {Array.from({ length: maxInstallments }, (_, i) => i + 1).map(i => (
-                              <SelectItem key={i} value={String(i)}>{i}x</SelectItem>
+                            {Array.from(
+                              { length: maxInstallments },
+                              (_, i) => i + 1,
+                            ).map((i) => (
+                              <SelectItem key={i} value={String(i)}>
+                                {i}x
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -437,33 +522,54 @@ export function TreatmentPaymentModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-1">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Data Base</Label>
-                    <Input 
-                      type="date" 
-                      value={currentPayment.date} 
-                      onChange={e => setCurrentPayment(prev => ({ ...prev, date: e.target.value }))}
+                    <Label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">
+                      Data Base
+                    </Label>
+                    <Input
+                      type="date"
+                      value={currentPayment.date}
+                      onChange={(e) =>
+                        setCurrentPayment((prev) => ({
+                          ...prev,
+                          date: e.target.value,
+                        }))
+                      }
                       className="h-12 bg-card shadow-sm"
                       disabled={isFullyPaid}
                     />
                   </div>
-                  <div className="col-span-1 flex items-center h-12 mt-5">
-                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                           type="checkbox" 
-                           checked={currentPayment.isPaid}
-                           onChange={e => setCurrentPayment(prev => ({ ...prev, isPaid: e.target.checked }))}
-                           className="w-5 h-5 rounded border-primary/50 text-primary focus:ring-primary"
-                           disabled={isFullyPaid}
-                        />
-                        <span className="text-sm font-semibold text-foreground">Já está pago?</span>
-                     </label>
+                  <div className="col-span-1 mt-5 flex h-12 items-center">
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={currentPayment.isPaid}
+                        onChange={(e) =>
+                          setCurrentPayment((prev) => ({
+                            ...prev,
+                            isPaid: e.target.checked,
+                          }))
+                        }
+                        className="h-5 w-5 rounded border-primary/50 text-primary focus:ring-primary"
+                        disabled={isFullyPaid}
+                      />
+                      <span className="text-sm font-semibold text-foreground">
+                        Já está pago?
+                      </span>
+                    </label>
                   </div>
                   <div className="col-span-2">
-                    <Label className="text-xs uppercase font-bold text-muted-foreground mb-1 block">Descrição do Lançamento</Label>
-                    <Input 
-                      type="text" 
-                      value={currentPayment.description} 
-                      onChange={e => setCurrentPayment(prev => ({ ...prev, description: e.target.value }))}
+                    <Label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">
+                      Descrição do Lançamento
+                    </Label>
+                    <Input
+                      type="text"
+                      value={currentPayment.description}
+                      onChange={(e) =>
+                        setCurrentPayment((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                       className="h-12 bg-card shadow-sm"
                       placeholder="Ex: O.S. #1234 - Cliente"
                       disabled={isFullyPaid}
@@ -473,36 +579,46 @@ export function TreatmentPaymentModal({
 
                 <Button
                   onClick={handleAddPayment}
-                  disabled={isFullyPaid || !currentPayment.paymentId || !currentPayment.amount}
-                  className="w-full h-14 text-lg uppercase tracking-wide font-bold shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
+                  disabled={
+                    isFullyPaid ||
+                    !currentPayment.paymentId ||
+                    !currentPayment.amount
+                  }
+                  className="h-14 w-full text-lg font-bold uppercase tracking-wide shadow-lg shadow-primary/20 transition-all active:scale-[0.99]"
                 >
-                  <Plus className="w-5 h-5 mr-2" />
+                  <Plus className="mr-2 h-5 w-5" />
                   Lançar Pagamento
                 </Button>
               </div>
             </div>
 
             {/* RIGHT: LIST / RECEIPT */}
-            <div className="md:col-span-5 bg-muted/30 p-6 md:p-8 flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-border/40 min-h-[300px]">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center justify-between">
+            <div className="flex h-full min-h-[300px] flex-col overflow-hidden border-t border-border/40 bg-muted/30 p-6 md:col-span-5 md:border-l md:border-t-0 md:p-8">
+              <h3 className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <span>Extrato de Lançamentos</span>
-                <span className="bg-muted px-2 py-1 rounded text-[10px] font-mono">{paymentMethodsData.length} items</span>
+                <span className="rounded bg-muted px-2 py-1 font-mono text-[10px]">
+                  {paymentMethodsData.length} items
+                </span>
               </h3>
 
-              <div className="flex-1 overflow-y-auto space-y-3 pr-2 -mr-2">
-                <AnimatePresence mode='popLayout'>
+              <div className="-mr-2 flex-1 space-y-3 overflow-y-auto pr-2">
+                <AnimatePresence mode="popLayout">
                   {paymentMethodsData.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="h-full flex flex-col items-center justify-center text-muted-foreground/30 border-2 border-dashed border-border/50 rounded-xl"
+                      className="flex h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/50 text-muted-foreground/30"
                     >
-                      <Wallet className="w-12 h-12 mb-3" />
-                      <p className="text-sm font-medium">Aguardando lançamentos...</p>
+                      <Wallet className="mb-3 h-12 w-12" />
+                      <p className="text-sm font-medium">
+                        Aguardando lançamentos...
+                      </p>
                     </motion.div>
                   ) : (
                     paymentMethodsData.map((item) => {
-                      const methodInfo = availablePayments.find(p => p.id === item.paymentId)
+                      const methodInfo = availablePayments.find(
+                        (p) => p.id === item.paymentId,
+                      )
                       return (
                         <motion.div
                           key={item.id}
@@ -510,16 +626,16 @@ export function TreatmentPaymentModal({
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -20 }}
-                          className="group bg-card p-4 rounded-lg shadow-sm border border-border/50 relative overflow-hidden flex justify-between items-center hover:border-primary/30 transition-colors"
+                          className="group relative flex items-center justify-between overflow-hidden rounded-lg border border-border/50 bg-card p-4 shadow-sm transition-colors hover:border-primary/30"
                         >
-                          <div className="flex flex-col gap-1 relative z-10">
-                            <span className="font-mono font-bold text-lg text-foreground tracking-tight">
+                          <div className="relative z-10 flex flex-col gap-1">
+                            <span className="font-mono text-lg font-bold tracking-tight text-foreground">
                               {formatCurrency(item.amount)}
                             </span>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase font-semibold">
+                            <div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
                               {methodInfo?.name}
                               {item.installments > 1 && (
-                                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px]">
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">
                                   {item.installments}x
                                 </span>
                               )}
@@ -529,33 +645,35 @@ export function TreatmentPaymentModal({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                            className="text-muted-foreground opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
                             onClick={() => handleRemovePayment(item.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
 
                           {/* Decorative receipt jagged edge effect could go here */}
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="absolute bottom-0 left-0 top-0 w-1 bg-primary/20 opacity-0 transition-opacity group-hover:opacity-100" />
                         </motion.div>
                       )
                     })
                   )}
                 </AnimatePresence>
               </div>
-
-
             </div>
           </div>
         </div>
 
         {/* FOOTER ACTIONS */}
-        <div className="p-4 md:p-6 bg-background border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 z-20">
-          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto h-12 text-muted-foreground hover:text-foreground">
+        <div className="z-20 flex flex-shrink-0 flex-col items-center justify-between gap-4 border-t border-border/50 bg-background p-4 sm:flex-row md:p-6">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="h-12 w-full text-muted-foreground hover:text-foreground sm:w-auto"
+          >
             Cancelar Operação
           </Button>
 
-          <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="flex w-full items-center gap-4 sm:w-auto">
             {/* Removed redundant remaining Amount display here */}
 
             <Button
@@ -563,22 +681,25 @@ export function TreatmentPaymentModal({
               onClick={handleSubmit}
               disabled={remainingAmount > 0.01 || isFinishing}
               className={cn(
-                "w-full sm:w-48 h-12 text-lg font-bold transition-all shadow-lg",
-                remainingAmount < 0.01 ? "bg-green-600 hover:bg-green-700 shadow-green-200 hover:scale-105" : "bg-muted text-muted-foreground"
+                'h-12 w-full text-lg font-bold shadow-lg transition-all sm:w-48',
+                remainingAmount < 0.01
+                  ? 'bg-green-600 shadow-green-200 hover:scale-105 hover:bg-green-700'
+                  : 'bg-muted text-muted-foreground',
               )}
             >
               {isFinishing ? (
-                <span className="flex items-center gap-2 animate-pulse">Processando...</span>
+                <span className="flex animate-pulse items-center gap-2">
+                  Processando...
+                </span>
               ) : (
                 <>
                   Finalizar
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </>
               )}
             </Button>
           </div>
         </div>
-
       </DialogContent>
     </Dialog>
   )

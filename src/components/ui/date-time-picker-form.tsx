@@ -4,9 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -22,15 +22,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
 import { toast } from '@/components/ui/use-toast'
+import { cn } from '@/lib/utils'
 
 import { TimePickerDemo } from './time-picker-demo'
 
 // 1. Definição do Schema
 const formSchema = z.object({
   dateTime: z.date({
-    required_error: "A data e hora são obrigatórias.",
+    required_error: 'A data e hora são obrigatórias.',
   }),
 })
 
@@ -84,7 +84,11 @@ export function DateTimePickerForm() {
     // Lógica para manter a hora ao trocar o dia no calendário
     if (tempDate) {
       const preservedTime = new Date(newDate)
-      preservedTime.setHours(tempDate.getHours(), tempDate.getMinutes(), tempDate.getSeconds())
+      preservedTime.setHours(
+        tempDate.getHours(),
+        tempDate.getMinutes(),
+        tempDate.getSeconds(),
+      )
       setTempDate(preservedTime)
     } else {
       setTempDate(newDate)
@@ -116,7 +120,9 @@ export function DateTimePickerForm() {
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {field.value ? (
-                        format(field.value, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })
+                        format(field.value, "dd 'de' MMMM 'às' HH:mm", {
+                          locale: ptBR,
+                        })
                       ) : (
                         <span>Selecione data e hora</span>
                       )}
@@ -134,14 +140,11 @@ export function DateTimePickerForm() {
                     initialFocus
                   />
 
-                  <div className="border-t border-border p-3 space-y-3">
-                    <TimePickerDemo
-                      setDate={setTempDate}
-                      date={tempDate}
-                    />
+                  <div className="space-y-3 border-t border-border p-3">
+                    <TimePickerDemo setDate={setTempDate} date={tempDate} />
 
                     {/* Rodapé de Ações */}
-                    <div className="flex justify-between items-center pt-2 gap-2">
+                    <div className="flex items-center justify-between gap-2 pt-2">
                       <Button
                         size="sm"
                         variant="ghost"

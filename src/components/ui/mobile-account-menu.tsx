@@ -39,10 +39,10 @@ export function MobileAccountMenu() {
   // Função para pegar as iniciais do nome
   const getInitials = (name: string) => {
     if (!name) return 'US'
-    
+
     return name
       .split(' ')
-      .map(word => word[0])
+      .map((word) => word[0])
       .filter(Boolean)
       .join('')
       .toUpperCase()
@@ -59,7 +59,7 @@ export function MobileAccountMenu() {
             className="h-8 w-8 rounded-full p-0"
           >
             {isLoadingProfile ? (
-              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+              <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                 {getInitials(profile?.name || '')}
