@@ -113,6 +113,9 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
   // INTERSEÇÃO: ambas as camadas devem liberar
   function hasAccess(slug: string): boolean {
     if (isLoading) return false
+    if (slug === 'cashier') {
+      return true
+    }
     if (profileData?.role === 'ADMIN') {
       return instanceSlugs.includes(slug)
     }
