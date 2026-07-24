@@ -1,8 +1,9 @@
-"use client"
 import { useState, useEffect, useRef } from 'react';
 import { Plus, ArrowLeft, TrendingDown, PlusCircle, Heart, CheckCircle2, UserCircle } from 'lucide-react';
+import { useModules } from '@/context/module-context';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
+    const { modules } = useModules();
     const [tipo, setTipo] = useState<'venda' | 'sangria' | 'suprimento' | 'caixinha'>('venda');
     const [valor, setValor] = useState('');
     const [paraQuem, setParaQuem] = useState('');
@@ -10,6 +11,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [banco, setBanco] = useState('CAIXA');
     
     const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
+        const configured = modules?.cashier_default_origin;
+        if (configured === 'Balcão' || configured === 'Delivery' || configured === 'Mesa') {
+            return configured;
+        }
         const saved = localStorage.getItem('cashier_default_origin')
         if (saved === 'Balcão' || saved === 'Delivery' || saved === 'Mesa') {
             return saved
@@ -19,6 +24,12 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     // Origem: Mesa, Balcão ou Delivery (carrega das configurações)
     const [tipoOrigem, setTipoOrigem] = useState<'Mesa' | 'Balcão' | 'Delivery'>(getInitialOrigem);
+
+    useEffect(() => {
+        if (modules?.cashier_default_origin) {
+            setTipoOrigem(modules.cashier_default_origin);
+        }
+    }, [modules?.cashier_default_origin]);
     const [numOrigem, setNumOrigem] = useState('');
 
     const [identificacao, setIdentificacao] = useState('');
