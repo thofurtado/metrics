@@ -77,20 +77,21 @@ export function DetalheLote({
   }, [loteAtivo.lancamentos])
 
   const renderOrigemLabel = (l: any) => {
-    if (formasCasa.includes(l.formaPagamento)) {
-      return 'Consumo Interno'
-    }
     const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão')
     const num = l.identification || l.mesa || ''
     const cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
+
+    // Se o identificador for um nome de consumidor (ex: João Silva), não usa como número de mesa
+    const isNum = cleanNum && !isNaN(Number(cleanNum))
+
     if (origin === 'Mesa') {
-      return cleanNum ? `Mesa ${cleanNum}` : 'Mesa'
+      return isNum ? `Mesa ${cleanNum}` : num && !num.toLowerCase().includes('mesa') ? `Mesa ${num}` : 'Mesa'
     }
     if (origin === 'Delivery') {
-      return cleanNum ? `Delivery ${cleanNum}` : 'Delivery'
+      return isNum ? `Delivery ${cleanNum}` : num && !num.toLowerCase().includes('delivery') ? `Delivery ${num}` : 'Delivery'
     }
     if (origin === 'Balcão') {
-      return cleanNum ? `Balcão ${cleanNum}` : 'Balcão'
+      return isNum ? `Balcão ${cleanNum}` : num && !num.toLowerCase().includes('balcão') && !num.toLowerCase().includes('balcao') ? `Balcão ${num}` : 'Balcão'
     }
     return cleanNum ? `${origin} ${cleanNum}` : origin
   }
@@ -565,7 +566,7 @@ export function DetalheLote({
                               {renderOrigemLabel(l)}
                             </td>
                             <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
-                              {l.consumidorCasa || l.identificacao || l.identification || l.banco || '-'}
+                              {l.consumidorCasa ? l.consumidorCasa : (l.banco || '-')}
                             </td>
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
                               {l.formaPagamento}{' '}

@@ -53,8 +53,18 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         queryFn: getCashierUsers,
     });
 
-    const clientsList = useMemo(() => clientsData?.data?.clients || clientsData?.clients || [], [clientsData]);
-    const employeesList = useMemo(() => cashierUsers || [], [cashierUsers]);
+    const clientsList = useMemo(() => {
+        if (Array.isArray(clientsData)) return clientsData;
+        if (clientsData && Array.isArray((clientsData as any).clients)) return (clientsData as any).clients;
+        if (clientsData && (clientsData as any).data && Array.isArray((clientsData as any).data.clients)) return (clientsData as any).data.clients;
+        return [];
+    }, [clientsData]);
+
+    const employeesList = useMemo(() => {
+        if (Array.isArray(cashierUsers)) return cashierUsers;
+        if (cashierUsers && Array.isArray((cashierUsers as any).users)) return (cashierUsers as any).users;
+        return [];
+    }, [cashierUsers]);
 
     const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
         const configured = modules?.cashier_default_origin;
@@ -523,15 +533,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
                                             <UserCircle size={12} /> {isEmployeeTarget ? 'Selecione o Funcionário / Colaborador' : 'Selecione o Cliente / Correntista'}
                                         </label>
-                                        {!isEmployeeTarget && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsQuickClientOpen(true)}
-                                                className="text-[10px] font-black uppercase text-blue-600 hover:underline flex items-center gap-1"
-                                            >
-                                                <UserPlus size={11} /> + Novo Cliente
-                                            </button>
-                                        )}
                                     </div>
 
                                     {isEmployeeTarget ? (
