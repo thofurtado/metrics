@@ -177,3 +177,8 @@ export async function getMonthlyCashAudit() {
   const response = await api.get('/api/cashier/monthly-audit')
   return response.data
 }
+
+export async function getCashierUsers() {
+  const response = await api.get<{ id: string; name: string; role: string }[]>('/api/cashier/users')
+  return response.data
+}

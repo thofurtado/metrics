@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, ArrowLeft, TrendingDown, PlusCircle, Heart, CheckCircle2, UserCircle } from 'lucide-react';
+import { Plus, TrendingDown, UserCircle, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useModules } from '@/context/module-context';
 import { getPOSMachines } from '@/api/pos-machines';
 import { getPaymentIdentifiers } from '@/api/payment-identifiers';
 import { getAccounts } from '@/api/get-accounts';
+import { getClients } from '@/api/get-clients';
+import { getCashierUsers } from '@/api/cashier/cashier';
+import { QuickClientDialog } from './QuickClientDialog';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const { modules } = useModules();
@@ -13,6 +16,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [paraQuem, setParaQuem] = useState('');
     const [forma, setForma] = useState('Dinheiro');
     const [banco, setBanco] = useState('CAIXA');
+
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+    const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
+
+    // Helper para normalização textual imune a acentos e maiúsculas/minúsculas
+    const normalizeStr = (str: string) => {
+        if (!str) return '';
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    };
 
     // Buscar dados do banco
     const { data: dbMachines } = useQuery({
@@ -29,7 +42,20 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         queryKey: ['accounts'],
         queryFn: getAccounts,
     });
-    
+
+    const { data: clientsData } = useQuery({
+        queryKey: ['clients'],
+        queryFn: getClients,
+    });
+
+    const { data: cashierUsers } = useQuery({
+        queryKey: ['cashier-users'],
+        queryFn: getCashierUsers,
+    });
+
+    const clientsList = useMemo(() => clientsData?.data?.clients || clientsData?.clients || [], [clientsData]);
+    const employeesList = useMemo(() => cashierUsers || [], [cashierUsers]);
+
     const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
         const configured = modules?.cashier_default_origin;
         if (configured === 'Balcão' || configured === 'Delivery' || configured === 'Mesa') {
@@ -42,7 +68,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return 'Mesa'
     }
 
-    // Origem: Mesa, Balcão ou Delivery (carrega das configurações)
     const [tipoOrigem, setTipoOrigem] = useState<'Mesa' | 'Balcão' | 'Delivery'>(getInitialOrigem);
 
     useEffect(() => {
@@ -50,8 +75,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setTipoOrigem(modules.cashier_default_origin);
         }
     }, [modules?.cashier_default_origin]);
-    const [numOrigem, setNumOrigem] = useState('');
 
+    const [numOrigem, setNumOrigem] = useState('');
     const [identificacao, setIdentificacao] = useState('');
     const [consumidorCasa, setConsumidorCasa] = useState('');
 
@@ -63,7 +88,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const formaSelectRef = useRef<HTMLSelectElement>(null);
     const consumidorInputRef = useRef<HTMLInputElement>(null);
     const bancoSelectRef = useRef<HTMLSelectElement>(null);
-    const identificacaoInputRef = useRef<HTMLInputElement>(null);
     const paraQuemInputRef = useRef<HTMLInputElement>(null);
     const submitBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -87,7 +111,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 });
             });
         } else {
-            // Fallback padrão se ainda não carregou do banco
             base.push(
                 { key: '6', name: 'Funcionário', display: '6 - Funcionário' },
                 { key: '7', name: 'Pró-labore', display: '7 - Pró-labore' },
@@ -99,34 +122,38 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return base;
     }, [dbIdentifiers]);
 
-    // Identifica se a forma selecionada é Conta da Casa / Identificador (A Prazo ou Operacional)
+    // Identifica se a forma selecionada é Conta da Casa / Identificador
     const isContaCasa = useMemo(() => {
         if (tipo !== 'venda') return false;
         
-        // Verifica nos identificadores do banco
+        const normForma = normalizeStr(forma);
         if (dbIdentifiers && dbIdentifiers.length > 0) {
-            const found = dbIdentifiers.find(i => i.name.toLowerCase() === forma.toLowerCase());
+            const found = dbIdentifiers.find(i => normalizeStr(i.name) === normForma);
             if (found) return true;
         }
 
-        // Padrão fallback
-        const padraoContaCasa = ['funcionário', 'pró-labore', 'cortesia', 'permuta', 'a prazo'];
-        return padraoContaCasa.includes(forma.toLowerCase());
+        const padraoContaCasa = ['funcionario', 'pro-labore', 'cortesia', 'permuta', 'a prazo'];
+        return padraoContaCasa.some(p => normForma.includes(p));
     }, [forma, tipo, dbIdentifiers]);
+
+    // Verifica se a seleção refere-se especificamente a Funcionário/Colaborador
+    const isEmployeeTarget = useMemo(() => {
+        const normForma = normalizeStr(forma);
+        const normConsumidor = normalizeStr(consumidorCasa);
+        return normForma.includes('funcionario') || normConsumidor.includes('funcionario');
+    }, [forma, consumidorCasa]);
 
     // Funções utilitárias de normalização de categoria
     const normalizeCategory = (str: string) =>
         str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
-    // Monta lista dinâmica de BANCOS_NUMERADOS filtrados por modalidade
+    // Monta lista dinâmica de BANCOS_NUMERADOS
     const BANCOS_NUMERADOS = useMemo(() => {
         const formaNorm = normalizeCategory(forma);
         
-        // Se houver maquininhas cadastradas no banco
         if (dbMachines && dbMachines.length > 0) {
-            // Filtra maquininhas que possuem a taxa cadastrada para essa categoria
             const matchingMachines = dbMachines.filter(m => {
-                if (!m.rates || m.rates.length === 0) return true; // Se não tem filtro de taxa, mostra
+                if (!m.rates || m.rates.length === 0) return true;
                 return m.rates.some(r => normalizeCategory(r.payment_category) === formaNorm);
             });
 
@@ -139,7 +166,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             }));
         }
 
-        // Fallback para contas bancárias gerais ou lista genérica
         if (dbAccounts && dbAccounts.accounts && dbAccounts.accounts.length > 0) {
             return dbAccounts.accounts.map((acc, idx) => ({
                 key: (idx + 1).toString(),
@@ -148,7 +174,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             }));
         }
 
-        // Fallback padrão fixo
         return [
             { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
             { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
@@ -178,7 +203,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             } else if (isContaCasa) {
                 setBanco('CONTA DA CASA');
             } else {
-                // Seleciona a primeira maquininha válida para aquela modalidade
                 if (BANCOS_NUMERADOS.length > 0 && (banco === 'CAIXA' || banco === 'CONTA DA CASA')) {
                     setBanco(BANCOS_NUMERADOS[0].name);
                 }
@@ -188,7 +212,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         }
     }, [forma, tipo, isContaCasa, BANCOS_NUMERADOS]);
 
-    // Avança para o próximo campo com base na forma de pagamento selecionada
     const advanceFromForma = (formaSelecionada: string) => {
         setForma(formaSelecionada);
 
@@ -213,7 +236,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         }
     };
 
-    // Avança a partir da seleção do Banco
     const advanceFromBanco = (bancoSelecionado: string) => {
         setBanco(bancoSelecionado);
         setTimeout(() => {
@@ -292,6 +314,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
             identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? consumidorCasa : '',
+            client_id: (tipo === 'venda' && isContaCasa && !isEmployeeTarget) ? selectedClientId : null,
+            employee_id: (tipo === 'venda' && isContaCasa && isEmployeeTarget) ? selectedEmployeeId : null,
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
@@ -305,6 +329,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         setNumOrigem('');
         setIdentificacao('');
         setConsumidorCasa('');
+        setSelectedClientId(null);
+        setSelectedEmployeeId(null);
 
         setShowTooltip(true);
         setTimeout(() => setShowTooltip(false), 2000);
@@ -331,297 +357,311 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             cardStyle: "bg-emerald-50/40 border-emerald-200",
             btnStyle: "bg-emerald-600 hover:bg-emerald-700",
             btnLabel: "Lançar Suprimento",
-            icon: <PlusCircle size={18} />
+            icon: <Plus size={18} />
         },
         caixinha: {
-            title: "Lançar Gorjeta",
+            title: "Lançar Gorjeta / Caixinha",
             cardStyle: "bg-purple-50/40 border-purple-200",
             btnStyle: "bg-purple-600 hover:bg-purple-700",
-            btnLabel: "Lançar Gorjeta",
-            icon: <Heart size={18} fill="currentColor" />
+            btnLabel: "Lançar Caixinha",
+            icon: <Plus size={18} />
         }
     };
 
     const currentConfig = formConfig[tipo];
 
     return (
-        <div className={`p-4 md:p-6 rounded-3xl border shadow-xl transition-all relative ${currentConfig.cardStyle}`}>
-            {showTooltip && (
-                <div className="absolute top-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-2">
-                    <CheckCircle2 size={16} /> Lançamento registrado com sucesso!
-                </div>
-            )}
+        <div className={`rounded-2xl border p-4 md:p-6 shadow-sm transition-all relative ${currentConfig.cardStyle}`}>
+            <QuickClientDialog
+                isOpen={isQuickClientOpen}
+                onClose={() => setIsQuickClientOpen(false)}
+                onSuccess={(newClient) => {
+                    setSelectedClientId(newClient.id);
+                    setConsumidorCasa(newClient.name);
+                }}
+            />
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                    <h3 className="font-black text-zinc-900 text-lg md:text-xl uppercase tracking-tight">{currentConfig.title}</h3>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-2xl overflow-x-auto max-w-full">
-                    <button
-                        type="button"
-                        onClick={() => setTipo('venda')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'venda' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
-                    >
-                        Venda
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTipo('sangria')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'text-zinc-500 hover:text-red-600'}`}
-                    >
-                        Sangria
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTipo('suprimento')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-500 hover:text-emerald-600'}`}
-                    >
-                        Suprimento
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setTipo('caixinha')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap ${tipo === 'caixinha' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-500 hover:text-purple-600'}`}
-                    >
-                        Gorjeta
-                    </button>
-                </div>
+            {/* SELETOR DE MODOS DE OPERAÇÃO (SUB-ABAS DE OPERAÇÃO) */}
+            <div className="flex items-center gap-2 mb-4 border-b border-zinc-100 pb-3 overflow-x-auto">
+                <button
+                    type="button"
+                    onClick={() => { setTipo('venda'); setTimeout(() => valorInputRef.current?.focus(), 50); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shrink-0 ${tipo === 'venda' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                >
+                    <Plus size={14} /> Venda Normal
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setTipo('sangria'); setForma('Sangria'); setBanco('CAIXA'); setTimeout(() => valorInputRef.current?.focus(), 50); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shrink-0 ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                >
+                    <TrendingDown size={14} /> Sangria (Retirada)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setTipo('suprimento'); setForma('Suprimento'); setBanco('CAIXA'); setTimeout(() => valorInputRef.current?.focus(), 50); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shrink-0 ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                >
+                    <Plus size={14} /> Suprimento (Entrada)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setTipo('caixinha'); setForma('Dinheiro'); setTimeout(() => valorInputRef.current?.focus(), 50); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shrink-0 ${tipo === 'caixinha' ? 'bg-purple-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                >
+                    <Plus size={14} /> Caixinha (Gorjeta)
+                </button>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 md:flex md:flex-wrap items-end gap-3 md:gap-4">
-                        {/* VALOR */}
-                        <div className="col-span-2 md:w-36">
-                            <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Valor (R$)</label>
-                            <input
-                                ref={valorInputRef}
-                                type="text"
-                                required
-                                value={valor}
-                                onChange={e => setValor(formatCurrency(e.target.value))}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        if (tipo === 'venda') {
-                                            origemInputRef.current?.focus();
-                                        } else if (tipo === 'caixinha') {
-                                            paraQuemInputRef.current?.focus();
-                                        } else {
-                                            identificacaoInputRef.current?.focus();
-                                        }
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 md:flex md:flex-wrap items-end gap-3">
+                    {/* VALOR DA OPERAÇÃO */}
+                    <div className="col-span-1 md:w-36">
+                        <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Valor (R$)</label>
+                        <input
+                            ref={valorInputRef}
+                            type="text"
+                            required
+                            autoFocus
+                            value={valor}
+                            onChange={e => setValor(formatCurrency(e.target.value))}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (tipo === 'venda') {
+                                        origemInputRef.current?.focus();
+                                        origemInputRef.current?.select();
+                                    } else if (tipo === 'caixinha') {
+                                        paraQuemInputRef.current?.focus();
+                                    } else {
+                                        submitBtnRef.current?.focus();
                                     }
-                                }}
-                                placeholder="0,00"
-                                className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-lg md:text-base font-black outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                            />
-                        </div>
+                                }
+                            }}
+                            placeholder="0,00"
+                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                    </div>
 
-                        {tipo === 'venda' && (
-                            <>
-                                {/* ORIGEM DA VENDA (MESA, BALCÃO, DELIVERY) */}
-                                <div className="col-span-2 md:w-48">
-                                    <div className="flex items-center justify-between mb-1 px-1">
-                                        <label className="text-[9px] font-black uppercase text-zinc-400 block">Origem</label>
-                                        <div className="flex items-center gap-1 text-[9px]">
-                                            <button
-                                                type="button"
-                                                tabIndex={-1}
-                                                onClick={() => setTipoOrigem('Mesa')}
-                                                className={`px-1 rounded ${tipoOrigem === 'Mesa' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
-                                                title="Mesa (Atalho: M)"
-                                            >
-                                                Mesa
-                                            </button>
-                                            <button
-                                                type="button"
-                                                tabIndex={-1}
-                                                onClick={() => setTipoOrigem('Balcão')}
-                                                className={`px-1 rounded ${tipoOrigem === 'Balcão' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
-                                                title="Balcão (Atalho: B)"
-                                            >
-                                                Balcão
-                                            </button>
-                                            <button
-                                                type="button"
-                                                tabIndex={-1}
-                                                onClick={() => setTipoOrigem('Delivery')}
-                                                className={`px-1 rounded ${tipoOrigem === 'Delivery' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
-                                                title="Delivery (Atalho: D)"
-                                            >
-                                                Delivery
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <input
-                                            ref={origemInputRef}
-                                            type="text"
-                                            value={numOrigem}
-                                            onChange={e => setNumOrigem(e.target.value)}
-                                            onKeyDown={handleOrigemKeyDown}
-                                            placeholder={tipoOrigem === 'Mesa' ? "Nº Mesa" : tipoOrigem === 'Balcão' ? "Nº Balcão" : "Nº Delivery"}
-                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* FORMA DE PAGAMENTO */}
-                                <div className="col-span-2 md:w-56">
-                                    <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
-                                        Forma de Pagamento
-                                    </label>
-                                    <select
-                                        ref={formaSelectRef}
-                                        value={forma}
-                                        onChange={e => {
-                                            advanceFromForma(e.target.value);
-                                        }}
-                                        onFocus={() => {
-                                            try {
-                                                formaSelectRef.current?.showPicker();
-                                            } catch (e) {}
-                                        }}
-                                        onKeyDown={handleFormaKeyDown}
-                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
-                                    >
-                                        {FORMAS_PAGAMENTO.map(f => (
-                                            <option key={f.key} value={f.name}>
-                                                {f.display}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* CONSUMIDOR CONTA CASA */}
-                                {isContaCasa && (
-                                    <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2">
-                                        <label className="text-[9px] font-black uppercase text-orange-500 block mb-1 ml-1 flex items-center gap-1">
-                                            <UserCircle size={10} /> Nome do Consumidor / Justificativa
-                                        </label>
-                                        <input
-                                            ref={consumidorInputRef}
-                                            type="text"
-                                            required
-                                            value={consumidorCasa}
-                                            onChange={e => setConsumidorCasa(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    submitBtnRef.current?.focus();
-                                                }
-                                            }}
-                                            placeholder="Ex: João Silva, Permuta Bar, Consumo Diretoria..."
-                                            className="w-full border-2 border-orange-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-700"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* BANCO / DESTINO */}
-                                {!isContaCasa && (
-                                    <div className="col-span-2 md:w-48">
-                                        <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Banco / Operadora</label>
-                                        <select
-                                            ref={bancoSelectRef}
-                                            disabled={forma === 'Dinheiro'}
-                                            value={banco}
-                                            onChange={e => advanceFromBanco(e.target.value)}
-                                            onFocus={() => {
-                                                if (forma !== 'Dinheiro') {
-                                                    try {
-                                                        bancoSelectRef.current?.showPicker();
-                                                    } catch (e) {}
-                                                }
-                                            }}
-                                            onKeyDown={handleBancoKeyDown}
-                                            className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    {tipo === 'venda' && (
+                        <>
+                            {/* ORIGEM (MESA, BALCÃO, DELIVERY) */}
+                            <div className="col-span-1 md:w-44">
+                                <div className="flex items-center justify-between mb-1 ml-1">
+                                    <label className="text-[9px] font-black uppercase text-zinc-400">Origem</label>
+                                    <div className="flex items-center gap-1 text-[8px]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTipoOrigem('Mesa')}
+                                            className={`px-1 rounded ${tipoOrigem === 'Mesa' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                            title="Mesa (Atalho: M)"
                                         >
-                                            {forma === 'Dinheiro' ? <option value="CAIXA">CAIXA</option> :
-                                                BANCOS_NUMERADOS.map(b => (
-                                                    <option key={b.key} value={b.name}>
-                                                        {b.display}
-                                                    </option>
-                                                ))
-                                            }
-                                        </select>
+                                            Mesa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTipoOrigem('Balcão')}
+                                            className={`px-1 rounded ${tipoOrigem === 'Balcão' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                            title="Balcão (Atalho: B)"
+                                        >
+                                            Balcão
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTipoOrigem('Delivery')}
+                                            className={`px-1 rounded ${tipoOrigem === 'Delivery' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
+                                            title="Delivery (Atalho: D)"
+                                        >
+                                            Delivery
+                                        </button>
                                     </div>
-                                )}
-                            </>
-                        )}
-
-                        {tipo === 'caixinha' && (
-                            <>
-                                <div className="col-span-2 md:flex-1">
-                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
+                                </div>
+                                <div className="relative">
                                     <input
-                                        ref={paraQuemInputRef}
+                                        ref={origemInputRef}
                                         type="text"
-                                        required
-                                        value={paraQuem}
-                                        onChange={e => setParaQuem(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                formaSelectRef.current?.focus();
-                                            }
-                                        }}
-                                        placeholder="Ex: João, Cozinha, Garçons..."
-                                        className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                        value={numOrigem}
+                                        onChange={e => setNumOrigem(e.target.value)}
+                                        onKeyDown={handleOrigemKeyDown}
+                                        placeholder={tipoOrigem === 'Mesa' ? "Nº Mesa" : tipoOrigem === 'Balcão' ? "Nº Balcão" : "Nº Delivery"}
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                     />
                                 </div>
+                            </div>
+
+                            {/* FORMA DE PAGAMENTO */}
+                            <div className="col-span-2 md:w-56">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">
+                                    Forma de Pagamento
+                                </label>
+                                <select
+                                    ref={formaSelectRef}
+                                    value={forma}
+                                    onChange={e => {
+                                        advanceFromForma(e.target.value);
+                                    }}
+                                    onFocus={() => {
+                                        try {
+                                            formaSelectRef.current?.showPicker();
+                                        } catch (e) {}
+                                    }}
+                                    onKeyDown={handleFormaKeyDown}
+                                    className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                                >
+                                    {FORMAS_PAGAMENTO.map(f => (
+                                        <option key={f.key} value={f.name}>
+                                            {f.display}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* SELETOR DE DEVEDOR CONTA CASA (FUNCIONÁRIO OU CLIENTE) */}
+                            {isContaCasa && (
+                                <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2">
+                                    <div className="flex items-center justify-between mb-1 ml-1">
+                                        <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
+                                            <UserCircle size={12} /> {isEmployeeTarget ? 'Selecione o Funcionário / Colaborador' : 'Selecione o Cliente / Correntista'}
+                                        </label>
+                                        {!isEmployeeTarget && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsQuickClientOpen(true)}
+                                                className="text-[10px] font-black uppercase text-blue-600 hover:underline flex items-center gap-1"
+                                            >
+                                                <UserPlus size={11} /> + Novo Cliente
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {isEmployeeTarget ? (
+                                        <select
+                                            value={selectedEmployeeId || ''}
+                                            onChange={e => {
+                                                const empId = e.target.value;
+                                                setSelectedEmployeeId(empId);
+                                                const found = employeesList.find((u: any) => u.id === empId);
+                                                if (found) setConsumidorCasa(found.name);
+                                            }}
+                                            className="w-full border-2 border-orange-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-900 cursor-pointer"
+                                        >
+                                            <option value="">-- Selecione o Funcionário --</option>
+                                            {employeesList.map((emp: any) => (
+                                                <option key={emp.id} value={emp.id}>
+                                                    {emp.name} ({emp.role})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={selectedClientId || ''}
+                                                onChange={e => {
+                                                    const cliId = e.target.value;
+                                                    setSelectedClientId(cliId);
+                                                    const found = clientsList.find((c: any) => c.id === cliId);
+                                                    if (found) setConsumidorCasa(found.name);
+                                                }}
+                                                className="w-full border-2 border-orange-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-900 cursor-pointer"
+                                            >
+                                                <option value="">-- Selecione o Cliente --</option>
+                                                {clientsList.map((cli: any) => (
+                                                    <option key={cli.id} value={cli.id}>
+                                                        {cli.name} {cli.phone ? `(${cli.phone})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsQuickClientOpen(true)}
+                                                className="h-[42px] px-3 rounded-xl bg-orange-500 text-white font-black text-xs uppercase hover:bg-orange-600 shrink-0 flex items-center gap-1 shadow"
+                                                title="Cadastrar Novo Cliente Rápido"
+                                            >
+                                                <UserPlus size={14} /> Novo
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* BANCO / DESTINO */}
+                            {!isContaCasa && (
                                 <div className="col-span-2 md:w-48">
-                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Forma de Pagamento</label>
+                                    <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Banco / Operadora</label>
                                     <select
-                                        ref={formaSelectRef}
-                                        value={forma}
-                                        onChange={e => setForma(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                submitBtnRef.current?.focus();
+                                        ref={bancoSelectRef}
+                                        disabled={forma === 'Dinheiro'}
+                                        value={banco}
+                                        onChange={e => advanceFromBanco(e.target.value)}
+                                        onFocus={() => {
+                                            if (forma !== 'Dinheiro') {
+                                                try {
+                                                    bancoSelectRef.current?.showPicker();
+                                                } catch (e) {}
                                             }
                                         }}
-                                        className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                        onKeyDown={handleBancoKeyDown}
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
                                     >
-                                        <option value="Dinheiro">Dinheiro</option>
-                                        <option value="PIX">PIX</option>
-                                        <option value="Débito">Débito</option>
-                                        <option value="Crédito">Crédito</option>
+                                        {forma === 'Dinheiro' ? <option value="CAIXA">CAIXA</option> :
+                                            BANCOS_NUMERADOS.map(b => (
+                                                <option key={b.key} value={b.name}>
+                                                    {b.display}
+                                                </option>
+                                            ))
+                                        }
                                     </select>
                                 </div>
-                            </>
-                        )}
+                            )}
+                        </>
+                    )}
 
-                        {(tipo === 'sangria' || tipo === 'suprimento') && (
-                            <div className="col-span-2 flex-1">
-                                <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Motivo / Identificação</label>
+                    {tipo === 'caixinha' && (
+                        <>
+                            <div className="col-span-2 md:flex-1">
+                                <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
                                 <input
-                                    ref={identificacaoInputRef}
+                                    ref={paraQuemInputRef}
                                     type="text"
                                     required
-                                    value={identificacao}
-                                    onChange={e => setIdentificacao(e.target.value)}
+                                    value={paraQuem}
+                                    onChange={e => setParaQuem(e.target.value)}
                                     onKeyDown={e => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
-                                            submitBtnRef.current?.focus();
+                                            formaSelectRef.current?.focus();
                                         }
                                     }}
-                                    placeholder={tipo === 'sangria' ? "Ex: Gás, Limpeza, Retirada..." : "Ex: Troco inicial, Suprimento de caixa..."}
-                                    className={`w-full border rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white ${tipo === 'sangria' ? 'border-red-200 focus:ring-2 focus:ring-red-500' : 'border-emerald-200 focus:ring-2 focus:ring-emerald-500'}`}
+                                    placeholder="Ex: João, Cozinha, Garçons..."
+                                    className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                                 />
                             </div>
-                        )}
-                    </div>
+                            <div className="col-span-2 md:w-48">
+                                <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Forma de Pagamento</label>
+                                <select
+                                    ref={formaSelectRef}
+                                    value={forma}
+                                    onChange={e => setForma(e.target.value)}
+                                    className="w-full border border-purple-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white cursor-pointer"
+                                >
+                                    <option value="Dinheiro">Dinheiro</option>
+                                    <option value="PIX">PIX</option>
+                                    <option value="Débito">Débito</option>
+                                    <option value="Crédito">Crédito</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
 
-                    <div className="flex flex-col md:flex-row items-center gap-4 mt-2 md:mt-0">
+                    {/* BOTÃO ADICIONAR */}
+                    <div className="col-span-2 md:w-auto">
                         <button
                             ref={submitBtnRef}
                             type="submit"
-                            className={`w-full md:w-auto px-10 py-5 md:py-3 h-auto md:h-[46px] flex items-center justify-center gap-2 text-white font-black uppercase text-xs md:text-[10px] rounded-xl transition-all shadow-lg active:scale-95 focus:ring-2 focus:ring-blue-600 outline-none ${currentConfig.btnStyle}`}
+                            className={`w-full md:w-auto h-[46px] md:h-[46px] px-6 rounded-xl text-xs font-black uppercase tracking-wider text-white transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${currentConfig.btnStyle}`}
                         >
-                            {currentConfig.icon} {currentConfig.btnLabel}
+                            {currentConfig.icon}
+                            <span>{currentConfig.btnLabel}</span>
                         </button>
                     </div>
                 </div>

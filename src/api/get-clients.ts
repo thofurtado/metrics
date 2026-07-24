@@ -22,3 +22,8 @@ export async function getClients() {
 
   return response
 }
+
+export async function createQuickClient(data: { name: string; identification?: string; phone?: string }) {
+  const response = await api.post('/clients', data)
+  return response.data
+}
