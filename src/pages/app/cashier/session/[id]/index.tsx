@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry } from '@/api/cashier/cashier'
+import { toast } from 'sonner'
+import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { DetalheLote } from '../../components/DetalheLote'
 
@@ -251,6 +252,25 @@ export function CashierSessionDetails() {
         }
     }
 
+    const { mutateAsync: finishSession } = useMutation({
+        mutationFn: closeSession,
+        onSuccess: () => {
+            toast.success('Caixa finalizado e enviado para conferência com sucesso!')
+            localStorage.removeItem('token')
+            localStorage.removeItem('refreshToken')
+            window.dispatchEvent(new Event('auth-change'))
+            navigate('/cashier/sign-in', { replace: true })
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Erro ao finalizar o caixa.')
+        }
+    })
+
+    const handleConferirECaixaConferido = async () => {
+        if (!id) return
+        await finishSession({ session_id: id })
+    }
+
     return (
         <div className="relative">
             <DetalheLote
@@ -262,6 +282,7 @@ export function CashierSessionDetails() {
                 onEditarLancamento={handleEditarLancamento}
                 onEditarAbertura={() => {}}
                 onAlterarStatus={handleAlterarStatus}
+                onConferirECaixaConferido={handleConferirECaixaConferido}
                 isAdmin={isAdmin}
             />
         </div>

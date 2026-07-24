@@ -82,6 +82,8 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
             <span className="pb-2">
               {isLoadingProfile ? (
                 <Skeleton className="h-4 w-32" />
+              ) : profile?.role === 'CASHIER' ? (
+                'Operador de Caixa'
               ) : profile?.role === 'TECHNICIAN' ? (
                 'Técnico'
               ) : (

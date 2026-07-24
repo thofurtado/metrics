@@ -61,10 +61,7 @@ export async function openSession(data: {
   return response.data
 }
 
-export async function closeSession(data: {
-  reported_amounts: { payment_method_id: number; reported_amount: number }[]
-  notes?: string
-}) {
+export async function closeSession(data: { session_id: string }) {
   const response = await api.post<CashierSession>(
     '/api/cashier/session/close',
     data,

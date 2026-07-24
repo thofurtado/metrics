@@ -33,6 +33,7 @@ interface DetalheLoteProps {
   onEditarLancamento: (id: string, dadosAtualizados: any) => void
   onEditarAbertura: (novoValor: number) => void
   onAlterarStatus: (novoStatus: any) => void
+  onConferirECaixaConferido?: () => void
   isAdmin?: boolean
 }
 
@@ -45,6 +46,7 @@ export function DetalheLote({
   onEditarLancamento,
   onEditarAbertura,
   onAlterarStatus,
+  onConferirECaixaConferido,
   isAdmin = true,
 }: DetalheLoteProps) {
   const [filtro, setFiltro] = useState({ mesa: '', banco: '', forma: '' })
@@ -297,13 +299,25 @@ export function DetalheLote({
           </div>
         </div>
 
-        <button
-          onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
-          className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3"
-        >
-          <Printer size={18} />
-          <span className="hidden md:inline">Exportar PDF</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onConferirECaixaConferido && (
+            <button
+              onClick={onConferirECaixaConferido}
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-emerald-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+            >
+              <CheckCircle2 size={18} />
+              <span>Caixa Conferido</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+          >
+            <Printer size={18} />
+            <span className="hidden md:inline">Exportar PDF</span>
+          </button>
+        </div>
       </header>
 
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
