@@ -50,6 +50,20 @@ export function CashierSessionDetails() {
         }
     })
 
+    const { mutateAsync: finishSession } = useMutation({
+        mutationFn: closeSession,
+        onSuccess: () => {
+            toast.success('Caixa finalizado e enviado para conferência com sucesso!')
+            localStorage.removeItem('token')
+            localStorage.removeItem('refreshToken')
+            window.dispatchEvent(new Event('auth-change'))
+            navigate('/cashier/sign-in', { replace: true })
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Erro ao finalizar o caixa.')
+        }
+    })
+
     if (isLoading) {
         return <div className="p-8 text-center text-zinc-500">Carregando detalhes do caixa...</div>
     }
@@ -251,20 +265,6 @@ export function CashierSessionDetails() {
             alert('Erro ao editar lançamento no caixa.')
         }
     }
-
-    const { mutateAsync: finishSession } = useMutation({
-        mutationFn: closeSession,
-        onSuccess: () => {
-            toast.success('Caixa finalizado e enviado para conferência com sucesso!')
-            localStorage.removeItem('token')
-            localStorage.removeItem('refreshToken')
-            window.dispatchEvent(new Event('auth-change'))
-            navigate('/cashier/sign-in', { replace: true })
-        },
-        onError: (err: any) => {
-            toast.error(err?.response?.data?.message || 'Erro ao finalizar o caixa.')
-        }
-    })
 
     const handleConferirECaixaConferido = async () => {
         if (!id) return
