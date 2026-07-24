@@ -8,14 +8,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Wallet,
-  TrendingDown,
-  PlusCircle,
-  Heart,
-  DollarSign,
-  User,
-  CreditCard,
-  Building2,
   Calendar
 } from 'lucide-react'
 
@@ -100,7 +92,6 @@ export function CashierDashboard() {
     return sessions
       .filter((s: any) => {
         if (!s.opened_at) return false
-        // Usa Horário de Brasília para agrupar por mês/ano
         const d = new Date(s.opened_at)
         const monthBRT = parseInt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'numeric' }).format(d), 10) - 1
         const yearBRT = parseInt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', year: 'numeric' }).format(d), 10)
@@ -125,27 +116,26 @@ export function CashierDashboard() {
       case 'AUDITED':
       case 'CONFERIDO':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-            <CheckCircle2 size={13} /> Conferido
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+            <CheckCircle2 size={11} /> Conferido
           </span>
         )
       case 'CLOSED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-            <AlertCircle size={13} /> Fechado
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+            <AlertCircle size={11} /> Fechado
           </span>
         )
       case 'OPEN':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
-            <Clock size={13} /> Aberto
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+            <Clock size={11} /> Aberto
           </span>
         )
     }
   }
 
-  // Ícones e cores para métodos de pagamento
   const getMethodBadgeStyle = (method: string) => {
     const m = (method || '').toLowerCase()
     if (m.includes('dinheiro')) return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: '💵' }
@@ -161,58 +151,52 @@ export function CashierDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="mx-auto max-w-7xl space-y-4 pb-8 text-slate-900 dark:text-slate-100">
       {/* Topo Padrão Metrics */}
       <PageHeader
         title="Conferência de Caixa"
         description="Gerencie a abertura, fechamento e conferência de lotes de caixa."
       />
 
-      {/* Formulário Horizontal Compacto no Topo para Abrir Caixa */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end justify-between">
+      {/* Formulário Horizontal Compacto para Abrir Caixa */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-              <Plus size={16} />
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <Plus size={14} />
             </div>
             <span>Abrir Novo Caixa</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 flex-1 md:max-w-2xl">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 flex-1 md:max-w-xl">
             <div>
-              <label className="mb-1 ml-1 block text-[10px] font-extrabold uppercase text-slate-400">
-                Período
-              </label>
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
               >
-                <option value="Almoço">Almoço</option>
-                <option value="Jantar">Jantar</option>
+                <option value="Almoço">Período: Almoço</option>
+                <option value="Jantar">Período: Jantar</option>
               </select>
             </div>
 
             <div>
-              <label className="mb-1 ml-1 block text-[10px] font-extrabold uppercase text-emerald-600">
-                Abertura em Dinheiro
-              </label>
               <input
                 type="number"
                 step="0.01"
                 value={saldoAbertura}
                 onChange={(e) => setSaldoAbertura(e.target.value)}
-                placeholder="0.00"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
+                placeholder="Abertura R$ 0.00"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
               />
             </div>
 
-            <div className="flex items-end">
+            <div>
               <button
                 onClick={handleCriar}
-                className="w-full h-[38px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-2"
+                className="w-full h-[34px] rounded-lg bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
               >
-                <Plus size={16} /> Iniciar Expediente
+                <Plus size={14} /> Iniciar Expediente
               </button>
             </div>
           </div>
@@ -220,45 +204,44 @@ export function CashierDashboard() {
       </div>
 
       {/* Seção Principal: Caixas do Mês */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Barra de Navegação de Mês */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <span className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-            <Calendar size={16} className="text-blue-500" /> Caixas do Mês
+            <Calendar size={14} className="text-blue-500" /> Caixas do Mês
           </span>
 
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-slate-800 dark:bg-slate-900">
             <button
               onClick={() => navegarMes(-1)}
-              className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
+              className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
               title="Mês anterior"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[120px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-100">
+            <span className="min-w-[110px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-100">
               {nomesMeses[mesVisualizacao]} <span className="text-blue-600">{anoVisualizacao}</span>
             </span>
             <button
               onClick={() => navegarMes(1)}
-              className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
+              className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
               title="Próximo mês"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
 
-        {/* Listagem de Caixas em Cards Dinâmicos */}
+        {/* Listagem Ultramoderna e Compacta: Mínimo 10 Caixas por Tela */}
         {isLoading ? (
-          <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-sm font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-950">
             Carregando caixas...
           </div>
         ) : sessionsFiltradas.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-2">
             {sessionsFiltradas.map((s: any) => {
               const entries = s.entries || []
               
-              // Cálculo de Métricas Dinâmicas
               let totalSangrias = 0
               let totalSuprimentos = 0
               let totalCaixinhas = 0
@@ -287,95 +270,90 @@ export function CashierDashboard() {
 
               const valorAbertura = Number(s.initial_balance || 0)
               const valorFinalCaixa = valorAbertura + totalEntradasSemSaida + totalSuprimentos - totalSangrias
-
-              // Métricas filtradas com valor > 0
               const activeMethods = Object.entries(totalsByMethod).filter(([_, val]) => val > 0)
 
               return (
                 <div
                   key={s.id}
                   onClick={() => navigate(`/cashier/session/${s.id}`)}
-                  className="group relative flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 cursor-pointer space-y-4"
+                  className="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 cursor-pointer"
                 >
-                  {/* Linha Superior: Data BRT, Período e Status */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-black text-slate-800 dark:text-slate-100">
+                  {/* Linha Principal Unificada: Data, Período, Valores em Razão e Status */}
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    {/* Identificação do Caixa */}
+                    <div className="flex items-center gap-2 min-w-[170px]">
+                      <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                         {formatDateBRT(s.opened_at)}
                       </span>
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                         {getPeriodoBRT(s.opened_at, s.period)}
                       </span>
                     </div>
 
-                    <div>{renderStatusBadge(s.status)}</div>
-                  </div>
+                    {/* Resumo Financeiro Compacto em Linha */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-black uppercase text-slate-400">Abertura:</span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                          R$ {valorAbertura.toFixed(2)}
+                        </span>
+                      </div>
 
-                  {/* Informações Gerais em Razão (Card Grid) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 bg-slate-50/70 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <div>
-                      <span className="block text-[9px] font-black uppercase text-slate-400">Abertura</span>
-                      <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-200">
-                        R$ {valorAbertura.toFixed(2)}
-                      </span>
+                      {totalSangrias > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-black uppercase text-red-500">Sangrias:</span>
+                          <span className="font-mono font-bold text-red-600">
+                            R$ -{totalSangrias.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {totalSuprimentos > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-black uppercase text-emerald-500">Suprimentos:</span>
+                          <span className="font-mono font-bold text-emerald-600">
+                            R$ +{totalSuprimentos.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {totalCaixinhas > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-black uppercase text-pink-500">Caixinhas:</span>
+                          <span className="font-mono font-bold text-pink-600">
+                            R$ {totalCaixinhas.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-black uppercase text-blue-600">Final em Caixa:</span>
+                        <span className="font-mono font-black text-blue-700 dark:text-blue-400">
+                          R$ {valorFinalCaixa.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
 
-                    {totalSangrias > 0 && (
-                      <div>
-                        <span className="block text-[9px] font-black uppercase text-red-500">Sangrias</span>
-                        <span className="text-xs font-bold font-mono text-red-600">
-                          R$ -{totalSangrias.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-
-                    {totalSuprimentos > 0 && (
-                      <div>
-                        <span className="block text-[9px] font-black uppercase text-emerald-500">Suprimentos</span>
-                        <span className="text-xs font-bold font-mono text-emerald-600">
-                          R$ +{totalSuprimentos.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-
-                    {totalCaixinhas > 0 && (
-                      <div>
-                        <span className="block text-[9px] font-black uppercase text-pink-500">Caixinhas</span>
-                        <span className="text-xs font-bold font-mono text-pink-600">
-                          R$ {totalCaixinhas.toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="col-span-2 sm:col-span-1">
-                      <span className="block text-[9px] font-black uppercase text-blue-600">Valor Final em Caixa</span>
-                      <span className="text-sm font-black font-mono text-blue-700 dark:text-blue-400">
-                        R$ {valorFinalCaixa.toFixed(2)}
-                      </span>
-                    </div>
+                    {/* Status Badge */}
+                    <div className="shrink-0">{renderStatusBadge(s.status)}</div>
                   </div>
 
-                  {/* Métricas Dinâmicas por Forma de Pagamento (Apenas as > 0) */}
+                  {/* Linha Secundária: Formas de Pagamento em Mini-Pills Ultracompactas */}
                   {activeMethods.length > 0 && (
-                    <div className="space-y-1.5 pt-1">
-                      <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">
-                        Formas de Pagamento
-                      </span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {activeMethods.map(([method, total]) => {
-                          const badgeStyle = getMethodBadgeStyle(method)
-                          return (
-                            <div
-                              key={method}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-extrabold ${badgeStyle.bg}`}
-                            >
-                              <span>{badgeStyle.icon}</span>
-                              <span>{method}:</span>
-                              <span className="font-mono font-black">R$ {total.toFixed(2)}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-dashed border-slate-100 dark:border-slate-850">
+                      {activeMethods.map(([method, total]) => {
+                        const badgeStyle = getMethodBadgeStyle(method)
+                        return (
+                          <div
+                            key={method}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-extrabold ${badgeStyle.bg}`}
+                          >
+                            <span className="text-[11px]">{badgeStyle.icon}</span>
+                            <span>{method}:</span>
+                            <span className="font-mono font-black">R$ {total.toFixed(2)}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -383,7 +361,7 @@ export function CashierDashboard() {
             })}
           </div>
         ) : (
-          <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-950">
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">
               Nenhum caixa registrado em {nomesMeses[mesVisualizacao]} de {anoVisualizacao}
             </p>
