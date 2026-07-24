@@ -16,6 +16,8 @@ import { Accounts } from './pages/app/settings/accounts'
 import { CreditCards } from './pages/app/settings/credit-cards'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { Payments } from './pages/app/settings/payments'
+import { POSMachinesSettings } from './pages/app/settings/pos-machines'
+import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identifiers'
 import { Permissions } from './pages/app/settings/permissions'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
@@ -189,6 +191,8 @@ export const router = createBrowserRouter([
               { path: 'accounts', element: <Accounts /> },
               { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
+              { path: 'pos-machines', element: <POSMachinesSettings /> },
+              { path: 'payment-identifiers', element: <PaymentIdentifiersSettings /> },
               { path: 'modules', element: <ModulesSettings /> },
               { path: 'permissions', element: <Permissions /> },
               { path: 'payment-config', element: <PaymentConfig /> },

@@ -1,4 +1,4 @@
-import { Blocks, CreditCard, Shield, Wallet } from 'lucide-react'
+import { Blocks, Cpu, CreditCard, Shield, Tag, Wallet } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
@@ -38,6 +38,42 @@ export function SettingsLayout() {
               <Shield className="h-4 w-4" />
               Usuários e Permissões
             </NavLink>
+
+            <div className="mx-3 my-2 hidden border-t border-border/40 lg:block" />
+            <span className="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 lg:block">
+              Caixa & Pagamentos
+            </span>
+
+            <NavLink
+              to="/settings/pos-machines"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'border-l-4 border-l-primary bg-muted text-primary'
+                    : 'border-l-4 border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )
+              }
+            >
+              <Cpu className="h-4 w-4" />
+              Maquininhas & Taxas
+            </NavLink>
+
+            <NavLink
+              to="/settings/payment-identifiers"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'border-l-4 border-l-primary bg-muted text-primary'
+                    : 'border-l-4 border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )
+              }
+            >
+              <Tag className="h-4 w-4" />
+              Identificadores (Caixa/Estoque)
+            </NavLink>
+
             <div className="mx-3 my-2 hidden border-t border-border/40 lg:block" />
             <span className="mb-2 hidden px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 lg:block">
               Financeiro
