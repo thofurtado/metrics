@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
+import { getPOSMachines } from '@/api/pos-machines'
 import { DetalheLote } from '../../components/DetalheLote'
 
 export function CashierSessionDetails() {
@@ -20,6 +21,11 @@ export function CashierSessionDetails() {
         queryKey: ['cashier-session', id],
         queryFn: () => getSessionDetails(id!),
         enabled: !!id
+    })
+
+    const { data: dbMachines } = useQuery({
+        queryKey: ['pos-machines'],
+        queryFn: getPOSMachines,
     })
 
     const { mutateAsync: audit } = useMutation({
@@ -142,7 +148,7 @@ export function CashierSessionDetails() {
         lancamentos: mappedLancamentos,
     }
 
-    const computeResumo = (sessionObj: any, entriesList: any[]) => {
+    const computeResumo = (sessionObj: any, entriesList: any[], machines: any[]) => {
         const res: any = {
             GERAL: {
                 entradas: 0,
@@ -199,14 +205,16 @@ export function CashierSessionDetails() {
                         Voucher: 0,
                         caixinha: 0,
                         total: 0,
+                        juros: 0,
                     }
                 }
 
                 let formaKey = method
-                if (method.toUpperCase() === 'PIX') formaKey = 'PIX'
-                else if (method.toLowerCase().includes('débito') || method.toLowerCase().includes('debito')) formaKey = 'Débito'
-                else if (method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')) formaKey = 'Crédito'
-                else if (method.toLowerCase().includes('voucher')) formaKey = 'Voucher'
+                let categoryNorm = ''
+                if (method.toUpperCase() === 'PIX') { formaKey = 'PIX'; categoryNorm = 'PIX'; }
+                else if (method.toLowerCase().includes('débito') || method.toLowerCase().includes('debito')) { formaKey = 'Débito'; categoryNorm = 'DEBITO'; }
+                else if (method.toLowerCase().includes('crédito') || method.toLowerCase().includes('credito')) { formaKey = 'Crédito'; categoryNorm = 'CREDITO'; }
+                else if (method.toLowerCase().includes('voucher')) { formaKey = 'Voucher'; categoryNorm = 'VOUCHER'; }
 
                 if (res[bank][formaKey] !== undefined) {
                     res[bank][formaKey] += amount
@@ -218,6 +226,19 @@ export function CashierSessionDetails() {
                     res[bank].caixinha += amount
                 }
                 res[bank].total += amount
+
+                // Calcular Juros Aproximados
+                let taxa = 0
+                if (categoryNorm && machines && machines.length > 0) {
+                    const machine = machines.find((m: any) => m.name.trim().toUpperCase() === bank.toUpperCase())
+                    if (machine && machine.rates && machine.rates.length > 0) {
+                        const rate = machine.rates.find((r: any) => r.payment_category.toUpperCase() === categoryNorm)
+                        if (rate && rate.tax_percentage) {
+                            taxa = (amount * rate.tax_percentage) / 100
+                        }
+                    }
+                }
+                res[bank].juros = (res[bank].juros || 0) + taxa
             }
         }
 
@@ -225,7 +246,7 @@ export function CashierSessionDetails() {
         return res
     }
 
-    const resumoLote = summary && Object.keys(summary).length > 0 && summary.GERAL ? summary : computeResumo(session, entries)
+    const resumoLote = summary && Object.keys(summary).length > 0 && summary.GERAL ? summary : computeResumo(session, entries, dbMachines || [])
 
     const handleAlterarStatus = async (novoStatus: string) => {
         if (!isAdmin) return

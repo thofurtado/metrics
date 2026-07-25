@@ -273,11 +273,21 @@ export function SummaryCards({
                   <span className="font-mono font-bold">{safeGet(resumo, `${banco}.caixinha`).toFixed(2)}</span>
                 </div>
               )}
-              <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-900">
-                <span className="text-[9px] font-black uppercase text-slate-400">Total</span>
-                <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
-                  R$ {safeGet(resumo, `${banco}.total`).toFixed(2)}
-                </span>
+              <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2 dark:border-slate-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase text-slate-400">Total (Bruto)</span>
+                  <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
+                    R$ {safeGet(resumo, `${banco}.total`).toFixed(2)}
+                  </span>
+                </div>
+                {safeGet(resumo, `${banco}.juros`) > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-red-400">Juros Aprox.</span>
+                    <span className="font-mono text-[10px] font-black text-red-500">
+                      - R$ {safeGet(resumo, `${banco}.juros`).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
