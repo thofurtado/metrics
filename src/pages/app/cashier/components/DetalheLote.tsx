@@ -80,19 +80,26 @@ export function DetalheLote({
   const renderOrigemLabel = (l: any) => {
     const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão')
     const num = l.identification || l.mesa || ''
-    const cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
+    let cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
+
+    const nomeConsumidor = (l.consumidorCasa || l.client?.name || l.employee?.name || '').trim().toLowerCase()
+    
+    // Se a identificação (já sem o prefixo) for idêntica ao nome do consumidor (ou motivo), não repetimos na origem.
+    if (nomeConsumidor && cleanNum.toLowerCase() === nomeConsumidor) {
+        cleanNum = ''
+    }
 
     // Se o identificador for um nome de consumidor (ex: João Silva), não usa como número de mesa
     const isNum = cleanNum && !isNaN(Number(cleanNum))
 
     if (origin === 'Mesa') {
-      return isNum ? `Mesa ${cleanNum}` : num && !num.toLowerCase().includes('mesa') ? `Mesa ${num}` : 'Mesa'
+      return isNum ? `Mesa ${cleanNum}` : cleanNum && !cleanNum.toLowerCase().includes('mesa') ? `Mesa ${cleanNum}` : 'Mesa'
     }
     if (origin === 'Delivery') {
-      return isNum ? `Delivery ${cleanNum}` : num && !num.toLowerCase().includes('delivery') ? `Delivery ${num}` : 'Delivery'
+      return isNum ? `Delivery ${cleanNum}` : cleanNum && !cleanNum.toLowerCase().includes('delivery') ? `Delivery ${cleanNum}` : 'Delivery'
     }
     if (origin === 'Balcão') {
-      return isNum ? `Balcão ${cleanNum}` : num && !num.toLowerCase().includes('balcão') && !num.toLowerCase().includes('balcao') ? `Balcão ${num}` : 'Balcão'
+      return isNum ? `Balcão ${cleanNum}` : cleanNum && !cleanNum.toLowerCase().includes('balcão') && !cleanNum.toLowerCase().includes('balcao') ? `Balcão ${cleanNum}` : 'Balcão'
     }
     return cleanNum ? `${origin} ${cleanNum}` : origin
   }
