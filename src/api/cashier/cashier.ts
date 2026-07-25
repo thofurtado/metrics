@@ -182,3 +182,8 @@ export async function getCashierUsers() {
   const response = await api.get<{ id: string; name: string; role: string }[]>('/api/cashier/users')
   return response.data
 }
+
+export async function getCashierEmployees() {
+  const response = await api.get<{ employees: { id: string; name: string; role: string }[] }>('/api/cashier/employees')
+  return response.data
+}

@@ -6,7 +6,7 @@ import { getPOSMachines } from '@/api/pos-machines';
 import { getPaymentIdentifiers } from '@/api/payment-identifiers';
 import { getAccounts } from '@/api/get-accounts';
 import { getClients } from '@/api/get-clients';
-import { getCashierUsers } from '@/api/cashier/cashier';
+import { getCashierEmployees } from '@/api/cashier/cashier';
 import { QuickClientDialog } from './QuickClientDialog';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
@@ -65,9 +65,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         queryFn: getClients,
     });
 
-    const { data: cashierUsers } = useQuery({
-        queryKey: ['cashier-users'],
-        queryFn: getCashierUsers,
+    const { data: cashierEmployees } = useQuery({
+        queryKey: ['cashier-employees'],
+        queryFn: getCashierEmployees,
     });
 
     const clientsList = useMemo(() => {
@@ -78,10 +78,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     }, [clientsData]);
 
     const employeesList = useMemo(() => {
-        if (Array.isArray(cashierUsers)) return cashierUsers;
-        if (cashierUsers && Array.isArray((cashierUsers as any).users)) return (cashierUsers as any).users;
+        if (Array.isArray(cashierEmployees)) return cashierEmployees;
+        if (cashierEmployees && Array.isArray((cashierEmployees as any).employees)) return (cashierEmployees as any).employees;
         return [];
-    }, [cashierUsers]);
+    }, [cashierEmployees]);
 
     const getInitialOrigem = (): 'Mesa' | 'Balcão' | 'Delivery' => {
         const configured = modules?.cashier_default_origin;
