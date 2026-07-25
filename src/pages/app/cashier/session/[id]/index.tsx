@@ -285,7 +285,16 @@ export function CashierSessionDetails() {
 
     const handleConferirECaixaConferido = async () => {
         if (!id) return
-        await finishSession({ session_id: id })
+        try {
+            await audit(id)
+            queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+            queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
+            alert('Caixa conferido e enviado ao Financeiro / RH com sucesso!')
+        } catch (err: any) {
+            console.error('Erro ao auditar caixa:', err)
+            alert(err?.response?.data?.message || 'Erro ao conferir caixa.')
+        }
     }
 
     return (

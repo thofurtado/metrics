@@ -9,6 +9,7 @@ import {
   Edit2,
   Eye,
   Filter,
+  Lock,
   Printer,
   ShoppingBag,
   Trash2,
@@ -94,6 +95,22 @@ export function DetalheLote({
       return isNum ? `Balcão ${cleanNum}` : num && !num.toLowerCase().includes('balcão') && !num.toLowerCase().includes('balcao') ? `Balcão ${num}` : 'Balcão'
     }
     return cleanNum ? `${origin} ${cleanNum}` : origin
+  }
+
+  const renderBancoConsumidor = (l: any) => {
+    if (l.consumidorCasa && l.consumidorCasa !== 'CONTA DA CASA') {
+      return l.consumidorCasa
+    }
+    if (l.client?.name) return l.client.name
+    if (l.employee?.name) return l.employee.name
+
+    const normForma = (l.formaPagamento || '').toLowerCase()
+    const isCasa = ['funcionário', 'funcionario', 'pró-labore', 'pro-labore', 'cortesia', 'permuta', 'a prazo'].some(
+      p => normForma.includes(p)
+    )
+    if (isCasa) return '-'
+
+    return (l.banco && l.banco !== 'CONTA DA CASA') ? l.banco : '-'
   }
 
   const sangrias = [...loteAtivo.lancamentos.filter((l: any) => l.isSaida)].reverse()
@@ -301,19 +318,25 @@ export function DetalheLote({
         </div>
 
         <div className="flex items-center gap-2">
-          {onConferirECaixaConferido && (
-            <button
-              onClick={onConferirECaixaConferido}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
-            >
-              <CheckCircle2 size={18} />
-              <span>Enviar p/ Conferência</span>
-            </button>
+          {(loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED') ? (
+            <div className="flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300">
+              <CheckCircle2 size={16} /> Caixa Conferido
+            </div>
+          ) : (
+            onConferirECaixaConferido && (
+              <button
+                onClick={onConferirECaixaConferido}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+              >
+                <CheckCircle2 size={18} />
+                <span>Marcar como Conferido</span>
+              </button>
+            )
           )}
 
           <button
             onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
-            className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
           >
             <Printer size={18} />
             <span className="hidden md:inline">Exportar PDF</span>
@@ -340,7 +363,14 @@ export function DetalheLote({
         {exibirSumario && (
           <SummaryCards resumo={resumoLote} onEditAbertura={onEditarAbertura} />
         )}
-        <TransactionForm onAdd={onAdicionarLancamento} />
+        
+        {loteAtivo.status === 'Aberto' || loteAtivo.status === 'OPEN' ? (
+          <TransactionForm onAdd={onAdicionarLancamento} />
+        ) : (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+            <Lock size={16} /> Caixa {loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
@@ -566,7 +596,7 @@ export function DetalheLote({
                               {renderOrigemLabel(l)}
                             </td>
                             <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
-                              {l.consumidorCasa ? l.consumidorCasa : (l.banco || '-')}
+                              {renderBancoConsumidor(l)}
                             </td>
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
                               {l.formaPagamento}{' '}
