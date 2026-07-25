@@ -88,9 +88,10 @@ export function CashierSessionDetails() {
     }
 
     const mapStatus = (apiStatus: string) => {
-        if (apiStatus === 'AUDITED' || apiStatus === 'CONFERIDO') return 'conferido'
-        if (apiStatus === 'CLOSED') return 'alerta'
-        return 'pendente'
+        const s = (apiStatus || '').toUpperCase().trim()
+        if (s === 'AUDITED' || s === 'CONFERIDO') return 'CONFERIDO'
+        if (s === 'OPEN' || s === 'ABERTO') return 'ABERTO'
+        return 'PENDENTE'
     }
 
     const FORMAS_CASA = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta', 'A Prazo']

@@ -364,11 +364,11 @@ export function DetalheLote({
           <SummaryCards resumo={resumoLote} onEditAbertura={onEditarAbertura} />
         )}
         
-        {loteAtivo.status === 'Aberto' || loteAtivo.status === 'OPEN' ? (
+        {loteAtivo.status === 'ABERTO' || loteAtivo.status === 'Aberto' || loteAtivo.status === 'OPEN' ? (
           <TransactionForm onAdd={onAdicionarLancamento} />
         ) : (
           <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-            <Lock size={16} /> Caixa {loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
+            <Lock size={16} /> Caixa {loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
           </div>
         )}
 
