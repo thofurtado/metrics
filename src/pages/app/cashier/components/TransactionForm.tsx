@@ -162,19 +162,24 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return base;
     }, [dbIdentifiers]);
 
-    // Identifica se a forma selecionada é Conta da Casa / Identificador
-    const isContaCasa = useMemo(() => {
+    const isOperacional = useMemo(() => {
         if (tipo !== 'venda') return false;
-        
         const normForma = normalizeStr(forma);
         if (dbIdentifiers && dbIdentifiers.length > 0) {
             const found = dbIdentifiers.find(i => normalizeStr(i.name) === normForma);
             if (found) return true;
         }
-
-        const padraoContaCasa = ['funcionario', 'pro-labore', 'cortesia', 'permuta', 'a prazo'];
-        return padraoContaCasa.some(p => normForma.includes(p));
+        return false;
     }, [forma, tipo, dbIdentifiers]);
+
+    const isAcessoDevedor = useMemo(() => {
+        if (tipo !== 'venda') return false;
+        const normForma = normalizeStr(forma);
+        const padraoDevedor = ['funcionario', 'pro-labore', 'cortesia', 'permuta', 'a prazo'];
+        return padraoDevedor.some(p => normForma.includes(p));
+    }, [forma, tipo]);
+
+    const isContaCasa = isOperacional || isAcessoDevedor;
 
     // Identifica se a forma selecionada é Funcionário vs Outro A Prazo (Cliente)
     const isEmployeeTarget = useMemo(() => {
@@ -388,8 +393,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
             identificacao: (tipo === 'venda' && isContaCasa && finalConsumidor) ? finalConsumidor : (tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao)),
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? finalConsumidor : '',
-            client_id: (tipo === 'venda' && isContaCasa && !isEmployeeTarget) ? selectedClientId : null,
-            employee_id: (tipo === 'venda' && isContaCasa && isEmployeeTarget) ? selectedEmployeeId : null,
+            client_id: (tipo === 'venda' && isAcessoDevedor && !isEmployeeTarget) ? selectedClientId : null,
+            employee_id: (tipo === 'venda' && isAcessoDevedor && isEmployeeTarget) ? selectedEmployeeId : null,
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
@@ -596,7 +601,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                             </div>
 
                             {/* SELETOR DE DEVEDOR COM PESQUISA EM TEMPO REAL (CLIENTE OU FUNCIONÁRIO) */}
-                            {isContaCasa && (
+                            {isAcessoDevedor && (
                                 <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2 relative" ref={comboboxRef}>
                                     <div className="flex items-center justify-between mb-1 ml-1">
                                         <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
@@ -719,6 +724,34 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                             )}
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {isOperacional && (
+                                <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2 relative">
+                                    <div className="flex items-center justify-between mb-1 ml-1">
+                                        <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
+                                            <UserCircle size={12} /> Motivo / Descrição
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={consumidorCasa}
+                                            onChange={e => {
+                                                setConsumidorCasa(e.target.value);
+                                                setSearchTerm(e.target.value);
+                                            }}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    submitBtnRef.current?.focus();
+                                                }
+                                            }}
+                                            placeholder="Digite o motivo ou descrição..."
+                                            className="w-full border-2 border-orange-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-950"
+                                        />
+                                    </div>
                                 </div>
                             )}
 
