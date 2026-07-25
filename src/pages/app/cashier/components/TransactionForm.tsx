@@ -162,8 +162,17 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return base;
     }, [dbIdentifiers]);
 
+    const isAcessoDevedor = useMemo(() => {
+        if (tipo !== 'venda') return false;
+        const normForma = normalizeStr(forma);
+        const padraoDevedor = ['funcionario', 'permuta', 'a prazo'];
+        return padraoDevedor.some(p => normForma.includes(p));
+    }, [forma, tipo]);
+
     const isOperacional = useMemo(() => {
         if (tipo !== 'venda') return false;
+        if (isAcessoDevedor) return false;
+
         const normForma = normalizeStr(forma);
         
         const padraoOperacional = ['pro-labore', 'cortesia'];
@@ -174,14 +183,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             if (found) return true;
         }
         return false;
-    }, [forma, tipo, dbIdentifiers]);
-
-    const isAcessoDevedor = useMemo(() => {
-        if (tipo !== 'venda') return false;
-        const normForma = normalizeStr(forma);
-        const padraoDevedor = ['funcionario', 'permuta', 'a prazo'];
-        return padraoDevedor.some(p => normForma.includes(p));
-    }, [forma, tipo]);
+    }, [forma, tipo, dbIdentifiers, isAcessoDevedor]);
 
     const isContaCasa = isOperacional || isAcessoDevedor;
 
