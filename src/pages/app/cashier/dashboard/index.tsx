@@ -172,6 +172,18 @@ export function CashierDashboard() {
     }
   }
 
+  const METHOD_ORDER = [
+    'dinheiro', 'pix', 'débito', 'debito', 'crédito', 'credito',
+    'voucher', 'funcionário', 'funcionario', 'pró-labore', 'pro-labore',
+    'permuta', 'cortesia', 'a prazo'
+  ]
+
+  const getMethodOrder = (method: string) => {
+    const m = (method || '').toLowerCase()
+    const idx = METHOD_ORDER.findIndex(o => m.includes(o))
+    return idx === -1 ? 99 : idx
+  }
+
   const getMethodBadgeStyle = (method: string) => {
     const m = (method || '').toLowerCase()
     if (m.includes('dinheiro')) return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: '💵' }
@@ -209,68 +221,9 @@ export function CashierDashboard() {
       />
 
       {/* PAINEL DE CONTROLE SUPERIOR (LADO A LADO) */}
-      <div className={`grid grid-cols-1 gap-3 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
-        {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (EXCLUSIVO ADMIN) */}
-        {isAdmin && (
-          <div
-            onClick={() => setModalAuditOpen(true)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-3.5 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-7 flex flex-col justify-between"
-          >
-            <Banknote
-              size={70}
-              className="absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
-            />
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
-                    <Banknote size={10} /> Saldo Espécie
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                    ({summary.totalCaixasMes} caixas)
-                  </span>
-                </div>
-                <p className="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
-                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
-                </p>
-                <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                  <Eye size={11} /> Clique para auditoria comparativa
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2.5 border-t border-emerald-200/60 pt-2 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0 dark:border-emerald-900/40">
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                    Abertura
-                  </span>
-                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                    R$ {summary.totalAberturaInicial.toFixed(2)}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                    + Vendas
-                  </span>
-                  <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                    R$ {summary.totalVendasDinheiroMes.toFixed(2)}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-red-500/80">
-                    - Sangrias
-                  </span>
-                  <span className="font-mono text-xs font-bold text-red-600">
-                    R$ {summary.totalSangriasMes.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+      <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
         {/* Formulário Horizontal Compacto para Abrir Caixa */}
-        <div className={`rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}>
+        <div className={`rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-4' : 'w-full'}`}>
           <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
             <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
               <Plus size={13} />
@@ -311,6 +264,67 @@ export function CashierDashboard() {
             </div>
           </div>
         </div>
+
+        {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (EXCLUSIVO ADMIN) */}
+        {isAdmin && (
+          <div
+            onClick={() => setModalAuditOpen(true)}
+            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-3.5 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-8 flex flex-col justify-between"
+          >
+            <Banknote
+              size={70}
+              className="absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
+                    <Banknote size={10} /> Saldo Espécie
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                    ({summary.totalCaixasMes} caixas)
+                  </span>
+                </div>
+                <p className="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
+                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
+                </p>
+                <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <Eye size={11} /> Clique para auditoria comparativa
+                </p>
+              </div>
+
+              <div className="flex items-center gap-5 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/30">
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
+                    Abertura
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                    R$ {summary.totalAberturaInicial.toFixed(2)}
+                  </span>
+                </div>
+                <div className="h-6 w-px bg-emerald-200/70 dark:bg-emerald-800/50" />
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
+                    + Vendas
+                  </span>
+                  <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    R$ {summary.totalVendasDinheiroMes.toFixed(2)}
+                  </span>
+                </div>
+                <div className="h-6 w-px bg-emerald-200/70 dark:bg-emerald-800/50" />
+                <div>
+                  <span className="block text-[8px] font-black uppercase text-red-500/80">
+                    - Sangrias
+                  </span>
+                  <span className="font-mono text-xs font-bold text-red-600">
+                    R$ {summary.totalSangriasMes.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Seção Principal: Caixas do Mês */}
@@ -380,7 +394,9 @@ export function CashierDashboard() {
 
               const valorAbertura = Number(s.initial_balance || 0)
               const valorFinalCaixa = valorAbertura + totalEntradasSemSaida + totalSuprimentos - totalSangrias
-              const activeMethods = Object.entries(totalsByMethod).filter(([_, val]) => val > 0)
+              const activeMethods = Object.entries(totalsByMethod)
+                .filter(([_, val]) => val > 0)
+                .sort(([a], [b]) => getMethodOrder(a) - getMethodOrder(b))
 
               return (
                 <div

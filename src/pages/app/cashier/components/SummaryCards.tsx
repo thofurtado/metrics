@@ -233,7 +233,7 @@ export function SummaryCards({
         </div>
 
         {/* CARDS DINÂMICOS DE BANCOS E MAQUINAS */}
-        {bancosDinamicos.map((banco) => (
+        {bancosDinamicos.filter(banco => safeGet(resumo, `${banco}.total`) > 0).map((banco) => (
           <div
             key={banco}
             className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
@@ -242,30 +242,38 @@ export function SummaryCards({
               <Landmark size={13} className="text-blue-500" /> {banco}
             </h2>
             <div className="space-y-1 text-[11px]">
-              <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>Pix</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {safeGet(resumo, `${banco}.PIX`).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>Débito</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {safeGet(resumo, `${banco}.Débito`).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>Crédito</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {safeGet(resumo, `${banco}.Crédito`).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between font-medium text-purple-600">
-                <span>Voucher</span>
-                <span className="font-mono font-bold">
-                  {safeGet(resumo, `${banco}.Voucher`).toFixed(2)}
-                </span>
-              </div>
+              {safeGet(resumo, `${banco}.PIX`) > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                  <span>Pix</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                    {safeGet(resumo, `${banco}.PIX`).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {safeGet(resumo, `${banco}.Débito`) > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                  <span>Débito</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                    {safeGet(resumo, `${banco}.Débito`).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {safeGet(resumo, `${banco}.Crédito`) > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                  <span>Crédito</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                    {safeGet(resumo, `${banco}.Crédito`).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {safeGet(resumo, `${banco}.Voucher`) > 0 && (
+                <div className="flex justify-between font-medium text-purple-600">
+                  <span>Voucher</span>
+                  <span className="font-mono font-bold">
+                    {safeGet(resumo, `${banco}.Voucher`).toFixed(2)}
+                  </span>
+                </div>
+              )}
               {safeGet(resumo, `${banco}.caixinha`) > 0 && (
                 <div className="flex justify-between font-bold italic text-pink-500">
                   <span>Gorjeta</span>
@@ -285,32 +293,34 @@ export function SummaryCards({
         ))}
 
         {/* CARD DINÂMICO DE CONSUMO INTERNO / IDENTIFICADORES */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
-          <h2 className="mb-3 flex items-center gap-1.5 text-[11px] font-black uppercase italic tracking-tight text-orange-600">
-            Consumo Interno
-          </h2>
-          <div className="space-y-1 text-[11px]">
-            {identificadoresCasa.map((forma) => (
-              <div
-                key={forma}
-                className="flex justify-between font-bold text-slate-500 dark:text-slate-400"
-              >
-                <span className="truncate pr-1">{forma}</span>
-                <span className="font-mono text-slate-700 dark:text-slate-200">
-                  {safeGet(resumo, `CASA.${forma}`).toFixed(2)}
+        {safeGet(resumo, 'CASA.total') > 0 && (
+          <div className="rounded-2xl border border-amber-100 bg-amber-50/30 p-4 shadow-sm dark:border-amber-950/40 dark:bg-amber-950/10">
+            <h2 className="mb-3 flex items-center gap-1.5 text-[11px] font-black uppercase italic tracking-tight text-orange-600">
+              Consumo Interno
+            </h2>
+            <div className="space-y-1 text-[11px]">
+              {identificadoresCasa.filter(forma => safeGet(resumo, `CASA.${forma}`) > 0).map((forma) => (
+                <div
+                  key={forma}
+                  className="flex justify-between font-bold text-slate-500 dark:text-slate-400"
+                >
+                  <span className="truncate pr-1">{forma}</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-200">
+                    {safeGet(resumo, `CASA.${forma}`).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              <div className="mt-2 flex items-center justify-between border-t border-amber-200/60 pt-2 text-orange-600 dark:border-amber-900/40">
+                <span className="text-[9px] font-black uppercase italic">
+                  Total
+                </span>
+                <span className="font-mono text-base font-black italic">
+                  {safeGet(resumo, 'CASA.total').toFixed(2)}
                 </span>
               </div>
-            ))}
-            <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-orange-600 dark:border-slate-800">
-              <span className="text-[9px] font-black uppercase italic">
-                Total
-              </span>
-              <span className="font-mono text-base font-black italic">
-                {safeGet(resumo, 'CASA.total').toFixed(2)}
-              </span>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

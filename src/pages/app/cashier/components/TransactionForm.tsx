@@ -20,6 +20,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
     // Tipo de Devedor (Cliente ou Funcionário) para Conta da Casa / Permuta / A Prazo
     const [targetType, setTargetType] = useState<'client' | 'employee'>('client');
@@ -116,6 +117,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const bancoSelectRef = useRef<HTMLSelectElement>(null);
     const paraQuemInputRef = useRef<HTMLInputElement>(null);
     const submitBtnRef = useRef<HTMLButtonElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Monta lista dinâmica de FORMAS_PAGAMENTO
     const FORMAS_PAGAMENTO = useMemo(() => {
@@ -259,14 +261,31 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     const advanceFromForma = (formaSelecionada: string) => {
         setForma(formaSelecionada);
+        setHighlightedIndex(-1);
+
+        // Determine if the new form is conta da casa (need to check against dbIdentifiers)
+        const normForma = normalizeStr(formaSelecionada);
+        let newIsContaCasa = false;
+        if (dbIdentifiers && dbIdentifiers.length > 0) {
+            const found = dbIdentifiers.find((i: any) => normalizeStr(i.name) === normForma);
+            if (found) newIsContaCasa = true;
+        }
+        if (!newIsContaCasa) {
+            const padraoContaCasa = ['funcionario', 'pro-labore', 'cortesia', 'permuta', 'a prazo'];
+            newIsContaCasa = padraoContaCasa.some(p => normForma.includes(p));
+        }
 
         if (formaSelecionada === 'Dinheiro') {
             setBanco('CAIXA');
             setTimeout(() => {
                 submitBtnRef.current?.focus();
             }, 60);
-        } else if (isContaCasa && tipo === 'venda') {
+        } else if (newIsContaCasa && tipo === 'venda') {
             setBanco('CONTA DA CASA');
+            setTimeout(() => {
+                setIsDropdownOpen(true);
+                searchInputRef.current?.focus();
+            }, 80);
         } else {
             setTimeout(() => {
                 bancoSelectRef.current?.focus();
@@ -577,14 +596,51 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         <div className="relative flex-1">
                                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none" />
                                             <input
+                                                ref={searchInputRef}
                                                 type="text"
                                                 value={searchTerm}
                                                 onChange={e => {
                                                     setSearchTerm(e.target.value);
                                                     setConsumidorCasa(e.target.value);
                                                     setIsDropdownOpen(true);
+                                                    setHighlightedIndex(-1);
                                                 }}
                                                 onFocus={() => setIsDropdownOpen(true)}
+                                                onKeyDown={e => {
+                                                    if (!isDropdownOpen || filteredTargets.length === 0) {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            submitBtnRef.current?.focus();
+                                                        }
+                                                        return;
+                                                    }
+                                                    if (e.key === 'ArrowDown') {
+                                                        e.preventDefault();
+                                                        setHighlightedIndex(prev => Math.min(prev + 1, filteredTargets.length - 1));
+                                                    } else if (e.key === 'ArrowUp') {
+                                                        e.preventDefault();
+                                                        setHighlightedIndex(prev => Math.max(prev - 1, 0));
+                                                    } else if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const item = highlightedIndex >= 0 ? filteredTargets[highlightedIndex] : filteredTargets[0];
+                                                        if (item) {
+                                                            if (isEmployeeTarget) {
+                                                                setSelectedEmployeeId(item.id);
+                                                                setSelectedClientId(null);
+                                                            } else {
+                                                                setSelectedClientId(item.id);
+                                                                setSelectedEmployeeId(null);
+                                                            }
+                                                            setConsumidorCasa(item.name);
+                                                            setSearchTerm(item.name);
+                                                            setIsDropdownOpen(false);
+                                                            setHighlightedIndex(-1);
+                                                            setTimeout(() => submitBtnRef.current?.focus(), 60);
+                                                        }
+                                                    } else if (e.key === 'Escape') {
+                                                        setIsDropdownOpen(false);
+                                                    }
+                                                }}
                                                 placeholder={isEmployeeTarget ? "Digite para buscar o funcionário (RH)..." : "Digite para buscar o cliente..."}
                                                 className="w-full border-2 border-orange-200 rounded-xl pl-9 pr-8 py-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-950"
                                             />
@@ -607,7 +663,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     {isDropdownOpen && (
                                         <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-2xl border border-orange-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
                                             {filteredTargets.length > 0 ? (
-                                                filteredTargets.map((item: any) => {
+                                                filteredTargets.map((item: any, idx: number) => {
                                                     const isSelected = isEmployeeTarget
                                                         ? selectedEmployeeId === item.id
                                                         : selectedClientId === item.id;
@@ -625,8 +681,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                                 setConsumidorCasa(item.name);
                                                                 setSearchTerm(item.name);
                                                                 setIsDropdownOpen(false);
+                                                                setHighlightedIndex(-1);
+                                                                setTimeout(() => submitBtnRef.current?.focus(), 60);
                                                             }}
-                                                            className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-300' : 'hover:bg-slate-50 text-slate-800 dark:hover:bg-slate-900 dark:text-slate-200'}`}
+                                                            className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isSelected || idx === highlightedIndex ? 'bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-300' : 'hover:bg-slate-50 text-slate-800 dark:hover:bg-slate-900 dark:text-slate-200'}`}
                                                         >
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-sm">{isEmployeeTarget ? '👤' : '🏢'}</span>
