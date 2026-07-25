@@ -50,6 +50,7 @@ import { AttachmentModal } from './components/attachment-modal'
 import { CreditCardDetailsDialog } from './components/credit-card-details-dialog'
 import { TransactionDetailsModal } from './components/transaction-details-modal'
 import { TransactionGroupDetailsDialog } from './components/transaction-group-details-dialog'
+import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { PaymentModal } from './payment-modal'
 
 // Interface de Transação Original do seu backend/query
@@ -68,6 +69,9 @@ interface Transaction {
   accounts: { name: string; id: string }
   transaction_group_id?: string | null
   isVirtual?: boolean
+  isCashierGroup?: boolean
+  cashier_session_id?: string
+  childTransactions?: any[]
   swipes?: any[]
   credit_card_id?: string
   treatment_id?: string | null
@@ -102,6 +106,7 @@ export function TransactionMobileCard({
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
+  const [openCashierDetailsModal, setOpenCashierDetailsModal] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
   const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
@@ -229,6 +234,8 @@ export function TransactionMobileCard({
         onClick={() => {
           if (transactions.isVirtual) {
             setOpenCreditCardDialog(true)
+          } else if (transactions.isCashierGroup) {
+            setOpenCashierDetailsModal(true)
           } else {
             setDetailsMode('view')
             setOpenDetailsModal(true)
@@ -309,16 +316,17 @@ export function TransactionMobileCard({
         </div>
 
         <div className="mt-1 flex items-center gap-2">
-          {transactions.isVirtual ? (
+          {transactions.isVirtual || transactions.isCashierGroup ? (
             <Button
               size="sm"
               className="h-8 flex-1 rounded-lg bg-amber-600 text-xs font-black uppercase tracking-widest text-white hover:bg-amber-700"
               onClick={(e) => {
                 e.stopPropagation()
-                setOpenCreditCardDialog(true)
+                if (transactions.isVirtual) setOpenCreditCardDialog(true)
+                if (transactions.isCashierGroup) setOpenCashierDetailsModal(true)
               }}
             >
-              Ver Fatura
+              {transactions.isVirtual ? 'Ver Fatura' : 'Ver Caixa'}
             </Button>
           ) : transactions.confirmed ? (
             <Button
@@ -402,6 +410,14 @@ export function TransactionMobileCard({
           open={openCreditCardDialog}
           onOpenChange={setOpenCreditCardDialog}
           virtualTransaction={transactions as any}
+        />
+      )}
+
+      {transactions.isCashierGroup && (
+        <CashierBatchDetailsModal
+          open={openCashierDetailsModal}
+          onOpenChange={setOpenCashierDetailsModal}
+          sessionId={transactions.cashier_session_id!}
         />
       )}
 
@@ -706,12 +722,14 @@ export function TransactionTableRow({
           aria-label={
             transactions.isVirtual
               ? 'Ver Fatura'
-              : transactions.confirmed
-                ? 'Reverter Pagamento'
-                : 'Registrar pagamento'
+              : transactions.isCashierGroup
+                ? 'Ver Caixa'
+                : transactions.confirmed
+                  ? 'Reverter Pagamento'
+                  : 'Registrar pagamento'
           }
           className={`mx-auto inline-flex w-[110px] items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
-            transactions.isVirtual
+            transactions.isVirtual || transactions.isCashierGroup
               ? 'border-transparent bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-600'
               : transactions.confirmed
                 ? 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
@@ -722,6 +740,8 @@ export function TransactionTableRow({
           onClick={() => {
             if (transactions.isVirtual) {
               setOpenCreditCardDialog(true)
+            } else if (transactions.isCashierGroup) {
+              setOpenCashierDetailsModal(true)
             } else if (transactions.confirmed) {
               setOpenRevertAlert(true)
             } else {
@@ -739,6 +759,11 @@ export function TransactionTableRow({
             <>
               <Eye className="h-3 w-3" />
               Ver Fatura
+            </>
+          ) : transactions.isCashierGroup ? (
+            <>
+              <Eye className="h-3 w-3" />
+              Ver Caixa
             </>
           ) : transactions.confirmed ? (
             <>
@@ -1046,6 +1071,14 @@ export function TransactionTableRow({
             open={openCreditCardDialog}
             onOpenChange={setOpenCreditCardDialog}
             virtualTransaction={transactions as any}
+          />
+        )}
+
+        {transactions.isCashierGroup && (
+          <CashierBatchDetailsModal
+            open={openCashierDetailsModal}
+            onOpenChange={setOpenCashierDetailsModal}
+            sessionId={transactions.cashier_session_id!}
           />
         )}
 

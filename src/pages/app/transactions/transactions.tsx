@@ -357,7 +357,9 @@ export function Transactions() {
           amount: totalSum,
           totalValue: totalSum,
           accounts: { name: 'Vários Bancos' },
-          childTransactions: groupItems
+          childTransactions: groupItems,
+          isCashierGroup: true,
+          cashier_session_id: sessionId
         })
       }
     }
