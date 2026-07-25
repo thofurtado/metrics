@@ -90,7 +90,7 @@ export function SummaryCards({
   return (
     <div className="space-y-3">
       {/* ── LINHA 1: KPIs PRINCIPAIS ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         {/* Vendas Líquidas */}
         <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-teal-950/20">
           <TrendingUp size={40} className="absolute -right-2 -top-2 rotate-12 text-emerald-500 opacity-10" />
@@ -115,7 +115,7 @@ export function SummaryCards({
 
         {/* Caixinhas (só se > 0) */}
         {totalCaixinha > 0 ? (
-          <div className="relative overflow-hidden rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50/60 p-4 shadow-sm dark:border-pink-900/40 dark:from-pink-950/30 dark:to-rose-950/20">
+          <div className="sm:col-span-2 relative overflow-hidden rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50/60 p-4 shadow-sm dark:border-pink-900/40 dark:from-pink-950/30 dark:to-rose-950/20">
             <Heart size={40} className="absolute -right-2 -top-2 rotate-12 text-pink-400 opacity-10" fill="currentColor" />
             <p className="mb-1 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">
               <Heart size={10} fill="currentColor" /> Caixinhas / Gorjetas
@@ -126,9 +126,9 @@ export function SummaryCards({
           </div>
         ) : (
           /* Totais por modalidade eletrônica */
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
-              Subtotal Eletrônico
+              Subtotal Cartões/Pix
             </p>
             <div className="space-y-1.5">
               {totalPorForma('PIX') > 0 && (
@@ -323,25 +323,6 @@ export function SummaryCards({
           </div>
         )}
       </div>
-
-      {/* ── LINHA 3: BARRA DE MODALIDADES ELETRÔNICAS (só se há bancos) ── */}
-      {bancosComValor.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-2">Consolidado Eletrônico</span>
-          {totalPorForma('PIX') > 0 && (
-            <Pill label="PIX" value={totalPorForma('PIX')} color="bg-teal-50 text-teal-700 border border-teal-100" />
-          )}
-          {totalPorForma('Débito') > 0 && (
-            <Pill label="Débito" value={totalPorForma('Débito')} color="bg-blue-50 text-blue-700 border border-blue-100" />
-          )}
-          {totalPorForma('Crédito') > 0 && (
-            <Pill label="Crédito" value={totalPorForma('Crédito')} color="bg-indigo-50 text-indigo-700 border border-indigo-100" />
-          )}
-          {totalPorForma('Voucher') > 0 && (
-            <Pill label="Voucher" value={totalPorForma('Voucher')} color="bg-purple-50 text-purple-700 border border-purple-100" />
-          )}
-        </div>
-      )}
     </div>
   )
 }
