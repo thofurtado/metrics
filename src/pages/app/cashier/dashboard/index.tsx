@@ -29,6 +29,9 @@ export function CashierDashboard() {
   const [saldoAbertura, setSaldoAbertura] = useState('0.00')
   const [periodo, setPeriodo] = useState('Almoço')
   const [selectedUser, setSelectedUser] = useState('')
+  const [dataAbertura, setDataAbertura] = useState(
+    `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`
+  )
   const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
@@ -141,9 +144,18 @@ export function CashierDashboard() {
 
   const handleCriar = async () => {
     try {
+      let opened_at = undefined;
+      if (dataAbertura) {
+        const now = new Date();
+        const [year, month, day] = dataAbertura.split('-');
+        now.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day));
+        opened_at = now.toISOString();
+      }
+
       await openSessionFn({
         initial_balance: parseFloat(saldoAbertura) || 0,
         period: periodo,
+        opened_at,
         ...(isAdmin && selectedUser ? { user_id: selectedUser } : {})
       } as any)
     } catch (error) {
@@ -241,9 +253,9 @@ export function CashierDashboard() {
             <span>Abrir Novo Caixa</span>
           </div>
 
-          <div className={`grid grid-cols-1 gap-3 ${isAdmin ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {isAdmin && (
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-3">
                 <select
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
@@ -257,7 +269,16 @@ export function CashierDashboard() {
               </div>
             )}
             
-            <div className={isAdmin ? 'col-span-1' : ''}>
+            <div className="col-span-1">
+              <input
+                type="date"
+                value={dataAbertura}
+                onChange={(e) => setDataAbertura(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+              />
+            </div>
+
+            <div className="col-span-1">
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
@@ -269,7 +290,7 @@ export function CashierDashboard() {
               </select>
             </div>
 
-            <div className={isAdmin ? 'col-span-1' : ''}>
+            <div className="col-span-1">
               <input
                 type="number"
                 step="0.01"
@@ -280,10 +301,10 @@ export function CashierDashboard() {
               />
             </div>
 
-            <div className={isAdmin ? 'sm:col-span-2 mt-1' : 'flex items-end'}>
+            <div className="sm:col-span-3 mt-1">
               <button
                 onClick={handleCriar}
-                className={`w-full ${isAdmin ? 'h-[40px]' : 'h-[42px]'} rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5`}
+                className="w-full h-[40px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
               >
                 <Plus size={14} /> Iniciar Expediente
               </button>
