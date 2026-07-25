@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, TrendingDown, UserCircle, UserPlus } from 'lucide-react';
+import { Plus, TrendingDown, UserCircle, UserPlus, Search, Check, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useModules } from '@/context/module-context';
 import { getPOSMachines } from '@/api/pos-machines';
@@ -21,11 +21,28 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
 
+    // Tipo de Devedor (Cliente ou Funcionário) para Conta da Casa / Permuta / A Prazo
+    const [targetType, setTargetType] = useState<'client' | 'employee'>('client');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const comboboxRef = useRef<HTMLDivElement>(null);
+
     // Helper para normalização textual imune a acentos e maiúsculas/minúsculas
     const normalizeStr = (str: string) => {
         if (!str) return '';
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     };
+
+    // Fechar dropdown ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (comboboxRef.current && !comboboxRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Buscar dados do banco
     const { data: dbMachines } = useQuery({
@@ -96,7 +113,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const valorInputRef = useRef<HTMLInputElement>(null);
     const origemInputRef = useRef<HTMLInputElement>(null);
     const formaSelectRef = useRef<HTMLSelectElement>(null);
-    const consumidorInputRef = useRef<HTMLInputElement>(null);
     const bancoSelectRef = useRef<HTMLSelectElement>(null);
     const paraQuemInputRef = useRef<HTMLInputElement>(null);
     const submitBtnRef = useRef<HTMLButtonElement>(null);
@@ -146,12 +162,32 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return padraoContaCasa.some(p => normForma.includes(p));
     }, [forma, tipo, dbIdentifiers]);
 
-    // Verifica se a seleção refere-se especificamente a Funcionário/Colaborador
-    const isEmployeeTarget = useMemo(() => {
+    // Ajusta o targetType padrão se a forma de pagamento selecionada for Funcionário
+    useEffect(() => {
         const normForma = normalizeStr(forma);
-        const normConsumidor = normalizeStr(consumidorCasa);
-        return normForma.includes('funcionario') || normConsumidor.includes('funcionario');
-    }, [forma, consumidorCasa]);
+        if (normForma.includes('funcionario')) {
+            setTargetType('employee');
+        }
+    }, [forma]);
+
+    // Filtragem em tempo real da lista de Clientes ou Funcionários
+    const filteredTargets = useMemo(() => {
+        const query = normalizeStr(searchTerm);
+        if (targetType === 'employee') {
+            if (!query) return employeesList;
+            return employeesList.filter((emp: any) =>
+                normalizeStr(emp.name).includes(query) ||
+                normalizeStr(emp.role || '').includes(query)
+            );
+        } else {
+            if (!query) return clientsList;
+            return clientsList.filter((cli: any) =>
+                normalizeStr(cli.name).includes(query) ||
+                normalizeStr(cli.phone || '').includes(query) ||
+                normalizeStr(cli.identification || '').includes(query)
+            );
+        }
+    }, [targetType, searchTerm, clientsList, employeesList]);
 
     // Funções utilitárias de normalização de categoria
     const normalizeCategory = (str: string) =>
@@ -232,10 +268,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             }, 60);
         } else if (isContaCasa && tipo === 'venda') {
             setBanco('CONTA DA CASA');
-            setTimeout(() => {
-                consumidorInputRef.current?.focus();
-                consumidorInputRef.current?.select();
-            }, 100);
         } else {
             setTimeout(() => {
                 bancoSelectRef.current?.focus();
@@ -312,6 +344,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         const valorNumerico = parseCurrencyToFloat(valor);
         if (valorNumerico <= 0) return;
 
+        const finalConsumidor = consumidorCasa.trim() || searchTerm.trim() || forma;
+
         onAdd({
             valor: valorNumerico,
             valorCaixinha: tipo === 'caixinha' ? valorNumerico : 0,
@@ -323,9 +357,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             origin: tipo === 'venda' ? tipoOrigem : '',
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
             identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
-            consumidorCasa: (tipo === 'venda' && isContaCasa) ? consumidorCasa : '',
-            client_id: (tipo === 'venda' && isContaCasa && !isEmployeeTarget) ? selectedClientId : null,
-            employee_id: (tipo === 'venda' && isContaCasa && isEmployeeTarget) ? selectedEmployeeId : null,
+            consumidorCasa: (tipo === 'venda' && isContaCasa) ? finalConsumidor : '',
+            client_id: (tipo === 'venda' && isContaCasa && targetType === 'client') ? selectedClientId : null,
+            employee_id: (tipo === 'venda' && isContaCasa && targetType === 'employee') ? selectedEmployeeId : null,
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
@@ -339,6 +373,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         setNumOrigem('');
         setIdentificacao('');
         setConsumidorCasa('');
+        setSearchTerm('');
         setSelectedClientId(null);
         setSelectedEmployeeId(null);
 
@@ -386,8 +421,12 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 isOpen={isQuickClientOpen}
                 onClose={() => setIsQuickClientOpen(false)}
                 onSuccess={(newClient) => {
+                    setTargetType('client');
                     setSelectedClientId(newClient.id);
+                    setSelectedEmployeeId(null);
                     setConsumidorCasa(newClient.name);
+                    setSearchTerm(newClient.name);
+                    setIsDropdownOpen(false);
                 }}
             />
 
@@ -526,60 +565,119 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                 </select>
                             </div>
 
-                            {/* SELETOR DE DEVEDOR CONTA CASA (FUNCIONÁRIO OU CLIENTE) */}
+                            {/* SELETOR DE DEVEDOR COM PESQUISA EM TEMPO REAL (CLIENTE OU FUNCIONÁRIO) */}
                             {isContaCasa && (
-                                <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2">
+                                <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2 relative" ref={comboboxRef}>
                                     <div className="flex items-center justify-between mb-1 ml-1">
-                                        <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
-                                            <UserCircle size={12} /> {isEmployeeTarget ? 'Selecione o Funcionário / Colaborador' : 'Selecione o Cliente / Correntista'}
-                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
+                                                <UserCircle size={12} /> Consumidor / Devedor:
+                                            </span>
+                                            {/* Alternador entre Cliente e Funcionário */}
+                                            <div className="flex items-center bg-orange-100/70 p-0.5 rounded-lg text-[9px] font-black uppercase">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTargetType('client');
+                                                        setSelectedEmployeeId(null);
+                                                        setSearchTerm('');
+                                                        setConsumidorCasa('');
+                                                        setIsDropdownOpen(true);
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-md transition-all ${targetType === 'client' ? 'bg-orange-500 text-white shadow-xs' : 'text-orange-800 hover:bg-orange-200/50'}`}
+                                                >
+                                                    🏢 Cliente
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTargetType('employee');
+                                                        setSelectedClientId(null);
+                                                        setSearchTerm('');
+                                                        setConsumidorCasa('');
+                                                        setIsDropdownOpen(true);
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-md transition-all ${targetType === 'employee' ? 'bg-orange-500 text-white shadow-xs' : 'text-orange-800 hover:bg-orange-200/50'}`}
+                                                >
+                                                    👤 Funcionário
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {isEmployeeTarget ? (
-                                        <select
-                                            value={selectedEmployeeId || ''}
-                                            onChange={e => {
-                                                const empId = e.target.value;
-                                                setSelectedEmployeeId(empId);
-                                                const found = employeesList.find((u: any) => u.id === empId);
-                                                if (found) setConsumidorCasa(found.name);
-                                            }}
-                                            className="w-full border-2 border-orange-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-900 cursor-pointer"
-                                        >
-                                            <option value="">-- Selecione o Funcionário --</option>
-                                            {employeesList.map((emp: any) => (
-                                                <option key={emp.id} value={emp.id}>
-                                                    {emp.name} ({emp.role})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <select
-                                                value={selectedClientId || ''}
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none" />
+                                            <input
+                                                type="text"
+                                                value={searchTerm}
                                                 onChange={e => {
-                                                    const cliId = e.target.value;
-                                                    setSelectedClientId(cliId);
-                                                    const found = clientsList.find((c: any) => c.id === cliId);
-                                                    if (found) setConsumidorCasa(found.name);
+                                                    setSearchTerm(e.target.value);
+                                                    setConsumidorCasa(e.target.value);
+                                                    setIsDropdownOpen(true);
                                                 }}
-                                                className="w-full border-2 border-orange-200 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-900 cursor-pointer"
-                                            >
-                                                <option value="">-- Selecione o Cliente --</option>
-                                                {clientsList.map((cli: any) => (
-                                                    <option key={cli.id} value={cli.id}>
-                                                        {cli.name} {cli.phone ? `(${cli.phone})` : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                onFocus={() => setIsDropdownOpen(true)}
+                                                placeholder={targetType === 'employee' ? "Digite para buscar o funcionário..." : "Digite para buscar o cliente..."}
+                                                className="w-full border-2 border-orange-200 rounded-xl pl-9 pr-8 py-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-950"
+                                            />
+                                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
+                                        </div>
+
+                                        {targetType === 'client' && (
                                             <button
                                                 type="button"
                                                 onClick={() => setIsQuickClientOpen(true)}
-                                                className="h-[42px] px-3 rounded-xl bg-orange-500 text-white font-black text-xs uppercase hover:bg-orange-600 shrink-0 flex items-center gap-1 shadow"
+                                                className="h-[42px] px-3 rounded-xl bg-orange-500 text-white font-black text-xs uppercase hover:bg-orange-600 shrink-0 flex items-center gap-1 shadow transition-all active:scale-95"
                                                 title="Cadastrar Novo Cliente Rápido"
                                             >
-                                                <UserPlus size={14} /> Novo
+                                                <UserPlus size={14} /> + Novo
                                             </button>
+                                        )}
+                                    </div>
+
+                                    {/* DROPDOWN FLUTUANTE COM RESULTADOS DA PESQUISA EM TEMPO REAL */}
+                                    {isDropdownOpen && (
+                                        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-2xl border border-orange-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                                            {filteredTargets.length > 0 ? (
+                                                filteredTargets.map((item: any) => {
+                                                    const isSelected = targetType === 'employee'
+                                                        ? selectedEmployeeId === item.id
+                                                        : selectedClientId === item.id;
+                                                    return (
+                                                        <div
+                                                            key={item.id}
+                                                            onClick={() => {
+                                                                if (targetType === 'employee') {
+                                                                    setSelectedEmployeeId(item.id);
+                                                                    setSelectedClientId(null);
+                                                                } else {
+                                                                    setSelectedClientId(item.id);
+                                                                    setSelectedEmployeeId(null);
+                                                                }
+                                                                setConsumidorCasa(item.name);
+                                                                setSearchTerm(item.name);
+                                                                setIsDropdownOpen(false);
+                                                            }}
+                                                            className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-300' : 'hover:bg-slate-50 text-slate-800 dark:hover:bg-slate-900 dark:text-slate-200'}`}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm">{targetType === 'employee' ? '👤' : '🏢'}</span>
+                                                                <div>
+                                                                    <p className="font-bold">{item.name}</p>
+                                                                    <p className="text-[10px] text-slate-400 font-medium">
+                                                                        {targetType === 'employee' ? (item.role || 'Colaborador') : (item.phone || item.identification || 'Cliente')}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            {isSelected && <Check size={14} className="text-orange-600" />}
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="p-3 text-center text-xs font-bold text-slate-400">
+                                                    {searchTerm ? `Nenhum ${targetType === 'employee' ? 'funcionário' : 'cliente'} encontrado com "${searchTerm}"` : 'Nenhum registro cadastrado.'}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

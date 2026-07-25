@@ -93,9 +93,24 @@ export function CashierSessionDetails() {
         return 'pendente'
     }
 
-    const FORMAS_CASA = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta']
+    const FORMAS_CASA = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta', 'A Prazo']
+
+    const normalizeStr = (str: string) => {
+        if (!str) return ''
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    }
 
     const mappedLancamentos = (entries || []).map((e: any) => {
+        const consumidorNome = e.client?.name || e.employee?.name || (
+            FORMAS_CASA.some(f => normalizeStr(f) === normalizeStr(e.payment_method)) &&
+            e.identification &&
+            !normalizeStr(e.identification).includes('mesa') &&
+            !normalizeStr(e.identification).includes('balcao') &&
+            !normalizeStr(e.identification).includes('delivery')
+                ? e.identification
+                : ''
+        )
+
         return {
             id: e.id,
             isSaida: e.is_withdrawal || false,
@@ -111,7 +126,9 @@ export function CashierSessionDetails() {
             mesa: e.origin === 'Mesa' ? (e.identification || '') : '',
             banco: e.bank || 'CAIXA',
             conferido: e.is_checked || false,
-            consumidorCasa: FORMAS_CASA.includes(e.payment_method) ? (e.identification || '') : '',
+            consumidorCasa: consumidorNome,
+            client_id: e.client_id || null,
+            employee_id: e.employee_id || null,
             valorCaixinha: e.is_tip ? e.amount : 0
         }
     })
