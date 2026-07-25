@@ -74,6 +74,8 @@ export function ModulesSettings() {
     mutationFn: updateSystemConfig,
     onSuccess: (data) => {
       queryClient.setQueryData(['system-config'], data)
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile-modules'] })
       toast.success('Configurações atualizadas com sucesso!', {
         description: 'As alterações já estão valendo para todo o sistema.',
       })

@@ -68,6 +68,12 @@ export function Sidebar() {
       icon: Wallet,
       access: hasAccess('cashier'),
     },
+    {
+      name: 'Recursos Humanos',
+      path: '/hr',
+      icon: Users,
+      access: hasAccess('hr'),
+    },
   ].filter((item) => {
     if (profile?.role === 'CASHIER') {
       return item.path === '/cashier'
