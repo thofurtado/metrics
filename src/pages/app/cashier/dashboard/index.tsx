@@ -17,7 +17,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
-import { getSessions, openSession, getMonthlyCashAudit } from '@/api/cashier/cashier'
+import { getSessions, openSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { PageHeader } from '@/components/page-header'
 
@@ -28,6 +28,7 @@ export function CashierDashboard() {
 
   const [saldoAbertura, setSaldoAbertura] = useState('0.00')
   const [periodo, setPeriodo] = useState('Almoço')
+  const [selectedUser, setSelectedUser] = useState('')
   const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
@@ -54,6 +55,14 @@ export function CashierDashboard() {
     queryFn: getMonthlyCashAudit,
     enabled: !!profile && isAdmin,
   })
+
+  const { data: usersData } = useQuery({
+    queryKey: ['cashier-users'],
+    queryFn: getCashierUsers,
+    enabled: !!profile && isAdmin,
+  })
+  
+  const possibleUsers = (usersData as any)?.users || (Array.isArray(usersData) ? usersData : [])
 
   const { mutateAsync: openSessionFn } = useMutation({
     mutationFn: openSession,
@@ -135,7 +144,8 @@ export function CashierDashboard() {
       await openSessionFn({
         initial_balance: parseFloat(saldoAbertura) || 0,
         period: periodo,
-      })
+        ...(isAdmin && selectedUser ? { user_id: selectedUser } : {})
+      } as any)
     } catch (error) {
       alert('Erro ao abrir caixa.')
     }
@@ -221,45 +231,61 @@ export function CashierDashboard() {
       />
 
       {/* PAINEL DE CONTROLE SUPERIOR (LADO A LADO) */}
-      <div className={`grid grid-cols-1 gap-4 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
+      <div className={`grid grid-cols-1 gap-6 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
         {/* Formulário Horizontal Compacto para Abrir Caixa */}
-        <div className={`rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-4' : 'w-full'}`}>
-          <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
+        <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}>
+          <div className="flex items-center gap-2 mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
             <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
               <Plus size={13} />
             </div>
             <span>Abrir Novo Caixa</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div>
+          <div className={`grid grid-cols-1 gap-3 ${isAdmin ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+            {isAdmin && (
+              <div className="sm:col-span-2">
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+                >
+                  <option value="">Selecione o Operador (Você mesmo)</option>
+                  {possibleUsers.map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className={isAdmin ? 'col-span-1' : ''}>
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
               >
                 <option value="Almoço">Período: Almoço</option>
                 <option value="Jantar">Período: Jantar</option>
+                <option value="Dia Todo">Período: Dia Todo</option>
               </select>
             </div>
 
-            <div>
+            <div className={isAdmin ? 'col-span-1' : ''}>
               <input
                 type="number"
                 step="0.01"
                 value={saldoAbertura}
                 onChange={(e) => setSaldoAbertura(e.target.value)}
                 placeholder="Abertura R$ 0.00"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 transition-all"
               />
             </div>
 
-            <div>
+            <div className={isAdmin ? 'sm:col-span-2 mt-1' : 'flex items-end'}>
               <button
                 onClick={handleCriar}
-                className="w-full h-[34px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1"
+                className={`w-full ${isAdmin ? 'h-[40px]' : 'h-[42px]'} rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5`}
               >
-                <Plus size={13} /> Iniciar Expediente
+                <Plus size={14} /> Iniciar Expediente
               </button>
             </div>
           </div>
@@ -269,7 +295,7 @@ export function CashierDashboard() {
         {isAdmin && (
           <div
             onClick={() => setModalAuditOpen(true)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-3.5 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-8 flex flex-col justify-between"
+            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-4 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-6 lg:col-start-7 flex flex-col justify-between"
           >
             <Banknote
               size={70}
