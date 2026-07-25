@@ -162,18 +162,15 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         return padraoContaCasa.some(p => normForma.includes(p));
     }, [forma, tipo, dbIdentifiers]);
 
-    // Ajusta o targetType padrão se a forma de pagamento selecionada for Funcionário
-    useEffect(() => {
-        const normForma = normalizeStr(forma);
-        if (normForma.includes('funcionario')) {
-            setTargetType('employee');
-        }
+    // Identifica se a forma selecionada é Funcionário vs Outro A Prazo (Cliente)
+    const isEmployeeTarget = useMemo(() => {
+        return normalizeStr(forma).includes('funcionario');
     }, [forma]);
 
     // Filtragem em tempo real da lista de Clientes ou Funcionários
     const filteredTargets = useMemo(() => {
         const query = normalizeStr(searchTerm);
-        if (targetType === 'employee') {
+        if (isEmployeeTarget) {
             if (!query) return employeesList;
             return employeesList.filter((emp: any) =>
                 normalizeStr(emp.name).includes(query) ||
@@ -187,7 +184,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 normalizeStr(cli.identification || '').includes(query)
             );
         }
-    }, [targetType, searchTerm, clientsList, employeesList]);
+    }, [isEmployeeTarget, searchTerm, clientsList, employeesList]);
 
     // Funções utilitárias de normalização de categoria
     const normalizeCategory = (str: string) =>
@@ -569,40 +566,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                             {isContaCasa && (
                                 <div className="col-span-2 md:flex-1 animate-in slide-in-from-left-2 relative" ref={comboboxRef}>
                                     <div className="flex items-center justify-between mb-1 ml-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
-                                                <UserCircle size={12} /> Consumidor / Devedor:
-                                            </span>
-                                            {/* Alternador entre Cliente e Funcionário */}
-                                            <div className="flex items-center bg-orange-100/70 p-0.5 rounded-lg text-[9px] font-black uppercase">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setTargetType('client');
-                                                        setSelectedEmployeeId(null);
-                                                        setSearchTerm('');
-                                                        setConsumidorCasa('');
-                                                        setIsDropdownOpen(true);
-                                                    }}
-                                                    className={`px-2 py-0.5 rounded-md transition-all ${targetType === 'client' ? 'bg-orange-500 text-white shadow-xs' : 'text-orange-800 hover:bg-orange-200/50'}`}
-                                                >
-                                                    🏢 Cliente
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setTargetType('employee');
-                                                        setSelectedClientId(null);
-                                                        setSearchTerm('');
-                                                        setConsumidorCasa('');
-                                                        setIsDropdownOpen(true);
-                                                    }}
-                                                    className={`px-2 py-0.5 rounded-md transition-all ${targetType === 'employee' ? 'bg-orange-500 text-white shadow-xs' : 'text-orange-800 hover:bg-orange-200/50'}`}
-                                                >
-                                                    👤 Funcionário
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <label className="text-[9px] font-black uppercase text-orange-600 flex items-center gap-1">
+                                            <UserCircle size={12} /> {isEmployeeTarget ? 'Selecione o Funcionário (RH)' : 'Selecione o Cliente / Correntista'}
+                                        </label>
                                     </div>
 
                                     <div className="flex items-center gap-2">
@@ -617,13 +583,13 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                     setIsDropdownOpen(true);
                                                 }}
                                                 onFocus={() => setIsDropdownOpen(true)}
-                                                placeholder={targetType === 'employee' ? "Digite para buscar o funcionário..." : "Digite para buscar o cliente..."}
+                                                placeholder={isEmployeeTarget ? "Digite para buscar o funcionário (RH)..." : "Digite para buscar o cliente..."}
                                                 className="w-full border-2 border-orange-200 rounded-xl pl-9 pr-8 py-3 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 bg-orange-50/30 text-orange-950"
                                             />
                                             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
                                         </div>
 
-                                        {targetType === 'client' && (
+                                        {!isEmployeeTarget && (
                                             <button
                                                 type="button"
                                                 onClick={() => setIsQuickClientOpen(true)}
@@ -640,14 +606,14 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-2xl border border-orange-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
                                             {filteredTargets.length > 0 ? (
                                                 filteredTargets.map((item: any) => {
-                                                    const isSelected = targetType === 'employee'
+                                                    const isSelected = isEmployeeTarget
                                                         ? selectedEmployeeId === item.id
                                                         : selectedClientId === item.id;
                                                     return (
                                                         <div
                                                             key={item.id}
                                                             onClick={() => {
-                                                                if (targetType === 'employee') {
+                                                                if (isEmployeeTarget) {
                                                                     setSelectedEmployeeId(item.id);
                                                                     setSelectedClientId(null);
                                                                 } else {
@@ -661,11 +627,11 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                             className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-300' : 'hover:bg-slate-50 text-slate-800 dark:hover:bg-slate-900 dark:text-slate-200'}`}
                                                         >
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-sm">{targetType === 'employee' ? '👤' : '🏢'}</span>
+                                                                <span className="text-sm">{isEmployeeTarget ? '👤' : '🏢'}</span>
                                                                 <div>
                                                                     <p className="font-bold">{item.name}</p>
                                                                     <p className="text-[10px] text-slate-400 font-medium">
-                                                                        {targetType === 'employee' ? (item.role || 'Colaborador') : (item.phone || item.identification || 'Cliente')}
+                                                                        {isEmployeeTarget ? (item.role || 'Colaborador RH') : (item.phone || item.identification || 'Cliente')}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -675,7 +641,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                 })
                                             ) : (
                                                 <div className="p-3 text-center text-xs font-bold text-slate-400">
-                                                    {searchTerm ? `Nenhum ${targetType === 'employee' ? 'funcionário' : 'cliente'} encontrado com "${searchTerm}"` : 'Nenhum registro cadastrado.'}
+                                                    {searchTerm ? `Nenhum ${isEmployeeTarget ? 'funcionário' : 'cliente'} encontrado com "${searchTerm}"` : 'Nenhum registro cadastrado.'}
                                                 </div>
                                             )}
                                         </div>

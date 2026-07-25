@@ -184,6 +184,21 @@ export async function getCashierUsers() {
 }
 
 export async function getCashierEmployees() {
-  const response = await api.get<{ employees: { id: string; name: string; role: string }[] }>('/api/cashier/employees')
-  return response.data
+  try {
+    const response = await api.get<{ data: { id: string; name: string; role?: string }[] }>('/hr/employees?limit=100')
+    const list = response.data?.data
+    if (Array.isArray(list) && list.length > 0) return list
+  } catch (e) {}
+
+  try {
+    const response = await api.get<{ id: string; name: string; role?: string }[]>('/hr/employees/sync')
+    if (Array.isArray(response.data) && response.data.length > 0) return response.data
+  } catch (e) {}
+
+  try {
+    const response = await api.get<{ users: { id: string; name: string; role?: string }[] }>('/api/cashier/users')
+    return response.data?.users || response.data
+  } catch (e) {
+    return []
+  }
 }
