@@ -6,12 +6,12 @@ import {
   Edit2,
   Heart,
   Landmark,
+  Minus,
   Smartphone,
   Ticket,
   X,
   TrendingUp,
   ArrowDownRight,
-  Minus,
   Equal,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -81,97 +81,74 @@ export function SummaryCards({
   const bancosComValor = bancosDinamicos.filter(b => safeGet(resumo, `${b}.total`) > 0)
   const temConsumoInterno = safeGet(resumo, 'CASA.total') > 0
 
-  // Total de todas as maquininhas
+  // Totais consolidados de maquininhas
   const totalMaquininhas = bancosComValor.reduce((acc, b) => acc + safeGet(resumo, `${b}.total`), 0)
+  const totalJuros = bancosComValor.reduce((acc, b) => acc + safeGet(resumo, `${b}.juros`), 0)
 
   return (
     <div className="space-y-3">
-      {/* ── HERO CARD: RESUMO FINANCEIRO UNIFICADO ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 shadow-lg dark:border-slate-700">
-        {/* Decorative elements */}
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl" />
-        <div className="absolute -left-4 -bottom-4 h-24 w-24 rounded-full bg-blue-500/10 blur-2xl" />
+      {/* ── LINHA 1: 4 CARDS PRINCIPAIS ── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
 
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
-          {/* TOTAL GERAL EM CAIXA — destaque principal */}
-          <div className="flex-1">
-            <p className="mb-0.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-400">
-              <Banknote size={12} /> Total Geral em Caixa
-            </p>
-            <p className="text-3xl font-black tracking-tight text-white md:text-4xl">
-              R$ {totalGeralEmCaixa.toFixed(2)}
-            </p>
-          </div>
+        {/* CARD 1: TOTAL GERAL + VENDAS LÍQUIDAS (unificado) */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-teal-950/20">
+          <TrendingUp size={34} className="absolute -right-1 -top-1 rotate-12 text-emerald-500 opacity-10" />
+          <p className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+            Total Geral em Caixa
+          </p>
+          <p className="text-xl font-black tracking-tight text-emerald-800 dark:text-emerald-200">
+            R$ {totalGeralEmCaixa.toFixed(2)}
+          </p>
 
-          {/* BREAKDOWN — como se chega nas Vendas Líquidas */}
-          <div className="flex flex-1 flex-col gap-1.5 rounded-xl bg-white/5 px-4 py-3 backdrop-blur-sm md:max-w-sm">
-            <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
-              Composição
-            </p>
-
-            {/* Total Entradas */}
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-slate-300">Total Entradas</span>
-              <span className="font-mono font-bold text-white">R$ {totalEntradas.toFixed(2)}</span>
-            </div>
-
-            {/* − Consumo Interno */}
+          <div className="mt-3 space-y-1 border-t border-emerald-200/60 pt-2 dark:border-emerald-800/40">
             {totalCasa > 0 && (
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 font-semibold text-amber-400">
-                  <Minus size={10} /> Consumo Interno
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                  <Minus size={8} /> Consumo Interno
                 </span>
-                <span className="font-mono font-bold text-amber-400">
-                  - R$ {totalCasa.toFixed(2)}
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                  {totalCasa.toFixed(2)}
                 </span>
               </div>
             )}
-
-            {/* − Sangrias */}
             {saidasDinheiro > 0 && (
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1 font-semibold text-red-400">
-                  <Minus size={10} /> Sangrias
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="flex items-center gap-1 font-medium text-red-500">
+                  <Minus size={8} /> Sangrias
                 </span>
-                <span className="font-mono font-bold text-red-400">
-                  - R$ {saidasDinheiro.toFixed(2)}
+                <span className="font-mono font-bold text-red-500">
+                  {saidasDinheiro.toFixed(2)}
                 </span>
               </div>
             )}
-
-            {/* ═ Vendas Líquidas */}
-            <div className="mt-1 flex items-center justify-between border-t border-white/10 pt-2 text-[11px]">
-              <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                <Equal size={10} /> Vendas Líquidas
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="flex items-center gap-1 font-black uppercase text-emerald-700 dark:text-emerald-400">
+                <Equal size={8} /> Vendas Líquidas
               </span>
-              <span className="font-mono text-sm font-black text-emerald-400">
+              <span className="font-mono text-xs font-black text-emerald-700 dark:text-emerald-400">
                 R$ {vendasLiquidas.toFixed(2)}
               </span>
             </div>
           </div>
 
-          {/* CAIXINHAS — se houver */}
           {totalCaixinha > 0 && (
-            <div className="flex items-center gap-2 rounded-xl bg-pink-500/10 px-4 py-3 md:flex-col md:items-start">
-              <Heart size={14} className="text-pink-400" fill="currentColor" />
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-pink-400">Gorjetas</p>
-                <p className="font-mono text-lg font-black text-pink-300">R$ {totalCaixinha.toFixed(2)}</p>
-              </div>
+            <div className="mt-2 flex items-center justify-between border-t border-emerald-200/60 pt-2 dark:border-emerald-800/40">
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase text-pink-600">
+                <Heart size={8} fill="currentColor" /> Gorjetas
+              </span>
+              <span className="font-mono text-xs font-black text-pink-600">
+                R$ {totalCaixinha.toFixed(2)}
+              </span>
             </div>
           )}
         </div>
-      </div>
 
-      {/* ── LINHA 2: TODOS OS DETALHAMENTOS EM UMA LINHA ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5">
-
-        {/* CARD DINHEIRO (ESPÉCIE) */}
+        {/* CARD 2: DINHEIRO (ESPÉCIE) */}
         <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm dark:border-emerald-950/40 dark:bg-slate-950">
           <Banknote size={34} className="absolute -right-1 -top-1 rotate-12 text-emerald-500 opacity-8" />
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              <Banknote size={12} className="text-emerald-600" /> Dinheiro
+              <Banknote size={12} className="text-emerald-600" /> Dinheiro (Espécie)
             </h2>
           </div>
           <div className="space-y-1.5 text-[11px]">
@@ -219,7 +196,7 @@ export function SummaryCards({
           </div>
         </div>
 
-        {/* CARD SUBTOTAL CARTÕES/PIX */}
+        {/* CARD 3: SUBTOTAL CARTÕES / PIX */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <div className="mb-3 flex items-center gap-1.5">
             <CreditCard size={12} className="text-indigo-500" />
@@ -253,89 +230,28 @@ export function SummaryCards({
               </div>
             )}
             {totalMaquininhas > 0 && (
-              <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-900">
-                <span className="text-[9px] font-black uppercase text-slate-400">Total</span>
-                <span className="font-mono text-sm font-black text-indigo-600 dark:text-indigo-400">
-                  R$ {totalMaquininhas.toFixed(2)}
-                </span>
+              <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2 dark:border-slate-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase text-slate-400">Total (Bruto)</span>
+                  <span className="font-mono text-sm font-black text-indigo-600 dark:text-indigo-400">
+                    R$ {totalMaquininhas.toFixed(2)}
+                  </span>
+                </div>
+                {totalJuros > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-red-400">Taxas Aprox.</span>
+                    <span className="font-mono text-[10px] font-black text-red-500">
+                      - R$ {totalJuros.toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* CARDS DINÂMICOS DE BANCOS E MAQUINAS */}
-        {bancosComValor.map((banco) => (
-          <div
-            key={banco}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
-          >
-            <div className="mb-3 flex items-center gap-1.5">
-              <Landmark size={12} className="text-blue-500" />
-              <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                {banco}
-              </h2>
-            </div>
-            <div className="space-y-1.5 text-[11px]">
-              {safeGet(resumo, `${banco}.PIX`) > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1"><Smartphone size={10} className="text-teal-500" /> PIX</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {safeGet(resumo, `${banco}.PIX`).toFixed(2)}
-                  </span>
-                </div>
-              )}
-              {safeGet(resumo, `${banco}.Débito`) > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1"><CreditCard size={10} className="text-blue-500" /> Débito</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {safeGet(resumo, `${banco}.Débito`).toFixed(2)}
-                  </span>
-                </div>
-              )}
-              {safeGet(resumo, `${banco}.Crédito`) > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1"><CreditCard size={10} className="text-indigo-500" /> Crédito</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {safeGet(resumo, `${banco}.Crédito`).toFixed(2)}
-                  </span>
-                </div>
-              )}
-              {safeGet(resumo, `${banco}.Voucher`) > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1"><Ticket size={10} className="text-purple-500" /> Voucher</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    {safeGet(resumo, `${banco}.Voucher`).toFixed(2)}
-                  </span>
-                </div>
-              )}
-              {safeGet(resumo, `${banco}.caixinha`) > 0 && (
-                <div className="flex justify-between text-pink-500">
-                  <span className="flex items-center gap-1"><Heart size={10} fill="currentColor" /> Gorjeta</span>
-                  <span className="font-mono font-bold">{safeGet(resumo, `${banco}.caixinha`).toFixed(2)}</span>
-                </div>
-              )}
-              <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2 dark:border-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black uppercase text-slate-400">Total (Bruto)</span>
-                  <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
-                    R$ {safeGet(resumo, `${banco}.total`).toFixed(2)}
-                  </span>
-                </div>
-                {safeGet(resumo, `${banco}.juros`) > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase text-red-400">Juros Aprox.</span>
-                    <span className="font-mono text-[10px] font-black text-red-500">
-                      - R$ {safeGet(resumo, `${banco}.juros`).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* CARD CONSUMO INTERNO */}
-        {temConsumoInterno && (
+        {/* CARD 4: CONSUMO INTERNO */}
+        {temConsumoInterno ? (
           <div className="rounded-2xl border border-amber-100 bg-amber-50/30 p-4 shadow-sm dark:border-amber-950/40 dark:bg-amber-950/10">
             <div className="mb-3 flex items-center gap-1.5">
               <span className="text-sm">🔄</span>
@@ -362,9 +278,99 @@ export function SummaryCards({
               </div>
             </div>
           </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+            <div className="mb-3 flex items-center gap-1.5">
+              <span className="text-sm">🔄</span>
+              <h2 className="text-[10px] font-black uppercase tracking-wider italic text-slate-400">
+                Consumo Interno
+              </h2>
+            </div>
+            <p className="text-[11px] italic text-slate-400">Nenhum lançamento</p>
+          </div>
         )}
       </div>
+
+      {/* ── LINHA 2: CARDS POR MAQUININHA ── */}
+      {bancosComValor.length > 0 && (
+        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${
+          bancosComValor.length >= 4
+            ? 'md:grid-cols-4'
+            : bancosComValor.length === 3
+            ? 'md:grid-cols-3'
+            : 'md:grid-cols-2'
+        }`}>
+          {bancosComValor.map((banco) => (
+            <div
+              key={banco}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+            >
+              <div className="mb-3 flex items-center gap-1.5">
+                <Landmark size={12} className="text-blue-500" />
+                <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  {banco}
+                </h2>
+              </div>
+              <div className="space-y-1.5 text-[11px]">
+                {safeGet(resumo, `${banco}.PIX`) > 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span className="flex items-center gap-1"><Smartphone size={10} className="text-teal-500" /> PIX</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {safeGet(resumo, `${banco}.PIX`).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {safeGet(resumo, `${banco}.Débito`) > 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span className="flex items-center gap-1"><CreditCard size={10} className="text-blue-500" /> Débito</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {safeGet(resumo, `${banco}.Débito`).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {safeGet(resumo, `${banco}.Crédito`) > 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span className="flex items-center gap-1"><CreditCard size={10} className="text-indigo-500" /> Crédito</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {safeGet(resumo, `${banco}.Crédito`).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {safeGet(resumo, `${banco}.Voucher`) > 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span className="flex items-center gap-1"><Ticket size={10} className="text-purple-500" /> Voucher</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {safeGet(resumo, `${banco}.Voucher`).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {safeGet(resumo, `${banco}.caixinha`) > 0 && (
+                  <div className="flex justify-between text-pink-500">
+                    <span className="flex items-center gap-1"><Heart size={10} fill="currentColor" /> Gorjeta</span>
+                    <span className="font-mono font-bold">{safeGet(resumo, `${banco}.caixinha`).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2 dark:border-slate-900">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-slate-400">Total (Bruto)</span>
+                    <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
+                      R$ {safeGet(resumo, `${banco}.total`).toFixed(2)}
+                    </span>
+                  </div>
+                  {safeGet(resumo, `${banco}.juros`) > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase text-red-400">Juros Aprox.</span>
+                      <span className="font-mono text-[10px] font-black text-red-500">
+                        - R$ {safeGet(resumo, `${banco}.juros`).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
-
