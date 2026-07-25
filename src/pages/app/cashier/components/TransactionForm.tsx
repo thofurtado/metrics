@@ -21,6 +21,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [isQuickClientOpen, setIsQuickClientOpen] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const dropdownListRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Tipo de Devedor (Cliente ou Funcionário) para Conta da Casa / Permuta / A Prazo
     const [targetType, setTargetType] = useState<'client' | 'employee'>('client');
@@ -44,6 +46,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Scroll automático no item destacado
+    useEffect(() => {
+        if (highlightedIndex >= 0 && itemRefs.current[highlightedIndex]) {
+            itemRefs.current[highlightedIndex]?.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth',
+            });
+        }
+    }, [highlightedIndex]);
 
     // Buscar dados do banco
     const { data: dbMachines } = useQuery({
@@ -661,7 +673,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
                                     {/* DROPDOWN FLUTUANTE COM RESULTADOS DA PESQUISA EM TEMPO REAL */}
                                     {isDropdownOpen && (
-                                        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-2xl border border-orange-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                                        <div ref={dropdownListRef} className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-2xl border border-orange-200 bg-white p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
                                             {filteredTargets.length > 0 ? (
                                                 filteredTargets.map((item: any, idx: number) => {
                                                     const isSelected = isEmployeeTarget
@@ -670,6 +682,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                     return (
                                                         <div
                                                             key={item.id}
+                                                            ref={el => { itemRefs.current[idx] = el; }}
                                                             onClick={() => {
                                                                 if (isEmployeeTarget) {
                                                                     setSelectedEmployeeId(item.id);
