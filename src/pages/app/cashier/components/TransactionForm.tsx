@@ -120,6 +120,12 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const [identificacao, setIdentificacao] = useState('');
     const [consumidorCasa, setConsumidorCasa] = useState('');
 
+    const [descricaoRetirada, setDescricaoRetirada] = useState('');
+    const [funcionarioRetiradaId, setFuncionarioRetiradaId] = useState<string | null>(null);
+    const [incluirCaixinha, setIncluirCaixinha] = useState(false);
+    const [caixinhaValor, setCaixinhaValor] = useState('');
+    const [caixinhaParaQuem, setCaixinhaParaQuem] = useState('');
+
     const [showTooltip, setShowTooltip] = useState(false);
 
     // Refs para controle refinado do foco
@@ -387,6 +393,25 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
         const finalConsumidor = consumidorCasa.trim() || searchTerm.trim() || forma;
 
+        let finalIdentificacao = (tipo === 'venda' && isContaCasa && finalConsumidor)
+            ? finalConsumidor
+            : (tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao));
+
+        if (tipo === 'venda' && incluirCaixinha) {
+            const tipVal = parseCurrencyToFloat(caixinhaValor);
+            if (tipVal > 0 && caixinhaParaQuem.trim()) {
+                finalIdentificacao = `${finalIdentificacao} [Gorjeta: R$ ${tipVal.toFixed(2)} | ${caixinhaParaQuem.trim()}]`;
+            }
+        }
+
+        if (tipo === 'sangria' || tipo === 'suprimento') {
+            finalIdentificacao = descricaoRetirada.trim();
+        }
+
+        const employeeId = (tipo === 'venda' && isAcessoDevedor && isEmployeeTarget)
+            ? selectedEmployeeId
+            : (tipo === 'sangria' ? funcionarioRetiradaId : null);
+
         onAdd({
             valor: valorNumerico,
             valorCaixinha: tipo === 'caixinha' ? valorNumerico : 0,
@@ -397,10 +422,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             banco: (tipo === 'sangria' || tipo === 'suprimento') ? 'CAIXA' : banco,
             origin: tipo === 'venda' ? tipoOrigem : '',
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
-            identificacao: (tipo === 'venda' && isContaCasa && finalConsumidor) ? finalConsumidor : (tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao)),
+            identificacao: finalIdentificacao,
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? finalConsumidor : '',
             client_id: (tipo === 'venda' && isAcessoDevedor && !isEmployeeTarget) ? selectedClientId : null,
-            employee_id: (tipo === 'venda' && isAcessoDevedor && isEmployeeTarget) ? selectedEmployeeId : null,
+            employee_id: employeeId,
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
@@ -417,6 +442,11 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         setSearchTerm('');
         setSelectedClientId(null);
         setSelectedEmployeeId(null);
+        setDescricaoRetirada('');
+        setFuncionarioRetiradaId(null);
+        setIncluirCaixinha(false);
+        setCaixinhaValor('');
+        setCaixinhaParaQuem('');
 
         setShowTooltip(true);
         setTimeout(() => setShowTooltip(false), 2000);
@@ -787,6 +817,77 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                                 </option>
                                             ))
                                         }
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* LINKED CAIXINHA TOGGLE & INPUTS */}
+                            <div className="col-span-2 w-full flex flex-col gap-2 mt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setIncluirCaixinha(!incluirCaixinha)}
+                                    className={`w-fit px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${incluirCaixinha ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100'}`}
+                                >
+                                    💖 {incluirCaixinha ? 'Remover Gorjeta' : 'Incluir Gorjeta / Caixinha'}
+                                </button>
+
+                                {incluirCaixinha && (
+                                    <div className="grid grid-cols-2 gap-3 p-3 rounded-xl border border-purple-100 bg-purple-50/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <div>
+                                            <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Valor da Gorjeta (R$)</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={caixinhaValor}
+                                                onChange={e => setCaixinhaValor(formatCurrency(e.target.value))}
+                                                placeholder="0,00"
+                                                className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={caixinhaParaQuem}
+                                                onChange={e => setCaixinhaParaQuem(e.target.value)}
+                                                placeholder="Ex: João, Garçons..."
+                                                className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {(tipo === 'sangria' || tipo === 'suprimento') && (
+                        <>
+                            {/* MOTIVO / DESCRIÇÃO */}
+                            <div className="col-span-2 md:flex-1">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Motivo / Descrição</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={descricaoRetirada}
+                                    onChange={e => setDescricaoRetirada(e.target.value)}
+                                    placeholder="Ex: Depósito banco, Troco inicial, Vale..."
+                                    className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                />
+                            </div>
+
+                            {tipo === 'sangria' && (
+                                <div className="col-span-2 md:w-56">
+                                    <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Funcionário (Vale RH - Opcional)</label>
+                                    <select
+                                        value={funcionarioRetiradaId || ''}
+                                        onChange={e => setFuncionarioRetiradaId(e.target.value || null)}
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                    >
+                                        <option value="">Não vincular (Sangria Comum)</option>
+                                        {employeesList.map((emp: any) => (
+                                            <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                             )}

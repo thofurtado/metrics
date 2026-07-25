@@ -99,7 +99,7 @@ export function SummaryCards({
             const isAPrazo = padraoAPrazo.some(p => normalizeStr(forma).includes(p))
             return acc + (isAPrazo ? 0 : safeGet(resumo, `CASA.${forma}`))
           }, 0)
-          const vendasLiquidasCalc = totalEntradas - totalOperacional - saidasDinheiro
+          const vendasLiquidasCalc = totalEntradas - totalOperacional - saidasDinheiro - totalCaixinha
 
           return (
             <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50/60 p-4 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:to-indigo-950/20">
@@ -129,6 +129,16 @@ export function SummaryCards({
                     </span>
                     <span className="font-mono font-bold text-red-500">
                       {saidasDinheiro.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {totalCaixinha > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-pink-500">
+                      <Minus size={8} /> Gorjetas
+                    </span>
+                    <span className="font-mono font-bold text-pink-500">
+                      {totalCaixinha.toFixed(2)}
                     </span>
                   </div>
                 )}

@@ -599,8 +599,15 @@ export function DetalheLote({
                                 className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                               />
                             </td>
-                            <td className="p-4 font-bold">
-                              {renderOrigemLabel(l)}
+                            <td className="p-4">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-bold">{renderOrigemLabel(l)}</span>
+                                {l.valorCaixinha > 0 && !l.isCaixinha && (
+                                  <span className="text-[10px] text-pink-500 font-black flex items-center gap-1 select-none">
+                                    💖 Gorjeta: R$ {l.valorCaixinha.toFixed(2)} {l.paraQuem ? `(${l.paraQuem})` : ''}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
                               {renderBancoConsumidor(l)}

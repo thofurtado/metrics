@@ -108,13 +108,19 @@ export function CashierSessionDetails() {
     }
 
     const mappedLancamentos = (entries || []).map((e: any) => {
+        const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i;
+        const match = (e.identification || '').match(regexCaixinha);
+        const valorCaixinhaLinked = match ? parseFloat(match[1].replace(',', '.')) : 0;
+        const paraQuemCaixinhaLinked = match ? match[2].trim() : '';
+        const cleanIdentification = (e.identification || '').replace(regexCaixinha, '').trim();
+
         const consumidorNome = e.client?.name || e.employee?.name || (
             FORMAS_CASA.some(f => normalizeStr(f) === normalizeStr(e.payment_method)) &&
-            e.identification &&
-            !normalizeStr(e.identification).includes('mesa') &&
-            !normalizeStr(e.identification).includes('balcao') &&
-            !normalizeStr(e.identification).includes('delivery')
-                ? e.identification
+            cleanIdentification &&
+            !normalizeStr(cleanIdentification).includes('mesa') &&
+            !normalizeStr(cleanIdentification).includes('balcao') &&
+            !normalizeStr(cleanIdentification).includes('delivery')
+                ? cleanIdentification
                 : ''
         )
 
@@ -127,16 +133,16 @@ export function CashierSessionDetails() {
             valor: e.amount,
             formaPagamento: e.payment_method || 'Dinheiro',
             origin: e.origin || 'Mesa',
-            identification: e.identification || '',
-            identificacao: e.identification || '',
-            paraQuem: e.identification || '',
-            mesa: e.origin === 'Mesa' ? (e.identification || '') : '',
+            identification: cleanIdentification,
+            identificacao: cleanIdentification,
+            paraQuem: e.is_tip ? cleanIdentification : paraQuemCaixinhaLinked,
+            mesa: e.origin === 'Mesa' ? cleanIdentification : '',
             banco: e.bank || 'CAIXA',
             conferido: e.is_checked || false,
             consumidorCasa: consumidorNome,
             client_id: e.client_id || null,
             employee_id: e.employee_id || null,
-            valorCaixinha: e.is_tip ? e.amount : 0
+            valorCaixinha: e.is_tip ? e.amount : valorCaixinhaLinked
         }
     })
 
@@ -166,11 +172,15 @@ export function CashierSessionDetails() {
         }
 
         const padraoCasa = ['funcionário', 'pró-labore', 'cortesia', 'permuta', 'a prazo']
+        const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i;
 
         for (const entry of entriesList || []) {
             const amount = Number(entry.amount || 0)
             const method = (entry.payment_method || '').trim()
             const bank = (entry.bank || '').toUpperCase().trim()
+
+            const match = (entry.identification || '').match(regexCaixinha);
+            const valorCaixinhaLinked = match ? parseFloat(match[1].replace(',', '.')) : 0;
 
             if (entry.is_withdrawal) {
                 res.CAIXA.totalSaidas += amount
@@ -179,6 +189,8 @@ export function CashierSessionDetails() {
 
             if (entry.is_tip) {
                 res.GERAL.totalCaixinha += amount
+            } else if (valorCaixinhaLinked > 0) {
+                res.GERAL.totalCaixinha += valorCaixinhaLinked
             }
 
             res.GERAL.entradas += amount
@@ -224,6 +236,8 @@ export function CashierSessionDetails() {
 
                 if (entry.is_tip) {
                     res[bank].caixinha += amount
+                } else if (valorCaixinhaLinked > 0) {
+                    res[bank].caixinha += valorCaixinhaLinked
                 }
                 res[bank].total += amount
 
