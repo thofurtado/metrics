@@ -484,6 +484,7 @@ export function TransactionTableRow({
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
   const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
+  const [openCashierDetailsModal, setOpenCashierDetailsModal] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
