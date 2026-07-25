@@ -165,6 +165,10 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const isOperacional = useMemo(() => {
         if (tipo !== 'venda') return false;
         const normForma = normalizeStr(forma);
+        
+        const padraoOperacional = ['pro-labore', 'cortesia'];
+        if (padraoOperacional.some(p => normForma.includes(p))) return true;
+
         if (dbIdentifiers && dbIdentifiers.length > 0) {
             const found = dbIdentifiers.find(i => normalizeStr(i.name) === normForma);
             if (found) return true;
@@ -175,7 +179,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const isAcessoDevedor = useMemo(() => {
         if (tipo !== 'venda') return false;
         const normForma = normalizeStr(forma);
-        const padraoDevedor = ['funcionario', 'pro-labore', 'cortesia', 'permuta', 'a prazo'];
+        const padraoDevedor = ['funcionario', 'permuta', 'a prazo'];
         return padraoDevedor.some(p => normForma.includes(p));
     }, [forma, tipo]);
 
