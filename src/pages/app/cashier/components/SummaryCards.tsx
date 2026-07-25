@@ -11,6 +11,8 @@ import {
   X,
   TrendingUp,
   ArrowDownRight,
+  Minus,
+  Equal,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -52,12 +54,14 @@ export function SummaryCards({
     )
   }
 
+  const totalCasa = safeGet(resumo, 'CASA.total')
+  const totalEntradas = safeGet(resumo, 'GERAL.entradas')
+
   const { vendasLiquidas, totalGeralEmCaixa } = useMemo(() => {
-    const totalCasa = safeGet(resumo, 'CASA.total')
-    const vLiquidas = safeGet(resumo, 'GERAL.entradas') - totalCasa
+    const vLiquidas = totalEntradas - totalCasa
     const tGeral = abertura + safeGet(resumo, 'GERAL.saldo') - totalCasa
     return { vendasLiquidas: vLiquidas, totalGeralEmCaixa: tGeral }
-  }, [resumo, abertura])
+  }, [resumo, abertura, totalEntradas, totalCasa])
 
   const saldoFinalDinheiro = abertura + entradasDinheiro - saidasDinheiro
 
@@ -77,104 +81,97 @@ export function SummaryCards({
   const bancosComValor = bancosDinamicos.filter(b => safeGet(resumo, `${b}.total`) > 0)
   const temConsumoInterno = safeGet(resumo, 'CASA.total') > 0
 
-  // Pill badge component
-  const Pill = ({ label, value, color }: { label: string; value: number; color: string }) => (
-    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${color}`}>
-      <span className="text-[9px] font-black uppercase tracking-wider opacity-70">{label}</span>
-      <span className="font-mono text-sm font-black">
-        R$ {value.toFixed(2)}
-      </span>
-    </div>
-  )
+  // Total de todas as maquininhas
+  const totalMaquininhas = bancosComValor.reduce((acc, b) => acc + safeGet(resumo, `${b}.total`), 0)
 
   return (
     <div className="space-y-3">
-      {/* ── LINHA 1: KPIs PRINCIPAIS ── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-        {/* Vendas Líquidas */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-teal-950/20">
-          <TrendingUp size={40} className="absolute -right-2 -top-2 rotate-12 text-emerald-500 opacity-10" />
-          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-            Vendas Líquidas
-          </p>
-          <p className="text-2xl font-black tracking-tight text-emerald-800 dark:text-emerald-200">
-            R$ {vendasLiquidas.toFixed(2)}
-          </p>
-        </div>
+      {/* ── HERO CARD: RESUMO FINANCEIRO UNIFICADO ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 shadow-lg dark:border-slate-700">
+        {/* Decorative elements */}
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl" />
+        <div className="absolute -left-4 -bottom-4 h-24 w-24 rounded-full bg-blue-500/10 blur-2xl" />
 
-        {/* Total Geral em Caixa */}
-        <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50/60 p-4 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:to-indigo-950/20">
-          <Banknote size={40} className="absolute -right-2 -top-2 rotate-12 text-blue-500 opacity-10" />
-          <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">
-            Total Geral em Caixa
-          </p>
-          <p className="text-2xl font-black tracking-tight text-blue-900 dark:text-blue-200">
-            R$ {totalGeralEmCaixa.toFixed(2)}
-          </p>
-        </div>
-
-        {/* Caixinhas (só se > 0) */}
-        {totalCaixinha > 0 ? (
-          <div className="sm:col-span-2 relative overflow-hidden rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-rose-50/60 p-4 shadow-sm dark:border-pink-900/40 dark:from-pink-950/30 dark:to-rose-950/20">
-            <Heart size={40} className="absolute -right-2 -top-2 rotate-12 text-pink-400 opacity-10" fill="currentColor" />
-            <p className="mb-1 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">
-              <Heart size={10} fill="currentColor" /> Caixinhas / Gorjetas
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+          {/* TOTAL GERAL EM CAIXA — destaque principal */}
+          <div className="flex-1">
+            <p className="mb-0.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-400">
+              <Banknote size={12} /> Total Geral em Caixa
             </p>
-            <p className="text-2xl font-black tracking-tight text-pink-700 dark:text-pink-200">
-              R$ {totalCaixinha.toFixed(2)}
+            <p className="text-3xl font-black tracking-tight text-white md:text-4xl">
+              R$ {totalGeralEmCaixa.toFixed(2)}
             </p>
           </div>
-        ) : (
-          /* Totais por modalidade eletrônica */
-          <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
-              Subtotal Cartões/Pix
+
+          {/* BREAKDOWN — como se chega nas Vendas Líquidas */}
+          <div className="flex flex-1 flex-col gap-1.5 rounded-xl bg-white/5 px-4 py-3 backdrop-blur-sm md:max-w-sm">
+            <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
+              Composição
             </p>
-            <div className="space-y-1.5">
-              {totalPorForma('PIX') > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="flex items-center gap-1 font-bold text-teal-600"><Smartphone size={11} /> PIX</span>
-                  <span className="font-mono font-black text-teal-700">R$ {totalPorForma('PIX').toFixed(2)}</span>
-                </div>
-              )}
-              {totalPorForma('Débito') > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="flex items-center gap-1 font-bold text-blue-600"><CreditCard size={11} /> Débito</span>
-                  <span className="font-mono font-black text-blue-700">R$ {totalPorForma('Débito').toFixed(2)}</span>
-                </div>
-              )}
-              {totalPorForma('Crédito') > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="flex items-center gap-1 font-bold text-indigo-600"><CreditCard size={11} /> Crédito</span>
-                  <span className="font-mono font-black text-indigo-700">R$ {totalPorForma('Crédito').toFixed(2)}</span>
-                </div>
-              )}
-              {totalPorForma('Voucher') > 0 && (
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="flex items-center gap-1 font-bold text-purple-600"><Ticket size={11} /> Voucher</span>
-                  <span className="font-mono font-black text-purple-700">R$ {totalPorForma('Voucher').toFixed(2)}</span>
-                </div>
-              )}
+
+            {/* Total Entradas */}
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-slate-300">Total Entradas</span>
+              <span className="font-mono font-bold text-white">R$ {totalEntradas.toFixed(2)}</span>
+            </div>
+
+            {/* − Consumo Interno */}
+            {totalCasa > 0 && (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1 font-semibold text-amber-400">
+                  <Minus size={10} /> Consumo Interno
+                </span>
+                <span className="font-mono font-bold text-amber-400">
+                  - R$ {totalCasa.toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            {/* − Sangrias */}
+            {saidasDinheiro > 0 && (
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1 font-semibold text-red-400">
+                  <Minus size={10} /> Sangrias
+                </span>
+                <span className="font-mono font-bold text-red-400">
+                  - R$ {saidasDinheiro.toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            {/* ═ Vendas Líquidas */}
+            <div className="mt-1 flex items-center justify-between border-t border-white/10 pt-2 text-[11px]">
+              <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                <Equal size={10} /> Vendas Líquidas
+              </span>
+              <span className="font-mono text-sm font-black text-emerald-400">
+                R$ {vendasLiquidas.toFixed(2)}
+              </span>
             </div>
           </div>
-        )}
+
+          {/* CAIXINHAS — se houver */}
+          {totalCaixinha > 0 && (
+            <div className="flex items-center gap-2 rounded-xl bg-pink-500/10 px-4 py-3 md:flex-col md:items-start">
+              <Heart size={14} className="text-pink-400" fill="currentColor" />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-pink-400">Gorjetas</p>
+                <p className="font-mono text-lg font-black text-pink-300">R$ {totalCaixinha.toFixed(2)}</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── LINHA 2: CONSOLIDAÇÃO POR OPERADORA / DINHEIRO / CONSUMO ── */}
-      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${
-        bancosComValor.length + 1 + (temConsumoInterno ? 1 : 0) >= 4
-          ? 'md:grid-cols-4'
-          : bancosComValor.length + 1 + (temConsumoInterno ? 1 : 0) === 3
-          ? 'md:grid-cols-3'
-          : 'md:grid-cols-2'
-      }`}>
+      {/* ── LINHA 2: TODOS OS DETALHAMENTOS EM UMA LINHA ── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5">
 
         {/* CARD DINHEIRO (ESPÉCIE) */}
         <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm dark:border-emerald-950/40 dark:bg-slate-950">
           <Banknote size={34} className="absolute -right-1 -top-1 rotate-12 text-emerald-500 opacity-8" />
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              <Banknote size={12} className="text-emerald-600" /> Dinheiro (Espécie)
+              <Banknote size={12} className="text-emerald-600" /> Dinheiro
             </h2>
           </div>
           <div className="space-y-1.5 text-[11px]">
@@ -219,6 +216,50 @@ export function SummaryCards({
                 R$ {saldoFinalDinheiro.toFixed(2)}
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* CARD SUBTOTAL CARTÕES/PIX */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="mb-3 flex items-center gap-1.5">
+            <CreditCard size={12} className="text-indigo-500" />
+            <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Cartões / PIX
+            </h2>
+          </div>
+          <div className="space-y-1.5 text-[11px]">
+            {totalPorForma('PIX') > 0 && (
+              <div className="flex items-center justify-between text-slate-500">
+                <span className="flex items-center gap-1 font-bold text-teal-600"><Smartphone size={10} /> PIX</span>
+                <span className="font-mono font-bold text-teal-700">R$ {totalPorForma('PIX').toFixed(2)}</span>
+              </div>
+            )}
+            {totalPorForma('Débito') > 0 && (
+              <div className="flex items-center justify-between text-slate-500">
+                <span className="flex items-center gap-1 font-bold text-blue-600"><CreditCard size={10} /> Débito</span>
+                <span className="font-mono font-bold text-blue-700">R$ {totalPorForma('Débito').toFixed(2)}</span>
+              </div>
+            )}
+            {totalPorForma('Crédito') > 0 && (
+              <div className="flex items-center justify-between text-slate-500">
+                <span className="flex items-center gap-1 font-bold text-indigo-600"><CreditCard size={10} /> Crédito</span>
+                <span className="font-mono font-bold text-indigo-700">R$ {totalPorForma('Crédito').toFixed(2)}</span>
+              </div>
+            )}
+            {totalPorForma('Voucher') > 0 && (
+              <div className="flex items-center justify-between text-slate-500">
+                <span className="flex items-center gap-1 font-bold text-purple-600"><Ticket size={10} /> Voucher</span>
+                <span className="font-mono font-bold text-purple-700">R$ {totalPorForma('Voucher').toFixed(2)}</span>
+              </div>
+            )}
+            {totalMaquininhas > 0 && (
+              <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-900">
+                <span className="text-[9px] font-black uppercase text-slate-400">Total</span>
+                <span className="font-mono text-sm font-black text-indigo-600 dark:text-indigo-400">
+                  R$ {totalMaquininhas.toFixed(2)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -326,3 +367,4 @@ export function SummaryCards({
     </div>
   )
 }
+
