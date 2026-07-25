@@ -355,7 +355,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             banco: (tipo === 'sangria' || tipo === 'suprimento') ? 'CAIXA' : banco,
             origin: tipo === 'venda' ? tipoOrigem : '',
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
-            identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
+            identificacao: (tipo === 'venda' && isContaCasa && finalConsumidor) ? finalConsumidor : (tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao)),
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? finalConsumidor : '',
             client_id: (tipo === 'venda' && isContaCasa && !isEmployeeTarget) ? selectedClientId : null,
             employee_id: (tipo === 'venda' && isContaCasa && isEmployeeTarget) ? selectedEmployeeId : null,

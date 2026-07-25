@@ -182,25 +182,25 @@ export function DetalheLote({
   }, [loteAtivo.lancamentos, activeTab, filtro, sortConfig, formasCasa])
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'conferido':
-        return {
-          label: 'Conferido',
-          color: 'bg-green-100 text-green-700 border-green-200',
-          icon: <CheckCircle2 size={14} />,
-        }
-      case 'alerta':
-        return {
-          label: 'Alerta',
-          color: 'bg-amber-100 text-amber-700 border-amber-200',
-          icon: <AlertCircle size={14} />,
-        }
-      default:
-        return {
-          label: 'Pendente',
-          color: 'bg-zinc-100 text-zinc-500 border-zinc-200',
-          icon: <Clock size={14} />,
-        }
+    const s = (status || '').toString().toLowerCase().trim()
+    if (s === 'conferido' || s === 'audited') {
+      return {
+        label: 'CONFERIDO',
+        color: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+        icon: <CheckCircle2 size={14} />,
+      }
+    }
+    if (s === 'aberto' || s === 'open') {
+      return {
+        label: 'ABERTO',
+        color: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300',
+        icon: <Clock size={14} />,
+      }
+    }
+    return {
+      label: 'PENDENTE (AGUARDANDO CONFERÊNCIA)',
+      color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+      icon: <AlertCircle size={14} />,
     }
   }
 
@@ -318,7 +318,7 @@ export function DetalheLote({
         </div>
 
         <div className="flex items-center gap-2">
-          {(loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED') ? (
+          {(loteAtivo.status === 'conferido' || loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'AUDITED') ? (
             <div className="flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300">
               <CheckCircle2 size={16} /> Caixa Conferido
             </div>
