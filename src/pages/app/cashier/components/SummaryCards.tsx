@@ -90,58 +90,71 @@ export function SummaryCards({
       {/* ── LINHA 1: 4 CARDS PRINCIPAIS ── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
 
-        {/* CARD 1: TOTAL GERAL + VENDAS LÍQUIDAS (unificado) */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-teal-950/20">
-          <TrendingUp size={34} className="absolute -right-1 -top-1 rotate-12 text-emerald-500 opacity-10" />
-          <p className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-            Total Geral em Caixa
-          </p>
-          <p className="text-xl font-black tracking-tight text-emerald-800 dark:text-emerald-200">
-            R$ {totalGeralEmCaixa.toFixed(2)}
-          </p>
+        {/* CARD 1: RESUMO GERAL (unificado) */}
+        {(() => {
+          // Separar operacional de a prazo dentro de CASA
+          const padraoAPrazo = ['funcionario', 'permuta', 'a prazo']
+          const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+          const totalOperacional = identificadoresCasa.reduce((acc, forma) => {
+            const isAPrazo = padraoAPrazo.some(p => normalizeStr(forma).includes(p))
+            return acc + (isAPrazo ? 0 : safeGet(resumo, `CASA.${forma}`))
+          }, 0)
+          const vendasLiquidasCalc = totalEntradas - totalOperacional - saidasDinheiro
 
-          <div className="mt-3 space-y-1 border-t border-emerald-200/60 pt-2 dark:border-emerald-800/40">
-            {totalCasa > 0 && (
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
-                  <Minus size={8} /> Consumo Interno
-                </span>
-                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                  {totalCasa.toFixed(2)}
-                </span>
-              </div>
-            )}
-            {saidasDinheiro > 0 && (
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="flex items-center gap-1 font-medium text-red-500">
-                  <Minus size={8} /> Sangrias
-                </span>
-                <span className="font-mono font-bold text-red-500">
-                  {saidasDinheiro.toFixed(2)}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="flex items-center gap-1 font-black uppercase text-emerald-700 dark:text-emerald-400">
-                <Equal size={8} /> Vendas Líquidas
-              </span>
-              <span className="font-mono text-xs font-black text-emerald-700 dark:text-emerald-400">
-                R$ {vendasLiquidas.toFixed(2)}
-              </span>
-            </div>
-          </div>
+          return (
+            <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50/60 p-4 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:to-indigo-950/20">
+              <Banknote size={34} className="absolute -right-1 -top-1 rotate-12 text-blue-500 opacity-10" />
+              <p className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">
+                Total Geral
+              </p>
+              <p className="text-xl font-black tracking-tight text-blue-900 dark:text-blue-200">
+                R$ {totalEntradas.toFixed(2)}
+              </p>
 
-          {totalCaixinha > 0 && (
-            <div className="mt-2 flex items-center justify-between border-t border-emerald-200/60 pt-2 dark:border-emerald-800/40">
-              <span className="flex items-center gap-1 text-[9px] font-black uppercase text-pink-600">
-                <Heart size={8} fill="currentColor" /> Gorjetas
-              </span>
-              <span className="font-mono text-xs font-black text-pink-600">
-                R$ {totalCaixinha.toFixed(2)}
-              </span>
+              <div className="mt-3 space-y-1 border-t border-blue-200/60 pt-2 dark:border-blue-800/40">
+                {totalOperacional > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                      <Minus size={8} /> Consumo Interno
+                    </span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      {totalOperacional.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {saidasDinheiro > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-red-500">
+                      <Minus size={8} /> Sangrias
+                    </span>
+                    <span className="font-mono font-bold text-red-500">
+                      {saidasDinheiro.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="flex items-center gap-1 font-black uppercase text-emerald-700 dark:text-emerald-400">
+                    <Equal size={8} /> Venda Líquida
+                  </span>
+                  <span className="font-mono text-xs font-black text-emerald-700 dark:text-emerald-400">
+                    R$ {vendasLiquidasCalc.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {totalCaixinha > 0 && (
+                <div className="mt-2 flex items-center justify-between border-t border-blue-200/60 pt-2 dark:border-blue-800/40">
+                  <span className="flex items-center gap-1 text-[9px] font-black uppercase text-pink-600">
+                    <Heart size={8} fill="currentColor" /> Gorjetas
+                  </span>
+                  <span className="font-mono text-xs font-black text-pink-600">
+                    R$ {totalCaixinha.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          )
+        })()}
 
         {/* CARD 2: DINHEIRO (ESPÉCIE) */}
         <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm dark:border-emerald-950/40 dark:bg-slate-950">
