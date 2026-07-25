@@ -250,7 +250,9 @@ export function CashierSessionDetails() {
                 is_addition: dados.isSuprimento || false,
                 is_tip: dados.isCaixinha || false,
                 type: dados.type || 'SALE',
-                identification: dados.identificacao || (dados.mesa ? `Mesa ${dados.mesa}` : '')
+                identification: dados.identificacao || (dados.mesa ? `Mesa ${dados.mesa}` : ''),
+                client_id: dados.client_id || null,
+                employee_id: dados.employee_id || null,
             })
         } catch (err: any) {
             console.error('Erro ao adicionar lançamento:', err)

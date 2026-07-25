@@ -171,14 +171,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const filteredTargets = useMemo(() => {
         const query = normalizeStr(searchTerm);
         if (isEmployeeTarget) {
-            if (!query) return employeesList;
-            return employeesList.filter((emp: any) =>
+            const validEmployees = (employeesList || []).filter((e: any) => e && e.id && e.name);
+            if (!query) return validEmployees;
+            return validEmployees.filter((emp: any) =>
                 normalizeStr(emp.name).includes(query) ||
                 normalizeStr(emp.role || '').includes(query)
             );
         } else {
-            if (!query) return clientsList;
-            return clientsList.filter((cli: any) =>
+            const validClients = (clientsList || []).filter((c: any) => c && c.id && c.name);
+            if (!query) return validClients;
+            return validClients.filter((cli: any) =>
                 normalizeStr(cli.name).includes(query) ||
                 normalizeStr(cli.phone || '').includes(query) ||
                 normalizeStr(cli.identification || '').includes(query)
@@ -355,8 +357,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             mesa: (tipo === 'venda' && tipoOrigem === 'Mesa') ? numOrigem : '',
             identificacao: tipo === 'venda' ? (numOrigem ? `${tipoOrigem} ${numOrigem}` : tipoOrigem) : (tipo === 'caixinha' ? paraQuem : identificacao),
             consumidorCasa: (tipo === 'venda' && isContaCasa) ? finalConsumidor : '',
-            client_id: (tipo === 'venda' && isContaCasa && targetType === 'client') ? selectedClientId : null,
-            employee_id: (tipo === 'venda' && isContaCasa && targetType === 'employee') ? selectedEmployeeId : null,
+            client_id: (tipo === 'venda' && isContaCasa && !isEmployeeTarget) ? selectedClientId : null,
+            employee_id: (tipo === 'venda' && isContaCasa && isEmployeeTarget) ? selectedEmployeeId : null,
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
