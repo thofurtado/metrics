@@ -110,7 +110,7 @@ export function TransactionMobileCard({
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
     sectorId: transactions.sectors?.id || null,
-    accountId: transactions.accounts.id,
+    accountId: transactions.accounts?.id || '',
   }
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
@@ -295,7 +295,7 @@ export function TransactionMobileCard({
           </span>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              {transactions.accounts.name}
+              {transactions.accounts?.name || 'Caixa Central'}
             </span>
             {transactions.sectors && (
               <>
@@ -473,7 +473,7 @@ export function TransactionTableRow({
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
     sectorId: transactions.sectors?.id || null,
-    accountId: transactions.accounts.id,
+    accountId: transactions.accounts?.id || '',
   }
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
@@ -849,7 +849,7 @@ export function TransactionTableRow({
 
       <TableCell className="hidden px-4 py-5 text-center xl:table-cell">
         <span className="inline-flex items-center rounded-lg border border-slate-200/50 bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:border-slate-700/50 dark:bg-slate-800">
-          {transactions.accounts.name}
+          {transactions.accounts?.name || 'Caixa Central'}
         </span>
       </TableCell>
 
