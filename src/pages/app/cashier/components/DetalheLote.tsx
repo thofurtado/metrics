@@ -9,6 +9,7 @@ import {
   Edit2,
   Eye,
   Filter,
+  Lock,
   Printer,
   ShoppingBag,
   Trash2,
@@ -33,6 +34,7 @@ interface DetalheLoteProps {
   onEditarLancamento: (id: string, dadosAtualizados: any) => void
   onEditarAbertura: (novoValor: number) => void
   onAlterarStatus: (novoStatus: any) => void
+  onConferirECaixaConferido?: () => void
   isAdmin?: boolean
 }
 
@@ -45,6 +47,7 @@ export function DetalheLote({
   onEditarLancamento,
   onEditarAbertura,
   onAlterarStatus,
+  onConferirECaixaConferido,
   isAdmin = true,
 }: DetalheLoteProps) {
   const [filtro, setFiltro] = useState({ mesa: '', banco: '', forma: '' })
@@ -78,16 +81,36 @@ export function DetalheLote({
     const origin = l.origin || (l.mesa ? 'Mesa' : 'Balcão')
     const num = l.identification || l.mesa || ''
     const cleanNum = num.replace(/^(Mesa|Balcão|Delivery)\s*/i, '').trim()
+
+    // Se o identificador for um nome de consumidor (ex: João Silva), não usa como número de mesa
+    const isNum = cleanNum && !isNaN(Number(cleanNum))
+
     if (origin === 'Mesa') {
-      return cleanNum ? `Mesa ${cleanNum}` : 'Mesa'
+      return isNum ? `Mesa ${cleanNum}` : num && !num.toLowerCase().includes('mesa') ? `Mesa ${num}` : 'Mesa'
     }
     if (origin === 'Delivery') {
-      return cleanNum ? `Delivery ${cleanNum}` : 'Delivery'
+      return isNum ? `Delivery ${cleanNum}` : num && !num.toLowerCase().includes('delivery') ? `Delivery ${num}` : 'Delivery'
     }
     if (origin === 'Balcão') {
-      return cleanNum ? `Balcão ${cleanNum}` : 'Balcão'
+      return isNum ? `Balcão ${cleanNum}` : num && !num.toLowerCase().includes('balcão') && !num.toLowerCase().includes('balcao') ? `Balcão ${num}` : 'Balcão'
     }
     return cleanNum ? `${origin} ${cleanNum}` : origin
+  }
+
+  const renderBancoConsumidor = (l: any) => {
+    if (l.consumidorCasa && l.consumidorCasa !== 'CONTA DA CASA') {
+      return l.consumidorCasa
+    }
+    if (l.client?.name) return l.client.name
+    if (l.employee?.name) return l.employee.name
+
+    const normForma = (l.formaPagamento || '').toLowerCase()
+    const isCasa = ['funcionário', 'funcionario', 'pró-labore', 'pro-labore', 'cortesia', 'permuta', 'a prazo'].some(
+      p => normForma.includes(p)
+    )
+    if (isCasa) return '-'
+
+    return (l.banco && l.banco !== 'CONTA DA CASA') ? l.banco : '-'
   }
 
   const sangrias = [...loteAtivo.lancamentos.filter((l: any) => l.isSaida)].reverse()
@@ -159,25 +182,25 @@ export function DetalheLote({
   }, [loteAtivo.lancamentos, activeTab, filtro, sortConfig, formasCasa])
 
   const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'conferido':
-        return {
-          label: 'Conferido',
-          color: 'bg-green-100 text-green-700 border-green-200',
-          icon: <CheckCircle2 size={14} />,
-        }
-      case 'alerta':
-        return {
-          label: 'Alerta',
-          color: 'bg-amber-100 text-amber-700 border-amber-200',
-          icon: <AlertCircle size={14} />,
-        }
-      default:
-        return {
-          label: 'Pendente',
-          color: 'bg-zinc-100 text-zinc-500 border-zinc-200',
-          icon: <Clock size={14} />,
-        }
+    const s = (status || '').toString().toLowerCase().trim()
+    if (s === 'conferido' || s === 'audited') {
+      return {
+        label: 'CONFERIDO',
+        color: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+        icon: <CheckCircle2 size={14} />,
+      }
+    }
+    if (s === 'aberto' || s === 'open') {
+      return {
+        label: 'ABERTO',
+        color: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300',
+        icon: <Clock size={14} />,
+      }
+    }
+    return {
+      label: 'PENDENTE (AGUARDANDO CONFERÊNCIA)',
+      color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+      icon: <AlertCircle size={14} />,
     }
   }
 
@@ -235,7 +258,7 @@ export function DetalheLote({
               <h1 className="text-sm font-black uppercase leading-none md:text-xl">
                 {new Date(loteAtivo.dataReferencia).toLocaleDateString(
                   'pt-BR',
-                  { timeZone: 'UTC' },
+                  { timeZone: 'America/Sao_Paulo' },
                 )}
               </h1>
               {isAdmin && (
@@ -294,13 +317,31 @@ export function DetalheLote({
           </div>
         </div>
 
-        <button
-          onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
-          className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3"
-        >
-          <Printer size={18} />
-          <span className="hidden md:inline">Exportar PDF</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {(loteAtivo.status === 'conferido' || loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'AUDITED') ? (
+            <div className="flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300">
+              <CheckCircle2 size={16} /> Caixa Conferido
+            </div>
+          ) : (
+            onConferirECaixaConferido && (
+              <button
+                onClick={onConferirECaixaConferido}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+              >
+                <CheckCircle2 size={18} />
+                <span>Marcar como Conferido</span>
+              </button>
+            )
+          )}
+
+          <button
+            onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+          >
+            <Printer size={18} />
+            <span className="hidden md:inline">Exportar PDF</span>
+          </button>
+        </div>
       </header>
 
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
@@ -322,7 +363,14 @@ export function DetalheLote({
         {exibirSumario && (
           <SummaryCards resumo={resumoLote} onEditAbertura={onEditarAbertura} />
         )}
-        <TransactionForm onAdd={onAdicionarLancamento} />
+        
+        {loteAtivo.status === 'ABERTO' || loteAtivo.status === 'Aberto' || loteAtivo.status === 'OPEN' ? (
+          <TransactionForm onAdd={onAdicionarLancamento} />
+        ) : (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+            <Lock size={16} /> Caixa {loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
@@ -547,8 +595,8 @@ export function DetalheLote({
                             <td className="p-4 font-bold">
                               {renderOrigemLabel(l)}
                             </td>
-                            <td className="p-4 text-[9px] font-black uppercase text-zinc-400">
-                              {l.consumidorCasa || l.banco}
+                            <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
+                              {renderBancoConsumidor(l)}
                             </td>
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
                               {l.formaPagamento}{' '}

@@ -24,7 +24,7 @@ export function ModuleGuard({
   const isAllowed = isModuleActive(module) && (slug ? hasAccess(slug) : true)
 
   if (!isAllowed) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/cashier" replace />
   }
 
   return <>{children}</>

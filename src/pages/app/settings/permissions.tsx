@@ -228,10 +228,12 @@ export function Permissions() {
                 className={
                   user.role === 'ADMIN'
                     ? 'mb-4 border-amber-600/30 bg-amber-500/10 text-amber-600'
+                    : user.role === 'CASHIER'
+                    ? 'mb-4 border-purple-600/30 bg-purple-500/10 text-purple-600'
                     : 'mb-4 text-slate-500'
                 }
               >
-                {user.role === 'ADMIN' ? 'Administrador' : 'Membro'}
+                {user.role === 'ADMIN' ? 'Administrador' : user.role === 'CASHIER' ? 'Operador de Caixa' : 'Membro'}
               </Badge>
 
               <div className="mt-auto flex flex-wrap gap-1.5">
@@ -322,13 +324,19 @@ export function Permissions() {
                 <select
                   id="role"
                   value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as any })
-                  }
+                  onChange={(e) => {
+                    const newRole = e.target.value as any
+                    setFormData({
+                      ...formData,
+                      role: newRole,
+                      modules: newRole === 'CASHIER' ? [] : formData.modules,
+                    })
+                  }}
                   className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   <option value="MEMBER">Membro Padrão</option>
                   <option value="ADMIN">Administrador</option>
+                  <option value="CASHIER">Operador de Caixa</option>
                 </select>
               </div>
             </div>
@@ -338,7 +346,9 @@ export function Permissions() {
                 Permissões de Módulos
               </Label>
               <p className="mb-4 text-sm text-muted-foreground">
-                Selecione quais áreas do sistema este usuário poderá acessar.
+                {formData.role === 'CASHIER'
+                  ? 'Operadores de Caixa possuem acesso exclusivo à Conferência de Caixa.'
+                  : 'Selecione quais áreas do sistema este usuário poderá acessar.'}
               </p>
 
               <div className="grid max-h-[300px] gap-3 overflow-y-auto pr-2">
@@ -350,11 +360,14 @@ export function Permissions() {
                 {availableModules?.map((mod) => (
                   <div
                     key={mod.id}
-                    className="flex items-start space-x-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
+                    className={`flex items-start space-x-3 rounded-md border p-3 transition-colors ${
+                      formData.role === 'CASHIER' ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/50'
+                    }`}
                   >
                     <Checkbox
                       id={`mod-${mod.id}`}
-                      checked={formData.modules.includes(mod.slug)}
+                      disabled={formData.role === 'CASHIER'}
+                      checked={formData.role !== 'CASHIER' && formData.modules.includes(mod.slug)}
                       onCheckedChange={(checked) =>
                         toggleModule(mod.slug, checked as boolean)
                       }

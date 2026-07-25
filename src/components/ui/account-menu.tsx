@@ -30,8 +30,13 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
   const { mutateAsync: signOutFn, isPending: isSigningOut } = useMutation({
     mutationFn: signOut,
     onSuccess: () => {
+      const isCashier = profile?.role === 'CASHIER'
       queryClient.clear()
-      navigate('/sign-in', { replace: true })
+      if (isCashier) {
+        navigate('/cashier/sign-in', { replace: true })
+      } else {
+        navigate('/sign-in', { replace: true })
+      }
     },
   })
 
@@ -77,6 +82,8 @@ export function AccountMenu({ isCollapsed }: { isCollapsed?: boolean }) {
             <span className="pb-2">
               {isLoadingProfile ? (
                 <Skeleton className="h-4 w-32" />
+              ) : profile?.role === 'CASHIER' ? (
+                'Operador de Caixa'
               ) : profile?.role === 'TECHNICIAN' ? (
                 'Técnico'
               ) : (

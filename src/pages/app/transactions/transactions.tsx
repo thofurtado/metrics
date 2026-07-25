@@ -11,7 +11,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -318,6 +318,54 @@ export function Transactions() {
       ),
     enabled: activeTab === 'transfers',
   })
+
+  const displayTransactions = useMemo(() => {
+    const list = transactionsResult?.data?.transactions?.transactions || []
+    if (!list.length) return []
+
+    const cashierMap = new Map<string, any[]>()
+    const result: any[] = []
+
+    for (const item of list) {
+      if (item.cashier_session_id) {
+        const group = cashierMap.get(item.cashier_session_id) || []
+        group.push(item)
+        cashierMap.set(item.cashier_session_id, group)
+      } else {
+        result.push(item)
+      }
+    }
+
+    for (const [sessionId, groupItems] of cashierMap.entries()) {
+      if (groupItems.length === 1) {
+        const item = groupItems[0]
+        const cleanDesc = item.description ? item.description.replace(/\s*-\s*[^-]+$/, '') : 'Fechamento de Caixa'
+        result.push({
+          ...item,
+          description: cleanDesc,
+          accounts: item.accounts?.name ? item.accounts : { name: 'Caixa / Bancos' }
+        })
+      } else {
+        const first = groupItems[0]
+        const totalSum = groupItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+        const cleanDesc = first.description ? first.description.replace(/\s*-\s*[^-]+$/, '') : 'Fechamento de Caixa'
+        
+        result.push({
+          ...first,
+          id: `cashier-group-${sessionId}`,
+          description: `Lote de Caixa — ${cleanDesc}`,
+          amount: totalSum,
+          totalValue: totalSum,
+          accounts: { name: 'Vários Bancos' },
+          childTransactions: groupItems,
+          isCashierGroup: true,
+          cashier_session_id: sessionId
+        })
+      }
+    }
+
+    return result
+  }, [transactionsResult])
 
   function handlePaginate(newPageIndex: number) {
     setSearchParams((state) => {
@@ -681,8 +729,7 @@ export function Transactions() {
                 </TableHeader>
                 <TableBody>
                   {activeTab !== 'transfers' &&
-                    transactionsResult &&
-                    transactionsResult.data.transactions.transactions.map(
+                    displayTransactions.map(
                       (transaction: any) => {
                         return (
                           <TransactionTableRow

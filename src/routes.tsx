@@ -16,6 +16,8 @@ import { Accounts } from './pages/app/settings/accounts'
 import { CreditCards } from './pages/app/settings/credit-cards'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { Payments } from './pages/app/settings/payments'
+import { POSMachinesSettings } from './pages/app/settings/pos-machines'
+import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identifiers'
 import { Permissions } from './pages/app/settings/permissions'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
@@ -24,6 +26,7 @@ import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
 import { SignIn } from './pages/auth/sign-in'
 import { SignUp } from './pages/auth/sign-up'
+import { CashierSignIn } from './pages/auth/cashier-sign-in'
 import { DownloadsPage } from './pages/downloads'
 import { HRDashboard } from './pages/hr/dashboard'
 import { PayrollHistory } from './pages/hr/payroll/history'
@@ -154,7 +157,7 @@ export const router = createBrowserRouter([
           {
             path: 'cashier',
             element: (
-              <ModuleGuard module="financial">
+              <ModuleGuard module="cashier">
                 <CashierDashboard />
               </ModuleGuard>
             ),
@@ -162,7 +165,7 @@ export const router = createBrowserRouter([
           {
             path: 'cashier/session/:id',
             element: (
-              <ModuleGuard module="financial">
+              <ModuleGuard module="cashier">
                 <CashierSessionDetails />
               </ModuleGuard>
             ),
@@ -188,6 +191,8 @@ export const router = createBrowserRouter([
               { path: 'accounts', element: <Accounts /> },
               { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
+              { path: 'pos-machines', element: <POSMachinesSettings /> },
+              { path: 'payment-identifiers', element: <PaymentIdentifiersSettings /> },
               { path: 'modules', element: <ModulesSettings /> },
               { path: 'permissions', element: <Permissions /> },
               { path: 'payment-config', element: <PaymentConfig /> },
@@ -216,6 +221,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'sign-in', element: <SignIn /> },
           { path: 'sign-up', element: <SignUp /> },
+          { path: 'cashier/sign-in', element: <CashierSignIn /> },
         ],
       },
     ],

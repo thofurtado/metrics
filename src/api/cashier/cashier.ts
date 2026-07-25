@@ -61,10 +61,7 @@ export async function openSession(data: {
   return response.data
 }
 
-export async function closeSession(data: {
-  reported_amounts: { payment_method_id: number; reported_amount: number }[]
-  notes?: string
-}) {
+export async function closeSession(data: { session_id: string }) {
   const response = await api.post<CashierSession>(
     '/api/cashier/session/close',
     data,
@@ -176,7 +173,32 @@ export async function updatePaymentCondition(id: number, data: any) {
   const response = await api.put(`/api/conditions/${id}`, data)
   return response.data
 }
-export async function deletePaymentCondition(id: number) {
-  const response = await api.delete(`/api/conditions/${id}`)
+export async function getMonthlyCashAudit() {
+  const response = await api.get('/api/cashier/monthly-audit')
   return response.data
+}
+
+export async function getCashierUsers() {
+  const response = await api.get<{ id: string; name: string; role: string }[]>('/api/cashier/users')
+  return response.data
+}
+
+export async function getCashierEmployees() {
+  try {
+    const response = await api.get<{ data: { id: string; name: string; role?: string }[] }>('/hr/employees?limit=100')
+    const list = response.data?.data
+    if (Array.isArray(list) && list.length > 0) return list
+  } catch (e) {}
+
+  try {
+    const response = await api.get<{ id: string; name: string; role?: string }[]>('/hr/employees/sync')
+    if (Array.isArray(response.data) && response.data.length > 0) return response.data
+  } catch (e) {}
+
+  try {
+    const response = await api.get<{ users: { id: string; name: string; role?: string }[] }>('/api/cashier/users')
+    return response.data?.users || response.data
+  } catch (e) {
+    return []
+  }
 }

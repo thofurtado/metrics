@@ -5,6 +5,7 @@ export interface SystemConfig {
   financial: boolean
   treatments: boolean
   cashier: boolean
+  cashier_default_origin?: 'Mesa' | 'Balcão' | 'Delivery'
   hr_module: boolean
   cestaBasicaValue: number
   financial_management_profile: 'ANALYTICAL' | 'OPERATIONAL'

@@ -50,6 +50,7 @@ import { AttachmentModal } from './components/attachment-modal'
 import { CreditCardDetailsDialog } from './components/credit-card-details-dialog'
 import { TransactionDetailsModal } from './components/transaction-details-modal'
 import { TransactionGroupDetailsDialog } from './components/transaction-group-details-dialog'
+import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { PaymentModal } from './payment-modal'
 
 // Interface de Transação Original do seu backend/query
@@ -68,6 +69,9 @@ interface Transaction {
   accounts: { name: string; id: string }
   transaction_group_id?: string | null
   isVirtual?: boolean
+  isCashierGroup?: boolean
+  cashier_session_id?: string
+  childTransactions?: any[]
   swipes?: any[]
   credit_card_id?: string
   treatment_id?: string | null
@@ -102,6 +106,7 @@ export function TransactionMobileCard({
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [detailsMode, setDetailsMode] = useState<'view' | 'edit'>('view')
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
+  const [openCashierDetailsModal, setOpenCashierDetailsModal] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
   const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
   const [openRevertAlert, setOpenRevertAlert] = useState(false)
@@ -110,7 +115,7 @@ export function TransactionMobileCard({
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
     sectorId: transactions.sectors?.id || null,
-    accountId: transactions.accounts.id,
+    accountId: transactions.accounts?.id || '',
   }
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
@@ -229,6 +234,8 @@ export function TransactionMobileCard({
         onClick={() => {
           if (transactions.isVirtual) {
             setOpenCreditCardDialog(true)
+          } else if (transactions.isCashierGroup) {
+            setOpenCashierDetailsModal(true)
           } else {
             setDetailsMode('view')
             setOpenDetailsModal(true)
@@ -295,7 +302,7 @@ export function TransactionMobileCard({
           </span>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              {transactions.accounts.name}
+              {transactions.accounts?.name || 'Caixa Central'}
             </span>
             {transactions.sectors && (
               <>
@@ -309,16 +316,17 @@ export function TransactionMobileCard({
         </div>
 
         <div className="mt-1 flex items-center gap-2">
-          {transactions.isVirtual ? (
+          {transactions.isVirtual || transactions.isCashierGroup ? (
             <Button
               size="sm"
               className="h-8 flex-1 rounded-lg bg-amber-600 text-xs font-black uppercase tracking-widest text-white hover:bg-amber-700"
               onClick={(e) => {
                 e.stopPropagation()
-                setOpenCreditCardDialog(true)
+                if (transactions.isVirtual) setOpenCreditCardDialog(true)
+                if (transactions.isCashierGroup) setOpenCashierDetailsModal(true)
               }}
             >
-              Ver Fatura
+              {transactions.isVirtual ? 'Ver Fatura' : 'Ver Caixa'}
             </Button>
           ) : transactions.confirmed ? (
             <Button
@@ -405,6 +413,14 @@ export function TransactionMobileCard({
         />
       )}
 
+      {transactions.isCashierGroup && (
+        <CashierBatchDetailsModal
+          open={openCashierDetailsModal}
+          onOpenChange={setOpenCashierDetailsModal}
+          sessionId={transactions.cashier_session_id!}
+        />
+      )}
+
       {transactions.treatment_id && (
         <Dialog open={openTreatmentModal} onOpenChange={setOpenTreatmentModal}>
           <TreatmentDetails
@@ -468,12 +484,13 @@ export function TransactionTableRow({
   const [openCreditCardDialog, setOpenCreditCardDialog] = useState(false)
   const [openAttachmentModal, setOpenAttachmentModal] = useState(false)
   const [openTreatmentModal, setOpenTreatmentModal] = useState(false)
+  const [openCashierDetailsModal, setOpenCashierDetailsModal] = useState(false)
 
   // --- MAPEAMENTO DE DADOS PARA O MODAL ---
   const paymentTransaction: PaymentTransaction = {
     ...transactions,
     sectorId: transactions.sectors?.id || null,
-    accountId: transactions.accounts.id,
+    accountId: transactions.accounts?.id || '',
   }
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
@@ -706,12 +723,14 @@ export function TransactionTableRow({
           aria-label={
             transactions.isVirtual
               ? 'Ver Fatura'
-              : transactions.confirmed
-                ? 'Reverter Pagamento'
-                : 'Registrar pagamento'
+              : transactions.isCashierGroup
+                ? 'Ver Caixa'
+                : transactions.confirmed
+                  ? 'Reverter Pagamento'
+                  : 'Registrar pagamento'
           }
           className={`mx-auto inline-flex w-[110px] items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
-            transactions.isVirtual
+            transactions.isVirtual || transactions.isCashierGroup
               ? 'border-transparent bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-600'
               : transactions.confirmed
                 ? 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
@@ -722,6 +741,8 @@ export function TransactionTableRow({
           onClick={() => {
             if (transactions.isVirtual) {
               setOpenCreditCardDialog(true)
+            } else if (transactions.isCashierGroup) {
+              setOpenCashierDetailsModal(true)
             } else if (transactions.confirmed) {
               setOpenRevertAlert(true)
             } else {
@@ -739,6 +760,11 @@ export function TransactionTableRow({
             <>
               <Eye className="h-3 w-3" />
               Ver Fatura
+            </>
+          ) : transactions.isCashierGroup ? (
+            <>
+              <Eye className="h-3 w-3" />
+              Ver Caixa
             </>
           ) : transactions.confirmed ? (
             <>
@@ -849,7 +875,7 @@ export function TransactionTableRow({
 
       <TableCell className="hidden px-4 py-5 text-center xl:table-cell">
         <span className="inline-flex items-center rounded-lg border border-slate-200/50 bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:border-slate-700/50 dark:bg-slate-800">
-          {transactions.accounts.name}
+          {transactions.accounts?.name || 'Caixa Central'}
         </span>
       </TableCell>
 
@@ -1046,6 +1072,14 @@ export function TransactionTableRow({
             open={openCreditCardDialog}
             onOpenChange={setOpenCreditCardDialog}
             virtualTransaction={transactions as any}
+          />
+        )}
+
+        {transactions.isCashierGroup && (
+          <CashierBatchDetailsModal
+            open={openCashierDetailsModal}
+            onOpenChange={setOpenCashierDetailsModal}
+            sessionId={transactions.cashier_session_id!}
           />
         )}
 
