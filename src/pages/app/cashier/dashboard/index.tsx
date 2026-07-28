@@ -14,7 +14,6 @@ import {
   Eye,
   X,
   ArrowRight,
-  AlertTriangle,
 } from 'lucide-react'
 
 import { getSessions, openSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
@@ -76,13 +75,7 @@ export function CashierDashboard() {
     },
   })
 
-  // Sessao ativa do usuario logado (OPEN ou PENDING)
-  const myCashierSession = useMemo(() => {
-    if (!profile || isAdmin) return null
-    return sessions.find((s: any) =>
-      s.user_id === profile.id && (s.status === 'OPEN' || s.status === 'PENDING')
-    ) || null
-  }, [sessions, profile, isAdmin])
+
 
   const nomesMeses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -166,15 +159,8 @@ export function CashierDashboard() {
         opened_at,
         ...(isAdmin && selectedUser ? { user_id: selectedUser } : {})
       } as any)
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Erro ao abrir caixa.'
-      const existingId = error?.response?.data?.existingSessionId
-      if (existingId) {
-        const ir = window.confirm(`${msg}\n\nDeseja ir para o caixa existente?`)
-        if (ir) navigate(`/cashier/session/${existingId}`)
-      } else {
-        alert(msg)
-      }
+    } catch (error) {
+      alert('Erro ao abrir caixa.')
     }
   }
 
@@ -268,100 +254,63 @@ export function CashierDashboard() {
             <span>Abrir Novo Caixa</span>
           </div>
 
-          {/* Banner de aviso: CASHIER já tem caixa ativo */}
-          {!isAdmin && myCashierSession ? (
-            <div className="flex flex-col gap-3">
-              {myCashierSession.status === 'OPEN' ? (
-                <div className="rounded-xl border border-blue-300 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
-                  <p className="text-xs font-black text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-1.5">
-                    <AlertTriangle size={14} /> Você já possui um caixa aberto
-                  </p>
-                  <p className="text-[11px] text-blue-700 dark:text-blue-400 mb-3">
-                    Finalize o caixa atual antes de abrir um novo.
-                  </p>
-                  <button
-                    onClick={() => navigate(`/cashier/session/${myCashierSession.id}`)}
-                    className="w-full h-9 rounded-xl bg-blue-600 text-xs font-black uppercase text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <ArrowRight size={14} /> Ir para Meu Caixa
-                  </button>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
-                  <p className="text-xs font-black text-amber-800 dark:text-amber-300 mb-1 flex items-center gap-1.5">
-                    <AlertTriangle size={14} /> Caixa aguardando conferência
-                  </p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mb-3">
-                    Seu caixa já foi enviado para conferência. Aguarde a aprovação do administrador antes de abrir um novo.
-                  </p>
-                  <button
-                    onClick={() => navigate(`/cashier/session/${myCashierSession.id}`)}
-                    className="w-full h-9 rounded-xl bg-amber-500 text-xs font-black uppercase text-white hover:bg-amber-600 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <Eye size={14} /> Ver Caixa em Conferência
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {isAdmin && (
-                <div className="sm:col-span-3">
-                  <select
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
-                  >
-                    <option value="">Selecione o Operador (Você mesmo)</option>
-                    {possibleUsers.map((u: any) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              
-              <div className="col-span-1">
-                <input
-                  type="date"
-                  value={dataAbertura}
-                  onChange={(e) => setDataAbertura(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
-                />
-              </div>
-
-              <div className="col-span-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {isAdmin && (
+              <div className="sm:col-span-3">
                 <select
-                  value={periodo}
-                  onChange={(e) => setPeriodo(e.target.value)}
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
                 >
-                  <option value="Almoço">Período: Almoço</option>
-                  <option value="Jantar">Período: Jantar</option>
-                  <option value="Dia Todo">Período: Dia Todo</option>
+                  <option value="">Selecione o Operador (Você mesmo)</option>
+                  {possibleUsers.map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
                 </select>
               </div>
-
-              <div className="col-span-1">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={saldoAbertura}
-                  onChange={(e) => setSaldoAbertura(e.target.value)}
-                  placeholder="Abertura R$ 0.00"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 transition-all"
-                />
-              </div>
-
-              <div className="sm:col-span-3 mt-1">
-                <button
-                  onClick={handleCriar}
-                  className="w-full h-[40px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <Plus size={14} /> Iniciar Expediente
-                </button>
-              </div>
+            )}
+            
+            <div className="col-span-1">
+              <input
+                type="date"
+                value={dataAbertura}
+                onChange={(e) => setDataAbertura(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+              />
             </div>
-          )}
+
+            <div className="col-span-1">
+              <select
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+              >
+                <option value="Almoço">Período: Almoço</option>
+                <option value="Jantar">Período: Jantar</option>
+                <option value="Dia Todo">Período: Dia Todo</option>
+              </select>
+            </div>
+
+            <div className="col-span-1">
+              <input
+                type="number"
+                step="0.01"
+                value={saldoAbertura}
+                onChange={(e) => setSaldoAbertura(e.target.value)}
+                placeholder="Abertura R$ 0.00"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 transition-all"
+              />
+            </div>
+
+            <div className="sm:col-span-3 mt-1">
+              <button
+                onClick={handleCriar}
+                className="w-full h-[40px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Plus size={14} /> Iniciar Expediente
+              </button>
+            </div>
+          </div>
         </div>
 
 
