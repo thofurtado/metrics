@@ -71,6 +71,14 @@ export async function closeSession(data: { session_id: string }) {
   return response.data
 }
 
+export async function submitSession(data: { session_id: string }) {
+  const response = await api.post<CashierSession>(
+    '/api/cashier/session/submit',
+    data,
+  )
+  return response.data
+}
+
 export interface CreateEntryParams {
   session_id: string
   origin?: string

@@ -35,6 +35,7 @@ interface DetalheLoteProps {
   onEditarAbertura: (novoValor: number) => void
   onAlterarStatus: (novoStatus: any) => void
   onConferirECaixaConferido?: () => void
+  onEnviarParaConferencia?: () => void
   isAdmin?: boolean
 }
 
@@ -48,6 +49,7 @@ export function DetalheLote({
   onEditarAbertura,
   onAlterarStatus,
   onConferirECaixaConferido,
+  onEnviarParaConferencia,
   isAdmin = true,
 }: DetalheLoteProps) {
   const [filtro, setFiltro] = useState({ mesa: '', banco: '', forma: '' })
@@ -325,20 +327,57 @@ export function DetalheLote({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Badge quando conferido */}
           {(loteAtivo.status === 'conferido' || loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'AUDITED') ? (
             <div className="flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300">
               <CheckCircle2 size={16} /> Caixa Conferido
             </div>
           ) : (
-            onConferirECaixaConferido && (
-              <button
-                onClick={onConferirECaixaConferido}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
-              >
-                <CheckCircle2 size={18} />
-                <span>Marcar como Conferido</span>
-              </button>
-            )
+            <>
+              {/* Botão CASHIER: Enviar para Conferência (só quando OPEN) */}
+              {!isAdmin && onEnviarParaConferencia && (
+                loteAtivo.status === 'ABERTO' || loteAtivo.status === 'OPEN' ? (
+                  <button
+                    onClick={onEnviarParaConferencia}
+                    className="flex items-center gap-2 rounded-xl bg-amber-500 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-amber-600 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+                  >
+                    <Clock size={18} />
+                    <span>Enviar para Conferência</span>
+                  </button>
+                ) : (
+                  // Status PENDING: já enviado, mostra apenas badge informativo
+                  <div className="flex items-center gap-1.5 rounded-xl bg-amber-100 px-4 py-2.5 text-xs font-black uppercase text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300">
+                    <Clock size={16} /> Aguardando Conferência
+                  </div>
+                )
+              )}
+
+              {/* Botões ADMIN: pode enviar para conferência E marcar como conferido */}
+              {isAdmin && (
+                <>
+                  {/* Admin também pode enviar para conferência quando OPEN */}
+                  {(loteAtivo.status === 'ABERTO' || loteAtivo.status === 'OPEN') && onEnviarParaConferencia && (
+                    <button
+                      onClick={onEnviarParaConferencia}
+                      className="flex items-center gap-2 rounded-xl bg-amber-500 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-amber-600 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+                    >
+                      <Clock size={18} />
+                      <span>Enviar para Conferência</span>
+                    </button>
+                  )}
+                  {/* Admin: Marcar como conferido (quando OPEN ou PENDING) */}
+                  {onConferirECaixaConferido && (
+                    <button
+                      onClick={onConferirECaixaConferido}
+                      className="flex items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
+                    >
+                      <CheckCircle2 size={18} />
+                      <span>Marcar como Conferido</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </>
           )}
 
           <button

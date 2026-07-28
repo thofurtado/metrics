@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession } from '@/api/cashier/cashier'
+import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession, submitSession } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { getPOSMachines } from '@/api/pos-machines'
 import { DetalheLote } from '../../components/DetalheLote'
@@ -67,6 +67,17 @@ export function CashierSessionDetails() {
         },
         onError: (err: any) => {
             toast.error(err?.response?.data?.message || 'Erro ao finalizar o caixa.')
+        }
+    })
+
+    const { mutateAsync: submitForReview } = useMutation({
+        mutationFn: submitSession,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+            queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Erro ao enviar para conferência.')
         }
     })
 
@@ -328,10 +339,41 @@ export function CashierSessionDetails() {
             queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
             queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
             queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
-            alert('Caixa conferido e enviado ao Financeiro / RH com sucesso!')
+            toast.success('Caixa conferido e enviado ao Financeiro / RH com sucesso!')
         } catch (err: any) {
             console.error('Erro ao auditar caixa:', err)
-            alert(err?.response?.data?.message || 'Erro ao conferir caixa.')
+            toast.error(err?.response?.data?.message || 'Erro ao conferir caixa.')
+        }
+    }
+
+    // CASHIER: envia para conferência (OPEN → PENDING) e é deslogado
+    const handleEnviarParaConferenciaComoOperador = async () => {
+        if (!id) return
+        try {
+            await submitForReview({ session_id: id })
+            toast.success('Caixa enviado para conferência!')
+            // Desloga o operador de caixa após enviar
+            localStorage.removeItem('token')
+            localStorage.removeItem('refreshToken')
+            window.dispatchEvent(new Event('auth-change'))
+            navigate('/cashier/sign-in', { replace: true })
+        } catch (err: any) {
+            console.error('Erro ao enviar para conferência:', err)
+            toast.error(err?.response?.data?.message || 'Erro ao enviar para conferência.')
+        }
+    }
+
+    // ADMIN: envia para conferência sem deslogar
+    const handleEnviarParaConferenciaComoAdmin = async () => {
+        if (!id) return
+        try {
+            await submitForReview({ session_id: id })
+            toast.success('Caixa enviado para conferência!')
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+            queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
+        } catch (err: any) {
+            console.error('Erro ao enviar para conferência:', err)
+            toast.error(err?.response?.data?.message || 'Erro ao enviar para conferência.')
         }
     }
 
@@ -346,7 +388,12 @@ export function CashierSessionDetails() {
                 onEditarLancamento={handleEditarLancamento}
                 onEditarAbertura={() => {}}
                 onAlterarStatus={handleAlterarStatus}
-                onConferirECaixaConferido={handleConferirECaixaConferido}
+                onConferirECaixaConferido={isAdmin ? handleConferirECaixaConferido : undefined}
+                onEnviarParaConferencia={
+                    session.status === 'OPEN'
+                        ? (isAdmin ? handleEnviarParaConferenciaComoAdmin : handleEnviarParaConferenciaComoOperador)
+                        : undefined
+                }
                 isAdmin={isAdmin}
             />
         </div>
