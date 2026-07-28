@@ -13,6 +13,7 @@ import {
   Banknote,
   Eye,
   AlertTriangle,
+  X,
   ArrowRight,
 } from 'lucide-react'
 
