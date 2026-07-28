@@ -136,36 +136,57 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const paraQuemInputRef = useRef<HTMLInputElement>(null);
     const submitBtnRef = useRef<HTMLButtonElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const motivoInputRef = useRef<HTMLInputElement>(null);
 
-    // Monta lista dinâmica de FORMAS_PAGAMENTO
     const FORMAS_PAGAMENTO = useMemo(() => {
         const base = [
-            { key: '1', name: 'Dinheiro', display: '1 - Dinheiro' },
-            { key: '2', name: 'PIX', display: '2 - PIX' },
-            { key: '3', name: 'Débito', display: '3 - Débito' },
-            { key: '4', name: 'Crédito', display: '4 - Crédito' },
-            { key: '5', name: 'Voucher', display: '5 - Voucher' },
+            { key: '', name: 'Dinheiro', display: '' },
+            { key: '', name: 'PIX', display: '' },
+            { key: '', name: 'Débito', display: '' },
+            { key: '', name: 'Crédito', display: '' },
+            { key: '', name: 'Voucher', display: '' },
         ];
 
         if (dbIdentifiers && dbIdentifiers.length > 0) {
             dbIdentifiers.forEach((idItem, idx) => {
-                const numKey = (6 + idx).toString();
                 base.push({
-                    key: numKey,
+                    key: '',
                     name: idItem.name,
-                    display: `${numKey} - ${idItem.name}`,
+                    display: '',
                 });
             });
         } else {
             base.push(
-                { key: '6', name: 'Funcionário', display: '6 - Funcionário' },
-                { key: '7', name: 'Pró-labore', display: '7 - Pró-labore' },
-                { key: '8', name: 'Cortesia', display: '8 - Cortesia' },
-                { key: '9', name: 'Permuta', display: '9 - Permuta' }
+                { key: '', name: 'Funcionário', display: '' },
+                { key: '', name: 'Pró-labore', display: '' },
+                { key: '', name: 'Cortesia', display: '' },
+                { key: '', name: 'Permuta', display: '' }
             );
         }
 
-        return base;
+        const savedOrder = localStorage.getItem('metrics-payment-forms-order');
+        if (savedOrder) {
+            try {
+                const orderArray = JSON.parse(savedOrder);
+                base.sort((a, b) => {
+                    const idxA = orderArray.indexOf(a.name);
+                    const idxB = orderArray.indexOf(b.name);
+                    if (idxA === -1 && idxB === -1) return 0;
+                    if (idxA === -1) return 1;
+                    if (idxB === -1) return -1;
+                    return idxA - idxB;
+                });
+            } catch (e) {}
+        }
+
+        return base.map((item, index) => {
+            const numKey = (index + 1).toString();
+            return {
+                ...item,
+                key: numKey,
+                display: `${numKey} - ${item.name}`
+            };
+        });
     }, [dbIdentifiers]);
 
     const isAcessoDevedor = useMemo(() => {
@@ -223,10 +244,11 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const normalizeCategory = (str: string) =>
         str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
-    // Monta lista dinâmica de BANCOS_NUMERADOS
     const BANCOS_NUMERADOS = useMemo(() => {
         const formaNorm = normalizeCategory(forma);
         
+        let base = [];
+
         if (dbMachines && dbMachines.length > 0) {
             const matchingMachines = dbMachines.filter(m => {
                 if (!m.rates || m.rates.length === 0) return true;
@@ -235,28 +257,50 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
             const machinesToUse = matchingMachines.length > 0 ? matchingMachines : dbMachines;
 
-            return machinesToUse.map((m, idx) => ({
-                key: (idx + 1).toString(),
+            base = machinesToUse.map(m => ({
+                key: '',
                 name: m.name,
-                display: `${idx + 1} - ${m.name}`
+                display: ''
             }));
-        }
-
-        if (dbAccounts && dbAccounts.accounts && dbAccounts.accounts.length > 0) {
-            return dbAccounts.accounts.map((acc, idx) => ({
-                key: (idx + 1).toString(),
+        } else if (dbAccounts && dbAccounts.accounts && dbAccounts.accounts.length > 0) {
+            base = dbAccounts.accounts.map(acc => ({
+                key: '',
                 name: acc.name,
-                display: `${idx + 1} - ${acc.name}`
+                display: ''
             }));
+        } else {
+            base = [
+                { key: '', name: 'SAFRA', display: '' },
+                { key: '', name: 'PAGBANK', display: '' },
+                { key: '', name: 'CIELO', display: '' },
+                { key: '', name: 'IFOOD', display: '' },
+                { key: '', name: 'STONE', display: '' },
+            ];
         }
 
-        return [
-            { key: '1', name: 'SAFRA', display: '1 - SAFRA' },
-            { key: '2', name: 'PAGBANK', display: '2 - PAGBANK' },
-            { key: '3', name: 'CIELO', display: '3 - CIELO' },
-            { key: '4', name: 'IFOOD', display: '4 - IFOOD' },
-            { key: '5', name: 'STONE', display: '5 - STONE' },
-        ];
+        const savedOrder = localStorage.getItem('metrics-payment-conditions-order');
+        if (savedOrder) {
+            try {
+                const orderArray = JSON.parse(savedOrder);
+                base.sort((a, b) => {
+                    const idxA = orderArray.indexOf(a.name);
+                    const idxB = orderArray.indexOf(b.name);
+                    if (idxA === -1 && idxB === -1) return 0;
+                    if (idxA === -1) return 1;
+                    if (idxB === -1) return -1;
+                    return idxA - idxB;
+                });
+            } catch (e) {}
+        }
+
+        return base.map((item, index) => {
+            const numKey = (index + 1).toString();
+            return {
+                ...item,
+                key: numKey,
+                display: `${numKey} - ${item.name}`
+            };
+        });
     }, [forma, dbMachines, dbAccounts]);
 
     const formatCurrency = (value: string) => {
@@ -312,15 +356,17 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         } else if (newIsContaCasa && tipo === 'venda') {
             setBanco('CONTA DA CASA');
             setTimeout(() => {
-                setIsDropdownOpen(true);
-                searchInputRef.current?.focus();
+                const isOperacionalLocal = ['pro-labore', 'cortesia'].some(p => normForma.includes(p)) || (dbIdentifiers && dbIdentifiers.some(i => normalizeStr(i.name) === normForma));
+                if (isOperacionalLocal) {
+                    motivoInputRef.current?.focus();
+                } else {
+                    setIsDropdownOpen(true);
+                    searchInputRef.current?.focus();
+                }
             }, 80);
         } else {
             setTimeout(() => {
                 bancoSelectRef.current?.focus();
-                try {
-                    bancoSelectRef.current?.showPicker();
-                } catch (e) {}
             }, 80);
         }
     };
@@ -380,9 +426,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         if (e.key === 'Enter') {
             e.preventDefault();
             formaSelectRef.current?.focus();
-            try {
-                formaSelectRef.current?.showPicker();
-            } catch (err) {}
         }
     };
 
@@ -400,7 +443,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         if (tipo === 'venda' && incluirCaixinha) {
             const tipVal = parseCurrencyToFloat(caixinhaValor);
             if (tipVal > 0 && caixinhaParaQuem.trim()) {
-                finalIdentificacao = `${finalIdentificacao} [Gorjeta: R$ ${tipVal.toFixed(2)} | ${caixinhaParaQuem.trim()}]`;
+                finalIdentificacao = `${finalIdentificacao} [Caixinha: R$ ${tipVal.toFixed(2)} | ${caixinhaParaQuem.trim()}]`;
             }
         }
 
@@ -476,7 +519,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             icon: <Plus size={18} />
         },
         caixinha: {
-            title: "Lançar Gorjeta / Caixinha",
+            title: "Lançar Caixinha",
             cardStyle: "bg-purple-50/40 border-purple-200",
             btnStyle: "bg-purple-600 hover:bg-purple-700",
             btnLabel: "Lançar Caixinha",
@@ -524,13 +567,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 >
                     <Plus size={14} /> Suprimento (Entrada)
                 </button>
-                <button
-                    type="button"
-                    onClick={() => { setTipo('caixinha'); setForma('Dinheiro'); setTimeout(() => valorInputRef.current?.focus(), 50); }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shrink-0 ${tipo === 'caixinha' ? 'bg-purple-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
-                >
-                    <Plus size={14} /> Caixinha (Gorjeta)
-                </button>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -572,6 +608,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     <div className="flex items-center gap-1 text-[8px]">
                                         <button
                                             type="button"
+                                            tabIndex={-1}
                                             onClick={() => setTipoOrigem('Mesa')}
                                             className={`px-1 rounded ${tipoOrigem === 'Mesa' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                             title="Mesa (Atalho: M)"
@@ -580,6 +617,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         </button>
                                         <button
                                             type="button"
+                                            tabIndex={-1}
                                             onClick={() => setTipoOrigem('Balcão')}
                                             className={`px-1 rounded ${tipoOrigem === 'Balcão' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                             title="Balcão (Atalho: B)"
@@ -588,6 +626,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         </button>
                                         <button
                                             type="button"
+                                            tabIndex={-1}
                                             onClick={() => setTipoOrigem('Delivery')}
                                             className={`px-1 rounded ${tipoOrigem === 'Delivery' ? 'bg-blue-100 text-blue-600 font-black' : 'text-zinc-400'}`}
                                             title="Delivery (Atalho: D)"
@@ -619,11 +658,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     value={forma}
                                     onChange={e => {
                                         advanceFromForma(e.target.value);
-                                    }}
-                                    onFocus={() => {
-                                        try {
-                                            formaSelectRef.current?.showPicker();
-                                        } catch (e) {}
                                     }}
                                     onKeyDown={handleFormaKeyDown}
                                     className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
@@ -772,6 +806,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <input
+                                            ref={motivoInputRef}
                                             type="text"
                                             value={consumidorCasa}
                                             onChange={e => {
@@ -800,13 +835,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         disabled={forma === 'Dinheiro'}
                                         value={banco}
                                         onChange={e => advanceFromBanco(e.target.value)}
-                                        onFocus={() => {
-                                            if (forma !== 'Dinheiro') {
-                                                try {
-                                                    bancoSelectRef.current?.showPicker();
-                                                } catch (e) {}
-                                            }
-                                        }}
                                         onKeyDown={handleBancoKeyDown}
                                         className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
                                     >
@@ -820,44 +848,6 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     </select>
                                 </div>
                             )}
-
-                            {/* LINKED CAIXINHA TOGGLE & INPUTS */}
-                            <div className="col-span-2 w-full flex flex-col gap-2 mt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setIncluirCaixinha(!incluirCaixinha)}
-                                    className={`w-fit px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${incluirCaixinha ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100'}`}
-                                >
-                                    💖 {incluirCaixinha ? 'Remover Gorjeta' : 'Incluir Gorjeta / Caixinha'}
-                                </button>
-
-                                {incluirCaixinha && (
-                                    <div className="grid grid-cols-2 gap-3 p-3 rounded-xl border border-purple-100 bg-purple-50/20 animate-in fade-in slide-in-from-top-1 duration-200">
-                                        <div>
-                                            <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Valor da Gorjeta (R$)</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={caixinhaValor}
-                                                onChange={e => setCaixinhaValor(formatCurrency(e.target.value))}
-                                                placeholder="0,00"
-                                                className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={caixinhaParaQuem}
-                                                onChange={e => setCaixinhaParaQuem(e.target.value)}
-                                                placeholder="Ex: João, Garçons..."
-                                                className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </>
                     )}
 
@@ -897,7 +887,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     {tipo === 'caixinha' && (
                         <>
                             <div className="col-span-2 md:flex-1">
-                                <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a gorjeta?</label>
+                                <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a caixinha?</label>
                                 <input
                                     ref={paraQuemInputRef}
                                     type="text"
@@ -943,6 +933,47 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                         </button>
                     </div>
                 </div>
+
+                {/* LINKED CAIXINHA TOGGLE & INPUTS - MOVIDO PARA FORA DO GRID PRINCIPAL */}
+                {tipo === 'venda' && (
+                    <div className="w-full flex flex-col gap-2">
+                        <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => setIncluirCaixinha(!incluirCaixinha)}
+                            className={`w-fit px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${incluirCaixinha ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100'}`}
+                        >
+                            💖 {incluirCaixinha ? 'Remover Caixinha' : 'Incluir Caixinha'}
+                        </button>
+
+                        {incluirCaixinha && (
+                            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl border border-purple-100 bg-purple-50/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div>
+                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Valor da Caixinha (R$)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={caixinhaValor}
+                                        onChange={e => setCaixinhaValor(formatCurrency(e.target.value))}
+                                        placeholder="0,00"
+                                        className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black uppercase text-purple-600 block mb-1 ml-1">Para quem é a caixinha?</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={caixinhaParaQuem}
+                                        onChange={e => setCaixinhaParaQuem(e.target.value)}
+                                        placeholder="Ex: João, Garçons..."
+                                        className="w-full border border-purple-200 rounded-xl p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </form>
         </div>
     );

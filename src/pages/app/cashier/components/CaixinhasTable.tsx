@@ -19,7 +19,6 @@ export function CaixinhasTable({ lancamentos = [] }: { lancamentos?: any[] }) {
       <div className="flex items-center justify-between border-b border-pink-100 bg-pink-50 px-6 py-4">
         <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-pink-600">
           <Heart size={14} fill="currentColor" /> Controle de Caixinhas
-          (Gorjetas)
         </h3>
         <span className="rounded-full bg-pink-600 px-3 py-1 font-mono text-xs font-black text-white">
           Total: R$ {totalGeral.toFixed(2)}

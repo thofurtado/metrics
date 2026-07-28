@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { PaymentShortcutsOrganizer } from './components/payment-shortcuts-organizer'
 
 const createPaymentSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -113,7 +114,9 @@ export function Payments() {
           </p>
         </div>
 
-        <Dialog>
+        <div className="flex items-center gap-2">
+          <PaymentShortcutsOrganizer />
+          <Dialog>
           <DialogTrigger asChild>
             <Button
               size="lg"
@@ -213,6 +216,7 @@ export function Payments() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="flex flex-col items-start justify-between gap-4 rounded-xl border bg-muted/20 p-4 sm:flex-row sm:items-center">

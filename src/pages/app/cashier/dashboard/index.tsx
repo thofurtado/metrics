@@ -12,7 +12,7 @@ import {
   User,
   Banknote,
   Eye,
-  X,
+  AlertTriangle,
   ArrowRight,
 } from 'lucide-react'
 

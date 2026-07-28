@@ -641,11 +641,6 @@ export function DetalheLote({
                             <td className="p-4">
                               <div className="flex flex-col gap-0.5">
                                 <span className="font-bold">{renderOrigemLabel(l)}</span>
-                                {l.valorCaixinha > 0 && !l.isCaixinha && (
-                                  <span className="text-[10px] text-pink-500 font-black flex items-center gap-1 select-none">
-                                    💖 Gorjeta: R$ {l.valorCaixinha.toFixed(2)} {l.paraQuem ? `(${l.paraQuem})` : ''}
-                                  </span>
-                                )}
                               </div>
                             </td>
                             <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
@@ -654,7 +649,7 @@ export function DetalheLote({
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
                               {l.formaPagamento}{' '}
                               {l.valorCaixinha > 0 && (
-                                <span className="ml-1 text-pink-500">♥</span>
+                                <span className="ml-1 text-pink-500 cursor-help" title={`Caixinha: R$ ${l.valorCaixinha.toFixed(2)} ${l.paraQuem ? `(${l.paraQuem})` : ''}`}>♥</span>
                               )}
                             </td>
                             <td className="p-4 text-right font-mono font-black text-zinc-900">
