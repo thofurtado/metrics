@@ -136,6 +136,19 @@ export async function auditSession(id: string) {
   return response.data
 }
 
+export interface ResolveDivergenceParams {
+  session_id: string
+  amount: number
+  action: 'JUSTIFY' | 'DESTINATION'
+  reason: string
+  account_id?: string
+}
+
+export async function resolveDivergence(data: ResolveDivergenceParams) {
+  const response = await api.post('/api/cashier/session/resolve-divergence', data)
+  return response.data
+}
+
 // Config APIs
 export async function getPaymentMethods() {
   const response = await api.get<PaymentMethod[]>('/api/payment-methods')

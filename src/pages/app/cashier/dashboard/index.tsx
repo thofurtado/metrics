@@ -19,6 +19,7 @@ import {
 
 import { getSessions, openSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
+import { DivergenceModal } from './components/divergence-modal'
 import { PageHeader } from '@/components/page-header'
 
 export function CashierDashboard() {
@@ -32,8 +33,10 @@ export function CashierDashboard() {
   const [dataAbertura, setDataAbertura] = useState(
     `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`
   )
-  const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
-  const [anoVisualizacao, setAnoVisualizacao] = useState(dataAtual.getFullYear())
+  const [mesVisualizacao, setMesVisualizacao] = useState(new Date().getMonth())
+  const [anoVisualizacao, setAnoVisualizacao] = useState(new Date().getFullYear())
+
+  const [divergenceModalSession, setDivergenceModalSession] = useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
 
   const token = localStorage.getItem('token')
@@ -439,6 +442,9 @@ export function CashierDashboard() {
                 if (!e.is_withdrawal) {
                   const method = e.payment_method || 'Dinheiro'
                   totalsByMethod[method] = (totalsByMethod[method] || 0) + amt
+                } else if (e.type === 'SANGRIA_DESTINO') {
+                  const dest = e.bank || 'Caixa Central'
+                  totalsByMethod[dest] = (totalsByMethod[dest] || 0) + amt
                 }
               }
 
@@ -620,9 +626,12 @@ export function CashierDashboard() {
                             <td className="p-3 text-center">
                               {item.proximaAbertura > 0 ? (
                                 isDivergent ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400">
+                                  <button
+                                    onClick={() => setDivergenceModalSession(item)}
+                                    className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-200 transition-colors"
+                                  >
                                     <AlertTriangle size={11} /> Dif: R$ {item.divergencia.toFixed(2)}
-                                  </span>
+                                  </button>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                                     <CheckCircle2 size={11} /> Batendo
@@ -673,6 +682,13 @@ export function CashierDashboard() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE RESOLUÇÃO DE DIVERGÊNCIA */}
+      <DivergenceModal
+        isOpen={!!divergenceModalSession}
+        onClose={() => setDivergenceModalSession(null)}
+        session={divergenceModalSession}
+      />
     </div>
   )
 }

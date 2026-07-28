@@ -373,6 +373,12 @@ export function SummaryCards({
                     <span className="font-mono font-bold">{safeGet(resumo, `${banco}.caixinha`).toFixed(2)}</span>
                   </div>
                 )}
+                {safeGet(resumo, `${banco}.recebimentoCaixa`) > 0 && (
+                  <div className="flex justify-between text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-1 py-0.5 rounded">
+                    <span className="flex items-center gap-1"><Banknote size={10} /> Depósito Dinheiro</span>
+                    <span className="font-mono font-bold">+ R$ {safeGet(resumo, `${banco}.recebimentoCaixa`).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="mt-2 flex flex-col gap-1 border-t border-slate-100 pt-2 dark:border-slate-900">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] font-black uppercase text-slate-400">Total (Bruto)</span>

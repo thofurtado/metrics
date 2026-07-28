@@ -195,6 +195,14 @@ export function CashierSessionDetails() {
 
             if (entry.is_withdrawal) {
                 res.CAIXA.totalSaidas += amount
+                if (entry.type === 'SANGRIA_DESTINO') {
+                    const destBank = bank || 'CAIXA CENTRAL'
+                    if (!res[destBank]) {
+                        res[destBank] = { PIX: 0, Débito: 0, Crédito: 0, Voucher: 0, caixinha: 0, total: 0, juros: 0, recebimentoCaixa: 0 }
+                    }
+                    res[destBank].recebimentoCaixa = (res[destBank].recebimentoCaixa || 0) + amount
+                    res[destBank].total += amount
+                }
                 continue
             }
 
