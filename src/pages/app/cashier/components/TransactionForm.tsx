@@ -656,6 +656,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                 <select
                                     ref={formaSelectRef}
                                     value={forma}
+                                    onFocus={e => {
+                                        try { e.target.showPicker(); } catch (err) {}
+                                    }}
                                     onChange={e => {
                                         advanceFromForma(e.target.value);
                                     }}
@@ -834,6 +837,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                         ref={bancoSelectRef}
                                         disabled={forma === 'Dinheiro'}
                                         value={banco}
+                                        onFocus={e => {
+                                            try { e.target.showPicker(); } catch (err) {}
+                                        }}
                                         onChange={e => advanceFromBanco(e.target.value)}
                                         onKeyDown={handleBancoKeyDown}
                                         className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white disabled:opacity-60 focus:ring-2 focus:ring-blue-500 cursor-pointer"
