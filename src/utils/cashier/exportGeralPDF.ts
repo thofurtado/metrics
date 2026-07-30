@@ -1,16 +1,36 @@
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
 
+const formatarData = (dStr: string) => {
+  if (!dStr) return '--/--/----'
+  try {
+    const d = new Date(dStr)
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(d)
+    }
+  } catch {}
+  return dStr
+}
+
 export const exportarRelatorioGeralPDF = (lotes: any[]) => {
+  if (!lotes || !Array.isArray(lotes) || lotes.length === 0) {
+    throw new Error('Nenhum lote para exportar.')
+  }
+
   // PDF em modo Paisagem (Landscape) para caber todas as colunas com folga
   const doc = new jsPDF('l', 'mm', 'a4')
 
   // Ordenação: Data decrescente (mais recente primeiro)
   const lotesOrdenados = [...lotes].sort((a, b) => {
-    const dataA = new Date(a.dataReferencia).getTime()
-    const dataB = new Date(b.dataReferencia).getTime()
+    const dataA = new Date(a.dataReferencia || a.opened_at || 0).getTime()
+    const dataB = new Date(b.dataReferencia || b.opened_at || 0).getTime()
     if (dataA !== dataB) return dataB - dataA
-    return a.periodo === 'Jantar' ? -1 : 1
+    return String(a.periodo || a.period) === 'Jantar' ? -1 : 1
   })
 
   // --- ESTILIZAÇÃO DO CABEÇALHO ---
@@ -19,10 +39,12 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
 
   doc.setFontSize(16)
   doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
   doc.text('MARUJO - RELATÓRIO GERENCIAL CONSOLIDADO', 14, 12)
 
   doc.setFontSize(9)
   doc.setTextColor(148, 163, 184) // Cinza azulado
+  doc.setFont('helvetica', 'normal')
   doc.text(
     `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`,
     14,
@@ -31,65 +53,128 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
 
   // --- MAPEAMENTO DOS DADOS COM CORES ---
   const body: RowInput[] = lotesOrdenados.map((l) => {
-    const lanc = l.lancamentos || []
-    const abertura = Number(l.valorAbertura || 0)
+    const lanc = l.lancamentos || l.entries || []
+    const abertura = Number(l.valorAbertura ?? l.initial_balance ?? 0)
 
     // Dinheiro que entrou (vendas - gorjetas em dinheiro)
     const entDin = lanc
-      .filter((i: any) => !i.isSaida && i.formaPagamento === 'Dinheiro')
+      .filter(
+        (i: any) =>
+          !i.isSaida &&
+          !i.is_withdrawal &&
+          (i.formaPagamento === 'Dinheiro' || i.payment_method === 'Dinheiro'),
+      )
       .reduce(
-        (acc: number, i: any) => acc + (i.valor - (i.valorCaixinha || 0)),
+        (acc: number, i: any) =>
+          acc +
+          (Number(i.valor ?? i.amount ?? 0) -
+            Number(i.valorCaixinha ?? (i.is_tip ? i.amount : 0) ?? 0)),
         0,
       )
 
     const sai = lanc
-      .filter((i: any) => i.isSaida)
-      .reduce((acc: number, i: any) => acc + i.valor, 0)
+      .filter((i: any) => i.isSaida || i.is_withdrawal)
+      .reduce(
+        (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),
+        0,
+      )
 
     const getSum = (forma: string) =>
       lanc
-        .filter((i: any) => !i.isSaida && i.formaPagamento === forma)
-        .reduce((acc: number, i: any) => acc + i.valor, 0)
+        .filter(
+          (i: any) =>
+            !i.isSaida &&
+            !i.is_withdrawal &&
+            ((i.formaPagamento &&
+              i.formaPagamento
+                .toLowerCase()
+                .includes(forma.toLowerCase())) ||
+              (i.payment_method &&
+                i.payment_method
+                  .toLowerCase()
+                  .includes(forma.toLowerCase()))),
+        )
+        .reduce(
+          (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),
+          0,
+        )
 
     const totalVendas = lanc
-      .filter((i: any) => !i.isSaida)
-      .reduce((acc: number, i: any) => acc + i.valor, 0)
+      .filter((i: any) => !i.isSaida && !i.is_withdrawal)
+      .reduce(
+        (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),
+        0,
+      )
 
     const saldoGaveta = abertura + entDin - sai
 
+    const dateStr = formatarData(l.dataReferencia || l.opened_at)
+    const periodoStr = String(l.periodo || l.period || '').toUpperCase()
+
     return [
-      l.dataReferencia.split('-').reverse().join('/'),
+      dateStr,
       {
-        content: l.periodo.toUpperCase(),
+        content: periodoStr,
         styles: { fontStyle: 'bold' as const },
       },
-      abertura.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-      entDin.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      abertura.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      entDin.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
       {
-        content: sai.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+        content: sai.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
         styles: { textColor: [185, 28, 28] as any },
       }, // Vermelho para saídas
       {
         content: saldoGaveta.toLocaleString('pt-BR', {
           minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }),
         styles: { fontStyle: 'bold' as const, textColor: [21, 128, 61] as any },
       }, // Verde para saldo físico
-      getSum('PIX').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-      getSum('Débito').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-      getSum('Crédito').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-      getSum('Voucher').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      getSum('PIX').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      getSum('Débito').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      getSum('Crédito').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      getSum('Voucher').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
       getSum('Funcionário').toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }),
       getSum('Pró-labore').toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }),
-      getSum('Permuta').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-      getSum('Cortesia').toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      getSum('Permuta').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      getSum('Cortesia').toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
       {
         content: totalVendas.toLocaleString('pt-BR', {
           minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }),
         styles: {
           fontStyle: 'bold' as const,
@@ -143,7 +228,7 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
   })
 
   // Nota explicativa no rodapé
-  const finalY = (doc as any).lastAutoTable.finalY || 30
+  const finalY = (doc as any).lastAutoTable?.finalY || 30
   doc.setFontSize(8)
   doc.setTextColor(100)
   doc.text(

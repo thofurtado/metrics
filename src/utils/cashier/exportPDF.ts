@@ -2,18 +2,108 @@ import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
 
 const fmt = (valor: number) =>
-  valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const formatarDataBR = (dataString: string) => {
   if (!dataString) return '--/--/----'
-  const [ano, mes, dia] = dataString.split('-')
-  return `${dia}/${mes}/${ano}`
+  try {
+    const d = new Date(dataString)
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(d)
+    }
+  } catch {}
+  return dataString
 }
 
-export const exportarLotePDF = (lote: any, resumo: any) => {
-  if (!resumo) return
+export function computeResumoFromLote(lote: any) {
+  const lancamentos = lote?.lancamentos || []
+  const abertura = Number(lote?.valorAbertura || 0)
+
+  const res: any = {
+    GERAL: {
+      entradas: 0,
+      totalCaixinha: 0,
+      saldo: 0,
+    },
+    CAIXA: {
+      saldoAbertura: abertura,
+      entradasDinheiro: 0,
+      totalSaidas: 0,
+    },
+    CASA: {
+      total: 0,
+    },
+  }
+
+  for (const l of lancamentos) {
+    const val = Number(l.valor || 0)
+    const isSaida = Boolean(l.isSaida)
+    const isCaixinha = Boolean(l.isCaixinha)
+    const forma = (l.formaPagamento || 'Dinheiro').trim()
+    const valorCaixinha = Number(l.valorCaixinha || 0)
+    const banco = (l.banco || l.bank || '').toUpperCase().trim()
+
+    if (isSaida) {
+      res.CAIXA.totalSaidas += val
+      continue
+    }
+
+    if (isCaixinha) {
+      res.GERAL.totalCaixinha += val
+    } else if (valorCaixinha > 0) {
+      res.GERAL.totalCaixinha += valorCaixinha
+    }
+
+    res.GERAL.entradas += val
+
+    if (forma.toLowerCase() === 'dinheiro' || banco === 'CAIXA') {
+      res.CAIXA.entradasDinheiro += val
+    } else if (banco) {
+      if (!res[banco]) {
+        res[banco] = {
+          PIX: 0,
+          Débito: 0,
+          Crédito: 0,
+          Voucher: 0,
+          caixinha: 0,
+          total: 0,
+        }
+      }
+      let formaKey = forma
+      if (forma.toUpperCase() === 'PIX') formaKey = 'PIX'
+      else if (forma.toLowerCase().includes('débito') || forma.toLowerCase().includes('debito')) formaKey = 'Débito'
+      else if (forma.toLowerCase().includes('crédito') || forma.toLowerCase().includes('credito')) formaKey = 'Crédito'
+      else if (forma.toLowerCase().includes('voucher')) formaKey = 'Voucher'
+
+      if (res[banco][formaKey] !== undefined) {
+        res[banco][formaKey] += val
+      } else {
+        res[banco][formaKey] = val
+      }
+      res[banco].total += val
+    }
+  }
+
+  res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
+  return res
+}
+
+export const exportarLotePDF = (lote: any, resumoParam?: any) => {
+  if (!lote) return
+
+  const resumo =
+    resumoParam && Object.keys(resumoParam).length > 0 && resumoParam.CAIXA
+      ? resumoParam
+      : computeResumoFromLote(lote)
+
   const doc = new jsPDF()
   const dataFormatada = formatarDataBR(lote.dataReferencia)
+  const periodoStr = lote.periodo ? String(lote.periodo).toUpperCase() : 'EXPEDIENTE'
 
   // --- HEADER DESIGN ---
   doc.setFillColor(15, 23, 42) // Navy Dark
@@ -26,23 +116,30 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
   doc.setFontSize(22)
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.text(`MARUJO - ${lote.periodo.toUpperCase()}`, 14, 28)
+  doc.text(`MARUJO - ${periodoStr}`, 14, 28)
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.text(dataFormatada, 196, 28, { align: 'right' })
 
   // --- DASHBOARD DE MÉTRICAS (KPIs) ---
-  const saldoGaveta =
-    resumo.CAIXA.entradasDinheiro +
-    resumo.CAIXA.saldoAbertura -
-    resumo.CAIXA.totalSaidas
-  const faturamentoTotal =
-    resumo.SAFRA.total +
-    resumo.PAGBANK.total +
-    resumo.CIELO.total +
-    resumo.STONE.total +
-    resumo.CAIXA.entradasDinheiro
+  const caixaEntradas = Number(resumo?.CAIXA?.entradasDinheiro || 0)
+  const caixaAbertura = Number(resumo?.CAIXA?.saldoAbertura || 0)
+  const caixaSaidas = Number(resumo?.CAIXA?.totalSaidas || 0)
+
+  const saldoGaveta = caixaEntradas + caixaAbertura - caixaSaidas
+
+  // Faturamento total (soma entradas em dinheiro + total de todos os bancos/operadoras)
+  const bankKeys = Object.keys(resumo || {}).filter(
+    (k) => !['GERAL', 'CAIXA', 'CASA'].includes(k),
+  )
+
+  let faturamentoTotal = caixaEntradas
+  for (const b of bankKeys) {
+    if (resumo[b] && typeof resumo[b].total === 'number') {
+      faturamentoTotal += resumo[b].total
+    }
+  }
 
   // Cards Principais com Cores de Destaque
   doc.setFillColor(240, 253, 244) // Verde claro
@@ -65,44 +162,33 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
   doc.text(fmt(faturamentoTotal), 114, 63)
 
   // Mini-Cards de Índices
-  const consumoInterno = lote.lancamentos
+  const lancamentos = lote.lancamentos || []
+  const consumoInterno = lancamentos
     .filter(
       (i: any) =>
         !i.isSaida &&
-        ['Funcionário', 'Cortesia', 'Pró-labore'].includes(i.formaPagamento),
+        ['Funcionário', 'Cortesia', 'Pró-labore', 'Permuta'].includes(i.formaPagamento),
     )
-    .reduce((acc: number, i: any) => acc + i.valor, 0)
+    .reduce((acc: number, i: any) => acc + (Number(i.valor) || 0), 0)
+
+  let totalPix = 0
+  let totalDebito = 0
+  let totalCredito = 0
+
+  for (const b of bankKeys) {
+    if (resumo[b]) {
+      totalPix += Number(resumo[b].PIX || 0)
+      totalDebito += Number(resumo[b].Débito || 0)
+      totalCredito += Number(resumo[b].Crédito || 0)
+    }
+  }
 
   const miniCards = [
-    { label: 'ABERTURA', val: fmt(resumo.CAIXA.saldoAbertura) },
-    {
-      label: 'PIX',
-      val: fmt(
-        resumo.SAFRA.PIX +
-          resumo.PAGBANK.PIX +
-          resumo.CIELO.PIX +
-          resumo.STONE.PIX,
-      ),
-    },
-    {
-      label: 'DÉBITO',
-      val: fmt(
-        resumo.SAFRA.Débito +
-          resumo.PAGBANK.Débito +
-          resumo.CIELO.Débito +
-          resumo.STONE.Débito,
-      ),
-    },
-    {
-      label: 'CRÉDITO',
-      val: fmt(
-        resumo.SAFRA.Crédito +
-          resumo.PAGBANK.Crédito +
-          resumo.CIELO.Crédito +
-          resumo.STONE.Crédito,
-      ),
-    },
-    { label: 'GORJETAS', val: fmt(resumo.GERAL.totalCaixinha) },
+    { label: 'ABERTURA', val: fmt(caixaAbertura) },
+    { label: 'PIX', val: fmt(totalPix) },
+    { label: 'DÉBITO', val: fmt(totalDebito) },
+    { label: 'CRÉDITO', val: fmt(totalCredito) },
+    { label: 'GORJETAS', val: fmt(resumo?.GERAL?.totalCaixinha || 0) },
     { label: 'CONSUMO', val: fmt(consumoInterno) },
   ]
 
@@ -130,8 +216,8 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
     doc.text(card.val, startX + index * (cardWidth + 2.5) + 2, startY + 11)
   })
 
-  // --- TABELA DE VENDAS (DESIGN MELHORADO) ---
-  const vendas = lote.lancamentos.filter((l: any) => !l.isSaida)
+  // --- TABELA DE VENDAS ---
+  const vendas = lancamentos.filter((l: any) => !l.isSaida)
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
@@ -142,7 +228,7 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
     startY: 104,
     head: [
       [
-        'Mesa',
+        'Mesa / Ident.',
         'Forma Pagto',
         'Valor Bruto',
         'Gorjeta',
@@ -151,85 +237,76 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
       ],
     ],
     body: vendas.map((v: any) => [
-      v.mesa || '--',
-      v.formaPagamento,
-      fmt(v.valor),
-      fmt(v.valorCaixinha || 0),
-      fmt(v.valor - (v.valorCaixinha || 0)),
-      v.observacoes || '',
+      v.mesa || v.identificacao || v.identification || '--',
+      v.formaPagamento || 'Dinheiro',
+      fmt(Number(v.valor) || 0),
+      fmt(Number(v.valorCaixinha) || 0),
+      fmt((Number(v.valor) || 0) - (Number(v.valorCaixinha) || 0)),
+      v.observacoes || v.identificacao || '',
     ]),
     theme: 'striped',
-    headStyles: { fillColor: [15, 23, 42], halign: 'center' }, // Azul Marinho Escuro
+    headStyles: { fillColor: [15, 23, 42], halign: 'center' },
     styles: { fontSize: 7.5, halign: 'center' },
     columnStyles: { 0: { fontStyle: 'bold' }, 5: { halign: 'left' } },
   })
 
-  // --- SANGRIAS E SAÍDAS (DESIGN ALERTA) ---
-  const sangrias = lote.lancamentos.filter((l: any) => l.isSaida)
+  // --- SANGRIAS E SAÍDAS ---
+  const sangrias = lancamentos.filter((l: any) => l.isSaida)
+  let lastY = (doc as any).lastAutoTable?.finalY || 140
+
   if (sangrias.length > 0) {
-    const lastY = (doc as any).lastAutoTable.finalY
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(153, 27, 27) // Vermelho escuro
+    doc.setTextColor(153, 27, 27)
     doc.text('2. SANGRIAS E SAÍDAS DE CAIXA', 14, lastY + 12)
 
     autoTable(doc, {
       startY: lastY + 16,
       head: [['Descrição / Identificação', 'Valor']],
       body: sangrias.map((s: any) => [
-        s.identificacao || 'Saída de Caixa',
-        fmt(s.valor),
+        s.identificacao || s.identification || 'Saída de Caixa',
+        fmt(Number(s.valor) || 0),
       ]),
-      headStyles: { fillColor: [153, 27, 27] }, // Vermelho Alerta
+      headStyles: { fillColor: [153, 27, 27] },
       styles: { fontSize: 7.5, halign: 'center' },
       columnStyles: { 0: { halign: 'left' } },
     })
+
+    lastY = (doc as any).lastAutoTable?.finalY || lastY + 30
   }
 
-  // --- RESUMO POR OPERADORA (DESIGN FINANCEIRO) ---
-  const lastYFinal = (doc as any).lastAutoTable.finalY
+  // --- RESUMO POR OPERADORA (BANCOS) ---
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(21, 128, 61) // Verde escuro
-  doc.text('3. CONSOLIDAÇÃO POR OPERADORA (BANCOS)', 14, lastYFinal + 12)
+  doc.setTextColor(21, 128, 61)
+  doc.text('3. CONSOLIDAÇÃO POR OPERADORA (BANCOS)', 14, lastY + 12)
 
-  const bodyBancos: RowInput[] = [
-    [
-      'SAFRA',
-      fmt(resumo.SAFRA.PIX),
-      fmt(resumo.SAFRA.Débito),
-      fmt(resumo.SAFRA.Crédito),
-      fmt(resumo.SAFRA.total),
-    ],
-    [
-      'PAGBANK',
-      fmt(resumo.PAGBANK.PIX),
-      fmt(resumo.PAGBANK.Débito),
-      fmt(resumo.PAGBANK.Crédito),
-      fmt(resumo.PAGBANK.total),
-    ],
-    [
-      'CIELO',
-      fmt(resumo.CIELO.PIX),
-      fmt(resumo.CIELO.Débito),
-      fmt(resumo.CIELO.Crédito),
-      fmt(resumo.CIELO.total),
-    ],
-    [
-      'STONE',
-      fmt(resumo.STONE.PIX),
-      fmt(resumo.STONE.Débito),
-      fmt(resumo.STONE.Crédito),
-      fmt(resumo.STONE.total),
-    ],
-  ]
+  const bodyBancos: RowInput[] = bankKeys.map((b) => [
+    b,
+    fmt(Number(resumo[b]?.PIX || 0)),
+    fmt(Number(resumo[b]?.Débito || 0)),
+    fmt(Number(resumo[b]?.Crédito || 0)),
+    fmt(Number(resumo[b]?.Voucher || 0)),
+    fmt(Number(resumo[b]?.total || 0)),
+  ])
+
+  if (bodyBancos.length === 0) {
+    bodyBancos.push([
+      'DINHEIRO / CAIXA',
+      fmt(0),
+      fmt(0),
+      fmt(0),
+      fmt(0),
+      fmt(caixaEntradas),
+    ])
+  }
 
   autoTable(doc, {
-    startY: lastYFinal + 16,
-    head: [['Banco', 'PIX', 'Débito', 'Crédito', 'Total']],
+    startY: lastY + 16,
+    head: [['Banco / Operadora', 'PIX', 'Débito', 'Crédito', 'Voucher', 'Total']],
     body: bodyBancos,
     theme: 'grid',
-    headStyles: { fillColor: [21, 128, 61] }, // Verde Financeiro
+    headStyles: { fillColor: [21, 128, 61] },
     styles: { fontSize: 7.5, halign: 'center' },
   })
 
@@ -240,12 +317,13 @@ export const exportarLotePDF = (lote: any, resumo: any) => {
     doc.setFontSize(7)
     doc.setTextColor(150)
     doc.text(
-      `Marujo - Página ${i} de ${totalPages} - Gerado em: ${new Date().toLocaleString()}`,
+      `Marujo - Página ${i} de ${totalPages} - Gerado em: ${new Date().toLocaleString('pt-BR')}`,
       105,
       288,
       { align: 'center' },
     )
   }
 
-  doc.save(`FECHAMENTO_${lote.periodo.toUpperCase()}_${dataFormatada}.pdf`)
+  const safeFileName = `FECHAMENTO_${periodoStr}_${dataFormatada.replace(/\//g, '-')}.pdf`
+  doc.save(safeFileName)
 }

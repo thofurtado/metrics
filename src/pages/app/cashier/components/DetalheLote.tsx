@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
@@ -381,7 +382,15 @@ export function DetalheLote({
           )}
 
           <button
-            onClick={() => exportarLotePDF(loteAtivo, resumoLote)}
+            onClick={() => {
+              try {
+                exportarLotePDF(loteAtivo, resumoLote)
+                toast.success('Relatório PDF gerado com sucesso!')
+              } catch (err: any) {
+                console.error('Erro ao exportar PDF:', err)
+                toast.error('Erro ao gerar relatório PDF.')
+              }
+            }}
             className="flex items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3 cursor-pointer"
           >
             <Printer size={18} />

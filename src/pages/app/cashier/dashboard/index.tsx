@@ -15,10 +15,15 @@ import {
   AlertTriangle,
   X,
   ArrowRight,
+  FileText,
+  Printer,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { getSessions, openSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
+import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
+import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 import { DivergenceModal } from './components/divergence-modal'
 import { PageHeader } from '@/components/page-header'
 
@@ -146,6 +151,61 @@ export function CashierDashboard() {
       })
       .sort((a: any, b: any) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
   }, [sessions, mesVisualizacao, anoVisualizacao, profile])
+
+  const handleExportarGeralPDF = () => {
+    try {
+      if (sessionsFiltradas.length === 0) {
+        toast.error('Nenhum caixa disponível para exportação neste mês.')
+        return
+      }
+      const lotesParaExportar = sessionsFiltradas.map((s: any) => ({
+        id: s.id,
+        dataReferencia: s.opened_at,
+        periodo: getPeriodoBRT(s.opened_at, s.period),
+        valorAbertura: Number(s.initial_balance || 0),
+        status: s.status,
+        lancamentos: (s.entries || []).map((e: any) => ({
+          isSaida: e.is_withdrawal || false,
+          isSuprimento: e.is_addition || false,
+          isCaixinha: e.is_tip || false,
+          valor: Number(e.amount || 0),
+          formaPagamento: e.payment_method || 'Dinheiro',
+          identificacao: e.identification || '',
+          valorCaixinha: e.is_tip ? Number(e.amount || 0) : 0,
+        })),
+      }))
+      exportarRelatorioGeralPDF(lotesParaExportar)
+      toast.success('Relatório Gerencial PDF gerado com sucesso!')
+    } catch (err: any) {
+      console.error('Erro ao exportar PDF gerencial:', err)
+      toast.error('Erro ao gerar relatório gerencial PDF.')
+    }
+  }
+
+  const handleExportarSessaoPDF = (s: any) => {
+    try {
+      const lote = {
+        dataReferencia: s.opened_at,
+        periodo: getPeriodoBRT(s.opened_at, s.period),
+        valorAbertura: Number(s.initial_balance || 0),
+        status: s.status,
+        lancamentos: (s.entries || []).map((e: any) => ({
+          isSaida: e.is_withdrawal || false,
+          isSuprimento: e.is_addition || false,
+          isCaixinha: e.is_tip || false,
+          valor: Number(e.amount || 0),
+          formaPagamento: e.payment_method || 'Dinheiro',
+          identificacao: e.identification || '',
+          valorCaixinha: e.is_tip ? Number(e.amount || 0) : 0,
+        })),
+      }
+      exportarLotePDF(lote)
+      toast.success('Relatório do caixa gerado em PDF com sucesso!')
+    } catch (err: any) {
+      console.error('Erro ao exportar PDF do turno:', err)
+      toast.error('Erro ao gerar PDF do turno.')
+    }
+  }
 
   const handleCriar = async () => {
     try {
@@ -384,9 +444,19 @@ export function CashierDashboard() {
       <div className="space-y-3">
         {/* Barra de Navegação de Mês */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <span className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-            <Calendar size={14} className="text-blue-500" /> Caixas do Mês
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+              <Calendar size={14} className="text-blue-500" /> Caixas do Mês
+            </span>
+            <button
+              onClick={handleExportarGeralPDF}
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-black text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 cursor-pointer"
+              title="Exportar relatório gerencial consolidado do mês em PDF"
+            >
+              <FileText size={14} />
+              <span>PDF Relatório Gerencial</span>
+            </button>
+          </div>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-slate-800 dark:bg-slate-900">
             <button
@@ -522,8 +592,21 @@ export function CashierDashboard() {
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className="shrink-0">{renderStatusBadge(s.status)}</div>
+                    {/* Status Badge + Exportar PDF */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleExportarSessaoPDF(s)
+                        }}
+                        title="Exportar PDF deste caixa"
+                        className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+                      >
+                        <FileText size={13} className="text-red-500" />
+                        <span>PDF</span>
+                      </button>
+                      {renderStatusBadge(s.status)}
+                    </div>
                   </div>
 
                   {/* Linha Secundária: Formas de Pagamento */}
