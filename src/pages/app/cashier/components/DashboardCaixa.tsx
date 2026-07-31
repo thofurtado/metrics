@@ -1,6 +1,7 @@
 'use client'
 import {
   AlertCircle,
+  AlertTriangle,
   Calculator,
   CheckCircle2,
   ChevronLeft,
@@ -12,11 +13,21 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { exportarParaCSV } from '../utils/exportCSV'
 import { exportarGeralCSV } from '../utils/exportGeralCSV'
 import { exportarRelatorioGeralPDF } from '../utils/exportGeralPDF'
+import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface DashboardProps {
   lotes: any[]
@@ -37,6 +48,34 @@ export function DashboardCaixa({
   )
   const [novoPeriodo, setNovoPeriodo] = useState('Almoço')
   const [saldoAbertura, setSaldoAbertura] = useState('0.00')
+
+  const [caixaToDelete, setCaixaToDelete] = useState<string | null>(null)
+  const [deleteCountdown, setDeleteCountdown] = useState<number>(5)
+
+  useEffect(() => {
+    let timer: any
+    if (caixaToDelete !== null && deleteCountdown > 0) {
+      timer = setInterval(() => {
+        setDeleteCountdown((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [caixaToDelete, deleteCountdown])
+
+  const handleOpenDeleteModal = (id: string) => {
+    setCaixaToDelete(id)
+    setDeleteCountdown(5)
+  }
+
+  const handleConfirmDelete = () => {
+    if (caixaToDelete) {
+      onApagar(caixaToDelete)
+      setCaixaToDelete(null)
+      setDeleteCountdown(5)
+    }
+  }
 
   const [mesVisualizacao, setMesVisualizacao] = useState(dataAtual.getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(
@@ -337,7 +376,7 @@ export function DashboardCaixa({
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          onApagar(l.id)
+                          handleOpenDeleteModal(l.id)
                         }}
                         className="p-2 text-zinc-300 transition-colors hover:text-red-500"
                       >
@@ -357,6 +396,46 @@ export function DashboardCaixa({
           </div>
         </div>
       </div>
+
+      {/* MODAL DE CONFIRMAÇÃO DE DELETAR CAIXA COMPLETO (COM TIMER DE 5s) */}
+      <AlertDialog
+        open={!!caixaToDelete}
+        onOpenChange={(open) => {
+          if (!open) setCaixaToDelete(null)
+        }}
+      >
+        <AlertDialogContent className="max-w-md rounded-3xl p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              Deletar Caixa Completo?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              Atenção: Esta ação excluirá permanentemente este caixa e <strong>todos os seus lançamentos, sangrias, suprimentos e caixinhas vinculadas</strong>. Esta ação é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
+            <AlertDialogCancel
+              onClick={() => setCaixaToDelete(null)}
+              className="rounded-xl border-slate-200 text-xs font-bold dark:border-slate-800"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="rounded-xl font-bold"
+              disabled={deleteCountdown > 0}
+              onClick={handleConfirmDelete}
+            >
+              {deleteCountdown > 0 ? (
+                `Aguarde (${deleteCountdown}s)`
+              ) : (
+                'Sim, Deletar Caixa'
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

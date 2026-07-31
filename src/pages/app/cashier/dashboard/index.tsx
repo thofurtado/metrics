@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -17,15 +17,26 @@ import {
   ArrowRight,
   FileText,
   Printer,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { getSessions, openSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
+import { getSessions, openSession, deleteSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 import { DivergenceModal } from './components/divergence-modal'
 import { PageHeader } from '@/components/page-header'
+import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -83,6 +94,45 @@ export function CashierDashboard() {
       navigate(`/cashier/session/${data.id}`)
     },
   })
+
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null)
+  const [deleteCountdown, setDeleteCountdown] = useState<number>(5)
+
+  useEffect(() => {
+    let timer: any
+    if (sessionToDelete !== null && deleteCountdown > 0) {
+      timer = setInterval(() => {
+        setDeleteCountdown((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [sessionToDelete, deleteCountdown])
+
+  const handleOpenDeleteSessionModal = (sessionId: string) => {
+    setSessionToDelete(sessionId)
+    setDeleteCountdown(5)
+  }
+
+  const handleCloseDeleteSessionModal = () => {
+    setSessionToDelete(null)
+    setDeleteCountdown(5)
+  }
+
+  const { mutateAsync: deleteSessionFn, isPending: isDeletingSession } = useMutation({
+    mutationFn: deleteSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
+      toast.success('Caixa excluído com sucesso!')
+      handleCloseDeleteSessionModal()
+    },
+    onError: () => {
+      toast.error('Erro ao excluir o caixa.')
+    },
+  })
+
 
 
 
@@ -592,7 +642,7 @@ export function CashierDashboard() {
                       </div>
                     </div>
 
-                    {/* Status Badge + Exportar PDF */}
+                    {/* Status Badge + Exportar PDF + Deletar Caixa (Admin) */}
                     <div className="shrink-0 flex items-center gap-2">
                       <button
                         onClick={(e) => {
@@ -605,6 +655,21 @@ export function CashierDashboard() {
                         <FileText size={13} className="text-red-500" />
                         <span>PDF</span>
                       </button>
+
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenDeleteSessionModal(s.id)
+                          }}
+                          title="Excluir este caixa completo"
+                          className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60 cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                          <span>Excluir</span>
+                        </button>
+                      )}
+
                       {renderStatusBadge(s.status)}
                     </div>
                   </div>
@@ -772,6 +837,49 @@ export function CashierDashboard() {
         onClose={() => setDivergenceModalSession(null)}
         session={divergenceModalSession}
       />
+
+      {/* MODAL DE CONFIRMAÇÃO DE DELETAR CAIXA COMPLETO (COM TIMER DE 5s) */}
+      <AlertDialog
+        open={!!sessionToDelete}
+        onOpenChange={(open) => {
+          if (!open) handleCloseDeleteSessionModal()
+        }}
+      >
+        <AlertDialogContent className="max-w-md rounded-3xl p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              Deletar Caixa Completo?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              Atenção: Esta ação excluirá permanentemente este caixa e <strong>todos os seus lançamentos, sangrias, suprimentos e caixinhas vinculadas</strong>. Esta ação é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
+            <AlertDialogCancel
+              onClick={handleCloseDeleteSessionModal}
+              disabled={isDeletingSession}
+              className="rounded-xl border-slate-200 text-xs font-bold dark:border-slate-800"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="rounded-xl font-bold"
+              disabled={deleteCountdown > 0 || isDeletingSession}
+              onClick={() => sessionToDelete && deleteSessionFn(sessionToDelete)}
+            >
+              {isDeletingSession ? (
+                'Excluindo...'
+              ) : deleteCountdown > 0 ? (
+                `Aguarde (${deleteCountdown}s)`
+              ) : (
+                'Sim, Deletar Caixa'
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

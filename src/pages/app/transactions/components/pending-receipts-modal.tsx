@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -21,6 +22,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { api, API_BASE_URL } from '@/lib/axios'
 
 interface PendingReceiptsModalProps {
@@ -40,6 +50,10 @@ export function PendingReceiptsModal({
   const [activeReceiptIndex, setActiveReceiptIndex] = useState<number | null>(
     null,
   )
+  const [receiptToDelete, setReceiptToDelete] = useState<{
+    filename: string
+    isFullscreen?: boolean
+  } | null>(null)
 
   const { data: receiptsData, isLoading } = useQuery({
     queryKey: ['pending-receipts'],
@@ -97,6 +111,17 @@ export function PendingReceiptsModal({
       }
     } catch (err) {
       // erro tratado no mutation
+    }
+  }
+
+  const handleConfirmDeleteReceipt = async () => {
+    if (!receiptToDelete) return
+    const { filename, isFullscreen } = receiptToDelete
+    setReceiptToDelete(null)
+    if (isFullscreen) {
+      await handleDeleteInFullscreen(filename)
+    } else {
+      await deleteReceipt(filename)
     }
   }
 
@@ -201,7 +226,12 @@ export function PendingReceiptsModal({
                       variant="destructive"
                       size="icon"
                       className="h-8 w-8 rounded-full shadow-lg"
-                      onClick={() => deleteReceipt(receipt.filename)}
+                      onClick={() =>
+                        setReceiptToDelete({
+                          filename: receipt.filename,
+                          isFullscreen: false,
+                        })
+                      }
                       disabled={isDeleting}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -312,7 +342,7 @@ export function PendingReceiptsModal({
                 </button>
 
                 {/* Imagem / PDF */}
-                <div className="flex h-[75vh] md:h-[80vh] w-full max-w-[85vw] flex-1 select-none items-center justify-center overflow-hidden">
+                <div className="flex h-[75vh] w-full max-w-[85vw] flex-1 select-none items-center justify-center overflow-hidden md:h-[80vh]">
                   {activeReceipt.url.endsWith('.pdf') ? (
                     <>
                       {/* Desktop View: Embed PDF inside a gorgeous iframe */}
@@ -387,7 +417,10 @@ export function PendingReceiptsModal({
                   variant="destructive"
                   className="w-full rounded-2xl bg-red-500/20 px-6 py-6 text-sm font-bold text-red-200 transition-all hover:bg-red-600 hover:text-white md:w-auto"
                   onClick={() =>
-                    handleDeleteInFullscreen(activeReceipt.filename)
+                    setReceiptToDelete({
+                      filename: activeReceipt.filename,
+                      isFullscreen: true,
+                    })
                   }
                   disabled={isDeleting}
                 >
@@ -399,6 +432,44 @@ export function PendingReceiptsModal({
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
       )}
+
+      {/* MODAL DE CONFIRMAÇÃO DE DELETAR COMPROVANTE */}
+      <AlertDialog
+        open={!!receiptToDelete}
+        onOpenChange={(open) => {
+          if (!open) setReceiptToDelete(null)
+        }}
+      >
+        <AlertDialogContent className="max-w-md rounded-3xl p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-100">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              Deletar Comprovante?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              Tem certeza que deseja descartar e excluir permanentemente este
+              comprovante? Esta ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
+            <AlertDialogCancel
+              onClick={() => setReceiptToDelete(null)}
+              disabled={isDeleting}
+              className="rounded-xl border-slate-200 text-xs font-bold dark:border-slate-800"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="rounded-xl font-bold"
+              disabled={isDeleting}
+              onClick={handleConfirmDeleteReceipt}
+            >
+              {isDeleting ? 'Excluindo...' : 'Sim, Deletar'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

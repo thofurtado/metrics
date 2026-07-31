@@ -120,6 +120,12 @@ export async function getSessions() {
   return response.data
 }
 
+export async function deleteSession(id: string) {
+  const response = await api.delete('/api/cashier/sessions/' + id)
+  return response.data
+}
+
+
 export async function getSessionDetails(id: string) {
   const response = await api.get<{
     session: CashierSession
