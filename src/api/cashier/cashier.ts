@@ -142,6 +142,13 @@ export async function auditSession(id: string) {
   return response.data
 }
 
+export async function revertCashierAudit(id: string) {
+  const response = await api.post('/api/cashier/session/revert', {
+    session_id: id,
+  })
+  return response.data
+}
+
 export interface ResolveDivergenceParams {
   session_id: string
   amount: number
