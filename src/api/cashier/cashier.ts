@@ -209,8 +209,13 @@ export async function updatePaymentCondition(id: number, data: any) {
   const response = await api.put(`/api/conditions/${id}`, data)
   return response.data
 }
-export async function getMonthlyCashAudit() {
-  const response = await api.get('/api/cashier/monthly-audit')
+export async function getMonthlyCashAudit(month?: number, year?: number) {
+  const response = await api.get('/api/cashier/monthly-audit', {
+    params: {
+      month: month !== undefined ? month + 1 : undefined,
+      year
+    }
+  })
   return response.data
 }
 
