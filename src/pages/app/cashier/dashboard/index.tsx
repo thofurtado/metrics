@@ -793,14 +793,16 @@ export function CashierDashboard() {
                               R$ {item.saldoFisicoFinal.toFixed(2)}
                             </td>
                             <td className="p-3 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                              {item.proximaAbertura > 0 ? `R$ ${item.proximaAbertura.toFixed(2)}` : '-'}
+                              {item.hasNextSession || item.proximaAbertura !== null 
+                                ? `R$ ${Number(item.proximaAbertura || 0).toFixed(2)}` 
+                                : '-'}
                             </td>
                             <td className="p-3 text-center">
-                              {item.proximaAbertura > 0 ? (
+                              {item.hasNextSession || item.proximaAbertura !== null ? (
                                 isDivergent ? (
                                   <button
                                     onClick={() => setDivergenceModalSession(item)}
-                                    className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-200 transition-colors"
+                                    className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-200 transition-colors cursor-pointer"
                                   >
                                     <AlertTriangle size={11} /> Dif: R$ {item.divergencia.toFixed(2)}
                                   </button>
