@@ -799,7 +799,15 @@ export function CashierDashboard() {
                             </td>
                             <td className="p-3 text-center">
                               {item.hasNextSession || item.proximaAbertura !== null ? (
-                                isDivergent ? (
+                                item.statusComparacao === 'RESOLVIDO' ? (
+                                  <button
+                                    onClick={() => setDivergenceModalSession(item)}
+                                    className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 hover:bg-indigo-200 transition-colors cursor-pointer"
+                                    title={item.resolutionDetails?.reason ? `Motivo: ${item.resolutionDetails.reason}` : 'Divergência tratada'}
+                                  >
+                                    <CheckCircle2 size={11} /> Resolvido ({item.resolutionDetails?.type === 'SANGRIA_DESTINO' ? item.resolutionDetails.bank || 'Destino' : 'Justificado'})
+                                  </button>
+                                ) : isDivergent ? (
                                   <button
                                     onClick={() => setDivergenceModalSession(item)}
                                     className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-200 transition-colors cursor-pointer"
