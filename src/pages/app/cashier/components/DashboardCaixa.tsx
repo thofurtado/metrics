@@ -411,7 +411,7 @@ export function DashboardCaixa({
               Deletar Caixa Completo?
             </AlertDialogTitle>
             <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Atenção: Esta ação excluirá permanentemente este caixa e <strong>todos os seus lançamentos, sangrias, suprimentos e caixinhas vinculadas</strong>. Esta ação é irreversível.
+              Atenção: Esta ação excluirá permanentemente este caixa, seus lançamentos internos, sangrias e, caso tenha sido conferido, <strong>todas as transações geradas no financeiro e vales criados no RH</strong>. Esta ação é irreversível.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
