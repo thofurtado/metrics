@@ -1034,7 +1034,6 @@ export function TransactionExpense({
                               setIsEmissaoPopoverOpen(false)
                             }
                           }}
-                          initialFocus
                         />
                       </PopoverContent>
                     </Popover>
@@ -1119,7 +1118,6 @@ export function TransactionExpense({
                               setIsPopoverOpen(false)
                             }
                           }}
-                          initialFocus
                         />
                       </PopoverContent>
                     </Popover>
