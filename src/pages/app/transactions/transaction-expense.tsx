@@ -140,6 +140,8 @@ export function TransactionExpense({
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
+  const [isPaymentMethodOpen, setIsPaymentMethodOpen] = useState(false)
+  const [isFrequencyOpen, setIsFrequencyOpen] = useState(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -590,7 +592,7 @@ export function TransactionExpense({
   const isPending = isTransactionPending || isUploading
 
   return (
-    <ResponsiveDialogContent>
+    <ResponsiveDialogContent onInteractOutside={(e) => e.preventDefault()}>
       {/* ─── HEADER ─── */}
       <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-4 md:pt-6">
         <div className="flex items-center gap-3">
@@ -651,12 +653,14 @@ export function TransactionExpense({
                   e.target instanceof HTMLSelectElement ||
                   (e.target as HTMLElement).getAttribute('role') ===
                     'combobox' ||
+                  (e.target as HTMLElement).getAttribute('aria-haspopup') ===
+                    'dialog' ||
                   (e.target as HTMLElement).getAttribute('role') === 'switch')
               ) {
                 e.preventDefault()
                 const inputs = Array.from(
                   e.currentTarget.querySelectorAll(
-                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])',
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled])',
                   ),
                 ) as HTMLElement[]
                 const index = inputs.indexOf(e.target as HTMLElement)
@@ -915,9 +919,14 @@ export function TransactionExpense({
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        open={isFrequencyOpen}
+                        onOpenChange={setIsFrequencyOpen}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                          <SelectTrigger 
+                            className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
+                            onFocus={() => setIsFrequencyOpen(true)}
+                          >
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -970,7 +979,7 @@ export function TransactionExpense({
                       <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
                     <Popover
-                      modal={true}
+                      modal={false}
                       open={isEmissaoPopoverOpen}
                       onOpenChange={setIsEmissaoPopoverOpen}
                     >
@@ -979,6 +988,7 @@ export function TransactionExpense({
                           <Button
                             variant="outline"
                             type="button"
+                            onFocus={() => setIsEmissaoPopoverOpen(true)}
                             className={cn(
                               'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
                               !field.value && 'text-muted-foreground',
@@ -1050,7 +1060,7 @@ export function TransactionExpense({
                       )}
                     </FormLabel>
                     <Popover
-                      modal={true}
+                      modal={false}
                       open={isPopoverOpen}
                       onOpenChange={setIsPopoverOpen}
                     >
@@ -1060,6 +1070,7 @@ export function TransactionExpense({
                             variant="outline"
                             type="button"
                             disabled={isCreditCard}
+                            onFocus={() => setIsPopoverOpen(true)}
                             className={cn(
                               'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
                               !field.value && 'text-muted-foreground',
@@ -1161,9 +1172,14 @@ export function TransactionExpense({
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                           value={field.value}
+                          open={isPaymentMethodOpen}
+                          onOpenChange={setIsPaymentMethodOpen}
                         >
                           <FormControl>
-                            <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                            <SelectTrigger 
+                              className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
+                              onFocus={() => setIsPaymentMethodOpen(true)}
+                            >
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                           </FormControl>

@@ -65,7 +65,15 @@ export function SupplierCombobox({
     !!onQuickAdd
 
   return (
-    <div className="flex w-full flex-col gap-1.5" ref={wrapperRef}>
+    <div
+      className="flex w-full flex-col gap-1.5"
+      ref={wrapperRef}
+      onBlur={(e) => {
+        if (!wrapperRef.current?.contains(e.relatedTarget as Node)) {
+          setOpen(false)
+        }
+      }}
+    >
       {/* ── Combobox trigger ocupa sempre 100% da largura ── */}
       <div className="relative w-full">
         <Button
@@ -80,6 +88,7 @@ export function SupplierCombobox({
           )}
           disabled={isLoading}
           onClick={() => setOpen(!open)}
+          onFocus={() => setOpen(true)}
         >
           {selectedSupplier ? (
             <span className="flex items-center gap-2 truncate">

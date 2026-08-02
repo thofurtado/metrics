@@ -51,6 +51,7 @@ export function QuickAddSelect({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   async function handleQuickAdd() {
     if (!newItemName.trim() || !onQuickAdd) return
@@ -91,9 +92,12 @@ export function QuickAddSelect({
         value={value}
         onValueChange={onValueChange}
         disabled={disabled || isLoading}
+        open={isOpen}
+        onOpenChange={setIsOpen}
       >
         <SelectTrigger
           className="h-10 flex-1"
+          onFocus={() => setIsOpen(true)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
               e.preventDefault()
