@@ -4,9 +4,10 @@ import { useForm } from 'react-form-field'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Palette } from 'lucide-react'
 
 import { api } from '@/lib/axios'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -40,6 +41,15 @@ async function updateProfile(data: ProfileFormData) {
 export function MenuSettings() {
   const queryClient = useQueryClient()
 
+  const THEMES = [
+    { name: 'Neutro', primary: '#475569', secondary: '#ffffff', bg: '#f8fafc' },
+    { name: 'Vibrante (Laranja)', primary: '#f97316', secondary: '#ffffff', bg: '#fff7ed' },
+    { name: 'Elegante (Preto)', primary: '#171717', secondary: '#ffffff', bg: '#f5f5f5' },
+    { name: 'Natural (Verde)', primary: '#16a34a', secondary: '#ffffff', bg: '#f0fdf4' },
+    { name: 'Oceano (Azul)', primary: '#2563eb', secondary: '#ffffff', bg: '#eff6ff' },
+    { name: 'Romântico (Vermelho)', primary: '#dc2626', secondary: '#ffffff', bg: '#fef2f2' },
+  ]
+
   const { data: profile, isLoading: isFetching } = useQuery({
     queryKey: ['company-profile'],
     queryFn: fetchProfile,
@@ -50,6 +60,8 @@ export function MenuSettings() {
     handleSubmit,
     control,
     reset,
+    getValues,
+    watch,
     formState: { isSubmitting },
   } = useReactHookForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -144,23 +156,63 @@ export function MenuSettings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Cores (Design Tokens)</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Identidade Visual (Cores)
+            </CardTitle>
             <CardDescription>
-              Ajuste as cores principais para combinar com a sua marca.
+              Escolha uma paleta de cores predefinida ou selecione a sua cor principal (as cores de fundo se ajustarão automaticamente).
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-6">
-            <div className="flex flex-col space-y-2">
-              <Label htmlFor="primaryColor">Cor Primária</Label>
-              <Input type="color" id="primaryColor" {...register('primaryColor')} className="h-14 w-full p-1 cursor-pointer" />
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {THEMES.map((theme) => (
+                <button
+                  key={theme.name}
+                  type="button"
+                  onClick={() => {
+                    reset({
+                      ...getValues(),
+                      primaryColor: theme.primary,
+                      secondaryColor: theme.secondary,
+                      backgroundColor: theme.bg,
+                    })
+                  }}
+                  className="flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary"
+                  style={{
+                    borderColor: watch('primaryColor') === theme.primary ? theme.primary : 'transparent',
+                    backgroundColor: watch('primaryColor') === theme.primary ? theme.bg : undefined,
+                  }}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: theme.primary }} />
+                  <span className="text-sm font-medium text-slate-700">{theme.name}</span>
+                </button>
+              ))}
             </div>
-            <div className="flex flex-col space-y-2">
-              <Label htmlFor="secondaryColor">Cor Secundária (Fundo dos cards)</Label>
-              <Input type="color" id="secondaryColor" {...register('secondaryColor')} className="h-14 w-full p-1 cursor-pointer" />
-            </div>
-            <div className="flex flex-col space-y-2">
-              <Label htmlFor="backgroundColor">Fundo (Geral)</Label>
-              <Input type="color" id="backgroundColor" {...register('backgroundColor')} className="h-14 w-full p-1 cursor-pointer" />
+
+            <Separator />
+
+            <div className="flex flex-col space-y-3 pt-2">
+              <Label htmlFor="primaryColor" className="text-base">Ou defina sua cor principal personalizada:</Label>
+              <div className="flex items-center gap-4">
+                <Input 
+                  type="color" 
+                  id="primaryColor" 
+                  {...register('primaryColor')} 
+                  onChange={(e) => {
+                    reset({
+                      ...getValues(),
+                      primaryColor: e.target.value,
+                      secondaryColor: '#ffffff', // Fundo dos cards sempre branco para leitura
+                      backgroundColor: '#f8fafc', // Fundo geral neutro
+                    })
+                  }}
+                  className="h-14 w-24 p-1 cursor-pointer" 
+                />
+                <p className="text-sm text-muted-foreground flex-1">
+                  Ao escolher sua cor primária, nós ajustamos as cores de fundo automaticamente para garantir que os textos fiquem legíveis!
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
