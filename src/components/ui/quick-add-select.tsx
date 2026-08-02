@@ -1,5 +1,5 @@
 import { Check, Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ export function QuickAddSelect({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   async function handleQuickAdd() {
     if (!newItemName.trim() || !onQuickAdd) return
@@ -89,10 +90,29 @@ export function QuickAddSelect({
     <div className="flex items-center gap-2">
       <Select
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={(val) => {
+          onValueChange(val)
+          setTimeout(() => {
+            if (triggerRef.current) {
+              const form = triggerRef.current.closest('form')
+              if (form) {
+                const inputs = Array.from(
+                  form.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
+                  ),
+                ) as HTMLElement[]
+                const index = inputs.indexOf(triggerRef.current)
+                if (index > -1 && index < inputs.length - 1) {
+                  const nextElement = inputs[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }
+          }, 50)
+        }}
         disabled={disabled || isLoading}
       >
-        <SelectTrigger className="h-10 flex-1">
+        <SelectTrigger ref={triggerRef} className="h-10 flex-1">
           <SelectValue
             placeholder={isLoading ? 'Carregando...' : placeholder}
           />

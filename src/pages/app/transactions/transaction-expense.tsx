@@ -140,6 +140,8 @@ export function TransactionExpense({
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
+  const paymentMethodTriggerRef = useRef<HTMLButtonElement>(null)
+  const frequencyTriggerRef = useRef<HTMLButtonElement>(null)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -915,11 +917,30 @@ export function TransactionExpense({
                         Frequência
                       </FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          setTimeout(() => {
+                            if (frequencyTriggerRef.current) {
+                              const form = frequencyTriggerRef.current.closest('form')
+                              if (form) {
+                                const inputs = Array.from(
+                                  form.querySelectorAll(
+                                    'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
+                                  ),
+                                ) as HTMLElement[]
+                                const index = inputs.indexOf(frequencyTriggerRef.current)
+                                if (index > -1 && index < inputs.length - 1) {
+                                  const nextElement = inputs[index + 1]
+                                  if (nextElement) nextElement.focus()
+                                }
+                              }
+                            }
+                          }, 50)
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                          <SelectTrigger ref={frequencyTriggerRef} className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -1160,12 +1181,31 @@ export function TransactionExpense({
                           Forma de Pagamento
                         </FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(val) => {
+                            field.onChange(val)
+                            setTimeout(() => {
+                              if (paymentMethodTriggerRef.current) {
+                                const form = paymentMethodTriggerRef.current.closest('form')
+                                if (form) {
+                                  const inputs = Array.from(
+                                    form.querySelectorAll(
+                                      'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
+                                    ),
+                                  ) as HTMLElement[]
+                                  const index = inputs.indexOf(paymentMethodTriggerRef.current)
+                                  if (index > -1 && index < inputs.length - 1) {
+                                    const nextElement = inputs[index + 1]
+                                    if (nextElement) nextElement.focus()
+                                  }
+                                }
+                              }
+                            }, 50)
+                          }}
                           defaultValue={field.value}
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                            <SelectTrigger ref={paymentMethodTriggerRef} className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                           </FormControl>
