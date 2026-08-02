@@ -327,7 +327,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
   }
 
   return (
-    <ResponsiveDialogContent>
+    <ResponsiveDialogContent onInteractOutside={(e) => e.preventDefault()}>
       <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-4 md:pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
@@ -385,12 +385,14 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   e.target instanceof HTMLSelectElement ||
                   (e.target as HTMLElement).getAttribute('role') ===
                     'combobox' ||
+                  (e.target as HTMLElement).getAttribute('aria-haspopup') ===
+                    'dialog' ||
                   (e.target as HTMLElement).getAttribute('role') === 'switch')
               ) {
                 e.preventDefault()
                 const inputs = Array.from(
                   e.currentTarget.querySelectorAll(
-                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[role="switch"]:not([disabled])',
+                    'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
                   ),
                 ) as HTMLElement[]
                 const index = inputs.indexOf(e.target as HTMLElement)
@@ -609,11 +611,41 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                         Frequência
                       </FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          setTimeout(() => {
+                            const trigger = document.activeElement as HTMLElement
+                            if (trigger && trigger.getAttribute('role') === 'combobox') {
+                              const form = trigger.closest('form')
+                              if (form) {
+                                const inputs = Array.from(
+                                  form.querySelectorAll(
+                                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
+                                  ),
+                                ) as HTMLElement[]
+                                const index = inputs.indexOf(trigger)
+                                if (index > -1 && index < inputs.length - 1) {
+                                  const nextElement = inputs[index + 1]
+                                  if (nextElement) nextElement.focus()
+                                }
+                              }
+                            }
+                          }, 0)
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                          <SelectTrigger 
+                            className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
+                            onKeyUp={(e) => {
+                              if (
+                                (e.key === 'Tab' || e.key === 'Enter') &&
+                                e.currentTarget.getAttribute('aria-expanded') === 'false'
+                              ) {
+                                e.currentTarget.click()
+                              }
+                            }}
+                          >
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>

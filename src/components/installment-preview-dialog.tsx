@@ -205,7 +205,30 @@ export function InstallmentPreviewDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="flex h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden bg-background p-0 shadow-2xl md:h-auto md:max-h-[85vh]">
+      <ResponsiveDialogContent 
+        onInteractOutside={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          if (
+            e.key === 'Enter' &&
+            (e.target instanceof HTMLInputElement ||
+              (e.target as HTMLElement).getAttribute('role') === 'switch' ||
+              (e.target as HTMLElement).getAttribute('aria-haspopup') === 'dialog')
+          ) {
+            e.preventDefault()
+            const inputs = Array.from(
+              e.currentTarget.querySelectorAll(
+                'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])'
+              )
+            ) as HTMLElement[]
+            const index = inputs.indexOf(e.target as HTMLElement)
+            if (index > -1 && index < inputs.length - 1) {
+              const nextElement = inputs[index + 1]
+              if (nextElement) nextElement.focus()
+            }
+          }
+        }}
+        className="flex h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden bg-background p-0 shadow-2xl md:h-auto md:max-h-[85vh]"
+      >
         {/* HERO HEADER */}
         <ResponsiveDialogHeader
           className={cn(
