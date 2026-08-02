@@ -1,5 +1,5 @@
 import { Check, Plus, X } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -51,8 +51,6 @@ export function QuickAddSelect({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-  const closingRef = useRef(false)
 
   async function handleQuickAdd() {
     if (!newItemName.trim() || !onQuickAdd) return
@@ -91,42 +89,37 @@ export function QuickAddSelect({
     <div className="flex items-center gap-2">
       <Select
         value={value}
-        onValueChange={onValueChange}
-        disabled={disabled || isLoading}
-        open={isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            closingRef.current = true
-            setTimeout(() => { closingRef.current = false }, 150)
-          }
-          setIsOpen(open)
+        onValueChange={(val) => {
+          onValueChange(val)
+          setTimeout(() => {
+            const trigger = document.activeElement as HTMLElement
+            if (trigger && trigger.getAttribute('role') === 'combobox') {
+              const form = trigger.closest('form')
+              if (form) {
+                const inputs = Array.from(
+                  form.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
+                  ),
+                ) as HTMLElement[]
+                const index = inputs.indexOf(trigger)
+                if (index > -1 && index < inputs.length - 1) {
+                  const nextElement = inputs[index + 1]
+                  if (nextElement) nextElement.focus()
+                }
+              }
+            }
+          }, 0)
         }}
+        disabled={disabled || isLoading}
       >
         <SelectTrigger
           className="h-10 flex-1"
-          onFocus={() => {
-            if (!closingRef.current) setIsOpen(true)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              if (!options || options.length === 0) return
-              const currentIndex = options.findIndex(
-                (opt) => opt.value === value,
-              )
-              if (e.key === 'ArrowDown') {
-                const nextIdx =
-                  currentIndex === -1
-                    ? 0
-                    : Math.min(currentIndex + 1, options.length - 1)
-                if (options[nextIdx]) onValueChange(options[nextIdx].value)
-              } else if (e.key === 'ArrowUp') {
-                const prevIdx =
-                  currentIndex === -1
-                    ? options.length - 1
-                    : Math.max(currentIndex - 1, 0)
-                if (options[prevIdx]) onValueChange(options[prevIdx].value)
-              }
+          onKeyUp={(e) => {
+            if (
+              (e.key === 'Tab' || e.key === 'Enter') &&
+              e.currentTarget.getAttribute('aria-expanded') === 'false'
+            ) {
+              e.currentTarget.click()
             }
           }}
         >

@@ -9,7 +9,7 @@ import {
   ListChecks,
   TrendingDown,
 } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -140,9 +140,6 @@ export function TransactionExpense({
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
-  const [isPaymentMethodOpen, setIsPaymentMethodOpen] = useState(false)
-  const [isFrequencyOpen, setIsFrequencyOpen] = useState(false)
-  const closingRef = useRef(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -918,22 +915,39 @@ export function TransactionExpense({
                         Frequência
                       </FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        open={isFrequencyOpen}
-                        onOpenChange={(open) => {
-                          if (!open) {
-                            closingRef.current = true
-                            setTimeout(() => { closingRef.current = false }, 150)
-                          }
-                          setIsFrequencyOpen(open)
+                        onValueChange={(val) => {
+                          field.onChange(val)
+                          setTimeout(() => {
+                            const trigger = document.activeElement as HTMLElement
+                            if (trigger && trigger.getAttribute('role') === 'combobox') {
+                              const form = trigger.closest('form')
+                              if (form) {
+                                const inputs = Array.from(
+                                  form.querySelectorAll(
+                                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
+                                  ),
+                                ) as HTMLElement[]
+                                const index = inputs.indexOf(trigger)
+                                if (index > -1 && index < inputs.length - 1) {
+                                  const nextElement = inputs[index + 1]
+                                  if (nextElement) nextElement.focus()
+                                }
+                              }
+                            }
+                          }, 0)
                         }}
+                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger 
                             className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                            onFocus={() => {
-                              if (!closingRef.current) setIsFrequencyOpen(true)
+                            onKeyUp={(e) => {
+                              if (
+                                (e.key === 'Tab' || e.key === 'Enter') &&
+                                e.currentTarget.getAttribute('aria-expanded') === 'false'
+                              ) {
+                                e.currentTarget.click()
+                              }
                             }}
                           >
                             <SelectValue placeholder="Selecione" />
@@ -1176,23 +1190,40 @@ export function TransactionExpense({
                           Forma de Pagamento
                         </FormLabel>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(val) => {
+                            field.onChange(val)
+                            setTimeout(() => {
+                              const trigger = document.activeElement as HTMLElement
+                              if (trigger && trigger.getAttribute('role') === 'combobox') {
+                                const form = trigger.closest('form')
+                                if (form) {
+                                  const inputs = Array.from(
+                                    form.querySelectorAll(
+                                      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
+                                    ),
+                                  ) as HTMLElement[]
+                                  const index = inputs.indexOf(trigger)
+                                  if (index > -1 && index < inputs.length - 1) {
+                                    const nextElement = inputs[index + 1]
+                                    if (nextElement) nextElement.focus()
+                                  }
+                                }
+                              }
+                            }, 0)
+                          }}
                           defaultValue={field.value}
                           value={field.value}
-                          open={isPaymentMethodOpen}
-                          onOpenChange={(open) => {
-                            if (!open) {
-                              closingRef.current = true
-                              setTimeout(() => { closingRef.current = false }, 150)
-                            }
-                            setIsPaymentMethodOpen(open)
-                          }}
                         >
                           <FormControl>
                             <SelectTrigger 
                               className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                              onFocus={() => {
-                                if (!closingRef.current) setIsPaymentMethodOpen(true)
+                              onKeyUp={(e) => {
+                                if (
+                                  (e.key === 'Tab' || e.key === 'Enter') &&
+                                  e.currentTarget.getAttribute('aria-expanded') === 'false'
+                                ) {
+                                  e.currentTarget.click()
+                                }
                               }}
                             >
                               <SelectValue placeholder="Selecione" />
