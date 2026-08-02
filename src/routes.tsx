@@ -37,7 +37,7 @@ import { ReceiptPage } from './pages/public/receipt-page'
 
 const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
 const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
-const Cardapio = lazy(() => import('./pages/landings/Marujo/Cardapio'))
+import { MenuResolver } from './pages/landings/MenuResolver'
 
 const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development'
 
@@ -84,28 +84,10 @@ export const router = createBrowserRouter([
             },
           ]
         : []),
-      ...(window.location.hostname.includes('marujogastrobar') ||
-      window.location.hostname.includes('metrics-two-gamma') ||
-      isDev
-        ? [
-            {
-              path: 'cardapio',
-              element: (
-                <div className="theme-marujo">
-                  <Suspense
-                    fallback={
-                      <div className="flex h-screen items-center justify-center">
-                        Carregando...
-                      </div>
-                    }
-                  >
-                    <Cardapio />
-                  </Suspense>
-                </div>
-              ),
-            },
-          ]
-        : []),
+      {
+        path: 'cardapio',
+        element: <MenuResolver />
+      },
       {
         path: 'comprovante/:transactionId',
         element: <ReceiptPage />,
