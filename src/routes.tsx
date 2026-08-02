@@ -15,6 +15,7 @@ import { Items } from './pages/app/items'
 import { Accounts } from './pages/app/settings/accounts'
 import { CreditCards } from './pages/app/settings/credit-cards'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
+import { MenuSettings } from './pages/app/settings/menu-settings'
 import { Payments } from './pages/app/settings/payments'
 import { POSMachinesSettings } from './pages/app/settings/pos-machines'
 import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identifiers'
@@ -176,6 +177,7 @@ export const router = createBrowserRouter([
               { path: 'pos-machines', element: <POSMachinesSettings /> },
               { path: 'payment-identifiers', element: <PaymentIdentifiersSettings /> },
               { path: 'modules', element: <ModulesSettings /> },
+              { path: 'cardapio', element: <MenuSettings /> },
               { path: 'permissions', element: <Permissions /> },
               { path: 'payment-config', element: <PaymentConfig /> },
             ],
