@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-form-field'
@@ -36,6 +37,54 @@ async function fetchProfile() {
 async function updateProfile(data: ProfileFormData) {
   const response = await api.put('/settings/company-profile', data)
   return response.data
+}
+
+// Função para converter HEX para HSL e gerar fundos super premium
+function hexToHSL(hex: string) {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substring(1, 3), 16);
+    g = parseInt(hex.substring(3, 5), 16);
+    b = parseInt(hex.substring(5, 7), 16);
+  }
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToHex(h: number, s: number, l: number) {
+  l /= 100;
+  const a = s * Math.min(l, 1 - l) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function generatePremiumPalette(hex: string) {
+  const { h, s } = hexToHSL(hex);
+  // Fundo dos cards (Secondary): Extremamente claro, quase branco, mas com um toque refinado da cor da marca
+  const premiumSecondary = hslToHex(h, Math.min(s, 40), 98);
+  // Fundo da página (Background): Um pouco mais escuro que o card para dar profundidade elegante
+  const premiumBg = hslToHex(h, Math.min(s, 30), 95);
+  return { secondary: premiumSecondary, bg: premiumBg };
 }
 
 export function MenuSettings() {
@@ -78,22 +127,20 @@ export function MenuSettings() {
   })
 
   // Set default values when profile is fetched
-  import('react').then((React) => {
-    React.useEffect(() => {
-      if (profile) {
-        reset({
-          tradeName: profile.tradeName || '',
-          primaryColor: profile.primaryColor || '#475569',
-          secondaryColor: profile.secondaryColor || '#ffffff',
-          backgroundColor: profile.backgroundColor || '#f8fafc',
-          logo_url: profile.logo_url || '',
-          banner_url: profile.banner_url || '',
-          isOpenManual: profile.isOpenManual ?? true,
-          whatsappNumber: profile.whatsappNumber || '',
-        })
-      }
-    }, [profile, reset])
-  })
+  useEffect(() => {
+    if (profile) {
+      reset({
+        tradeName: profile.tradeName || '',
+        primaryColor: profile.primaryColor || '#475569',
+        secondaryColor: profile.secondaryColor || '#ffffff',
+        backgroundColor: profile.backgroundColor || '#f8fafc',
+        logo_url: profile.logo_url || '',
+        banner_url: profile.banner_url || '',
+        isOpenManual: profile.isOpenManual ?? true,
+        whatsappNumber: profile.whatsappNumber || '',
+      })
+    }
+  }, [profile, reset])
 
   const { mutateAsync: updateProfileFn } = useMutation({
     mutationFn: updateProfile,
@@ -200,11 +247,14 @@ export function MenuSettings() {
                   id="primaryColor" 
                   {...register('primaryColor')} 
                   onChange={(e) => {
+                    const primary = e.target.value;
+                    const { secondary, bg } = generatePremiumPalette(primary);
+                    
                     reset({
                       ...getValues(),
-                      primaryColor: e.target.value,
-                      secondaryColor: '#ffffff', // Fundo dos cards sempre branco para leitura
-                      backgroundColor: '#f8fafc', // Fundo geral neutro
+                      primaryColor: primary,
+                      secondaryColor: secondary, 
+                      backgroundColor: bg, 
                     })
                   }}
                   className="h-14 w-24 p-1 cursor-pointer" 
