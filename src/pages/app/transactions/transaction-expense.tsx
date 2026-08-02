@@ -1209,7 +1209,7 @@ export function TransactionExpense({
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent withPortal={false}>
                             <SelectItem value="BOLETO">Boleto</SelectItem>
                             <SelectItem value="PIX">Pix</SelectItem>
                             <SelectItem value="CREDIT_CARD">
