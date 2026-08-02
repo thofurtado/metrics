@@ -9,7 +9,7 @@ import {
   ListChecks,
   TrendingDown,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -142,6 +142,7 @@ export function TransactionExpense({
   const [isEmissaoPopoverOpen, setIsEmissaoPopoverOpen] = useState(false)
   const [isPaymentMethodOpen, setIsPaymentMethodOpen] = useState(false)
   const [isFrequencyOpen, setIsFrequencyOpen] = useState(false)
+  const closingRef = useRef(false)
   const [previewInstallmentsOpen, setPreviewInstallmentsOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -660,7 +661,7 @@ export function TransactionExpense({
                 e.preventDefault()
                 const inputs = Array.from(
                   e.currentTarget.querySelectorAll(
-                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled])',
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
                   ),
                 ) as HTMLElement[]
                 const index = inputs.indexOf(e.target as HTMLElement)
@@ -920,12 +921,20 @@ export function TransactionExpense({
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         open={isFrequencyOpen}
-                        onOpenChange={setIsFrequencyOpen}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            closingRef.current = true
+                            setTimeout(() => { closingRef.current = false }, 150)
+                          }
+                          setIsFrequencyOpen(open)
+                        }}
                       >
                         <FormControl>
                           <SelectTrigger 
                             className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                            onFocus={() => setIsFrequencyOpen(true)}
+                            onFocus={() => {
+                              if (!closingRef.current) setIsFrequencyOpen(true)
+                            }}
                           >
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -1171,12 +1180,20 @@ export function TransactionExpense({
                           defaultValue={field.value}
                           value={field.value}
                           open={isPaymentMethodOpen}
-                          onOpenChange={setIsPaymentMethodOpen}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              closingRef.current = true
+                              setTimeout(() => { closingRef.current = false }, 150)
+                            }
+                            setIsPaymentMethodOpen(open)
+                          }}
                         >
                           <FormControl>
                             <SelectTrigger 
                               className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                              onFocus={() => setIsPaymentMethodOpen(true)}
+                              onFocus={() => {
+                                if (!closingRef.current) setIsPaymentMethodOpen(true)
+                              }}
                             >
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>

@@ -1,5 +1,5 @@
 import { Check, Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -52,6 +52,7 @@ export function QuickAddSelect({
   const [newItemName, setNewItemName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const closingRef = useRef(false)
 
   async function handleQuickAdd() {
     if (!newItemName.trim() || !onQuickAdd) return
@@ -93,11 +94,19 @@ export function QuickAddSelect({
         onValueChange={onValueChange}
         disabled={disabled || isLoading}
         open={isOpen}
-        onOpenChange={setIsOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closingRef.current = true
+            setTimeout(() => { closingRef.current = false }, 150)
+          }
+          setIsOpen(open)
+        }}
       >
         <SelectTrigger
           className="h-10 flex-1"
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            if (!closingRef.current) setIsOpen(true)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
               e.preventDefault()
