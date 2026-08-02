@@ -658,7 +658,7 @@ export function TransactionExpense({
                 e.preventDefault()
                 const inputs = Array.from(
                   e.currentTarget.querySelectorAll(
-                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
+                    'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
                   ),
                 ) as HTMLElement[]
                 const index = inputs.indexOf(e.target as HTMLElement)
@@ -915,41 +915,11 @@ export function TransactionExpense({
                         Frequência
                       </FormLabel>
                       <Select
-                        onValueChange={(val) => {
-                          field.onChange(val)
-                          setTimeout(() => {
-                            const trigger = document.activeElement as HTMLElement
-                            if (trigger && trigger.getAttribute('role') === 'combobox') {
-                              const form = trigger.closest('form')
-                              if (form) {
-                                const inputs = Array.from(
-                                  form.querySelectorAll(
-                                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
-                                  ),
-                                ) as HTMLElement[]
-                                const index = inputs.indexOf(trigger)
-                                if (index > -1 && index < inputs.length - 1) {
-                                  const nextElement = inputs[index + 1]
-                                  if (nextElement) nextElement.focus()
-                                }
-                              }
-                            }
-                          }, 0)
-                        }}
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger 
-                            className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                            onKeyUp={(e) => {
-                              if (
-                                (e.key === 'Tab' || e.key === 'Enter') &&
-                                e.currentTarget.getAttribute('aria-expanded') === 'false'
-                              ) {
-                                e.currentTarget.click()
-                              }
-                            }}
-                          >
+                          <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -1190,42 +1160,12 @@ export function TransactionExpense({
                           Forma de Pagamento
                         </FormLabel>
                         <Select
-                          onValueChange={(val) => {
-                            field.onChange(val)
-                            setTimeout(() => {
-                              const trigger = document.activeElement as HTMLElement
-                              if (trigger && trigger.getAttribute('role') === 'combobox') {
-                                const form = trigger.closest('form')
-                                if (form) {
-                                  const inputs = Array.from(
-                                    form.querySelectorAll(
-                                      'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
-                                    ),
-                                  ) as HTMLElement[]
-                                  const index = inputs.indexOf(trigger)
-                                  if (index > -1 && index < inputs.length - 1) {
-                                    const nextElement = inputs[index + 1]
-                                    if (nextElement) nextElement.focus()
-                                  }
-                                }
-                              }
-                            }, 0)
-                          }}
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger 
-                              className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                              onKeyUp={(e) => {
-                                if (
-                                  (e.key === 'Tab' || e.key === 'Enter') &&
-                                  e.currentTarget.getAttribute('aria-expanded') === 'false'
-                                ) {
-                                  e.currentTarget.click()
-                                }
-                              }}
-                            >
+                            <SelectTrigger className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                           </FormControl>

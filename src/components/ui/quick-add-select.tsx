@@ -89,40 +89,10 @@ export function QuickAddSelect({
     <div className="flex items-center gap-2">
       <Select
         value={value}
-        onValueChange={(val) => {
-          onValueChange(val)
-          setTimeout(() => {
-            const trigger = document.activeElement as HTMLElement
-            if (trigger && trigger.getAttribute('role') === 'combobox') {
-              const form = trigger.closest('form')
-              if (form) {
-                const inputs = Array.from(
-                  form.querySelectorAll(
-                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), button[role="combobox"]:not([disabled]), button[aria-haspopup="dialog"]:not([disabled]), button[role="switch"]:not([disabled]), button[type="submit"]:not([disabled])',
-                  ),
-                ) as HTMLElement[]
-                const index = inputs.indexOf(trigger)
-                if (index > -1 && index < inputs.length - 1) {
-                  const nextElement = inputs[index + 1]
-                  if (nextElement) nextElement.focus()
-                }
-              }
-            }
-          }, 0)
-        }}
+        onValueChange={onValueChange}
         disabled={disabled || isLoading}
       >
-        <SelectTrigger
-          className="h-10 flex-1"
-          onKeyUp={(e) => {
-            if (
-              (e.key === 'Tab' || e.key === 'Enter') &&
-              e.currentTarget.getAttribute('aria-expanded') === 'false'
-            ) {
-              e.currentTarget.click()
-            }
-          }}
-        >
+        <SelectTrigger className="h-10 flex-1">
           <SelectValue
             placeholder={isLoading ? 'Carregando...' : placeholder}
           />
@@ -150,6 +120,7 @@ export function QuickAddSelect({
           title="Limpar seleção"
           disabled={disabled || isLoading}
           onClick={() => onValueChange('')}
+          tabIndex={-1}
           className="h-10 w-10 shrink-0 border border-transparent px-0 text-slate-400 transition-colors hover:border-red-100 hover:bg-red-50 hover:text-red-500"
         >
           <X className="h-4 w-4" />
@@ -165,6 +136,7 @@ export function QuickAddSelect({
             disabled={disabled || isLoading}
             title={quickAddLabel}
             type="button"
+            tabIndex={-1}
             className="h-10 w-10 shrink-0"
             onClick={onQuickAddClick}
           >
@@ -183,6 +155,7 @@ export function QuickAddSelect({
                 disabled={disabled || isLoading}
                 title={quickAddLabel}
                 type="button"
+                tabIndex={-1}
                 className="h-10 w-10 shrink-0"
               >
                 <Plus className="h-4 w-4" />
