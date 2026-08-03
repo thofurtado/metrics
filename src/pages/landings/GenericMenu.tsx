@@ -160,7 +160,6 @@ const DynamicHero = ({ profile }: { profile: any }) => {
     </div>
   )
 }
-}
 
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [cart, setCart] = useState<Record<string, CartItem>>({})
