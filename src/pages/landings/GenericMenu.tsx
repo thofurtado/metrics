@@ -16,7 +16,7 @@ interface Product {
   description: string | null
   measureUnit: string
   category: string
-  imageUrl?: string // Optional for future or current use
+  imageUrl?: string
 }
 
 interface CartItem {
@@ -36,6 +36,40 @@ const formatCurrency = (value: number) => {
   }).format(value)
 }
 
+// Subcomponent: Dynamic Hero Header
+const DynamicHero = ({ profile }: { profile: any }) => {
+  if (profile?.banner_url) {
+    return (
+      <div className="relative h-40 w-full lg:h-56">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10" />
+        <img src={profile.banner_url} className="h-full w-full object-cover" alt="Banner" />
+      </div>
+    )
+  }
+
+  // Generative elegant background based on primary color
+  return (
+    <div 
+      className="relative h-32 w-full lg:h-48 overflow-hidden" 
+      style={{ backgroundColor: 'var(--primary-color)' }}
+    >
+      <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{
+        backgroundImage: `radial-gradient(circle at 20% 150%, rgba(255,255,255,0.8) 0%, transparent 50%), radial-gradient(circle at 80% -50%, rgba(0,0,0,0.5) 0%, transparent 50%)`
+      }} />
+      <motion.div 
+        animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none"
+      />
+      <motion.div 
+        animate={{ scale: [1, 1.5, 1] }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-black/10 blur-3xl pointer-events-none"
+      />
+    </div>
+  )
+}
+
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -48,21 +82,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
-  // Derived state: categories
   const categories = useMemo(() => {
     if (!products) return []
     const cats = Array.from(new Set(products.map((p) => p.category || 'Geral')))
     return ['All', ...cats]
   }, [products])
 
-  // Set initial category when loaded
   useEffect(() => {
     if (categories.length > 1 && activeCategory === 'All') {
       setActiveCategory('All')
     }
   }, [categories, activeCategory])
 
-  // Filtered products based on search and category
   const filteredProducts = useMemo(() => {
     if (!products) return []
     let filtered = products
@@ -77,11 +108,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     } else if (activeCategory !== 'All') {
       filtered = filtered.filter((p) => (p.category || 'Geral') === activeCategory)
     }
-
     return filtered
   }, [products, searchQuery, activeCategory])
 
-  // Group filtered products by category for rendering
   const groupedProducts = useMemo(() => {
     return filteredProducts.reduce(
       (acc, product) => {
@@ -138,12 +167,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     window.open(url, '_blank')
   }
 
-  // Common Cart Component for both Mobile Modal and Desktop Sidebar
   const CartContent = () => (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b p-6">
-        <h2 className="text-xl font-bold text-slate-800">Seu Pedido</h2>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
+      <div className="flex items-center justify-between border-b border-slate-100 p-6">
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Seu Pedido</h2>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-[13px] font-bold text-slate-600">
           {cartCount} itens
         </span>
       </div>
@@ -153,7 +181,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           <div className="flex h-full flex-col items-center justify-center text-slate-400">
             <ShoppingBag className="mb-4 h-16 w-16 opacity-20" />
             <p className="text-center font-medium">Sua sacola está vazia.</p>
-            <p className="mt-1 text-sm">Adicione itens para fazer seu pedido.</p>
+            <p className="mt-1 text-[13px]">Adicione deliciosos itens ao seu pedido.</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -162,33 +190,33 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <motion.div
                   key={item.product.id}
                   layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
                   className="flex items-start justify-between gap-4"
                 >
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-800">{item.product.name}</h4>
-                    <p className="font-medium" style={{ color: 'var(--primary-color)' }}>
+                    <h4 className="font-bold text-slate-800 text-[15px] leading-snug">{item.product.name}</h4>
+                    <p className="font-black mt-1" style={{ color: 'var(--primary-color)' }}>
                       {formatCurrency(item.product.price * item.quantity)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 rounded-full border p-1 shadow-sm">
+                  <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-inner shrink-0">
                     <button
                       onClick={() => handleRemoveFromCart(item.product.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-transform active:scale-90"
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className="h-4 w-4 stroke-[3]" />
                     </button>
-                    <span className="w-4 text-center text-sm font-bold text-slate-700">
+                    <span className="w-6 text-center text-[14px] font-bold text-slate-800">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => handleAddToCart(item.product)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
                       style={{ backgroundColor: 'var(--primary-color)' }}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-4 w-4 stroke-[3]" />
                     </button>
                   </div>
                 </motion.div>
@@ -198,125 +226,93 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         )}
       </div>
 
-      <div className="border-t bg-slate-50 p-6">
-        <div className="mb-4 flex items-center justify-between text-lg font-bold text-slate-800">
-          <span>Total</span>
-          <span>{formatCurrency(cartTotal)}</span>
+      <div className="border-t border-slate-100 bg-slate-50 p-6">
+        <div className="mb-5 flex items-end justify-between text-slate-900">
+          <span className="text-[15px] font-bold text-slate-500 uppercase tracking-wide">Subtotal</span>
+          <span className="text-2xl font-black tracking-tight">{formatCurrency(cartTotal)}</span>
         </div>
         <button
           onClick={handleCheckout}
           disabled={cartCount === 0 || profile?.isOpenManual === false}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-bold text-white shadow-lg transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           style={{ backgroundColor: 'var(--primary-color)' }}
         >
-          {profile?.isOpenManual === false ? 'Fechado' : 'Finalizar Pedido'}
-          <ChevronRight className="h-5 w-5" />
+          {profile?.isOpenManual === false ? 'Restaurante Fechado' : 'Avançar para o Checkout'}
+          {profile?.isOpenManual !== false && <ChevronRight className="h-5 w-5 stroke-[3]" />}
         </button>
       </div>
     </div>
   )
 
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col bg-[var(--background-color)] font-sans text-slate-800 lg:flex-row">
-      
-      {/* MAIN CONTENT AREA */}
-      <main className="flex flex-1 flex-col overflow-hidden pb-24 lg:pb-0">
-        
-        {/* HEADER & BANNER */}
-        <header className="relative z-10 shrink-0 bg-white shadow-sm">
-          {profile?.banner_url ? (
-            <div className="relative h-40 w-full lg:h-56">
-              <div className="absolute inset-0 bg-black/30 z-10" />
-              <img src={profile.banner_url} className="h-full w-full object-cover" alt="Banner" />
-              {/* Logo over banner */}
-              <div className="absolute -bottom-10 left-6 z-20 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg lg:left-12 lg:h-32 lg:w-32">
-                {profile?.logo_url ? (
-                  <img src={profile.logo_url} alt="Logo" className="h-full w-full object-cover" />
-                ) : (
-                  <Store className="h-10 w-10" style={{ color: 'var(--primary-color)' }} />
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-32 items-end px-6 pb-6 lg:h-40 lg:px-12" style={{ backgroundColor: 'var(--secondary-color)' }}>
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg lg:h-24 lg:w-24">
-                {profile?.logo_url ? (
-                  <img src={profile.logo_url} alt="Logo" className="h-full w-full object-cover" />
-                ) : (
-                  <Store className="h-10 w-10" style={{ color: 'var(--primary-color)' }} />
-                )}
-              </div>
-            </div>
-          )}
+    <div className="flex min-h-[100dvh] w-full flex-col bg-[#F8FAFC] font-sans text-slate-800 lg:flex-row">
+      <main className="flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0 relative">
+        <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
+          <DynamicHero profile={profile} />
 
-          <div className="mt-12 px-6 pb-6 pt-2 lg:mt-4 lg:px-12 lg:ml-48">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+          <div className="relative z-20 -mt-10 px-5 lg:px-12 flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-md lg:h-24 lg:w-24">
+                {profile?.logo_url ? (
+                  <img src={profile.logo_url} alt="Logo" className="h-full w-full object-cover" />
+                ) : (
+                  <Store className="h-full w-full p-4" style={{ color: 'var(--primary-color)' }} />
+                )}
+              </div>
+              <div className="flex flex-col pt-8">
+                <h1 className="text-[22px] font-black tracking-tight text-slate-900 leading-none">
                   {tenantName}
                 </h1>
-                {profile?.isOpenManual === false ? (
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                    Fechado no momento
-                  </span>
-                ) : (
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Aberto para pedidos
-                  </span>
-                )}
+                <div className="mt-2">
+                  {profile?.isOpenManual === false ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100/80 px-2.5 py-1 text-[11px] font-bold text-red-700 uppercase tracking-wider backdrop-blur-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span> Fechado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/80 px-2.5 py-1 text-[11px] font-bold text-emerald-700 uppercase tracking-wider backdrop-blur-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Aberto
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            
-            {/* Search Bar */}
-            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-slate-100 px-4 py-3 shadow-inner">
+
+            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/60 focus-within:ring-2 focus-within:ring-[var(--primary-color)] transition-all">
               <Search className="h-5 w-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar por pratos, ingredientes..."
+                placeholder="O que você está desejando hoje?"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-slate-700 placeholder-slate-400 outline-none"
+                className="w-full bg-transparent text-[15px] font-medium text-slate-800 placeholder-slate-400 outline-none"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600">
-                  <X className="h-5 w-5" />
+                <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100">
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
           </div>
         </header>
 
-        {/* CATEGORY TABS (Sticky) */}
         {!searchQuery && categories.length > 0 && (
-          <div className="sticky top-0 z-20 shrink-0 border-b bg-white/80 px-6 py-4 backdrop-blur-md lg:px-12">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200/60 bg-white/80 px-5 pt-4 pb-0 backdrop-blur-xl lg:px-12 mt-4">
+            <div className="flex gap-6 overflow-x-auto no-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className="relative whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-colors"
-                  style={{
-                    color: activeCategory === cat ? 'white' : 'var(--primary-color)',
-                  }}
+                  className={`relative whitespace-nowrap pb-3 text-[15px] font-bold transition-colors ${
+                    activeCategory === cat ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+                  }`}
                 >
+                  <span>{cat === 'All' ? 'Menu Completo' : cat}</span>
                   {activeCategory === cat && (
                     <motion.div
-                      layoutId="activeCategory"
-                      className="absolute inset-0 rounded-full"
+                      layoutId="activeTabIndicator"
+                      className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full"
                       style={{ backgroundColor: 'var(--primary-color)' }}
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <span className="relative z-10">
-                    {cat === 'All' ? 'Todos' : cat}
-                  </span>
-                  {/* Subtle translucent background for non-active items */}
-                  {activeCategory !== cat && (
-                    <div 
-                      className="absolute inset-0 rounded-full opacity-10" 
-                      style={{ backgroundColor: 'var(--primary-color)' }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
                 </button>
@@ -325,18 +321,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           </div>
         )}
 
-        {/* PRODUCT LIST */}
-        <div className="flex-1 overflow-y-auto px-6 py-8 lg:px-12">
+        <div className="flex-1 px-5 py-8 lg:px-12">
           {isLoading ? (
             <div className="flex h-64 flex-col items-center justify-center space-y-4">
               <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[var(--primary-color)]" />
-              <span className="text-sm font-medium text-slate-500">Preparando o cardápio...</span>
             </div>
           ) : !products?.length ? (
             <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
               <UtensilsCrossed className="mb-4 h-16 w-16 opacity-20" />
-              <h3 className="text-lg font-bold text-slate-600">Nenhum produto encontrado</h3>
-              <p className="mt-1 text-sm">Volte mais tarde para conferir as novidades.</p>
+              <h3 className="text-lg font-bold text-slate-600">Nenhum produto cadastrado</h3>
             </div>
           ) : Object.keys(groupedProducts).length === 0 ? (
              <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
@@ -348,52 +341,59 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               {Object.entries(groupedProducts).map(([catName, prods]) => (
                 <section key={catName}>
                   {!searchQuery && (
-                    <h2 className="mb-6 flex items-center gap-2 text-2xl font-extrabold text-slate-800">
+                    <h2 className="mb-5 flex items-center gap-2 text-[20px] font-black tracking-tight text-slate-900">
                       {catName}
-                      <span className="text-sm font-normal text-slate-400">({prods.length})</span>
+                      <span className="text-[13px] font-bold text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-full">{prods.length}</span>
                     </h2>
                   )}
-                  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                     {prods.map((product) => (
                       <div
                         key={product.id}
-                        className="group relative flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md hover:ring-slate-200"
+                        className="group relative flex flex-col overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-200/60 transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:ring-slate-300"
                       >
                         {product.imageUrl ? (
-                          <div className="h-48 w-full overflow-hidden bg-slate-100">
+                          <div className="h-40 w-full overflow-hidden bg-slate-50">
                             <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                           </div>
                         ) : null}
                         <div className="flex flex-1 flex-col p-5">
-                          <h3 className="text-lg font-bold text-slate-800 leading-tight">{product.name}</h3>
+                          <h3 className="text-[17px] font-bold text-slate-900 leading-tight">{product.name}</h3>
                           {product.description && (
-                            <p className="mt-2 text-sm text-slate-500 line-clamp-2">
+                            <p className="mt-2 text-[14px] leading-snug text-slate-500 line-clamp-2">
                               {product.description}
                             </p>
                           )}
-                          <div className="mt-auto pt-4 flex items-center justify-between">
-                            <p className="text-xl font-black tracking-tight" style={{ color: 'var(--primary-color)' }}>
-                              {formatCurrency(product.price)}
-                            </p>
+                          
+                          <div className="mt-6 flex items-end justify-between gap-4">
+                            <div className="flex flex-col">
+                              {product.measureUnit && product.measureUnit !== 'UN' && (
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">{product.measureUnit}</span>
+                              )}
+                              <p className="text-lg font-black tracking-tight text-slate-900">
+                                {formatCurrency(product.price)}
+                              </p>
+                            </div>
                             
                             <div>
                               {cart[product.id] ? (
-                                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-                                  <button onClick={() => handleRemoveFromCart(product.id)} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors">
-                                    <Minus className="h-4 w-4" />
+                                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-inner">
+                                  <button onClick={() => handleRemoveFromCart(product.id)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-transform active:scale-90">
+                                    <Minus className="h-4 w-4 stroke-[3]" />
                                   </button>
-                                  <span className="w-6 text-center text-sm font-bold">{cart[product.id].quantity}</span>
-                                  <button onClick={() => handleAddToCart(product)} className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-95" style={{ backgroundColor: 'var(--primary-color)' }}>
-                                    <Plus className="h-4 w-4" />
+                                  <span className="w-6 text-center text-[15px] font-bold text-slate-800">{cart[product.id].quantity}</span>
+                                  <button onClick={() => handleAddToCart(product)} className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90" style={{ backgroundColor: 'var(--primary-color)' }}>
+                                    <Plus className="h-4 w-4 stroke-[3]" />
                                   </button>
                                 </div>
                               ) : (
                                 <button
                                   onClick={() => handleAddToCart(product)}
-                                  className="flex h-10 w-10 items-center justify-center rounded-full text-white shadow-sm transition-transform hover:scale-105 active:scale-95"
+                                  className="flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:scale-95"
                                   style={{ backgroundColor: 'var(--primary-color)' }}
                                 >
-                                  <Plus className="h-5 w-5" />
+                                  <Plus className="h-4 w-4 stroke-[3]" />
+                                  Adicionar
                                 </button>
                               )}
                             </div>
@@ -409,38 +409,36 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         </div>
       </main>
 
-      {/* DESKTOP SIDEBAR CART */}
       <aside className="hidden w-[400px] shrink-0 border-l border-slate-200 bg-white shadow-2xl lg:block z-30">
         <CartContent />
       </aside>
 
-      {/* MOBILE FLOATING CART BUTTON */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-40 p-5 lg:hidden">
           <motion.button
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: 'spring', bounce: 0.3 }}
             onClick={() => setIsCartModalOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl p-4 font-bold text-white shadow-2xl transition-transform active:scale-[0.98]"
+            className="flex w-full items-center justify-between rounded-full p-4 px-6 font-bold text-white shadow-2xl transition-transform active:scale-[0.98]"
             style={{ backgroundColor: 'var(--primary-color)' }}
           >
             <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-                <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-black" style={{ color: 'var(--primary-color)' }}>
+              <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black/20">
+                <ShoppingBag className="h-4 w-4" />
+                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--primary-color)] bg-white text-[11px] font-black text-slate-900 shadow-sm">
                   {cartCount}
                 </span>
               </div>
-              <span className="text-lg">Ver Sacola</span>
+              <span className="text-[15px] font-bold tracking-wide">Ver Pedido</span>
             </div>
-            <span className="rounded-xl bg-white/20 px-4 py-2 text-lg">
+            <span className="text-[17px] font-black tracking-tight">
               {formatCurrency(cartTotal)}
             </span>
           </motion.button>
         </div>
       )}
 
-      {/* MOBILE CART MODAL (BOTTOM SHEET) */}
       <AnimatePresence>
         {isCartModalOpen && (
           <>
@@ -449,21 +447,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsCartModalOpen(false)}
-              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-              className="fixed bottom-0 left-0 right-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl lg:hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl lg:hidden"
             >
-              <div className="flex items-center justify-between border-b p-6 pt-8 relative">
+              <div className="flex items-center justify-between border-b border-slate-100 p-6 pt-8 relative">
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 h-1.5 w-12 rounded-full bg-slate-200" />
-                <h2 className="text-2xl font-bold text-slate-800">Seu Pedido</h2>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900">Seu Pedido</h2>
                 <button
                   onClick={() => setIsCartModalOpen(false)}
-                  className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+                  className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 transition-colors"
                 >
                   <X className="h-6 w-6" />
                 </button>
