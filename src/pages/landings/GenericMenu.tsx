@@ -92,6 +92,41 @@ function crc16(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
+// Normalizador de Chaves Pix segundo o padrão do Banco Central (BACEN / DICT)
+function normalizePixKey(key: string): string {
+  if (!key) return ''
+  const clean = key.trim()
+
+  // 1. E-mail: minúsculo
+  if (clean.includes('@')) {
+    return clean.toLowerCase()
+  }
+
+  // 2. Chave Aleatória (EVP / UUID): 36 caracteres
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
+    return clean.toLowerCase()
+  }
+
+  const digitsOnly = clean.replace(/\D/g, '')
+
+  // 3. Telefone sem código de país (+55): ex: 12992193644 -> +5512992193644
+  if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+    return `+55${digitsOnly}`
+  }
+
+  // 4. Telefone com 55 mas sem o sinal de +: ex: 5512992193644 -> +5512992193644
+  if ((digitsOnly.length === 12 || digitsOnly.length === 13) && digitsOnly.startsWith('55') && !clean.startsWith('+')) {
+    return `+${digitsOnly}`
+  }
+
+  // 5. CPF (11 dig) ou CNPJ (14 dig)
+  if (digitsOnly.length === 11 || digitsOnly.length === 14) {
+    return digitsOnly
+  }
+
+  return clean
+}
+
 function generatePixBRCode({
   pixKey,
   merchantName,
@@ -105,7 +140,7 @@ function generatePixBRCode({
 }): string {
   if (!pixKey || !pixKey.trim()) return ''
 
-  const cleanKey = pixKey.trim()
+  const cleanKey = normalizePixKey(pixKey)
   const rawName = (merchantName || 'METRICS LOJA')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -535,16 +570,24 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     try {
       // Registra dados do cliente no backend via API publica
       if (fulfillmentType === 'DELIVERY') {
-        await api.post('/public/checkout/client', {
-          name: customerName,
-          phone: customerPhone,
-          street,
-          number,
-          neighborhood,
-          city: city || profile?.city || '',
-          state: state || profile?.state || '',
-          zipcode,
-        })
+        try {
+          const rawPhone = customerPhone.replace(/\D/g, '')
+          const rawZipcode = zipcode.replace(/\D/g, '')
+          const parsedNumber = parseInt(number.replace(/\D/g, ''), 10) || 0
+
+          await api.post('/public/checkout/client', {
+            name: customerName,
+            phone: rawPhone,
+            street,
+            number: parsedNumber,
+            neighborhood,
+            city: city || profile?.city || '',
+            state: state || profile?.state || '',
+            zipcode: rawZipcode ? parseInt(rawZipcode, 10) : undefined,
+          })
+        } catch (clientErr) {
+          console.warn('Aviso ao sincronizar cliente com backend:', clientErr)
+        }
       }
 
       // Formata mensagem estruturada padrão iFood / Anota AI para o WhatsApp
