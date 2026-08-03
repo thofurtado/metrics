@@ -118,7 +118,16 @@ export function CashierSessionDetails() {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
     }
 
-    const mappedLancamentos = (entries || []).map((e: any) => {
+    const mappedLancamentos = (entries || [])
+      .sort((a: any, b: any) => {
+        if (a.is_checked !== b.is_checked) {
+          return a.is_checked ? 1 : -1
+        }
+        const dateA = new Date(a.created_at || 0).getTime()
+        const dateB = new Date(b.created_at || 0).getTime()
+        return dateB - dateA
+      })
+      .map((e: any) => {
         const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i;
         const match = (e.identification || '').match(regexCaixinha);
         const valorCaixinhaLinked = match ? parseFloat(match[1].replace(',', '.')) : 0;
