@@ -354,16 +354,22 @@ export function TimeSheetPage() {
                     ? 'F. Injustificada'
                     : r.status
 
-        const getOvertimeStr = (row: any) => {
-          if (!row.overtimeMinutes || row.overtimeMinutes <= 0) return '--'
-          const h = Math.floor(row.overtimeMinutes / 60)
-          const m = row.overtimeMinutes % 60
+        const list = timeClocks?.timeClocks || timeClocks?.data || []
+        const dayClock: any = list.find((tc: any) => tc.date?.split('T')[0] === r.date)
+
+        const getOvertimeStr = (row: any, originalDayClock: any) => {
+          const ovtMins = originalDayClock?.overtimeMinutes ?? row.overtimeMinutes
+          const calcMem = originalDayClock?.calculation_memory ?? row.calculation_memory
+
+          if (!ovtMins || ovtMins <= 0) return '--'
+          const h = Math.floor(ovtMins / 60)
+          const m = ovtMins % 60
           const timeStr = `${h}h${m > 0 ? ` ${m.toString().padStart(2, '0')}m` : ''}`
           
           let percent = ''
-          if (row.calculation_memory && row.calculation_memory.multiplier) {
-              if (row.calculation_memory.multiplier === 1.6) percent = ' (60%)'
-              else if (row.calculation_memory.multiplier >= 2.0) percent = ' (100%)'
+          if (calcMem && calcMem.multiplier) {
+              if (calcMem.multiplier === 1.6) percent = ' (60%)'
+              else if (calcMem.multiplier >= 2.0) percent = ' (100%)'
           }
           return timeStr + percent
         }
@@ -385,7 +391,7 @@ export function TimeSheetPage() {
               })
             : '--',
           calculateNetHours(r),
-          getOvertimeStr(r),
+          getOvertimeStr(r, dayClock),
         ]
       })
 
@@ -444,6 +450,23 @@ export function TimeSheetPage() {
         timeClocks?.summary?.extraDays ??
         rows.filter((r: any) => r.isExtraDay).length
       doc.text(`Dias Extras: ${totalExtraDays}`, 15, finalY + 5)
+      
+      const ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
+      const ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
+      if (ovt60 > 0 || ovt100 > 0) {
+        let txt = 'Horas Extras Estimadas:'
+        if (ovt60 > 0) {
+           const h = Math.floor(ovt60 / 60)
+           const m = ovt60 % 60
+           txt += ` ${h}h${m.toString().padStart(2, '0')}m (60%)`
+        }
+        if (ovt100 > 0) {
+           const h = Math.floor(ovt100 / 60)
+           const m = ovt100 % 60
+           txt += `${ovt60 > 0 ? ' | ' : ' '}${h}h${m.toString().padStart(2, '0')}m (100%)`
+        }
+        doc.text(txt, 15, finalY + 10)
+      }
 
       // Signature area
       finalY += 15
