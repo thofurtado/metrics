@@ -102,15 +102,14 @@ function checkIsOpen(profile: any) {
   return { isOpen: true, reason: 'Aberto' }
 }
 
-// Subcomponente: Dynamic Hero Header (Redesign Ultra-Premium)
+// Subcomponente: Dynamic Hero Background (Preenchimento Absoluto)
 const DynamicHero = ({ profile }: { profile: any }) => {
   if (profile?.banner_url) {
     return (
-      <div className="relative h-40 w-full sm:h-48 md:h-52 lg:h-56 overflow-hidden shadow-inner">
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/30 to-transparent z-10" />
+      <div className="absolute inset-0 overflow-hidden">
         <img
           src={profile.banner_url}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center"
           alt="Banner do Estabelecimento"
         />
       </div>
@@ -120,49 +119,47 @@ const DynamicHero = ({ profile }: { profile: any }) => {
   // Generative Ultra-Premium Animated Mesh Banner (Modo Cor Sem Imagem)
   return (
     <div
-      className="relative h-40 w-full sm:h-48 md:h-52 lg:h-56 overflow-hidden shadow-xl"
+      className="absolute inset-0 overflow-hidden"
       style={{ backgroundColor: 'var(--primary-color, #FF5722)' }}
     >
       {/* Sobreposição de Gradientes Radiais Mesh */}
       <div
-        className="absolute inset-0 opacity-40 mix-blend-overlay"
+        className="absolute inset-0 opacity-50 mix-blend-overlay"
         style={{
           backgroundImage: `
-            radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.9) 0%, transparent 45%),
-            radial-gradient(circle at 85% 80%, rgba(0, 0, 0, 0.7) 0%, transparent 50%),
+            radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.95) 0%, transparent 45%),
+            radial-gradient(circle at 85% 80%, rgba(0, 0, 0, 0.8) 0%, transparent 50%),
             radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)
           `,
         }}
       />
 
       {/* Padrão Geométrico Sutil */}
-      <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:24px_24px]" />
+      <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:28px_28px]" />
 
       {/* Orbes de Luz Flutuantes Animadas (Bokeh) */}
       <motion.div
         animate={{
           scale: [1, 1.25, 1],
-          x: [0, 20, 0],
-          y: [0, -10, 0],
+          x: [0, 25, 0],
+          y: [0, -15, 0],
         }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/25 blur-3xl pointer-events-none"
+        className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-white/30 blur-3xl pointer-events-none"
       />
 
       <motion.div
         animate={{
           scale: [1, 1.3, 1],
-          x: [0, -25, 0],
-          y: [0, 15, 0],
+          x: [0, -30, 0],
+          y: [0, 20, 0],
         }}
         transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -bottom-24 -left-20 h-80 w-80 rounded-full bg-black/30 blur-3xl pointer-events-none"
+        className="absolute -bottom-24 -left-20 h-96 w-96 rounded-full bg-black/40 blur-3xl pointer-events-none"
       />
-
-      {/* Gradiente Inferior para Fusão com o Fundo */}
-      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/40 to-transparent z-10" />
     </div>
   )
+}
 }
 
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
@@ -524,58 +521,69 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     <div className="flex min-h-[100dvh] w-full flex-col bg-[#F8FAFC] font-sans text-slate-800 lg:flex-row">
       <main className="flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0 relative">
         <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
-          {/* Banner Elegante Corrigido */}
-          <DynamicHero profile={profile} />
+          {/* Banner Hero Container com Conteúdo 100% Sobreposto */}
+          <div className="relative min-h-[220px] sm:min-h-[250px] md:min-h-[270px] w-full overflow-hidden flex flex-col justify-end p-5 lg:p-10 shadow-lg">
+            {/* Fundo do Banner (Imagem ou Mesh Gerativo Animado) */}
+            <DynamicHero profile={profile} />
 
-          <div className="relative z-20 -mt-10 px-5 lg:px-12 flex flex-col gap-5">
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-md lg:h-24 lg:w-24">
+            {/* Máscara de Gradiente para Leitura Perfeita dos Textos */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-black/20 z-10 pointer-events-none" />
+
+            {/* Conteúdo Posicionado Sobre o Banner */}
+            <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-end gap-4 text-white">
+              {/* Box do Logo */}
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white/90 bg-white shadow-2xl lg:h-24 lg:w-24 transition-transform hover:scale-105">
                 {profile?.logo_url ? (
                   <img src={profile.logo_url} alt="Logo" className="h-full w-full object-cover" />
                 ) : (
-                  <Store className="h-full w-full p-4" style={{ color: 'var(--primary-color)' }} />
+                  <Store className="h-full w-full p-4" style={{ color: 'var(--primary-color, #FF5722)' }} />
                 )}
               </div>
-              <div className="flex flex-col pt-8">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-[22px] font-black tracking-tight text-slate-900 leading-none">
+
+              {/* Título e Badges da Loja */}
+              <div className="flex flex-col gap-2 flex-1 drop-shadow-md">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
                     {profile?.tradeName || tenantName}
                   </h1>
                   <button
                     onClick={() => setIsStoreInfoOpen(true)}
-                    className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-200/60 px-2 py-1 rounded-full transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-bold text-white/90 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 transition-all"
                   >
-                    <Info className="h-3.5 w-3.5" /> Info
+                    <Info className="h-3.5 w-3.5" /> Informações
                   </button>
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                {/* Badges de Atendimento */}
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {!storeStatus.isOpen ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100/80 px-2.5 py-1 text-[11px] font-bold text-red-700 uppercase tracking-wider backdrop-blur-sm">
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span> {storeStatus.reason}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20 shadow-sm">
+                      <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span> {storeStatus.reason}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/80 px-2.5 py-1 text-[11px] font-bold text-emerald-700 uppercase tracking-wider backdrop-blur-sm">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Aberto agora
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20 shadow-sm">
+                      <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span> Aberto agora
                     </span>
                   )}
 
                   {profile?.deliveryTimeMin && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
-                      <Clock className="h-3 w-3 text-slate-400" />
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                      <Clock className="h-3.5 w-3.5 text-indigo-300" />
                       {profile.deliveryTimeMin}-{profile.deliveryTimeMax || 60} min
                     </span>
                   )}
 
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
-                    <Truck className="h-3 w-3 text-slate-400" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                    <Truck className="h-3.5 w-3.5 text-indigo-300" />
                     {profile?.deliveryFee > 0 ? formatCurrency(profile.deliveryFee) : 'Entrega Grátis'}
                   </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Barra de Pesquisa */}
+          {/* Barra de Pesquisa (Abaixo do Banner) */}
+          <div className="px-5 lg:px-12 pt-4 pb-2">
             <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/60 focus-within:ring-2 focus-within:ring-[var(--primary-color)] transition-all">
               <Search className="h-5 w-5 text-slate-400" />
               <input
