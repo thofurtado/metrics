@@ -301,6 +301,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [addressReadonly, setAddressReadonly] = useState(false)
   const [isNewAddress, setIsNewAddress] = useState(false)
   const [isAddressesModalOpen, setIsAddressesModalOpen] = useState(false)
+  const [phoneSearchToast, setPhoneSearchToast] = useState<{
+    type: 'success' | 'info' | 'error'
+    message: string
+  } | null>(null)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -339,9 +343,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     if (rawPhone.length < 10) return
 
     setIsLoadingPhone(true)
+    setPhoneSearchToast(null)
+
     try {
       const res = await api.get(`/public/clients/phone/${rawPhone}`)
-      if (res.data.client) {
+      if (res.data && res.data.client) {
         const client = res.data.client
         setCustomerName(client.name || '')
         setClientFound(true)
@@ -362,20 +368,40 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           setAddressReadonly(false)
           setIsNewAddress(true)
         }
+
+        setPhoneSearchToast({
+          type: 'success',
+          message: `Cliente ${client.name || ''} localizado!`,
+        })
       } else {
-        setClientFound(false)
-        setSavedAddresses([])
-        setAddressReadonly(false)
-        setIsNewAddress(true)
+        throw new Error('Cliente não encontrado')
       }
     } catch {
       setClientFound(false)
       setSavedAddresses([])
       setAddressReadonly(false)
       setIsNewAddress(true)
+      setCustomerName('')
+      setZipcode('')
+      setStreet('')
+      setNumber('')
+      setNeighborhood('')
+      setCity('')
+      setState('')
+
+      setPhoneSearchToast({
+        type: 'info',
+        message: 'Cliente não cadastrado. Preencha seus dados abaixo para se cadastrar!',
+      })
+
+      // Pula para o campo Nome automaticamente
+      setTimeout(() => {
+        document.getElementById('name-input')?.focus()
+      }, 150)
     } finally {
       setIsLoadingPhone(false)
       setHasSearchedPhone(true)
+      setTimeout(() => setPhoneSearchToast(null), 4000)
     }
   }
 
@@ -400,6 +426,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setNeighborhood('')
     setCity('')
     setState('')
+    setTimeout(() => {
+      document.getElementById('zipcode-input')?.focus()
+    }, 100)
   }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1239,19 +1268,38 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     <span>Buscar</span>
                   </button>
                 </div>
+
+                {/* Banner de Notificação Toast (Busca de Cliente) */}
+                {phoneSearchToast && (
+                  <div
+                    className={`p-3 rounded-xl font-bold text-xs flex items-center gap-2 border shadow-sm ${
+                      phoneSearchToast.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : phoneSearchToast.type === 'info'
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-rose-50 border-rose-300 text-rose-800'
+                    }`}
+                  >
+                    <span className="text-sm">
+                      {phoneSearchToast.type === 'success' ? '✅' : phoneSearchToast.type === 'info' ? 'ℹ️' : '⚠️'}
+                    </span>
+                    <span>{phoneSearchToast.message}</span>
+                  </div>
+                )}
+
                 <p className="text-[11px] text-slate-500">
-                  Digite seu WhatsApp e clique em Buscar para recuperar seus dados e endereços salvos.
+                  Digite seu WhatsApp e aperte Enter ou clique em Buscar para recuperar seus dados e endereços salvos.
                 </p>
               </div>
 
               {/* Formulário de Nome e Endereço */}
               <div className="space-y-3 pt-1">
                 <div className="space-y-1">
-                  <Label htmlFor="customerName" className="text-xs font-bold text-slate-800">
+                  <Label htmlFor="name-input" className="text-xs font-bold text-slate-800">
                     2. Seu Nome Completo *
                   </Label>
                   <Input
-                    id="customerName"
+                    id="name-input"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     disabled={addressReadonly}
@@ -1338,12 +1386,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     {(savedAddresses.length === 0 || isNewAddress) && (
                       <div className="space-y-3 pt-1">
                         <div className="space-y-1">
-                          <Label htmlFor="zipcode" className="text-xs flex items-center justify-between">
+                          <Label htmlFor="zipcode-input" className="text-xs flex items-center justify-between">
                             <span>Buscar CEP</span>
                             {isSearchingCEPCheckout && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">Buscando endereço...</span>}
                           </Label>
                           <Input
-                            id="zipcode"
+                            id="zipcode-input"
                             value={zipcode}
                             onChange={handleCepChange}
                             disabled={addressReadonly}
@@ -1457,7 +1505,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   }}
                   className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors shadow-sm"
                 >
-                  Avançar para Pagamento →
+                  {isNewAddress || !clientFound ? 'Cadastrar e Avançar para Pagamento →' : 'Avançar para Pagamento →'}
                 </button>
               </div>
             </motion.div>
