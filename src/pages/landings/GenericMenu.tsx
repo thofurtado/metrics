@@ -587,6 +587,36 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setIsCheckoutStepOpen(true)
   }
 
+  const registerClientInBackend = async () => {
+    if (!customerName.trim() || !customerPhone.trim()) return
+    try {
+      const rawPhone = customerPhone.replace(/\D/g, '')
+      const rawZipcode = zipcode.replace(/\D/g, '')
+
+      const payload = {
+        name: customerName,
+        phone: rawPhone,
+        street: fulfillmentType === 'DELIVERY' ? street : 'Retirada no Balcão',
+        number: fulfillmentType === 'DELIVERY' ? (number || '0') : '0',
+        neighborhood: fulfillmentType === 'DELIVERY' ? neighborhood : 'Balcão',
+        city: fulfillmentType === 'DELIVERY' ? (city || profile?.city || 'Local') : (profile?.city || 'Local'),
+        state: fulfillmentType === 'DELIVERY' ? (state || profile?.state || 'SP') : (profile?.state || 'SP'),
+        zipcode: fulfillmentType === 'DELIVERY' && rawZipcode ? rawZipcode : undefined,
+        isNewAddress,
+      }
+
+      const res = await api.post('/public/checkout/client', payload)
+      if (res.data && res.data.client) {
+        setClientFound(true)
+        if (res.data.client.addresses) {
+          setSavedAddresses(res.data.client.addresses)
+        }
+      }
+    } catch (clientErr) {
+      console.warn('Aviso ao sincronizar cliente com backend:', clientErr)
+    }
+  }
+
   const handleFinalizeOrder = async () => {
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Por favor, preencha seu nome e WhatsApp.')
@@ -601,27 +631,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     try {
-      // Registra dados do cliente no backend via API publica (Estrutura Exata do Marujo)
-      if (fulfillmentType === 'DELIVERY') {
-        try {
-          const rawPhone = customerPhone.replace(/\D/g, '')
-          const rawZipcode = zipcode.replace(/\D/g, '')
-
-          await api.post('/public/checkout/client', {
-            name: customerName,
-            phone: rawPhone,
-            street,
-            number,
-            neighborhood,
-            city: city || profile?.city || '',
-            state: state || profile?.state || '',
-            zipcode: rawZipcode || undefined,
-            isNewAddress,
-          })
-        } catch (clientErr) {
-          console.warn('Aviso ao sincronizar cliente com backend:', clientErr)
-        }
-      }
+      // Registra dados do cliente no backend via API publica (Marujo Standard para Delivery e Balcão)
+      await registerClientInBackend()
 
       // Formata mensagem estruturada padrão iFood / Anota AI para o WhatsApp
       let text = `🛒 *NOVO PEDIDO - ${tenantName.toUpperCase()}*\n`
@@ -1492,7 +1503,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!customerName.trim() || !customerPhone.trim()) {
                       alert('Por favor, preencha seu nome e telefone.')
                       return
@@ -1501,6 +1512,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       alert('Por favor, preencha o endereço completo de entrega.')
                       return
                     }
+                    await registerClientInBackend()
                     setCheckoutWizardStep(3)
                   }}
                   className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors shadow-sm"
