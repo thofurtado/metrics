@@ -277,6 +277,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
+  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3>(1)
   const [fulfillmentType, setFulfillmentType] = useState<'DELIVERY' | 'TAKEOUT'>('DELIVERY')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -553,37 +554,40 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       alert(`O valor mínimo para pedido é de ${formatCurrency(minOrderValue)}.`)
       return
     }
+    setCheckoutWizardStep(1)
     setIsCheckoutStepOpen(true)
   }
 
   const handleFinalizeOrder = async () => {
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Por favor, preencha seu nome e WhatsApp.')
+      setCheckoutWizardStep(2)
       return
     }
 
     if (fulfillmentType === 'DELIVERY' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
       alert('Por favor, preencha o endereço completo de entrega.')
+      setCheckoutWizardStep(2)
       return
     }
 
     try {
-      // Registra dados do cliente no backend via API publica
+      // Registra dados do cliente no backend via API publica (Estrutura Exata do Marujo)
       if (fulfillmentType === 'DELIVERY') {
         try {
           const rawPhone = customerPhone.replace(/\D/g, '')
           const rawZipcode = zipcode.replace(/\D/g, '')
-          const parsedNumber = parseInt(number.replace(/\D/g, ''), 10) || 0
 
           await api.post('/public/checkout/client', {
             name: customerName,
             phone: rawPhone,
             street,
-            number: parsedNumber,
+            number,
             neighborhood,
             city: city || profile?.city || '',
             state: state || profile?.state || '',
-            zipcode: rawZipcode ? parseInt(rawZipcode, 10) : undefined,
+            zipcode: rawZipcode || undefined,
+            isNewAddress,
           })
         } catch (clientErr) {
           console.warn('Aviso ao sincronizar cliente com backend:', clientErr)
@@ -1101,57 +1105,99 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard) */}
+      {/* Modal de Checkout Robusto em Etapas (Padrão iFood / Anota AI / Marujo Sliding Wizard) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              Finalizar Pedido
+            <DialogTitle className="flex items-center justify-between gap-2 text-xl font-bold">
+              <span className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-primary" />
+                Finalizar Pedido
+              </span>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                Etapa {checkoutWizardStep} de 3
+              </span>
             </DialogTitle>
-            <DialogDescription>
-              Identifique-se e preencha as informações para concluir seu pedido.
-            </DialogDescription>
+
+            {/* Barra de Progresso das Etapas */}
+            <div className="grid grid-cols-3 gap-1.5 pt-2">
+              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-primary' : 'bg-slate-200'}`} />
+              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-primary' : 'bg-slate-200'}`} />
+              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-primary' : 'bg-slate-200'}`} />
+            </div>
           </DialogHeader>
 
-          <div className="space-y-5 py-2 text-sm">
-            {/* Opções de Atendimento (Entrega vs Retirada no Balcão) */}
-            <div className="space-y-2">
-              <Label className="font-bold">Como deseja receber seu pedido?</Label>
-              <div className="grid grid-cols-2 gap-3">
+          {/* PASSO 1: Tipo de Atendimento (Entrega vs Retirada) */}
+          {checkoutWizardStep === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-5 py-4 text-sm"
+            >
+              <div className="space-y-1 text-center py-2">
+                <h3 className="text-base font-black text-slate-900">Como deseja receber seu pedido?</h3>
+                <p className="text-xs text-slate-500">Selecione uma das opções abaixo para continuar:</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() => setFulfillmentType('DELIVERY')}
-                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 font-bold text-xs gap-1.5 transition-all ${
+                  onClick={() => {
+                    setFulfillmentType('DELIVERY')
+                    setCheckoutWizardStep(2)
+                  }}
+                  className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 font-bold gap-3 transition-all hover:scale-[1.02] ${
                     fulfillmentType === 'DELIVERY'
-                      ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                      ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20 shadow-md'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <Truck className="h-5 w-5" />
-                  Entrega Delivery
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    <Truck className="h-7 w-7" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold text-sm">🚀 Entrega Delivery</p>
+                    <p className="text-[11px] font-normal text-slate-500 mt-1">Receba no seu endereço</p>
+                  </div>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setFulfillmentType('TAKEOUT')
                     setPaymentMethod('PIX')
+                    setCheckoutWizardStep(2)
                   }}
-                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 font-bold text-xs gap-1.5 transition-all ${
+                  className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 font-bold gap-3 transition-all hover:scale-[1.02] ${
                     fulfillmentType === 'TAKEOUT'
-                      ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                      ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20 shadow-md'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <Store className="h-5 w-5" />
-                  Retirada no Balcão (Pix Antecipado)
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    <Store className="h-7 w-7" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold text-sm">🛍️ Retirada no Balcão</p>
+                    <p className="text-[11px] font-normal text-slate-500 mt-1">Retire na loja (Pix Antecipado)</p>
+                  </div>
                 </button>
               </div>
-            </div>
+            </motion.div>
+          )}
 
-            {/* Cadastro e Identificação do Cliente (Padrão Marujo 2 Etapas) */}
-            <div className="space-y-4 border-t pt-4">
-              {/* Etapa 1: Telefone / WhatsApp com Botão de Busca */}
+          {/* PASSO 2: Identificação do Cliente & Endereço de Entrega */}
+          {checkoutWizardStep === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 py-2 text-sm"
+            >
+              {/* Etapa 1: Telefone / WhatsApp com Botão de Busca Marujo */}
               <div className="space-y-2 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="customerPhone" className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
@@ -1194,345 +1240,391 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Digite seu WhatsApp e clique em Buscar para auto-preencher seus dados e endereços salvos.
+                  Digite seu WhatsApp e clique em Buscar para recuperar seus dados e endereços salvos.
                 </p>
               </div>
 
-              {/* Etapa 2: Dados Pessoais & Endereço (Exibido após buscar telefone ou digitar) */}
-              {(hasSearchedPhone || customerPhone.replace(/\D/g, '').length >= 10 || customerName) && (
-                <div className="space-y-3 pt-1 duration-300 animate-in fade-in slide-in-from-top-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="customerName" className="text-xs font-bold text-slate-800">
-                      2. Seu Nome Completo *
-                    </Label>
-                    <Input
-                      id="customerName"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      disabled={addressReadonly}
-                      placeholder="Ex: João Silva"
-                      className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 disabled:text-slate-700 font-medium"
-                    />
-                  </div>
+              {/* Formulário de Nome e Endereço */}
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1">
+                  <Label htmlFor="customerName" className="text-xs font-bold text-slate-800">
+                    2. Seu Nome Completo *
+                  </Label>
+                  <Input
+                    id="customerName"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    disabled={addressReadonly}
+                    placeholder="Ex: João Silva"
+                    className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 disabled:text-slate-700 font-medium"
+                  />
+                </div>
 
-                  {/* Endereço de Entrega (se Delivery) */}
-                  {fulfillmentType === 'DELIVERY' && (
-                    <div className="space-y-3 border-t pt-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega *
-                        </Label>
+                {/* Endereço de Entrega (se Delivery) */}
+                {fulfillmentType === 'DELIVERY' && (
+                  <div className="space-y-3 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega *
+                      </Label>
 
-                        {/* Ações de Endereço Salvo (Padrão Marujo) */}
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        {savedAddresses.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddressesModalOpen(true)}
+                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/20"
+                          >
+                            <MapPin className="h-3.5 w-3.5" /> {savedAddresses.length} Endereços
+                          </button>
+                        )}
+                        {addressReadonly && (
+                          <button
+                            type="button"
+                            onClick={handleNewAddress}
+                            className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Novo Endereço
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Exibição do Endereço Selecionado */}
+                    {savedAddresses.length > 0 && !isNewAddress && (
+                      <div className="p-3.5 rounded-2xl border-2 border-primary/30 bg-primary/5 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                              Endereço Selecionado
+                            </span>
+                            <p className="font-bold text-sm text-slate-900 mt-1">
+                              {street}, {number}
+                            </p>
+                            <p className="text-xs text-slate-600 font-medium">
+                              {neighborhood} - {city}/{state} {zipcode ? `(CEP: ${zipcode})` : ''}
+                            </p>
+                            {complement && (
+                              <p className="text-xs text-slate-500 italic mt-0.5">
+                                Comp: {complement}
+                              </p>
+                            )}
+                          </div>
+                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-1" />
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-1 border-t border-primary/10">
                           {savedAddresses.length > 1 && (
                             <button
                               type="button"
                               onClick={() => setIsAddressesModalOpen(true)}
-                              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/20"
+                              className="text-xs font-bold text-primary hover:underline"
                             >
-                              <MapPin className="h-3.5 w-3.5" /> Escolher entre meus {savedAddresses.length} endereços
+                              Trocar endereço
                             </button>
                           )}
-                          {addressReadonly && (
-                            <button
-                              type="button"
-                              onClick={handleNewAddress}
-                              className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
-                            >
-                              <Plus className="h-3.5 w-3.5" /> Novo Endereço
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={handleNewAddress}
+                            className="text-xs font-bold text-slate-600 hover:underline"
+                          >
+                            + Digitar outro endereço
+                          </button>
                         </div>
                       </div>
+                    )}
 
-                      {/* Exibição do Endereço Selecionado em Cartão Destacado */}
-                      {savedAddresses.length > 0 && !isNewAddress && (
-                        <div className="p-3.5 rounded-2xl border-2 border-primary/30 bg-primary/5 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                Endereço Selecionado
-                              </span>
-                              <p className="font-bold text-sm text-slate-900 mt-1">
-                                {street}, {number}
-                              </p>
-                              <p className="text-xs text-slate-600 font-medium">
-                                {neighborhood} - {city}/{state} {zipcode ? `(CEP: ${zipcode})` : ''}
-                              </p>
-                              {complement && (
-                                <p className="text-xs text-slate-500 italic mt-0.5">
-                                  Comp: {complement}
-                                </p>
-                              )}
-                            </div>
-                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-1" />
-                          </div>
-
-                          <div className="flex items-center gap-3 pt-1 border-t border-primary/10">
-                            {savedAddresses.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => setIsAddressesModalOpen(true)}
-                                className="text-xs font-bold text-primary hover:underline"
-                              >
-                                Trocar endereço
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={handleNewAddress}
-                              className="text-xs font-bold text-slate-600 hover:underline"
-                            >
-                              + Digitar outro endereço
-                            </button>
-                          </div>
+                    {/* Formulário de Digitação de Endereço */}
+                    {(savedAddresses.length === 0 || isNewAddress) && (
+                      <div className="space-y-3 pt-1">
+                        <div className="space-y-1">
+                          <Label htmlFor="zipcode" className="text-xs flex items-center justify-between">
+                            <span>Buscar CEP</span>
+                            {isSearchingCEPCheckout && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">Buscando endereço...</span>}
+                          </Label>
+                          <Input
+                            id="zipcode"
+                            value={zipcode}
+                            onChange={handleCepChange}
+                            disabled={addressReadonly}
+                            placeholder="00000-000"
+                            className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                          />
                         </div>
-                      )}
 
-                      {/* Formulário de Digitação de Endereço */}
-                      {(savedAddresses.length === 0 || isNewAddress) && (
-                        <div className="space-y-3 pt-1">
-                          <div className="space-y-1">
-                            <Label htmlFor="zipcode" className="text-xs flex items-center justify-between">
-                              <span>Buscar CEP</span>
-                              {isSearchingCEPCheckout && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">Buscando endereço...</span>}
-                            </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="col-span-2 space-y-1">
+                            <Label htmlFor="street" className="text-xs">Rua / Logradouro *</Label>
                             <Input
-                              id="zipcode"
-                              value={zipcode}
-                              onChange={handleCepChange}
+                              id="street"
+                              value={street}
+                              onChange={(e) => setStreet(e.target.value)}
                               disabled={addressReadonly}
-                              placeholder="00000-000"
+                              placeholder="Ex: Av. Paulista"
                               className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
                             />
                           </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-2 space-y-1">
-                              <Label htmlFor="street" className="text-xs">Rua / Logradouro *</Label>
-                              <Input
-                                id="street"
-                                value={street}
-                                onChange={(e) => setStreet(e.target.value)}
-                                disabled={addressReadonly}
-                                placeholder="Ex: Av. Paulista"
-                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor="number" className="text-xs">Número *</Label>
-                              <Input
-                                id="number-input"
-                                value={number}
-                                onChange={(e) => setNumber(e.target.value)}
-                                disabled={addressReadonly}
-                                placeholder="Ex: 1000"
-                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
-                              <Input
-                                id="neighborhood"
-                                value={neighborhood}
-                                onChange={(e) => setNeighborhood(e.target.value)}
-                                disabled={addressReadonly}
-                                placeholder="Bairro"
-                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor="complement" className="text-xs">Complemento / Ref.</Label>
-                              <Input
-                                id="complement"
-                                value={complement}
-                                onChange={(e) => setComplement(e.target.value)}
-                                disabled={addressReadonly}
-                                placeholder="Apto, Bloco, etc."
-                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-2 space-y-1">
-                              <Label htmlFor="city" className="text-xs">Cidade *</Label>
-                              <Input
-                                id="city"
-                                value={city}
-                                onChange={(e) => setCity(e.target.value)}
-                                disabled={addressReadonly}
-                                placeholder="Cidade"
-                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor="state" className="text-xs">Estado *</Label>
-                              <Input
-                                id="state"
-                                value={state}
-                                onChange={(e) => setState(e.target.value)}
-                                disabled={addressReadonly}
-                                maxLength={2}
-                                placeholder="UF"
-                                className="bg-white border-slate-300 focus-visible:ring-primary uppercase disabled:bg-slate-100 font-medium"
-                              />
-                            </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="number" className="text-xs">Número *</Label>
+                            <Input
+                              id="number-input"
+                              value={number}
+                              onChange={(e) => setNumber(e.target.value)}
+                              disabled={addressReadonly}
+                              placeholder="Ex: 1000"
+                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
 
-            {/* Forma de Pagamento */}
-            <div className="space-y-3 border-t pt-3">
-              <Label className="font-bold">Forma de Pagamento</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('PIX')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    paymentMethod === 'PIX'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-slate-200 text-slate-600'
-                  }`}
-                >
-                  ⚡ Pix
-                </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
+                            <Input
+                              id="neighborhood"
+                              value={neighborhood}
+                              onChange={(e) => setNeighborhood(e.target.value)}
+                              disabled={addressReadonly}
+                              placeholder="Bairro"
+                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="complement" className="text-xs">Complemento / Ref.</Label>
+                            <Input
+                              id="complement"
+                              value={complement}
+                              onChange={(e) => setComplement(e.target.value)}
+                              disabled={addressReadonly}
+                              placeholder="Apto, Bloco, etc."
+                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            />
+                          </div>
+                        </div>
 
-                {fulfillmentType === 'DELIVERY' && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('CREDIT')}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        paymentMethod === 'CREDIT'
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      💳 Cartão Crédito
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('DEBIT')}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        paymentMethod === 'DEBIT'
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      💳 Cartão Débito
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('CASH')}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        paymentMethod === 'CASH'
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      💵 Dinheiro
-                    </button>
-                  </>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="col-span-2 space-y-1">
+                            <Label htmlFor="city" className="text-xs">Cidade *</Label>
+                            <Input
+                              id="city"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              disabled={addressReadonly}
+                              placeholder="Cidade"
+                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="state" className="text-xs">Estado *</Label>
+                            <Input
+                              id="state"
+                              value={state}
+                              onChange={(e) => setState(e.target.value)}
+                              disabled={addressReadonly}
+                              maxLength={2}
+                              placeholder="UF"
+                              className="bg-white border-slate-300 focus-visible:ring-primary uppercase disabled:bg-slate-100 font-medium"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Caixa da Chave Pix & QR Code Oficial (Retirada ou Opção Pix) */}
-              {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                      <QrCode className="h-4 w-4 text-emerald-600" />
-                      <span>QR Code Pix & Copia e Cola Oficial</span>
-                    </div>
-                    <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
-                      {formatCurrency(cartTotal)}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between pt-4 border-t gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutWizardStep(1)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors"
+                >
+                  ← Voltar
+                </button>
 
-                  {/* Renderização do QR Code Visual Oficial BACEN */}
-                  {pixBRCodePayload && (
-                    <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixBRCodePayload)}`}
-                        alt="QR Code Pix do Pedido"
-                        className="h-44 w-44 object-contain rounded-lg"
-                      />
-                      <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center">
-                        Abra o app do seu banco e escaneie o QR Code acima
-                      </p>
-                    </div>
-                  )}
-
-                  <p className="text-[11px] text-emerald-700 leading-snug">
-                    Ou copie o código <strong>Pix Copia e Cola</strong> abaixo. Ao colar no seu banco, o valor exato de <strong>{formatCurrency(cartTotal)}</strong> será preenchido automaticamente!
-                  </p>
-
-                  <div className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 p-2.5 shadow-sm">
-                    <span className="flex-1 font-mono text-[11px] text-slate-800 truncate font-semibold">
-                      {pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
-                    >
-                      {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {isCopiedPix ? 'Pix Copiado!' : 'Copiar Pix Copia e Cola'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
-                <div className="space-y-1 pt-1">
-                  <Label htmlFor="changeAmount" className="text-xs">Precisa de troco para quanto?</Label>
-                  <Input
-                    id="changeAmount"
-                    value={changeAmount}
-                    onChange={(e) => setChangeAmount(e.target.value)}
-                    placeholder="Ex: 50.00 (Deixe em branco se não precisar)"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Resumo de Valores */}
-            <div className="rounded-xl border bg-slate-50 p-4 space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-600">
-                <span>Subtotal dos itens</span>
-                <span>{formatCurrency(cartSubtotal)}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!customerName.trim() || !customerPhone.trim()) {
+                      alert('Por favor, preencha seu nome e telefone.')
+                      return
+                    }
+                    if (fulfillmentType === 'DELIVERY' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
+                      alert('Por favor, preencha o endereço completo de entrega.')
+                      return
+                    }
+                    setCheckoutWizardStep(3)
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  Avançar para Pagamento →
+                </button>
               </div>
-              {fulfillmentType === 'DELIVERY' && (
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Taxa de Entrega</span>
-                  <span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Grátis'}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between text-base font-black text-slate-900 border-t pt-2">
-                <span>Total a Pagar</span>
-                <span style={{ color: 'var(--primary-color)' }}>{formatCurrency(cartTotal)}</span>
-              </div>
-            </div>
+            </motion.div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleFinalizeOrder}
-              className="w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-transform active:scale-98"
-              style={{ backgroundColor: 'var(--primary-color)' }}
+          {/* PASSO 3: Forma de Pagamento & Confirmação Final */}
+          {checkoutWizardStep === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 py-2 text-sm"
             >
-              Confirmar e Enviar Pedido via WhatsApp
-            </button>
-          </div>
+              {/* Forma de Pagamento */}
+              <div className="space-y-3 border-t pt-3">
+                <Label className="font-bold">Forma de Pagamento</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('PIX')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      paymentMethod === 'PIX'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    ⚡ Pix
+                  </button>
+
+                  {fulfillmentType === 'DELIVERY' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('CREDIT')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          paymentMethod === 'CREDIT'
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        💳 Cartão Crédito
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('DEBIT')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          paymentMethod === 'DEBIT'
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        💳 Cartão Débito
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('CASH')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          paymentMethod === 'CASH'
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        💵 Dinheiro
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Caixa da Chave Pix & QR Code Oficial (Retirada ou Opção Pix) */}
+                {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                        <QrCode className="h-4 w-4 text-emerald-600" />
+                        <span>QR Code Pix & Copia e Cola Oficial</span>
+                      </div>
+                      <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                        {formatCurrency(cartTotal)}
+                      </span>
+                    </div>
+
+                    {/* Renderização do QR Code Visual Oficial BACEN */}
+                    {pixBRCodePayload && (
+                      <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixBRCodePayload)}`}
+                          alt="QR Code Pix do Pedido"
+                          className="h-44 w-44 object-contain rounded-lg"
+                        />
+                        <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center">
+                          Abra o app do seu banco e escaneie o QR Code acima
+                        </p>
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-emerald-700 leading-snug">
+                      Ou copie o código <strong>Pix Copia e Cola</strong> abaixo. Ao colar no seu banco, o valor exato de <strong>{formatCurrency(cartTotal)}</strong> será preenchido automaticamente!
+                    </p>
+
+                    <div className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 p-2.5 shadow-sm">
+                      <span className="flex-1 font-mono text-[11px] text-slate-800 truncate font-semibold">
+                        {pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
+                      >
+                        {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        {isCopiedPix ? 'Pix Copiado!' : 'Copiar Pix Copia e Cola'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
+                  <div className="space-y-1 pt-1">
+                    <Label htmlFor="changeAmount" className="text-xs">Precisa de troco para quanto?</Label>
+                    <Input
+                      id="changeAmount"
+                      value={changeAmount}
+                      onChange={(e) => setChangeAmount(e.target.value)}
+                      placeholder="Ex: 50.00 (Deixe em branco se não precisar)"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo de Valores */}
+              <div className="rounded-xl border bg-slate-50 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Subtotal dos itens</span>
+                  <span>{formatCurrency(cartSubtotal)}</span>
+                </div>
+                {fulfillmentType === 'DELIVERY' && (
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span>Taxa de Entrega</span>
+                    <span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Grátis'}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-base font-black text-slate-900 border-t pt-2">
+                  <span>Total a Pagar</span>
+                  <span style={{ color: 'var(--primary-color)' }}>{formatCurrency(cartTotal)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutWizardStep(2)}
+                  className="px-4 py-3 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors"
+                >
+                  ← Voltar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFinalizeOrder}
+                  className="flex-1 py-3.5 rounded-xl font-black text-white text-sm shadow-lg transition-transform active:scale-98"
+                  style={{ backgroundColor: 'var(--primary-color)' }}
+                >
+                  Confirmar e Enviar Pedido via WhatsApp 🚀
+                </button>
+              </div>
+            </motion.div>
+          )}
         </DialogContent>
       </Dialog>
 
