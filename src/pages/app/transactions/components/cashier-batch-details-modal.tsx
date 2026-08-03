@@ -264,6 +264,14 @@ export function CashierBatchDetailsModal({
                     <div className="flex flex-col gap-2">
                       {data.transactions
                         .filter((t: any) => t.operation !== 'cashier_summary')
+                        .sort((a: any, b: any) => {
+                          if (a.confirmed !== b.confirmed) {
+                            return a.confirmed ? 1 : -1
+                          }
+                          const dateA = new Date(a.created_at || a.data_emissao || 0).getTime()
+                          const dateB = new Date(b.created_at || b.data_emissao || 0).getTime()
+                          return dateB - dateA
+                        })
                         .map((tx: any) => (
                         <div key={tx.id} className="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                           <div className="flex flex-col">
