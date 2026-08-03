@@ -57,6 +57,7 @@ const profileSchema = z.object({
   deliveryTimeMax: z.coerce.number().min(1, 'Tempo inválido').default(60),
   ifoodMerchantId: z.string().optional(),
   anotaAiApiKey: z.string().optional(),
+  pixKey: z.string().optional(),
   businessHours: z.array(businessHourSchema),
 })
 
@@ -198,6 +199,7 @@ export function MenuSettings() {
       deliveryTimeMax: 60,
       ifoodMerchantId: '',
       anotaAiApiKey: '',
+      pixKey: '',
       businessHours: DEFAULT_BUSINESS_HOURS,
     },
   })
@@ -242,6 +244,7 @@ export function MenuSettings() {
         deliveryTimeMax: profile.deliveryTimeMax ?? 60,
         ifoodMerchantId: profile.ifoodMerchantId || '',
         anotaAiApiKey: profile.anotaAiApiKey || '',
+        pixKey: profile.pixKey || '',
         businessHours,
       })
     }
@@ -723,20 +726,25 @@ export function MenuSettings() {
           </CardContent>
         </Card>
 
-        {/* Card 6: Integrações Marketplace (iFood / Anota AI) */}
+        {/* Card 6: Integrações Marketplace & Pagamento Pix */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Globe className="h-5 w-5 text-primary" />
-              Integrações (iFood / Anota AI)
+              Integrações & Pagamento Pix
             </CardTitle>
             <CardDescription>
-              Campos de identificação preparados para futura comunicação de cardápio e pedidos.
+              Configure sua Chave Pix para recebimento de pedidos no checkout e identificadores de marketplaces.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ifoodMerchantId">ID da Loja no iFood (Merchant ID)</Label>
+              <Label htmlFor="pixKey" className="font-semibold text-primary">Chave Pix (Recebimento de Pedidos)</Label>
+              <Input id="pixKey" {...register('pixKey')} placeholder="CNPJ, Telefone, E-mail ou Aleatória" />
+              <p className="text-[11px] text-muted-foreground">Exibida no checkout para retira no balcão e Pix adiantado</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ifoodMerchantId">ID da Loja iFood (Merchant ID)</Label>
               <Input id="ifoodMerchantId" {...register('ifoodMerchantId')} placeholder="Ex: uuid-ifood-merchant" />
             </div>
             <div className="space-y-2">

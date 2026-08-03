@@ -13,6 +13,11 @@ import {
   Truck,
   MapPin,
   FileText,
+  QrCode,
+  Copy,
+  Check,
+  User,
+  CheckCircle2,
 } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { api } from '@/lib/axios'
@@ -168,9 +173,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false)
   const [isStoreInfoOpen, setIsStoreInfoOpen] = useState(false)
 
-  // Estados do Modal de Checkout Robusto (iFood / Anota AI)
+  // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
-  const [fulfillmentType, setFulfillmentType] = useState<'DELIVERY' | 'TAKEOUT' | 'DINE_IN'>('DELIVERY')
+  const [fulfillmentType, setFulfillmentType] = useState<'DELIVERY' | 'TAKEOUT'>('DELIVERY')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [street, setStreet] = useState('')
@@ -183,38 +188,145 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'>('PIX')
   const [changeAmount, setChangeAmount] = useState('')
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
+  const [isCopiedPix, setIsCopiedPix] = useState(false)
 
-  const handleSearchCEPCheckout = async () => {
-    const cleaned = zipcode.replace(/\D/g, '')
-    if (cleaned.length !== 8) {
-      alert('Informe um CEP válido com 8 dígitos para buscar.')
-      return
+  // Estados de Busca do Cliente Marujo & Múltiplos Endereços
+  const [clientFound, setClientFound] = useState(false)
+  const [isLoadingPhone, setIsLoadingPhone] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+  const [addressReadonly, setAddressReadonly] = useState(false)
+  const [isNewAddress, setIsNewAddress] = useState(false)
+
+  const formatPhone = (val: string) => {
+    const v = val.replace(/\D/g, '').substring(0, 11)
+    if (v.length > 10) {
+      return v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    } else if (v.length > 6) {
+      return v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+    } else if (v.length > 2) {
+      return v.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
+    } else if (v.length > 0) {
+      return v.replace(/^(\d{0,2})/, '($1')
     }
+    return v
+  }
 
-    setIsSearchingCEPCheckout(true)
+  const formatCep = (val: string) => {
+    const v = val.replace(/\D/g, '').substring(0, 8)
+    if (v.length > 5) {
+      return v.replace(/^(\d{5})(\d{1,3})/, '$1-$2')
+    }
+    return v
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    setCustomerPhone(formatted)
+    const raw = formatted.replace(/\D/g, '')
+    if (raw.length >= 10) {
+      handlePhoneSearch(raw)
+    }
+  }
+
+  const handlePhoneSearch = async (rawPhone: string) => {
+    if (rawPhone.length < 10) return
+
+    setIsLoadingPhone(true)
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleaned}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
+      const res = await api.get(`/public/clients/phone/${rawPhone}`)
+      if (res.data.client) {
+        const client = res.data.client
+        setCustomerName(client.name || '')
+        setClientFound(true)
 
-      if (data.street) setStreet(data.street)
-      if (data.neighborhood) setNeighborhood(data.neighborhood)
-      if (data.city) setCity(data.city)
-      if (data.state) setState(data.state)
-    } catch {
-      try {
-        const resVia = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`)
-        const data = await resVia.json()
-        if (data.erro) throw new Error()
-        if (data.logradouro) setStreet(data.logradouro)
-        if (data.bairro) setNeighborhood(data.bairro)
-        if (data.localidade) setCity(data.localidade)
-        if (data.uf) setState(data.uf)
-      } catch {
-        alert('Erro ao buscar CEP. Por favor, preencha o endereço manualmente.')
+        if (client.addresses && client.addresses.length > 0) {
+          setSavedAddresses(client.addresses)
+          const addr = client.addresses[0]
+          setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
+          setStreet(addr.street || '')
+          setNumber(addr.number ? addr.number.toString() : '')
+          setNeighborhood(addr.neighborhood || '')
+          setCity(addr.city || '')
+          setState(addr.state || '')
+          setAddressReadonly(true)
+          setIsNewAddress(false)
+        } else {
+          setSavedAddresses([])
+          setAddressReadonly(false)
+          setIsNewAddress(true)
+        }
       }
+    } catch {
+      setClientFound(false)
+      setSavedAddresses([])
+      setAddressReadonly(false)
+      setIsNewAddress(true)
     } finally {
-      setIsSearchingCEPCheckout(false)
+      setIsLoadingPhone(false)
+    }
+  }
+
+  const handleSelectSavedAddress = (addr: any) => {
+    setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
+    setStreet(addr.street || '')
+    setNumber(addr.number ? addr.number.toString() : '')
+    setNeighborhood(addr.neighborhood || '')
+    setCity(addr.city || '')
+    setState(addr.state || '')
+    setAddressReadonly(true)
+    setIsNewAddress(false)
+  }
+
+  const handleNewAddress = () => {
+    setAddressReadonly(false)
+    setIsNewAddress(true)
+    setZipcode('')
+    setStreet('')
+    setNumber('')
+    setNeighborhood('')
+    setCity('')
+    setState('')
+    setComplement('')
+  }
+
+  const handleCopyPixKey = (key: string) => {
+    navigator.clipboard.writeText(key)
+    setIsCopiedPix(true)
+    setTimeout(() => setIsCopiedPix(false), 3000)
+  }
+
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = formatCep(e.target.value)
+    setZipcode(val)
+    const rawCep = val.replace(/\D/g, '')
+
+    if (rawCep.length === 8) {
+      setIsSearchingCEPCheckout(true)
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+
+        setStreet(data.street || '')
+        setNeighborhood(data.neighborhood || '')
+        setCity(data.city || '')
+        setState(data.state || '')
+      } catch {
+        try {
+          const resVia = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`)
+          const data = await resVia.json()
+          if (!data.erro) {
+            setStreet(data.logradouro || '')
+            setNeighborhood(data.bairro || '')
+            setCity(data.localidade || '')
+            setState(data.uf || '')
+          }
+        } catch {
+          // ignore
+        }
+      } finally {
+        setIsSearchingCEPCheckout(false)
+      }
     }
   }
 
@@ -410,7 +522,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
   }
 
-  const CartContent = () => (
+  const renderCartSection = () => (
     <div className="flex h-full flex-col bg-white">
       <div className="flex items-center justify-between border-b border-slate-100 p-6">
         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Seu Pedido</h2>
@@ -741,7 +853,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       {/* Sidebar Carrinho Desktop */}
       <aside className="hidden w-[400px] shrink-0 border-l border-slate-200 bg-white shadow-2xl lg:block z-30">
-        <CartContent />
+        {renderCartSection()}
       </aside>
 
       {/* Botão Flutuante Mobile */}
@@ -800,7 +912,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
-                <CartContent />
+                {renderCartSection()}
               </div>
             </motion.div>
           </>
@@ -866,7 +978,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Checkout Robusto (iFood / Anota AI Standard) */}
+      {/* Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -875,58 +987,77 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               Finalizar Pedido
             </DialogTitle>
             <DialogDescription>
-              Preencha seus dados de entrega e forma de pagamento para concluir.
+              Identifique-se e preencha as informações para concluir seu pedido.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-2 text-sm">
-            {/* Opções de Atendimento */}
+            {/* Opções de Atendimento (Entrega vs Retirada no Balcão) */}
             <div className="space-y-2">
               <Label className="font-bold">Como deseja receber seu pedido?</Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setFulfillmentType('DELIVERY')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 font-bold text-xs gap-1.5 transition-all ${
+                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 font-bold text-xs gap-1.5 transition-all ${
                     fulfillmentType === 'DELIVERY'
-                      ? 'border-primary bg-primary/5 text-primary'
+                      ? 'border-primary bg-primary/5 text-primary shadow-sm'
                       : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                 >
-                  <Truck className="h-4 w-4" />
-                  Entrega
+                  <Truck className="h-5 w-5" />
+                  Entrega Delivery
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFulfillmentType('TAKEOUT')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 font-bold text-xs gap-1.5 transition-all ${
+                  onClick={() => {
+                    setFulfillmentType('TAKEOUT')
+                    setPaymentMethod('PIX')
+                  }}
+                  className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border-2 font-bold text-xs gap-1.5 transition-all ${
                     fulfillmentType === 'TAKEOUT'
-                      ? 'border-primary bg-primary/5 text-primary'
+                      ? 'border-primary bg-primary/5 text-primary shadow-sm'
                       : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                 >
-                  <Store className="h-4 w-4" />
-                  Retirada
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFulfillmentType('DINE_IN')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 font-bold text-xs gap-1.5 transition-all ${
-                    fulfillmentType === 'DINE_IN'
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <UtensilsCrossed className="h-4 w-4" />
-                  No Local
+                  <Store className="h-5 w-5" />
+                  Retirada no Balcão (Pix Antecipado)
                 </button>
               </div>
             </div>
 
-            {/* Dados do Cliente */}
+            {/* Cadastro e Identificação do Cliente (Padrão Marujo) */}
             <div className="space-y-3 border-t pt-3">
-              <Label className="font-bold">Seus Dados</Label>
+              <div className="flex items-center justify-between">
+                <Label className="font-bold flex items-center gap-1.5">
+                  <User className="h-4 w-4 text-primary" /> Seus Dados de Contato
+                </Label>
+                {clientFound && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="h-3 w-3" /> Cliente Identificado
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="customerPhone" className="text-xs">WhatsApp / Telefone *</Label>
+                  <div className="relative">
+                    <Input
+                      id="customerPhone"
+                      value={customerPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="(11) 99999-9999"
+                    />
+                    {isLoadingPhone && (
+                      <span className="absolute right-3 top-2.5 text-xs text-slate-400 animate-pulse">
+                        Buscando...
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400">Digite seu WhatsApp para buscar seus dados</p>
+                </div>
+
                 <div className="space-y-1">
                   <Label htmlFor="customerName" className="text-xs">Seu Nome Completo *</Label>
                   <Input
@@ -936,109 +1067,138 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     placeholder="Ex: João Silva"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="customerPhone" className="text-xs">WhatsApp / Telefone *</Label>
-                  <Input
-                    id="customerPhone"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="11999999999"
-                  />
-                </div>
               </div>
             </div>
 
-            {/* Endereço de Entrega (se Delivery) */}
+            {/* Endereço de Entrega (se Delivery - Padrão Marujo Múltiplos Endereços) */}
             {fulfillmentType === 'DELIVERY' && (
               <div className="space-y-3 border-t pt-3">
-                <Label className="font-bold flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega
-                </Label>
-
-                <div className="space-y-1">
-                  <Label htmlFor="zipcode" className="text-xs">Buscar CEP</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="zipcode"
-                      value={zipcode}
-                      onChange={(e) => setZipcode(e.target.value)}
-                      placeholder="00000-000"
-                    />
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega
+                  </Label>
+                  {savedAddresses.length > 0 && (
                     <button
                       type="button"
-                      onClick={handleSearchCEPCheckout}
-                      disabled={isSearchingCEPCheckout}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 shrink-0 flex items-center gap-1"
+                      onClick={handleNewAddress}
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                     >
-                      <Search className="h-3.5 w-3.5 text-primary" />
-                      {isSearchingCEPCheckout ? 'Buscando...' : 'Buscar CEP'}
+                      <Plus className="h-3.5 w-3.5" /> Novo Endereço
                     </button>
-                  </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2 space-y-1">
-                    <Label htmlFor="street" className="text-xs">Logradouro / Rua *</Label>
-                    <Input
-                      id="street"
-                      value={street}
-                      onChange={(e) => setStreet(e.target.value)}
-                      placeholder="Rua Exemplo"
-                    />
+                {/* Seleção de Endereços Salvos do Cliente */}
+                {savedAddresses.length > 0 && !isNewAddress && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500 font-medium">Seus endereços cadastrados:</p>
+                    <div className="space-y-2">
+                      {savedAddresses.map((addr, idx) => {
+                        const isSelected = addressReadonly && street === addr.street && number === addr.number?.toString()
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectSavedAddress(addr)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                : 'border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div>
+                              <p className="font-bold text-xs text-slate-800">
+                                {addr.street}, {addr.number} - {addr.neighborhood}
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                {addr.city}/{addr.state} {addr.zipcode ? `(CEP: ${formatCep(addr.zipcode.toString())})` : ''}
+                              </p>
+                            </div>
+                            {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="number" className="text-xs">Número *</Label>
-                    <Input
-                      id="number"
-                      value={number}
-                      onChange={(e) => setNumber(e.target.value)}
-                      placeholder="123"
-                    />
-                  </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
-                    <Input
-                      id="neighborhood"
-                      value={neighborhood}
-                      onChange={(e) => setNeighborhood(e.target.value)}
-                      placeholder="Bairro"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="complement" className="text-xs">Complemento / Ref.</Label>
-                    <Input
-                      id="complement"
-                      value={complement}
-                      onChange={(e) => setComplement(e.target.value)}
-                      placeholder="Apto 12, Bloco B"
-                    />
-                  </div>
-                </div>
+                {/* Formulário de Digitação de Endereço */}
+                {(savedAddresses.length === 0 || isNewAddress) && (
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1">
+                      <Label htmlFor="zipcode" className="text-xs">Buscar CEP</Label>
+                      <Input
+                        id="zipcode"
+                        value={zipcode}
+                        onChange={handleCepChange}
+                        placeholder="00000-000"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2 space-y-1">
-                    <Label htmlFor="city" className="text-xs">Cidade</Label>
-                    <Input
-                      id="city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Cidade"
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <Label htmlFor="street" className="text-xs">Logradouro / Rua *</Label>
+                        <Input
+                          id="street"
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
+                          placeholder="Rua Exemplo"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="number" className="text-xs">Número *</Label>
+                        <Input
+                          id="number"
+                          value={number}
+                          onChange={(e) => setNumber(e.target.value)}
+                          placeholder="123"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
+                        <Input
+                          id="neighborhood"
+                          value={neighborhood}
+                          onChange={(e) => setNeighborhood(e.target.value)}
+                          placeholder="Bairro"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="complement" className="text-xs">Complemento / Ponto de Ref.</Label>
+                        <Input
+                          id="complement"
+                          value={complement}
+                          onChange={(e) => setComplement(e.target.value)}
+                          placeholder="Apto 12, Bloco B"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <Label htmlFor="city" className="text-xs">Cidade</Label>
+                        <Input
+                          id="city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Cidade"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="state" className="text-xs">UF</Label>
+                        <Input
+                          id="state"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="UF"
+                          maxLength={2}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="state" className="text-xs">UF</Label>
-                    <Input
-                      id="state"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="UF"
-                      maxLength={2}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -1049,50 +1209,83 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('PIX')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     paymentMethod === 'PIX'
-                      ? 'border-primary bg-primary/5 text-primary'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                       : 'border-slate-200 text-slate-600'
                   }`}
                 >
                   ⚡ Pix
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('CREDIT')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                    paymentMethod === 'CREDIT'
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 text-slate-600'
-                  }`}
-                >
-                  💳 Cartão Crédito
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('DEBIT')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                    paymentMethod === 'DEBIT'
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 text-slate-600'
-                  }`}
-                >
-                  💳 Cartão Débito
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('CASH')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                    paymentMethod === 'CASH'
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-slate-200 text-slate-600'
-                  }`}
-                >
-                  💵 Dinheiro
-                </button>
+
+                {fulfillmentType === 'DELIVERY' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CREDIT')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        paymentMethod === 'CREDIT'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      💳 Cartão Crédito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('DEBIT')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        paymentMethod === 'DEBIT'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      💳 Cartão Débito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CASH')}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        paymentMethod === 'CASH'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      💵 Dinheiro
+                    </button>
+                  </>
+                )}
               </div>
 
-              {paymentMethod === 'CASH' && (
+              {/* Caixa da Chave Pix & QR Code (Retirada ou Opção Pix) */}
+              {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                    <QrCode className="h-4 w-4 text-emerald-600" />
+                    <span>Pagamento Antecipado via Pix</span>
+                  </div>
+
+                  <p className="text-[11px] text-emerald-700">
+                    Realize o pagamento transferindo o valor total de <strong className="text-emerald-900">{formatCurrency(cartTotal)}</strong> para a Chave Pix abaixo e apresente o comprovante.
+                  </p>
+
+                  <div className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 p-2.5 shadow-sm">
+                    <span className="flex-1 font-mono text-xs text-slate-800 truncate font-semibold">
+                      {profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPixKey(profile?.pixKey || profile?.whatsappNumber || '')}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors"
+                    >
+                      {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {isCopiedPix ? 'Copiado!' : 'Copiar Chave'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
                 <div className="space-y-1 pt-1">
                   <Label htmlFor="changeAmount" className="text-xs">Precisa de troco para quanto?</Label>
                   <Input
