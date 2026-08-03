@@ -75,6 +75,73 @@ const formatCurrency = (value: number) => {
   }).format(value || 0)
 }
 
+// Gerador Oficial do Padrão BR Code Pix BACEN (EMV QRCPS-MPM) com Valor Exato
+function crc16(str: string): string {
+  let crc = 0xffff
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = (crc << 1) ^ 0x1021
+      } else {
+        crc = crc << 1
+      }
+      crc = crc & 0xffff
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0')
+}
+
+function generatePixBRCode({
+  pixKey,
+  merchantName,
+  merchantCity,
+  amount,
+}: {
+  pixKey: string
+  merchantName: string
+  merchantCity: string
+  amount: number
+}): string {
+  if (!pixKey || !pixKey.trim()) return ''
+
+  const cleanKey = pixKey.trim()
+  const rawName = (merchantName || 'METRICS LOJA')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 ]/g, '')
+    .toUpperCase()
+  const cleanName = (rawName || 'LOJA').substring(0, 25)
+  const rawCity = (merchantCity || 'SAO PAULO')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 ]/g, '')
+    .toUpperCase()
+  const cleanCity = (rawCity || 'SAO PAULO').substring(0, 15)
+  const formattedAmount = (amount || 0).toFixed(2)
+
+  const merchantAccountInfo =
+    '0014br.gov.bcb.pix' +
+    '01' +
+    cleanKey.length.toString().padStart(2, '0') +
+    cleanKey
+
+  const payload =
+    '000201' +
+    '26' + merchantAccountInfo.length.toString().padStart(2, '0') + merchantAccountInfo +
+    '52040000' +
+    '5303986' +
+    '54' + formattedAmount.length.toString().padStart(2, '0') + formattedAmount +
+    '5802BR' +
+    '59' + cleanName.length.toString().padStart(2, '0') + cleanName +
+    '60' + cleanCity.length.toString().padStart(2, '0') + cleanCity +
+    '62070503***' +
+    '6304'
+
+  const checksum = crc16(payload)
+  return payload + checksum
+}
+
 // Utilitário para verificar se a loja está aberta no momento
 function checkIsOpen(profile: any) {
   if (!profile) return { isOpen: true, reason: 'Aberto' }
@@ -193,9 +260,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   // Estados de Busca do Cliente Marujo & Múltiplos Endereços
   const [clientFound, setClientFound] = useState(false)
   const [isLoadingPhone, setIsLoadingPhone] = useState(false)
+  const [hasSearchedPhone, setHasSearchedPhone] = useState(false)
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [addressReadonly, setAddressReadonly] = useState(false)
   const [isNewAddress, setIsNewAddress] = useState(false)
+  const [isAddressesModalOpen, setIsAddressesModalOpen] = useState(false)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -222,13 +291,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value)
     setCustomerPhone(formatted)
+    setHasSearchedPhone(false)
     const raw = formatted.replace(/\D/g, '')
     if (raw.length >= 10) {
       handlePhoneSearch(raw)
     }
   }
 
-  const handlePhoneSearch = async (rawPhone: string) => {
+  const handlePhoneSearch = async (overrideRawPhone?: string) => {
+    const rawPhone = (overrideRawPhone || customerPhone).replace(/\D/g, '')
     if (rawPhone.length < 10) return
 
     setIsLoadingPhone(true)
@@ -255,6 +326,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           setAddressReadonly(false)
           setIsNewAddress(true)
         }
+      } else {
+        setClientFound(false)
+        setSavedAddresses([])
+        setAddressReadonly(false)
+        setIsNewAddress(true)
       }
     } catch {
       setClientFound(false)
@@ -263,6 +339,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       setIsNewAddress(true)
     } finally {
       setIsLoadingPhone(false)
+      setHasSearchedPhone(true)
     }
   }
 
@@ -275,6 +352,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setState(addr.state || '')
     setAddressReadonly(true)
     setIsNewAddress(false)
+    setIsAddressesModalOpen(false)
   }
 
   const handleNewAddress = () => {
@@ -286,48 +364,39 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setNeighborhood('')
     setCity('')
     setState('')
-    setComplement('')
+  }
+
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawCep = e.target.value.replace(/\D/g, '')
+    setZipcode(formatCep(rawCep))
+
+    if (rawCep.length === 8) {
+      setIsSearchingCEPCheckout(true)
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
+        if (!res.ok) throw new Error('CEP não encontrado')
+
+        const data = await res.json()
+        setStreet(data.street || '')
+        setNeighborhood(data.neighborhood || '')
+        setCity(data.city || '')
+        setState(data.state || '')
+
+        setTimeout(() => {
+          document.getElementById('number-input')?.focus()
+        }, 100)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsSearchingCEPCheckout(false)
+      }
+    }
   }
 
   const handleCopyPixKey = (key: string) => {
     navigator.clipboard.writeText(key)
     setIsCopiedPix(true)
     setTimeout(() => setIsCopiedPix(false), 3000)
-  }
-
-  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = formatCep(e.target.value)
-    setZipcode(val)
-    const rawCep = val.replace(/\D/g, '')
-
-    if (rawCep.length === 8) {
-      setIsSearchingCEPCheckout(true)
-      try {
-        const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
-        if (!res.ok) throw new Error()
-        const data = await res.json()
-
-        setStreet(data.street || '')
-        setNeighborhood(data.neighborhood || '')
-        setCity(data.city || '')
-        setState(data.state || '')
-      } catch {
-        try {
-          const resVia = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`)
-          const data = await resVia.json()
-          if (!data.erro) {
-            setStreet(data.logradouro || '')
-            setNeighborhood(data.bairro || '')
-            setCity(data.localidade || '')
-            setState(data.uf || '')
-          }
-        } catch {
-          // ignore
-        }
-      } finally {
-        setIsSearchingCEPCheckout(false)
-      }
-    }
   }
 
   const { data: products, isLoading } = useQuery({
@@ -428,6 +497,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const minOrderValue = Number(profile?.minOrderValue || 0)
   const isMinOrderSatisfied = cartSubtotal >= minOrderValue
+
+  const pixBRCodePayload = useMemo(() => {
+    const key = profile?.pixKey || profile?.whatsappNumber || ''
+    if (!key) return ''
+    return generatePixBRCode({
+      pixKey: key,
+      merchantName: profile?.tradeName || tenantName,
+      merchantCity: profile?.city || 'SAO PAULO',
+      amount: cartTotal,
+    })
+  }, [profile, tenantName, cartTotal])
 
   const handleOpenCheckout = () => {
     if (!storeStatus.isOpen) {
@@ -1026,181 +1106,247 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               </div>
             </div>
 
-            {/* Cadastro e Identificação do Cliente (Padrão Marujo) */}
-            <div className="space-y-3 border-t pt-3">
-              <div className="flex items-center justify-between">
-                <Label className="font-bold flex items-center gap-1.5">
-                  <User className="h-4 w-4 text-primary" /> Seus Dados de Contato
-                </Label>
-                {clientFound && (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    <CheckCircle2 className="h-3 w-3" /> Cliente Identificado
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="customerPhone" className="text-xs">WhatsApp / Telefone *</Label>
-                  <div className="relative">
-                    <Input
-                      id="customerPhone"
-                      value={customerPhone}
-                      onChange={handlePhoneChange}
-                      placeholder="(11) 99999-9999"
-                    />
-                    {isLoadingPhone && (
-                      <span className="absolute right-3 top-2.5 text-xs text-slate-400 animate-pulse">
-                        Buscando...
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-400">Digite seu WhatsApp para buscar seus dados</p>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="customerName" className="text-xs">Seu Nome Completo *</Label>
-                  <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Ex: João Silva"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Endereço de Entrega (se Delivery - Padrão Marujo Múltiplos Endereços) */}
-            {fulfillmentType === 'DELIVERY' && (
-              <div className="space-y-3 border-t pt-3">
+            {/* Cadastro e Identificação do Cliente (Padrão Marujo 2 Etapas) */}
+            <div className="space-y-4 border-t pt-4">
+              {/* Etapa 1: Telefone / WhatsApp com Botão de Busca */}
+              <div className="space-y-2 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
                 <div className="flex items-center justify-between">
-                  <Label className="font-bold flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega
+                  <Label htmlFor="customerPhone" className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                    <User className="h-4 w-4 text-primary" />
+                    <span>1. Seu Telefone / WhatsApp *</span>
                   </Label>
-                  {savedAddresses.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleNewAddress}
-                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Novo Endereço
-                    </button>
+                  {clientFound && (
+                    <span className="flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-sm">
+                      <CheckCircle2 className="h-3 w-3" /> Cliente Identificado
+                    </span>
                   )}
                 </div>
 
-                {/* Seleção de Endereços Salvos do Cliente */}
-                {savedAddresses.length > 0 && !isNewAddress && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-500 font-medium">Seus endereços cadastrados:</p>
-                    <div className="space-y-2">
-                      {savedAddresses.map((addr, idx) => {
-                        const isSelected = addressReadonly && street === addr.street && number === addr.number?.toString()
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => handleSelectSavedAddress(addr)}
-                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start justify-between gap-3 ${
-                              isSelected
-                                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                : 'border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div>
-                              <p className="font-bold text-xs text-slate-800">
-                                {addr.street}, {addr.number} - {addr.neighborhood}
-                              </p>
-                              <p className="text-[11px] text-slate-500">
-                                {addr.city}/{addr.state} {addr.zipcode ? `(CEP: ${formatCep(addr.zipcode.toString())})` : ''}
-                              </p>
-                            </div>
-                            {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Formulário de Digitação de Endereço */}
-                {(savedAddresses.length === 0 || isNewAddress) && (
-                  <div className="space-y-3 pt-1">
-                    <div className="space-y-1">
-                      <Label htmlFor="zipcode" className="text-xs">Buscar CEP</Label>
-                      <Input
-                        id="zipcode"
-                        value={zipcode}
-                        onChange={handleCepChange}
-                        placeholder="00000-000"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2 space-y-1">
-                        <Label htmlFor="street" className="text-xs">Logradouro / Rua *</Label>
-                        <Input
-                          id="street"
-                          value={street}
-                          onChange={(e) => setStreet(e.target.value)}
-                          placeholder="Rua Exemplo"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="number" className="text-xs">Número *</Label>
-                        <Input
-                          id="number"
-                          value={number}
-                          onChange={(e) => setNumber(e.target.value)}
-                          placeholder="123"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
-                        <Input
-                          id="neighborhood"
-                          value={neighborhood}
-                          onChange={(e) => setNeighborhood(e.target.value)}
-                          placeholder="Bairro"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="complement" className="text-xs">Complemento / Ponto de Ref.</Label>
-                        <Input
-                          id="complement"
-                          value={complement}
-                          onChange={(e) => setComplement(e.target.value)}
-                          placeholder="Apto 12, Bloco B"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2 space-y-1">
-                        <Label htmlFor="city" className="text-xs">Cidade</Label>
-                        <Input
-                          id="city"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="Cidade"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="state" className="text-xs">UF</Label>
-                        <Input
-                          id="state"
-                          value={state}
-                          onChange={(e) => setState(e.target.value)}
-                          placeholder="UF"
-                          maxLength={2}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <Input
+                    id="customerPhone"
+                    value={customerPhone}
+                    onChange={handlePhoneChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handlePhoneSearch()
+                      }
+                    }}
+                    placeholder="(11) 99999-9999"
+                    className="flex-1 bg-white border-slate-300 focus-visible:ring-primary font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handlePhoneSearch()}
+                    disabled={customerPhone.replace(/\D/g, '').length < 10 || isLoadingPhone}
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors disabled:opacity-50 shadow-sm"
+                  >
+                    {isLoadingPhone ? (
+                      <span className="animate-spin text-sm">⏳</span>
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    <span>Buscar</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Digite seu WhatsApp e clique em Buscar para auto-preencher seus dados e endereços salvos.
+                </p>
               </div>
-            )}
+
+              {/* Etapa 2: Dados Pessoais & Endereço (Exibido após buscar telefone ou digitar) */}
+              {(hasSearchedPhone || customerPhone.replace(/\D/g, '').length >= 10 || customerName) && (
+                <div className="space-y-3 pt-1 duration-300 animate-in fade-in slide-in-from-top-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="customerName" className="text-xs font-bold text-slate-800">
+                      2. Seu Nome Completo *
+                    </Label>
+                    <Input
+                      id="customerName"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      disabled={addressReadonly}
+                      placeholder="Ex: João Silva"
+                      className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 disabled:text-slate-700 font-medium"
+                    />
+                  </div>
+
+                  {/* Endereço de Entrega (se Delivery) */}
+                  {fulfillmentType === 'DELIVERY' && (
+                    <div className="space-y-3 border-t pt-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega *
+                        </Label>
+
+                        {/* Ações de Endereço Salvo (Padrão Marujo) */}
+                        <div className="flex items-center gap-3">
+                          {savedAddresses.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setIsAddressesModalOpen(true)}
+                              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/20"
+                            >
+                              <MapPin className="h-3.5 w-3.5" /> Escolher entre meus {savedAddresses.length} endereços
+                            </button>
+                          )}
+                          {addressReadonly && (
+                            <button
+                              type="button"
+                              onClick={handleNewAddress}
+                              className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Novo Endereço
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Exibição do Endereço Selecionado em Cartão Destacado */}
+                      {savedAddresses.length > 0 && !isNewAddress && (
+                        <div className="p-3.5 rounded-2xl border-2 border-primary/30 bg-primary/5 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                Endereço Selecionado
+                              </span>
+                              <p className="font-bold text-sm text-slate-900 mt-1">
+                                {street}, {number}
+                              </p>
+                              <p className="text-xs text-slate-600 font-medium">
+                                {neighborhood} - {city}/{state} {zipcode ? `(CEP: ${zipcode})` : ''}
+                              </p>
+                              {complement && (
+                                <p className="text-xs text-slate-500 italic mt-0.5">
+                                  Comp: {complement}
+                                </p>
+                              )}
+                            </div>
+                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-1" />
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1 border-t border-primary/10">
+                            {savedAddresses.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setIsAddressesModalOpen(true)}
+                                className="text-xs font-bold text-primary hover:underline"
+                              >
+                                Trocar endereço
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleNewAddress}
+                              className="text-xs font-bold text-slate-600 hover:underline"
+                            >
+                              + Digitar outro endereço
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Formulário de Digitação de Endereço */}
+                      {(savedAddresses.length === 0 || isNewAddress) && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-1">
+                            <Label htmlFor="zipcode" className="text-xs flex items-center justify-between">
+                              <span>Buscar CEP</span>
+                              {isSearchingCEPCheckout && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">Buscando endereço...</span>}
+                            </Label>
+                            <Input
+                              id="zipcode"
+                              value={zipcode}
+                              onChange={handleCepChange}
+                              disabled={addressReadonly}
+                              placeholder="00000-000"
+                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="col-span-2 space-y-1">
+                              <Label htmlFor="street" className="text-xs">Rua / Logradouro *</Label>
+                              <Input
+                                id="street"
+                                value={street}
+                                onChange={(e) => setStreet(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Ex: Av. Paulista"
+                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="number" className="text-xs">Número *</Label>
+                              <Input
+                                id="number-input"
+                                value={number}
+                                onChange={(e) => setNumber(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Ex: 1000"
+                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
+                              <Input
+                                id="neighborhood"
+                                value={neighborhood}
+                                onChange={(e) => setNeighborhood(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Bairro"
+                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="complement" className="text-xs">Complemento / Ref.</Label>
+                              <Input
+                                id="complement"
+                                value={complement}
+                                onChange={(e) => setComplement(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Apto, Bloco, etc."
+                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="col-span-2 space-y-1">
+                              <Label htmlFor="city" className="text-xs">Cidade *</Label>
+                              <Input
+                                id="city"
+                                value={city}
+                                onChange={(e) => setCity(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Cidade"
+                                className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="state" className="text-xs">Estado *</Label>
+                              <Input
+                                id="state"
+                                value={state}
+                                onChange={(e) => setState(e.target.value)}
+                                disabled={addressReadonly}
+                                maxLength={2}
+                                placeholder="UF"
+                                className="bg-white border-slate-300 focus-visible:ring-primary uppercase disabled:bg-slate-100 font-medium"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Forma de Pagamento */}
             <div className="space-y-3 border-t pt-3">
@@ -1257,29 +1403,48 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 )}
               </div>
 
-              {/* Caixa da Chave Pix & QR Code (Retirada ou Opção Pix) */}
+              {/* Caixa da Chave Pix & QR Code Oficial (Retirada ou Opção Pix) */}
               {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
-                    <QrCode className="h-4 w-4 text-emerald-600" />
-                    <span>Pagamento Antecipado via Pix</span>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                      <QrCode className="h-4 w-4 text-emerald-600" />
+                      <span>QR Code Pix & Copia e Cola Oficial</span>
+                    </div>
+                    <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                      {formatCurrency(cartTotal)}
+                    </span>
                   </div>
 
-                  <p className="text-[11px] text-emerald-700">
-                    Realize o pagamento transferindo o valor total de <strong className="text-emerald-900">{formatCurrency(cartTotal)}</strong> para a Chave Pix abaixo e apresente o comprovante.
+                  {/* Renderização do QR Code Visual Oficial BACEN */}
+                  {pixBRCodePayload && (
+                    <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixBRCodePayload)}`}
+                        alt="QR Code Pix do Pedido"
+                        className="h-44 w-44 object-contain rounded-lg"
+                      />
+                      <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center">
+                        Abra o app do seu banco e escaneie o QR Code acima
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-emerald-700 leading-snug">
+                    Ou copie o código <strong>Pix Copia e Cola</strong> abaixo. Ao colar no seu banco, o valor exato de <strong>{formatCurrency(cartTotal)}</strong> será preenchido automaticamente!
                   </p>
 
                   <div className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 p-2.5 shadow-sm">
-                    <span className="flex-1 font-mono text-xs text-slate-800 truncate font-semibold">
-                      {profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
+                    <span className="flex-1 font-mono text-[11px] text-slate-800 truncate font-semibold">
+                      {pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleCopyPixKey(profile?.pixKey || profile?.whatsappNumber || '')}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors"
+                      onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
                     >
                       {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {isCopiedPix ? 'Copiado!' : 'Copiar Chave'}
+                      {isCopiedPix ? 'Pix Copiado!' : 'Copiar Pix Copia e Cola'}
                     </button>
                   </div>
                 </div>
@@ -1323,6 +1488,79 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               style={{ backgroundColor: 'var(--primary-color)' }}
             >
               Confirmar e Enviar Pedido via WhatsApp
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog de Meus Endereços Cadastrados (Padrão Marujo) */}
+      <Dialog open={isAddressesModalOpen} onOpenChange={setIsAddressesModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              <MapPin className="h-5 w-5 text-primary" /> Meus Endereços Cadastrados
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Selecione em qual endereço deseja receber seu pedido:
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2.5 max-h-[60vh] overflow-y-auto py-2 pr-1">
+            {savedAddresses.map((addr, index) => {
+              const isSelected = addressReadonly && street === addr.street && number === addr.number?.toString()
+              return (
+                <div
+                  key={index}
+                  onClick={() => handleSelectSavedAddress(addr)}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                    isSelected
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-slate-900">
+                        {addr.street}, {addr.number}
+                      </p>
+                      {addr.is_main && (
+                        <span className="bg-primary/10 text-primary text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                          Principal
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium">
+                      {addr.neighborhood} - {addr.city}/{addr.state}
+                    </p>
+                    {addr.zipcode && (
+                      <p className="text-[11px] text-slate-400">
+                        CEP: {formatCep(addr.zipcode.toString().padStart(8, '0'))}
+                      </p>
+                    )}
+                  </div>
+                  {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="pt-2 border-t flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                handleNewAddress()
+                setIsAddressesModalOpen(false)
+              }}
+              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <Plus className="h-4 w-4" /> Cadastrar novo endereço
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddressesModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+            >
+              Fechar
             </button>
           </div>
         </DialogContent>
