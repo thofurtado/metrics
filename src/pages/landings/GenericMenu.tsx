@@ -102,12 +102,12 @@ function checkIsOpen(profile: any) {
   return { isOpen: true, reason: 'Aberto' }
 }
 
-// Subcomponente: Dynamic Hero Header (Altura ajustada e refinada)
+// Subcomponente: Dynamic Hero Header (Redesign Ultra-Premium)
 const DynamicHero = ({ profile }: { profile: any }) => {
   if (profile?.banner_url) {
     return (
-      <div className="relative h-36 w-full sm:h-44 md:h-48 lg:h-52 overflow-hidden shadow-inner">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent z-10" />
+      <div className="relative h-40 w-full sm:h-48 md:h-52 lg:h-56 overflow-hidden shadow-inner">
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/30 to-transparent z-10" />
         <img
           src={profile.banner_url}
           className="h-full w-full object-cover"
@@ -117,27 +117,50 @@ const DynamicHero = ({ profile }: { profile: any }) => {
     )
   }
 
+  // Generative Ultra-Premium Animated Mesh Banner (Modo Cor Sem Imagem)
   return (
     <div
-      className="relative h-36 w-full sm:h-44 md:h-48 lg:h-52 overflow-hidden"
+      className="relative h-40 w-full sm:h-48 md:h-52 lg:h-56 overflow-hidden shadow-xl"
       style={{ backgroundColor: 'var(--primary-color, #FF5722)' }}
     >
+      {/* Sobreposição de Gradientes Radiais Mesh */}
       <div
-        className="absolute inset-0 opacity-25 mix-blend-overlay"
+        className="absolute inset-0 opacity-40 mix-blend-overlay"
         style={{
-          backgroundImage: `radial-gradient(circle at 20% 150%, rgba(255,255,255,0.9) 0%, transparent 50%), radial-gradient(circle at 80% -50%, rgba(0,0,0,0.6) 0%, transparent 50%)`,
+          backgroundImage: `
+            radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.9) 0%, transparent 45%),
+            radial-gradient(circle at 85% 80%, rgba(0, 0, 0, 0.7) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)
+          `,
         }}
       />
+
+      {/* Padrão Geométrico Sutil */}
+      <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+      {/* Orbes de Luz Flutuantes Animadas (Bokeh) */}
       <motion.div
-        animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none"
+        animate={{
+          scale: [1, 1.25, 1],
+          x: [0, 20, 0],
+          y: [0, -10, 0],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/25 blur-3xl pointer-events-none"
       />
+
       <motion.div
-        animate={{ scale: [1, 1.5, 1] }}
+        animate={{
+          scale: [1, 1.3, 1],
+          x: [0, -25, 0],
+          y: [0, 15, 0],
+        }}
         transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-black/10 blur-3xl pointer-events-none"
+        className="absolute -bottom-24 -left-20 h-80 w-80 rounded-full bg-black/30 blur-3xl pointer-events-none"
       />
+
+      {/* Gradiente Inferior para Fusão com o Fundo */}
+      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/40 to-transparent z-10" />
     </div>
   )
 }
@@ -163,6 +186,41 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [complement, setComplement] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'>('PIX')
   const [changeAmount, setChangeAmount] = useState('')
+  const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
+
+  const handleSearchCEPCheckout = async () => {
+    const cleaned = zipcode.replace(/\D/g, '')
+    if (cleaned.length !== 8) {
+      alert('Informe um CEP válido com 8 dígitos para buscar.')
+      return
+    }
+
+    setIsSearchingCEPCheckout(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleaned}`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+
+      if (data.street) setStreet(data.street)
+      if (data.neighborhood) setNeighborhood(data.neighborhood)
+      if (data.city) setCity(data.city)
+      if (data.state) setState(data.state)
+    } catch {
+      try {
+        const resVia = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`)
+        const data = await resVia.json()
+        if (data.erro) throw new Error()
+        if (data.logradouro) setStreet(data.logradouro)
+        if (data.bairro) setNeighborhood(data.bairro)
+        if (data.localidade) setCity(data.localidade)
+        if (data.uf) setState(data.uf)
+      } catch {
+        alert('Erro ao buscar CEP. Por favor, preencha o endereço manualmente.')
+      }
+    } finally {
+      setIsSearchingCEPCheckout(false)
+    }
+  }
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['public-menu'],
@@ -889,6 +947,27 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <Label className="font-bold flex items-center gap-1.5">
                   <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega
                 </Label>
+
+                <div className="space-y-1">
+                  <Label htmlFor="zipcode" className="text-xs">Buscar CEP</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="zipcode"
+                      value={zipcode}
+                      onChange={(e) => setZipcode(e.target.value)}
+                      placeholder="00000-000"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSearchCEPCheckout}
+                      disabled={isSearchingCEPCheckout}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 shrink-0 flex items-center gap-1"
+                    >
+                      <Search className="h-3.5 w-3.5 text-primary" />
+                      {isSearchingCEPCheckout ? 'Buscando...' : 'Buscar CEP'}
+                    </button>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-3 gap-2">
                   <div className="col-span-2 space-y-1">

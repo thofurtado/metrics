@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
@@ -12,6 +12,8 @@ import {
   Loader2,
   MapPin,
   Palette,
+  Search,
+  Sparkles,
   Store,
   Truck,
 } from 'lucide-react'
@@ -256,6 +258,78 @@ export function MenuSettings() {
     },
   })
 
+  const [isSearchingCNPJ, setIsSearchingCNPJ] = useState(false)
+  const [isSearchingCEP, setIsSearchingCEP] = useState(false)
+
+  const handleSearchCNPJ = async () => {
+    const documentVal = getValues('document') || ''
+    const cleaned = documentVal.replace(/\D/g, '')
+    if (cleaned.length !== 14) {
+      toast.error('Informe um CNPJ válido com 14 dígitos para buscar.')
+      return
+    }
+
+    setIsSearchingCNPJ(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleaned}`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+
+      setValue('tradeName', data.nome_fantasia || data.razao_social || getValues('tradeName'))
+      setValue('companyName', data.razao_social || getValues('companyName'))
+      setValue('street', data.logradouro || getValues('street'))
+      setValue('number', data.numero || getValues('number'))
+      setValue('neighborhood', data.bairro || getValues('neighborhood'))
+      setValue('city', data.municipio || getValues('city'))
+      setValue('state', data.uf || getValues('state'))
+      if (data.cep) setValue('zipcode', data.cep)
+
+      toast.success('Dados da empresa preenchidos via BrasilAPI!')
+    } catch {
+      toast.error('Erro ao consultar CNPJ via BrasilAPI.')
+    } finally {
+      setIsSearchingCNPJ(false)
+    }
+  }
+
+  const handleSearchCEP = async () => {
+    const zipcodeVal = getValues('zipcode') || ''
+    const cleaned = zipcodeVal.replace(/\D/g, '')
+    if (cleaned.length !== 8) {
+      toast.error('Informe um CEP válido com 8 dígitos para buscar.')
+      return
+    }
+
+    setIsSearchingCEP(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleaned}`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+
+      if (data.street) setValue('street', data.street)
+      if (data.neighborhood) setValue('neighborhood', data.neighborhood)
+      if (data.city) setValue('city', data.city)
+      if (data.state) setValue('state', data.state)
+
+      toast.success('Endereço preenchido via BrasilAPI!')
+    } catch {
+      try {
+        const resVia = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`)
+        const data = await resVia.json()
+        if (data.erro) throw new Error()
+        if (data.logradouro) setValue('street', data.logradouro)
+        if (data.bairro) setValue('neighborhood', data.bairro)
+        if (data.localidade) setValue('city', data.localidade)
+        if (data.uf) setValue('state', data.uf)
+        toast.success('Endereço preenchido via ViaCEP!')
+      } catch {
+        toast.error('Erro ao consultar CEP.')
+      }
+    } finally {
+      setIsSearchingCEP(false)
+    }
+  }
+
   const onSubmit = async (data: ProfileFormData) => {
     await updateProfileFn(data)
   }
@@ -320,7 +394,25 @@ export function MenuSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="document">CNPJ / CPF</Label>
-                <Input id="document" {...register('document')} placeholder="00.000.000/0001-00" />
+                <div className="flex gap-2">
+                  <Input id="document" {...register('document')} placeholder="00.000.000/0001-00" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSearchCNPJ}
+                    disabled={isSearchingCNPJ}
+                    className="shrink-0 gap-1 text-xs"
+                    title="Consultar CNPJ via BrasilAPI"
+                  >
+                    {isSearchingCNPJ ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4 text-primary" />
+                    )}
+                    Buscar CNPJ
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Clique para preencher os dados automaticamente</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="whatsappNumber">WhatsApp (Recebimento de Pedidos) *</Label>
@@ -335,7 +427,30 @@ export function MenuSettings() {
               <Label className="flex items-center gap-1.5 font-semibold">
                 <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço Completo
               </Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="zipcode" className="text-xs">CEP</Label>
+                  <div className="flex gap-2">
+                    <Input id="zipcode" {...register('zipcode')} placeholder="00000-000" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleSearchCEP}
+                      disabled={isSearchingCEP}
+                      title="Consultar CEP via BrasilAPI"
+                      className="shrink-0"
+                    >
+                      {isSearchingCEP ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4 text-primary" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="street" className="text-xs">Logradouro / Rua</Label>
                   <Input id="street" {...register('street')} placeholder="Av. Principal" />
@@ -355,15 +470,9 @@ export function MenuSettings() {
                   <Label htmlFor="city" className="text-xs">Cidade</Label>
                   <Input id="city" {...register('city')} placeholder="São Paulo" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="state" className="text-xs">Estado</Label>
-                    <Input id="state" {...register('state')} placeholder="SP" maxLength={2} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zipcode" className="text-xs">CEP</Label>
-                    <Input id="zipcode" {...register('zipcode')} placeholder="00000-000" />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-xs">Estado (UF)</Label>
+                  <Input id="state" {...register('state')} placeholder="SP" maxLength={2} />
                 </div>
               </div>
             </div>
