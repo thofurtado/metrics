@@ -1,23 +1,41 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-form-field'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Palette } from 'lucide-react'
+import {
+  Building2,
+  Clock,
+  Copy,
+  Globe,
+  Loader2,
+  MapPin,
+  Palette,
+  Store,
+  Truck,
+} from 'lucide-react'
 
 import { api } from '@/lib/axios'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+const businessHourSchema = z.object({
+  dayOfWeek: z.number(),
+  openTime: z.string(),
+  closeTime: z.string(),
+  isOpen: z.boolean(),
+})
 
 const profileSchema = z.object({
   tradeName: z.string().min(1, 'Nome fantasia é obrigatório'),
+  companyName: z.string().optional(),
+  document: z.string().optional(),
   primaryColor: z.string(),
   secondaryColor: z.string(),
   backgroundColor: z.string(),
@@ -25,9 +43,39 @@ const profileSchema = z.object({
   banner_url: z.string().optional(),
   isOpenManual: z.boolean(),
   whatsappNumber: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipcode: z.string().optional(),
+  deliveryFee: z.coerce.number().min(0, 'Taxa inválida').default(0),
+  minOrderValue: z.coerce.number().min(0, 'Valor mínimo inválido').default(0),
+  deliveryTimeMin: z.coerce.number().min(1, 'Tempo inválido').default(30),
+  deliveryTimeMax: z.coerce.number().min(1, 'Tempo inválido').default(60),
+  ifoodMerchantId: z.string().optional(),
+  anotaAiApiKey: z.string().optional(),
+  businessHours: z.array(businessHourSchema),
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
+
+const DAYS_OF_WEEK = [
+  'Domingo',
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+]
+
+const DEFAULT_BUSINESS_HOURS = DAYS_OF_WEEK.map((_, index) => ({
+  dayOfWeek: index,
+  openTime: '18:00',
+  closeTime: '23:00',
+  isOpen: index !== 0, // Por padrão aberto de Seg a Sáb
+}))
 
 async function fetchProfile() {
   const response = await api.get('/public/profile')
@@ -39,52 +87,62 @@ async function updateProfile(data: ProfileFormData) {
   return response.data
 }
 
-// Função para converter HEX para HSL e gerar fundos super premium
 function hexToHSL(hex: string) {
-  let r = 0, g = 0, b = 0;
+  let r = 0, g = 0, b = 0
   if (hex.length === 4) {
-    r = parseInt(hex[1] + hex[1], 16);
-    g = parseInt(hex[2] + hex[2], 16);
-    b = parseInt(hex[3] + hex[3], 16);
+    r = parseInt(hex[1] + hex[1], 16)
+    g = parseInt(hex[2] + hex[2], 16)
+    b = parseInt(hex[3] + hex[3], 16)
   } else if (hex.length === 7) {
-    r = parseInt(hex.substring(1, 3), 16);
-    g = parseInt(hex.substring(3, 5), 16);
-    b = parseInt(hex.substring(5, 7), 16);
+    r = parseInt(hex.substring(1, 3), 16)
+    g = parseInt(hex.substring(3, 5), 16)
+    b = parseInt(hex.substring(5, 7), 16)
   }
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b)
+  let h = 0,
+    s = 0,
+    l = (max + min) / 2
   if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
     }
-    h /= 6;
+    h /= 6
   }
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
 }
 
 function hslToHex(h: number, s: number, l: number) {
-  l /= 100;
-  const a = s * Math.min(l, 1 - l) / 100;
+  l /= 100
+  const a = (s * Math.min(l, 1 - l)) / 100
   const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
+    const k = (n + h / 30) % 12
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
 }
 
 function generatePremiumPalette(hex: string) {
-  const { h, s } = hexToHSL(hex);
-  // Fundo dos cards (Secondary): Extremamente claro, quase branco, mas com um toque refinado da cor da marca
-  const premiumSecondary = hslToHex(h, Math.min(s, 40), 98);
-  // Fundo da página (Background): Um pouco mais escuro que o card para dar profundidade elegante
-  const premiumBg = hslToHex(h, Math.min(s, 30), 95);
-  return { secondary: premiumSecondary, bg: premiumBg };
+  const { h, s } = hexToHSL(hex)
+  const premiumSecondary = hslToHex(h, Math.min(s, 40), 98)
+  const premiumBg = hslToHex(h, Math.min(s, 30), 95)
+  return { secondary: premiumSecondary, bg: premiumBg }
 }
 
 export function MenuSettings() {
@@ -110,34 +168,79 @@ export function MenuSettings() {
     control,
     reset,
     getValues,
+    setValue,
     watch,
     formState: { isSubmitting },
   } = useReactHookForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       tradeName: '',
-      primaryColor: '#475569',
-      secondaryColor: '#ffffff',
-      backgroundColor: '#f8fafc',
+      companyName: '',
+      document: '',
+      primaryColor: '#FF5722',
+      secondaryColor: '#FFFFFF',
+      backgroundColor: '#F9F9F9',
       logo_url: '',
       banner_url: '',
       isOpenManual: true,
       whatsappNumber: '',
+      street: '',
+      number: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipcode: '',
+      deliveryFee: 0,
+      minOrderValue: 0,
+      deliveryTimeMin: 30,
+      deliveryTimeMax: 60,
+      ifoodMerchantId: '',
+      anotaAiApiKey: '',
+      businessHours: DEFAULT_BUSINESS_HOURS,
     },
   })
 
-  // Set default values when profile is fetched
   useEffect(() => {
     if (profile) {
+      // Formata os horários salvos do backend mantendo a ordem dos 7 dias
+      const savedHoursMap = new Map(
+        (profile.businessHours || []).map((bh: any) => [bh.dayOfWeek, bh])
+      )
+
+      const businessHours = DAYS_OF_WEEK.map((_, index) => {
+        const saved = savedHoursMap.get(index)
+        return {
+          dayOfWeek: index,
+          openTime: saved?.openTime || '18:00',
+          closeTime: saved?.closeTime || '23:00',
+          isOpen: saved?.isOpen ?? (index !== 0),
+        }
+      })
+
       reset({
         tradeName: profile.tradeName || '',
-        primaryColor: profile.primaryColor || '#475569',
-        secondaryColor: profile.secondaryColor || '#ffffff',
-        backgroundColor: profile.backgroundColor || '#f8fafc',
+        companyName: profile.companyName || '',
+        document: profile.document || '',
+        primaryColor: profile.primaryColor || '#FF5722',
+        secondaryColor: profile.secondaryColor || '#FFFFFF',
+        backgroundColor: profile.backgroundColor || '#F9F9F9',
         logo_url: profile.logo_url || '',
         banner_url: profile.banner_url || '',
         isOpenManual: profile.isOpenManual ?? true,
         whatsappNumber: profile.whatsappNumber || '',
+        street: profile.street || '',
+        number: profile.number || '',
+        neighborhood: profile.neighborhood || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zipcode: profile.zipcode || '',
+        deliveryFee: profile.deliveryFee ?? 0,
+        minOrderValue: profile.minOrderValue ?? 0,
+        deliveryTimeMin: profile.deliveryTimeMin ?? 30,
+        deliveryTimeMax: profile.deliveryTimeMax ?? 60,
+        ifoodMerchantId: profile.ifoodMerchantId || '',
+        anotaAiApiKey: profile.anotaAiApiKey || '',
+        businessHours,
       })
     }
   }, [profile, reset])
@@ -157,6 +260,21 @@ export function MenuSettings() {
     await updateProfileFn(data)
   }
 
+  const copyMondayToWeekdays = () => {
+    const hours = getValues('businessHours')
+    const monday = hours[1] // Segunda-feira
+    if (!monday) return
+
+    const updated = hours.map((h) => {
+      if (h.dayOfWeek >= 1 && h.dayOfWeek <= 5) {
+        return { ...h, openTime: monday.openTime, closeTime: monday.closeTime, isOpen: monday.isOpen }
+      }
+      return h
+    })
+    setValue('businessHours', updated)
+    toast.success('Horário de Segunda aplicado para os dias úteis (Seg-Sex)!')
+  }
+
   if (isFetching) {
     return (
       <div className="flex h-40 items-center justify-center">
@@ -166,126 +284,243 @@ export function MenuSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Cardápio (White Label)</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Cardápio & Estabelecimento (White Label)</h2>
         <p className="text-muted-foreground">
-          Gerencie as cores, logo e configurações do seu cardápio digital.
+          Configure as informações da sua empresa, regras de entrega, horários de funcionamento e identidade visual.
         </p>
       </div>
       <Separator />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Card 1: Informações Gerais da Empresa */}
         <Card>
           <CardHeader>
-            <CardTitle>Identidade Visual</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5 text-primary" />
+              Dados do Estabelecimento
+            </CardTitle>
             <CardDescription>
-              Configure o nome e os links das imagens (em breve upload direto).
+              Informações do perfil da sua empresa para exibições no cardápio e impressões de comandas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tradeName">Nome do Restaurante</Label>
-              <Input id="tradeName" {...register('tradeName')} placeholder="Ex: Marujo Gastrobar" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="logo_url">URL da Logo</Label>
-                <Input id="logo_url" {...register('logo_url')} placeholder="https://..." />
+                <Label htmlFor="tradeName">Nome Fantasia *</Label>
+                <Input id="tradeName" {...register('tradeName')} placeholder="Ex: Marujo Gastrobar" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="banner_url">URL do Banner</Label>
-                <Input id="banner_url" {...register('banner_url')} placeholder="https://..." />
+                <Label htmlFor="companyName">Razão Social</Label>
+                <Input id="companyName" {...register('companyName')} placeholder="Ex: Marujo Alimenticios LTDA" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="document">CNPJ / CPF</Label>
+                <Input id="document" {...register('document')} placeholder="00.000.000/0001-00" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="whatsappNumber">WhatsApp (Recebimento de Pedidos) *</Label>
+                <Input id="whatsappNumber" {...register('whatsappNumber')} placeholder="5511999999999" />
+                <p className="text-[11px] text-muted-foreground">Formato: 55 + DDD + Número</p>
+              </div>
+            </div>
+
+            <Separator className="my-2" />
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 font-semibold">
+                <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço Completo
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="street" className="text-xs">Logradouro / Rua</Label>
+                  <Input id="street" {...register('street')} placeholder="Av. Principal" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="number" className="text-xs">Número</Label>
+                  <Input id="number" {...register('number')} placeholder="123" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood" className="text-xs">Bairro</Label>
+                  <Input id="neighborhood" {...register('neighborhood')} placeholder="Centro" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-xs">Cidade</Label>
+                  <Input id="city" {...register('city')} placeholder="São Paulo" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-xs">Estado</Label>
+                    <Input id="state" {...register('state')} placeholder="SP" maxLength={2} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zipcode" className="text-xs">CEP</Label>
+                    <Input id="zipcode" {...register('zipcode')} placeholder="00000-000" />
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Card 2: Regras de Pedidos & Entrega (Padrão iFood/Anota AI) */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Identidade Visual (Cores)
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Truck className="h-5 w-5 text-primary" />
+              Regras de Entrega e Pedidos
             </CardTitle>
             <CardDescription>
-              Escolha uma paleta de cores predefinida ou selecione a sua cor principal (as cores de fundo se ajustarão automaticamente).
+              Defina os parâmetros de frete, valor mínimo do pedido e prazos estimados de entrega.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {THEMES.map((theme) => (
-                <button
-                  key={theme.name}
-                  type="button"
-                  onClick={() => {
-                    reset({
-                      ...getValues(),
-                      primaryColor: theme.primary,
-                      secondaryColor: theme.secondary,
-                      backgroundColor: theme.bg,
-                    })
-                  }}
-                  className="flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary"
-                  style={{
-                    borderColor: watch('primaryColor') === theme.primary ? theme.primary : 'transparent',
-                    backgroundColor: watch('primaryColor') === theme.primary ? theme.bg : undefined,
-                  }}
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: theme.primary }} />
-                  <span className="text-sm font-medium text-slate-700">{theme.name}</span>
-                </button>
-              ))}
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="deliveryFee">Taxa de Entrega (R$)</Label>
+              <Input
+                id="deliveryFee"
+                type="number"
+                step="0.50"
+                {...register('deliveryFee')}
+                placeholder="0.00"
+              />
+              <p className="text-[11px] text-muted-foreground">Deixe 0 para entrega grátis</p>
             </div>
 
-            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="minOrderValue">Valor Mínimo do Pedido (R$)</Label>
+              <Input
+                id="minOrderValue"
+                type="number"
+                step="1.00"
+                {...register('minOrderValue')}
+                placeholder="0.00"
+              />
+            </div>
 
-            <div className="flex flex-col space-y-3 pt-2">
-              <Label htmlFor="primaryColor" className="text-base">Ou defina sua cor principal personalizada:</Label>
-              <div className="flex items-center gap-4">
-                <Input 
-                  type="color" 
-                  id="primaryColor" 
-                  {...register('primaryColor')} 
-                  onChange={(e) => {
-                    const primary = e.target.value;
-                    const { secondary, bg } = generatePremiumPalette(primary);
-                    
-                    reset({
-                      ...getValues(),
-                      primaryColor: primary,
-                      secondaryColor: secondary, 
-                      backgroundColor: bg, 
-                    })
-                  }}
-                  className="h-14 w-24 p-1 cursor-pointer" 
+            <div className="space-y-2">
+              <Label>Tempo Estimado (Minutos)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  {...register('deliveryTimeMin')}
+                  placeholder="30"
+                  className="w-1/2"
                 />
-                <p className="text-sm text-muted-foreground flex-1">
-                  Ao escolher sua cor primária, nós ajustamos as cores de fundo automaticamente para garantir que os textos fiquem legíveis!
-                </p>
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="number"
+                  {...register('deliveryTimeMax')}
+                  placeholder="60"
+                  className="w-1/2"
+                />
               </div>
+              <p className="text-[11px] text-muted-foreground">Ex: 30 a 60 minutos</p>
             </div>
           </CardContent>
         </Card>
 
+        {/* Card 3: Horário de Funcionamento (Grade Semanal iFood Shift) */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5 text-primary" />
+                Horário de Funcionamento
+              </CardTitle>
+              <CardDescription>
+                Defina o horário de abertura e fechamento para cada dia da semana.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={copyMondayToWeekdays}
+              className="gap-1.5 text-xs"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Replicar Seg-Sex
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>Dia da Semana</TableHead>
+                    <TableHead className="w-28 text-center">Status</TableHead>
+                    <TableHead>Horário Abertura</TableHead>
+                    <TableHead>Horário Fechamento</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {DAYS_OF_WEEK.map((dayName, index) => {
+                    const isOpen = watch(`businessHours.${index}.isOpen`)
+                    return (
+                      <TableRow key={dayName}>
+                        <TableCell className="font-semibold text-slate-700">{dayName}</TableCell>
+                        <TableCell className="text-center">
+                          <Controller
+                            control={control}
+                            name={`businessHours.${index}.isOpen`}
+                            render={({ field }) => (
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="time"
+                            disabled={!isOpen}
+                            {...register(`businessHours.${index}.openTime`)}
+                            className="w-32"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="time"
+                            disabled={!isOpen}
+                            {...register(`businessHours.${index}.closeTime`)}
+                            className="w-32"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Interrupção Manual / Pausa da Loja */}
         <Card>
           <CardHeader>
-            <CardTitle>Atendimento</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Store className="h-5 w-5 text-primary" />
+              Status de Atendimento
+            </CardTitle>
             <CardDescription>
-              Regras de funcionamento e recebimento de pedidos.
+              Controle o funcionamento em tempo real do seu cardápio digital.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="whatsappNumber">Número do WhatsApp</Label>
-              <Input id="whatsappNumber" {...register('whatsappNumber')} placeholder="Ex: 5511999999999" />
-              <p className="text-xs text-muted-foreground">Inclua o código do país (ex: 55) e o DDD.</p>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-4">
+          <CardContent>
+            <div className="flex items-center justify-between rounded-lg border p-4 bg-slate-50/50">
               <div className="space-y-0.5">
-                <Label className="text-base">Aceitar Pedidos</Label>
+                <Label className="text-base font-semibold">Aceitar Pedidos (Loja Aberta)</Label>
                 <p className="text-sm text-muted-foreground">
-                  Se desativado, o cardápio mostrará "Fechado" e bloqueará novos pedidos.
+                  Se desativado, o cardápio exibirá "Fechado" e bloqueará novas compras imediatamente.
                 </p>
               </div>
               <Controller
@@ -302,10 +537,110 @@ export function MenuSettings() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Salvar Configurações
+        {/* Card 5: Identidade Visual e Imagens */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Palette className="h-5 w-5 text-primary" />
+              Identidade Visual & Cores
+            </CardTitle>
+            <CardDescription>
+              Personalize o tema e as imagens do seu cardápio whitelabel.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="logo_url">URL da Logo</Label>
+                <Input id="logo_url" {...register('logo_url')} placeholder="https://..." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner_url">URL do Banner</Label>
+                <Input id="banner_url" {...register('banner_url')} placeholder="https://..." />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Paleta de Cores do Tema:</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {THEMES.map((theme) => (
+                  <button
+                    key={theme.name}
+                    type="button"
+                    onClick={() => {
+                      reset({
+                        ...getValues(),
+                        primaryColor: theme.primary,
+                        secondaryColor: theme.secondary,
+                        backgroundColor: theme.bg,
+                      })
+                    }}
+                    className="flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary"
+                    style={{
+                      borderColor: watch('primaryColor') === theme.primary ? theme.primary : 'transparent',
+                      backgroundColor: watch('primaryColor') === theme.primary ? theme.bg : undefined,
+                    }}
+                  >
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: theme.primary }} />
+                    <span className="text-xs font-medium text-slate-700">{theme.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 pt-2">
+              <Input
+                type="color"
+                id="primaryColor"
+                {...register('primaryColor')}
+                onChange={(e) => {
+                  const primary = e.target.value
+                  const { secondary, bg } = generatePremiumPalette(primary)
+                  reset({
+                    ...getValues(),
+                    primaryColor: primary,
+                    secondaryColor: secondary,
+                    backgroundColor: bg,
+                  })
+                }}
+                className="h-12 w-20 p-1 cursor-pointer"
+              />
+              <p className="text-xs text-muted-foreground flex-1">
+                Selecione a cor primária para ajustar automaticamente as cores de fundo.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 6: Integrações Marketplace (iFood / Anota AI) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Globe className="h-5 w-5 text-primary" />
+              Integrações (iFood / Anota AI)
+            </CardTitle>
+            <CardDescription>
+              Campos de identificação preparados para futura comunicação de cardápio e pedidos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ifoodMerchantId">ID da Loja no iFood (Merchant ID)</Label>
+              <Input id="ifoodMerchantId" {...register('ifoodMerchantId')} placeholder="Ex: uuid-ifood-merchant" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="anotaAiApiKey">Chave API Anota AI</Label>
+              <Input id="anotaAiApiKey" {...register('anotaAiApiKey')} placeholder="Ex: token_anota_ai_secret" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" size="lg" disabled={isSubmitting} className="px-8 font-bold">
+            {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+            Salvar Configurações da Empresa
           </Button>
         </div>
       </form>

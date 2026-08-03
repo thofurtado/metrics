@@ -42,7 +42,7 @@ interface Product {
 function CardapioContent() {
   const isDev = import.meta.env.DEV
 
-  if (!isDev && getCurrentTenant().id !== 'marujo') {
+  if (!isDev && getCurrentTenant()?.id !== 'marujo') {
     return <Navigate to="/" />
   }
 
