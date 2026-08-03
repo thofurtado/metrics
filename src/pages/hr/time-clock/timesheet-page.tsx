@@ -151,6 +151,9 @@ export function TimeSheetPage() {
           extraClockOutNextDay: isNextDay(dayClock?.extraClockOut),
           isExtraDay: dayClock?.isExtraDay ?? false,
           negotiatedValue: dayClock?.negotiatedValue ?? undefined,
+          overtimeMinutes: (dayClock as any)?.overtimeMinutes ?? 0,
+          overtimeValue: (dayClock as any)?.overtimeValue ?? 0,
+          calculation_memory: (dayClock as any)?.calculation_memory ?? null,
         }
       })
       replace(newRows)
@@ -222,7 +225,7 @@ export function TimeSheetPage() {
   const exportToPDF = () => {
     try {
       const doc = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4',
       })
@@ -284,7 +287,7 @@ export function TimeSheetPage() {
           : `${Number(employee?.salary || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}${employee?.registrationType === 'HOURLY' ? '/hora' : ''}`
       doc.text(salaryValue, 133, 34)
 
-      doc.line(15, 37, 195, 37)
+      doc.line(15, 37, 282, 37)
 
       // Rows data processing
       const rows = watch('rows') || []
@@ -351,6 +354,20 @@ export function TimeSheetPage() {
                     ? 'F. Injustificada'
                     : r.status
 
+        const getOvertimeStr = (row: any) => {
+          if (!row.overtimeMinutes || row.overtimeMinutes <= 0) return '--'
+          const h = Math.floor(row.overtimeMinutes / 60)
+          const m = row.overtimeMinutes % 60
+          const timeStr = `${h}h${m > 0 ? ` ${m.toString().padStart(2, '0')}m` : ''}`
+          
+          let percent = ''
+          if (row.calculation_memory && row.calculation_memory.multiplier) {
+              if (row.calculation_memory.multiplier === 1.6) percent = ' (60%)'
+              else if (row.calculation_memory.multiplier >= 2.0) percent = ' (100%)'
+          }
+          return timeStr + percent
+        }
+
         return [
           format(parsedDay, 'dd/MM (EEE)', { locale: ptBR }),
           formatTime(r.clockIn),
@@ -368,6 +385,7 @@ export function TimeSheetPage() {
               })
             : '--',
           calculateNetHours(r),
+          getOvertimeStr(r),
         ]
       })
 
@@ -400,6 +418,7 @@ export function TimeSheetPage() {
             'Extra?',
             'Valor',
             'Horas',
+            'H. Extras',
           ],
         ],
         body: tableRows,
@@ -433,13 +452,13 @@ export function TimeSheetPage() {
         finalY = 25
       }
 
-      doc.line(15, finalY, 95, finalY)
+      doc.line(15, finalY, 120, finalY)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.text('Assinatura do Colaborador', 15, finalY + 4)
 
-      doc.line(115, finalY, 195, finalY)
-      doc.text('Assinatura do Gestor / Empresa', 115, finalY + 4)
+      doc.line(150, finalY, 255, finalY)
+      doc.text('Assinatura do Gestor / Empresa', 150, finalY + 4)
 
       doc.save(
         `Espelho_Ponto_${employee?.name ? employee.name.replace(/\\s+/g, '_') : 'colaborador'}_${format(month, 'MM_yyyy')}.pdf`,
