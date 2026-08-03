@@ -358,8 +358,58 @@ export function TimeSheetPage() {
         const dayClock: any = list.find((tc: any) => tc.date?.split('T')[0] === r.date)
 
         const getOvertimeStr = (row: any, originalDayClock: any) => {
-          const ovtMins = originalDayClock?.overtimeMinutes ?? row.overtimeMinutes
-          const calcMem = originalDayClock?.calculation_memory ?? row.calculation_memory
+          let ovtMins = originalDayClock?.overtimeMinutes ?? row.overtimeMinutes
+          let calcMem = originalDayClock?.calculation_memory ?? row.calculation_memory
+          let multiplier = calcMem?.multiplier
+
+          if (!ovtMins || ovtMins <= 0) {
+            if (row.status !== 'PRESENCA') return '--'
+            
+            const setTime = (t: string, isNext?: boolean) => {
+              if (!t) return null
+              const [h, m] = t.split(':').map(Number)
+              const d = parseDateOnly(row.date)
+              d.setHours(h, m, 0, 0)
+              const isAutoNextDay = h < 4
+              if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
+              return d
+            }
+            
+            let total = 0
+            const cin = setTime(row.clockIn)
+            const bout = setTime(row.breakStart)
+            const bin = setTime(row.breakEnd)
+            const cout = setTime(row.clockOut, row.clockOutNextDay)
+            const xcin = setTime(row.extraClockIn)
+            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
+            
+            if (cin && bout) total += differenceInMinutes(bout, cin)
+            else if (cin && cout && !bout && !bin) total += differenceInMinutes(cout, cin)
+            if (bin && cout) total += differenceInMinutes(cout, bin)
+            if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
+            
+            if (total > 0) {
+              const DAILY_WORKLOAD = 440
+              const TOLERANCE = 10
+              const excess = total - DAILY_WORKLOAD
+              const dailyOvt = excess > TOLERANCE ? excess : 0
+              
+              const isSunday = parseDateOnly(row.date).getDay() === 0
+              // holidaysData might be undefined in the exact scope, let's use holidaysData?.holidays or fallback to false
+              const isHoliday = holidaysData?.holidays?.some((h: any) => h.date.startsWith(row.date)) ?? false
+              
+              if (isHoliday) {
+                ovtMins = total
+                multiplier = 2.0
+              } else if (isSunday) {
+                ovtMins = dailyOvt
+                multiplier = 2.0
+              } else {
+                ovtMins = dailyOvt
+                multiplier = 1.6
+              }
+            }
+          }
 
           if (!ovtMins || ovtMins <= 0) return '--'
           const h = Math.floor(ovtMins / 60)
@@ -367,9 +417,9 @@ export function TimeSheetPage() {
           const timeStr = `${h}h${m > 0 ? ` ${m.toString().padStart(2, '0')}m` : ''}`
           
           let percent = ''
-          if (calcMem && calcMem.multiplier) {
-              if (calcMem.multiplier === 1.6) percent = ' (60%)'
-              else if (calcMem.multiplier >= 2.0) percent = ' (100%)'
+          if (multiplier) {
+              if (multiplier === 1.6) percent = ' (60%)'
+              else if (multiplier >= 2.0) percent = ' (100%)'
           }
           return timeStr + percent
         }
@@ -451,8 +501,58 @@ export function TimeSheetPage() {
         rows.filter((r: any) => r.isExtraDay).length
       doc.text(`Dias Extras: ${totalExtraDays}`, 15, finalY + 5)
       
-      const ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
-      const ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
+      let ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
+      let ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
+      
+      // Fallback para estimativa global se backend não forneceu
+      if (ovt60 === 0 && ovt100 === 0) {
+         const DAILY_WORKLOAD = 440
+         const TOLERANCE = 10
+         
+         rows.forEach((row: any) => {
+            if (row.status !== 'PRESENCA') return
+            
+            const setTime = (t: string, isNext?: boolean) => {
+              if (!t) return null
+              const [h, m] = t.split(':').map(Number)
+              const d = parseDateOnly(row.date)
+              d.setHours(h, m, 0, 0)
+              const isAutoNextDay = h < 4
+              if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
+              return d
+            }
+            
+            let total = 0
+            const cin = setTime(row.clockIn)
+            const bout = setTime(row.breakStart)
+            const bin = setTime(row.breakEnd)
+            const cout = setTime(row.clockOut, row.clockOutNextDay)
+            const xcin = setTime(row.extraClockIn)
+            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
+            
+            if (cin && bout) total += differenceInMinutes(bout, cin)
+            else if (cin && cout && !bout && !bin) total += differenceInMinutes(cout, cin)
+            if (bin && cout) total += differenceInMinutes(cout, bin)
+            if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
+            
+            if (total > 0) {
+              const excess = total - DAILY_WORKLOAD
+              const dailyOvt = excess > TOLERANCE ? excess : 0
+              
+              const isSunday = parseDateOnly(row.date).getDay() === 0
+              const isHoliday = holidaysData?.holidays?.some((h: any) => h.date.startsWith(row.date)) ?? false
+              
+              if (isHoliday) {
+                ovt100 += total
+              } else if (isSunday) {
+                ovt100 += dailyOvt
+              } else {
+                ovt60 += dailyOvt
+              }
+            }
+         })
+      }
+
       if (ovt60 > 0 || ovt100 > 0) {
         let txt = 'Horas Extras Estimadas:'
         if (ovt60 > 0) {
