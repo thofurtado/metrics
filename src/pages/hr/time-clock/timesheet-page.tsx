@@ -489,17 +489,8 @@ export function TimeSheetPage() {
         finalY = 20
       }
 
-      // Summary Text
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-
-      const totalHoursFormatted = timeClocks?.summary?.totalHours || '--'
-      doc.text(`Total de Horas Trabalhadas: ${totalHoursFormatted}`, 15, finalY)
-
-      const totalExtraDays =
-        timeClocks?.summary?.extraDays ??
-        rows.filter((r: any) => r.isExtraDay).length
-      doc.text(`Dias Extras: ${totalExtraDays}`, 15, finalY + 5)
+      // Calculate Total Hours if '--'
+      let totalHoursFormatted = timeClocks?.summary?.totalHours || '--'
       
       let ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
       let ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
@@ -508,6 +499,7 @@ export function TimeSheetPage() {
       if (ovt60 === 0 && ovt100 === 0) {
          const DAILY_WORKLOAD = 440
          const TOLERANCE = 10
+         let totalAllMinutes = 0
          
          rows.forEach((row: any) => {
             if (row.status !== 'PRESENCA') return
@@ -536,6 +528,7 @@ export function TimeSheetPage() {
             if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
             
             if (total > 0) {
+              totalAllMinutes += total
               const excess = total - DAILY_WORKLOAD
               const dailyOvt = excess > TOLERANCE ? excess : 0
               
@@ -551,26 +544,82 @@ export function TimeSheetPage() {
               }
             }
          })
+         
+         if (totalHoursFormatted === '--') {
+           const isNegative = totalAllMinutes < 0
+           const absMins = Math.abs(totalAllMinutes)
+           const h = Math.floor(absMins / 60)
+           const m = absMins % 60
+           totalHoursFormatted = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`
+         }
       }
 
-      if (ovt60 > 0 || ovt100 > 0) {
-        let txt = 'Horas Extras Estimadas:'
-        if (ovt60 > 0) {
-           const h = Math.floor(ovt60 / 60)
-           const m = ovt60 % 60
-           txt += ` ${h}h${m.toString().padStart(2, '0')}m (60%)`
-        }
-        if (ovt100 > 0) {
-           const h = Math.floor(ovt100 / 60)
-           const m = ovt100 % 60
-           txt += `${ovt60 > 0 ? ' | ' : ' '}${h}h${m.toString().padStart(2, '0')}m (100%)`
-        }
-        doc.text(txt, 15, finalY + 10)
+      // UX: Resumo Financeiro (Estimativa) Box
+      if (finalY + 45 > 190) {
+        doc.addPage()
+        finalY = 20
       }
+
+      doc.setDrawColor(200, 200, 200)
+      doc.setFillColor(248, 250, 252) // slate-50
+      doc.roundedRect(15, finalY, 120, 44, 3, 3, 'FD')
+      
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(30, 41, 59) // slate-800
+      doc.text('Resumo e Estimativas', 20, finalY + 7)
+      
+      doc.line(15, finalY + 10, 135, finalY + 10)
+      
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(71, 85, 105) // slate-600
+      
+      doc.text('Total de Horas Trabalhadas:', 20, finalY + 16)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(15, 23, 42)
+      doc.text(totalHoursFormatted, 73, finalY + 16)
+      
+      const rate = Number(employee?.salary) || 0
+      const hourlyRate = rate / 220
+      const overtimeHourlyRate60 = hourlyRate * 1.6
+      const overtimeHourlyRate100 = hourlyRate * 2.0
+      
+      const value60 = (ovt60 / 60) * overtimeHourlyRate60
+      const value100 = (ovt100 / 60) * overtimeHourlyRate100
+      const totalValue = value60 + value100
+      
+      const fmtCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const fmtHours = (mins: number) => `${Math.floor(mins/60)}h${(mins%60).toString().padStart(2,'0')}m`
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(71, 85, 105)
+      doc.text(`Valor de Horas Extras (60%):`, 20, finalY + 23)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(15, 23, 42)
+      doc.text(`${fmtHours(ovt60)} = ${fmtCurrency(value60)}`, 73, finalY + 23)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(71, 85, 105)
+      doc.text(`Valor de Horas Extras (100%):`, 20, finalY + 30)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(15, 23, 42)
+      doc.text(`${fmtHours(ovt100)} = ${fmtCurrency(value100)}`, 73, finalY + 30)
+
+      doc.setDrawColor(226, 232, 240) // slate-200
+      doc.line(20, finalY + 34, 130, finalY + 34)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(22, 163, 74) // green-600
+      doc.text(`Valor Estimado a Receber (Total):`, 20, finalY + 40)
+      doc.text(fmtCurrency(totalValue), 73, finalY + 40)
+
+      doc.setTextColor(0, 0, 0)
+      finalY += 55
 
       // Signature area
       finalY += 15
-      if (finalY > 275) {
+      if (finalY > 185) {
         doc.addPage()
         finalY = 25
       }
