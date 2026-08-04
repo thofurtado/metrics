@@ -53,7 +53,7 @@ export function SupplierCombobox({
 
   return (
     <div className="flex w-full flex-col gap-1.5">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -88,6 +88,7 @@ export function SupplierCombobox({
               placeholder="Buscar por Nome ou Documento..." 
               value={search} 
               onValueChange={setSearch} 
+              autoFocus
             />
             <CommandList>
               <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
