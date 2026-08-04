@@ -53,7 +53,7 @@ export function SupplierCombobox({
 
   return (
     <div className="flex w-full flex-col gap-1.5">
-      <Popover open={open} onOpenChange={setOpen} modal={true}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -82,7 +82,7 @@ export function SupplierCombobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0" align="start">
+        <PopoverContent className="w-[300px] p-0" align="start" portal={false}>
           <Command shouldFilter={false}>
             <CommandInput 
               placeholder="Buscar por Nome ou Documento..." 
