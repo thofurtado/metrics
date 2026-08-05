@@ -6,6 +6,7 @@ export interface POSMachineRate {
   payment_category: string // DEBITO, CREDITO, VOUCHER, PIX
   installments: number
   tax_percentage: number
+  settlement_days?: number
 }
 
 export interface POSMachine {

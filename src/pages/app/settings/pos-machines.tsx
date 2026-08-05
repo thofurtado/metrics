@@ -107,6 +107,7 @@ export function POSMachinesSettings() {
             payment_category: r.payment_category,
             installments: r.installments,
             tax_percentage: r.tax_percentage,
+            settlement_days: r.settlement_days || 1,
           }))
         : []
     )
@@ -127,7 +128,7 @@ export function POSMachinesSettings() {
   }
 
   const handleAddRateRow = () => {
-    setRates([...rates, { payment_category: 'DÉBITO', installments: 1, tax_percentage: 0 }])
+    setRates([...rates, { payment_category: 'DÉBITO', installments: 1, tax_percentage: 0, settlement_days: 1 }])
   }
 
   const handleRemoveRateRow = (index: number) => {
@@ -227,8 +228,11 @@ export function POSMachinesSettings() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {(machine.rates || []).slice(0, 4).map((r, idx) => (
                         <div key={idx} className="flex items-center justify-between rounded-lg bg-background p-2 border">
-                          <span className="font-semibold text-muted-foreground">
+                          <span className="font-semibold text-muted-foreground flex items-center gap-1">
                             {r.payment_category} {r.installments > 1 ? `${r.installments}x` : 'À vista'}
+                            <span className="text-[9px] bg-slate-100 dark:bg-slate-800 px-1 rounded text-slate-500 font-bold ml-1">
+                              D+{r.settlement_days || 1}
+                            </span>
                           </span>
                           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                             {r.tax_percentage.toFixed(2)}%
@@ -313,7 +317,7 @@ export function POSMachinesSettings() {
               <div className="space-y-2">
                 {rates.map((rate, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2 items-center rounded-xl bg-background p-2 border">
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <Select
                         value={rate.payment_category}
                         onValueChange={(val) => {
@@ -322,7 +326,7 @@ export function POSMachinesSettings() {
                           setRates(newRates)
                         }}
                       >
-                        <SelectTrigger className="h-9 text-xs">
+                        <SelectTrigger className="h-9 text-[10px] font-bold px-2">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -334,7 +338,7 @@ export function POSMachinesSettings() {
                       </Select>
                     </div>
 
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Input
                         type="number"
                         min={1}
@@ -346,7 +350,7 @@ export function POSMachinesSettings() {
                           setRates(newRates)
                         }}
                         className="h-9 text-xs"
-                        placeholder="Parcelas"
+                        placeholder="Parc."
                       />
                     </div>
 
@@ -357,8 +361,28 @@ export function POSMachinesSettings() {
                         value={rate.tax_percentage}
                         onChange={(e) => handleUpdateRatePercentage(index, parseFloat(e.target.value) || 0)}
                         className="h-9 text-xs pr-6 font-mono font-bold"
+                        placeholder="Taxa"
                       />
                       <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">%</span>
+                    </div>
+
+                    <div className="col-span-3">
+                      <div className="flex items-center border rounded-md px-2 focus-within:ring-1 focus-within:ring-primary/50">
+                        <span className="text-[10px] font-bold text-muted-foreground mr-1">D+</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={365}
+                          value={rate.settlement_days ?? 1}
+                          onChange={(e) => {
+                            const newRates = [...rates]
+                            newRates[index].settlement_days = parseInt(e.target.value, 10) || 0
+                            setRates(newRates)
+                          }}
+                          className="h-9 text-xs font-mono font-bold border-0 px-1 py-0 shadow-none focus-visible:ring-0 w-full"
+                          placeholder="Dias"
+                        />
+                      </div>
                     </div>
 
                     <div className="col-span-1 text-right">
