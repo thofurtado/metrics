@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Landmark, Users, CreditCard, Loader2, ChevronDown, ChevronUp, DollarSign, CheckCircle2, Circle, Undo2 } from 'lucide-react'
+import { 
+  Landmark, Users, CreditCard, Loader2, ChevronDown, ChevronUp, 
+  CheckCircle2, Circle, Undo2, Banknote, Wallet, Receipt, RefreshCcw
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -23,6 +26,7 @@ import { updateStatusTransaction } from '@/api/update-transaction-status'
 import { revertTransactionStatus } from '@/api/revert-transaction-status'
 import dayjs from 'dayjs'
 import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface CashierBatchDetailsModalProps {
   open: boolean
@@ -100,7 +104,8 @@ export function CashierBatchDetailsModal({
     const res: any = {
       CASA: { total: 0, detalhado: {} as Record<string, number>, entries: {} as Record<string, any[]> },
       BANCOS: {} as Record<string, number>,
-      BANCOS_ENTRIES: {} as Record<string, any[]>
+      BANCOS_ENTRIES: {} as Record<string, any[]>,
+      TOTAL: 0
     }
 
     const padraoCasa = ['funcionário', 'pró-labore', 'cortesia', 'permuta', 'a prazo']
@@ -111,6 +116,8 @@ export function CashierBatchDetailsModal({
       const bank = (entry.bank || '').toUpperCase().trim()
 
       if (entry.is_withdrawal || entry.is_tip) continue
+      
+      res.TOTAL += amount
 
       const normMethod = method.toLowerCase()
       
@@ -139,212 +146,293 @@ export function CashierBatchDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md overflow-hidden rounded-2xl border-none p-0 shadow-2xl">
-        <DialogHeader className="bg-slate-900 px-6 py-5 text-white flex flex-row items-center justify-between">
-          <div>
-            <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
-              <Landmark className="h-5 w-5 text-amber-500" />
-              Detalhes do Lote
+      <DialogContent className="max-w-3xl overflow-hidden rounded-3xl border border-slate-200/50 p-0 shadow-2xl dark:border-slate-800/50 bg-slate-50 dark:bg-[#0A0A0A]">
+        {/* Header Elegante */}
+        <DialogHeader className="relative overflow-hidden bg-white px-8 pt-8 pb-6 dark:bg-[#111] flex flex-row items-start justify-between border-b border-slate-200/60 dark:border-slate-800/60">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-900/10" />
+          
+          <div className="relative z-10">
+            <DialogTitle className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                <Receipt className="h-5 w-5" />
+              </div>
+              Lote Finalizado
             </DialogTitle>
             {data?.session && (
-              <p className="text-sm font-medium text-slate-400 mt-1">
-                {dayjs(data.session.opened_at).format('DD/MM/YYYY')} —{' '}
-                {dayjs(data.session.opened_at).hour() < 16 ? 'Almoço' : 'Jantar'}
+              <p className="mt-2 flex items-center gap-2 text-[13px] font-medium text-slate-500 dark:text-slate-400">
+                <span>{dayjs(data.session.opened_at).format('DD MMMM YYYY')}</span>
+                <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span>{dayjs(data.session.opened_at).hour() < 16 ? 'Turno Almoço' : 'Turno Jantar'}</span>
               </p>
             )}
           </div>
+
           <button
             onClick={() => setIsReverting(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+            className="relative z-10 flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-[13px] font-semibold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             title="Reverter Conferência"
           >
             <Undo2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Desfazer</span>
+            <span className="hidden sm:inline">Desfazer Fechamento</span>
           </button>
         </DialogHeader>
 
-        <div className="bg-slate-50 p-6 dark:bg-slate-950">
+        <div className="px-8 py-6">
           {isLoading ? (
-            <div className="flex h-40 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+            <div className="flex h-[400px] items-center justify-center">
+              <div className="flex flex-col items-center gap-4 text-slate-400">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-500" />
+                <span className="text-sm font-medium">Buscando liquidações...</span>
+              </div>
             </div>
           ) : !resumo ? (
-            <div className="flex h-40 items-center justify-center text-sm font-medium text-slate-500">
-              Dados não encontrados.
+            <div className="flex h-[400px] items-center justify-center text-sm font-medium text-slate-500">
+              Nenhuma movimentação registrada neste lote.
             </div>
           ) : (
-            <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-              <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-8">
+              
+              {/* Grand Total Card */}
+              <div className="flex items-center justify-between rounded-2xl bg-white p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:bg-[#111] border border-slate-200/50 dark:border-slate-800/50">
                 <div>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400">
-                    <CreditCard className="h-4 w-4 text-emerald-500" />
-                    Valores Creditados
-                  </h4>
-                  {bancosKeys.length === 0 ? (
-                    <p className="text-sm text-slate-500">Nenhum lançamento eletrônico.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {bancosKeys.map(bancoKey => {
-                        // bancoKey é "SAFRA Crédito"
-                        const [banco, ...metodoArr] = bancoKey.split(' ')
-                        const metodo = metodoArr.join(' ')
-                        
-                        // Tentar achar a transação financeira correspondente
-                        const tx = data?.transactions?.find((t: any) => 
-                          (t.payment_method || '').toLowerCase() === metodo.toLowerCase() && 
-                          (t.description || '').toUpperCase().includes(banco.toUpperCase())
-                        )
+                  <h3 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">
+                    Total Declarado no Lote
+                  </h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-lg font-medium text-slate-400">R$</span>
+                    <span className="text-4xl font-bold tracking-tighter text-slate-900 dark:text-white">
+                      {resumo.TOTAL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="hidden sm:flex gap-4">
+                  <div className="rounded-xl bg-emerald-50 px-4 py-3 dark:bg-emerald-500/10">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-500/70">Cartões</span>
+                    <span className="block mt-0.5 text-base font-bold text-emerald-700 dark:text-emerald-400">
+                      R$ {Object.values(resumo.BANCOS).reduce((a:any, b:any) => a + b, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-orange-50 px-4 py-3 dark:bg-orange-500/10">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-orange-600/70 dark:text-orange-500/70">Vales / Fiado</span>
+                    <span className="block mt-0.5 text-base font-bold text-orange-700 dark:text-orange-400">
+                      R$ {resumo.CASA.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-                        return (
-                          <div key={bancoKey} className="flex flex-col rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
-                              <div className="flex flex-col p-4 hover:bg-slate-50 transition-colors">
-                                <div className="flex items-center justify-between">
-                                  <button 
-                                    onClick={() => setExpandedSection(expandedSection === `banco-${bancoKey}` ? null : `banco-${bancoKey}`)}
-                                    className="flex items-center gap-3 text-left"
-                                  >
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-                                      <CreditCard className="h-5 w-5 text-slate-500" />
-                                    </div>
-                                    <div>
-                                      <span className="font-bold text-slate-700 dark:text-slate-300 block">{bancoKey}</span>
-                                      <span className="text-[10px] text-slate-400 font-medium">Liquidação Automática</span>
-                                    </div>
-                                    {expandedSection === `banco-${bancoKey}` ? <ChevronUp className="h-4 w-4 text-slate-400 ml-2" /> : <ChevronDown className="h-4 w-4 text-slate-400 ml-2" />}
-                                  </button>
-                                  
-                                  <div className="flex items-center gap-4">
-                                    {tx && (
-                                      <div className="flex flex-col items-end mr-2">
-                                        <span className={cn(
-                                          "flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                          tx.confirmed ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" : "text-amber-500 bg-amber-50 dark:bg-amber-950/40"
-                                        )}>
-                                          {tx.confirmed ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
-                                          {tx.confirmed ? 'PAGO / CONTA REAL' : 'PENDENTE (A RECEBER)'}
+              {/* Tabs Section */}
+              <Tabs defaultValue="cartoes" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-200/50 dark:bg-[#1A1A1A] rounded-xl p-1 h-12">
+                  <TabsTrigger value="cartoes" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#2A2A2A] text-[13px] font-medium h-full">
+                    <CreditCard className="mr-2 h-4 w-4" /> Cartões (Crédito/Débito)
+                  </TabsTrigger>
+                  <TabsTrigger value="prazo" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#2A2A2A] text-[13px] font-medium h-full">
+                    <Users className="mr-2 h-4 w-4" /> Vales, Cortesias & Fiado
+                  </TabsTrigger>
+                </TabsList>
+
+                <div className="mt-6 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <TabsContent value="cartoes" className="m-0 focus-visible:outline-none">
+                    {bancosKeys.length === 0 ? (
+                      <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                        <span className="text-sm text-slate-500">Nenhum cartão registrado.</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {bancosKeys.map(bancoKey => {
+                          const [banco, ...metodoArr] = bancoKey.split(' ')
+                          const metodo = metodoArr.join(' ')
+                          
+                          const tx = data?.transactions?.find((t: any) => 
+                            (t.payment_method || '').toLowerCase() === metodo.toLowerCase() && 
+                            (t.description || '').toUpperCase().includes(banco.toUpperCase())
+                          )
+
+                          return (
+                            <div key={bancoKey} className="group flex flex-col rounded-2xl bg-white shadow-sm dark:bg-[#141414] border border-slate-200/60 dark:border-slate-800 overflow-hidden transition-all hover:border-blue-500/30">
+                              <div className="flex items-center justify-between p-5">
+                                <button 
+                                  onClick={() => setExpandedSection(expandedSection === `banco-${bancoKey}` ? null : `banco-${bancoKey}`)}
+                                  className="flex flex-1 items-center gap-4 text-left"
+                                >
+                                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+                                    <CreditCard className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+                                  </div>
+                                  <div>
+                                    <span className="block font-bold text-slate-900 dark:text-white text-base tracking-tight">{bancoKey}</span>
+                                    <span className="text-[12px] text-slate-500 font-medium mt-0.5 block">Captura Eletrônica</span>
+                                  </div>
+                                </button>
+                                
+                                <div className="flex items-center gap-6">
+                                  {tx && (
+                                    <div className="flex flex-col items-end">
+                                      {tx.confirmed ? (
+                                        <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-600 dark:text-emerald-400">
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                          <span className="text-[10px] font-bold uppercase tracking-widest">Liquidado</span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-blue-600 dark:text-blue-400">
+                                          <RefreshCcw className="h-3 w-3 animate-spin-slow" />
+                                          <span className="text-[10px] font-bold uppercase tracking-widest">Pendente</span>
+                                        </div>
+                                      )}
+                                      {!tx.confirmed && tx.data_vencimento && (
+                                        <span className="text-[11px] font-medium text-slate-400 mt-1.5 block">
+                                          Previsto: {dayjs(tx.data_vencimento).format('DD/MM/YY')}
                                         </span>
-                                        {!tx.confirmed && tx.data_vencimento && (
-                                          <span className="text-[10px] font-bold text-slate-500 mt-1">
-                                            Cai em: {dayjs(tx.data_vencimento).format('DD/MM/YYYY')}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    <span className="font-mono font-black text-emerald-600 text-lg">
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className="font-mono text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                                       R$ {resumo.BANCOS[bancoKey].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
+                                    <ChevronDown className={cn(
+                                      "h-4 w-4 text-slate-400 transition-transform duration-200", 
+                                      expandedSection === `banco-${bancoKey}` && "rotate-180"
+                                    )} />
                                   </div>
                                 </div>
                               </div>
-                              {expandedSection === `banco-${bancoKey}` && resumo.BANCOS_ENTRIES[bancoKey] && (
-                                <div className="bg-slate-50/80 p-4 pt-3 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-3">
-                                  {resumo.BANCOS_ENTRIES[bancoKey].map((l: any) => (
-                                    <div key={l.id} className="flex justify-between items-center text-slate-500 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm">
-                                      <span className="font-medium text-slate-600 dark:text-slate-300">{l.identification || l.origin || 'Venda Diversa'}</span>
-                                      <span className="font-mono text-slate-600 dark:text-slate-400 font-bold">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              
+                              {/* Details accordion */}
+                              <div className={cn(
+                                "grid transition-all duration-300 ease-in-out",
+                                expandedSection === `banco-${bancoKey}` ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                              )}>
+                                <div className="overflow-hidden">
+                                  <div className="bg-slate-50 p-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 dark:bg-black/20 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                      <span>Origem / Referência</span>
+                                      <span>Valor Creditado</span>
                                     </div>
-                                  ))}
+                                    {resumo.BANCOS_ENTRIES[bancoKey].map((l: any) => (
+                                      <div key={l.id} className="flex justify-between items-center text-slate-600 bg-white dark:bg-[#1A1A1A] px-4 py-3 rounded-xl border border-slate-200/50 dark:border-slate-800 shadow-sm transition-colors hover:border-slate-300 dark:hover:border-slate-700">
+                                        <span className="font-medium text-[13px] dark:text-slate-300">{l.identification || l.origin || 'Venda Caixa'}</span>
+                                        <span className="font-mono text-[13px] font-bold dark:text-slate-200">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              )}
+                              </div>
                             </div>
                           )
                         })}
                       </div>
                     )}
-                  </div>
+                  </TabsContent>
 
-                  <div>
-                    <h4 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400">
-                      <Users className="h-4 w-4 text-rose-500" />
-                      Vales & A Prazo
-                    </h4>
+                  <TabsContent value="prazo" className="m-0 focus-visible:outline-none">
                     {casaKeys.length === 0 ? (
-                      <p className="text-sm text-slate-500">Nenhum lançamento a prazo.</p>
+                      <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+                        <span className="text-sm text-slate-500">Nenhum lançamento a prazo.</span>
+                      </div>
                     ) : (
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-4">
                         {casaKeys.map(forma => (
-                          <div key={forma} className="flex flex-col rounded-2xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
+                          <div key={forma} className="group flex flex-col rounded-2xl bg-white shadow-sm dark:bg-[#141414] border border-slate-200/60 dark:border-slate-800 overflow-hidden transition-all hover:border-rose-500/30">
                             <button 
                               onClick={() => setExpandedSection(expandedSection === `casa-${forma}` ? null : `casa-${forma}`)}
-                              className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                              className="flex items-center justify-between p-5 text-left"
                             >
-                              <div className="flex items-center gap-3 text-left">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-                                  <Users className="h-5 w-5 text-slate-500" />
+                              <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/40 dark:to-rose-900/40 border border-rose-200/50 dark:border-rose-800/50 shadow-inner">
+                                  <Users className="h-5 w-5 text-rose-600 dark:text-rose-400" />
                                 </div>
-                                <span className="font-bold text-slate-700 dark:text-slate-300">{forma}</span>
+                                <div>
+                                  <span className="block font-bold text-slate-900 dark:text-white text-base tracking-tight">{forma}</span>
+                                  <span className="text-[12px] text-slate-500 font-medium mt-0.5 block">Acerto a prazo / Vale</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <span className="font-mono font-black text-rose-600 text-lg">
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="font-mono text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                                   R$ {resumo.CASA.detalhado[forma].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
-                                {expandedSection === `casa-${forma}` ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                                <ChevronDown className={cn(
+                                  "h-4 w-4 text-slate-400 transition-transform duration-200", 
+                                  expandedSection === `casa-${forma}` && "rotate-180"
+                                )} />
                               </div>
                             </button>
-                            {expandedSection === `casa-${forma}` && resumo.CASA.entries[forma] && (
-                              <div className="bg-slate-50/80 p-4 pt-0 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-3">
-                                {resumo.CASA.entries[forma].map((l: any) => {
-                                  const entityName = l.client?.name || l.employee?.name || l.identification || 'Não Identificado'
-                                  return (
-                                    <div key={l.id} className="flex justify-between items-center text-slate-500 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm mt-3">
-                                      <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">{entityName}</span>
-                                      <span className="font-mono text-slate-600 dark:text-slate-400 font-bold">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                  )
-                                })}
+                            
+                            <div className={cn(
+                              "grid transition-all duration-300 ease-in-out",
+                              expandedSection === `casa-${forma}` ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                            )}>
+                              <div className="overflow-hidden">
+                                <div className="bg-rose-50/30 p-5 pt-3 border-t border-slate-100 dark:border-slate-800/60 dark:bg-black/20 flex flex-col gap-2">
+                                  <div className="flex items-center justify-between px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                    <span>Identificação / Nome</span>
+                                    <span>Valor</span>
+                                  </div>
+                                  {resumo.CASA.entries[forma].map((l: any) => {
+                                    const entityName = l.client?.name || l.employee?.name || l.identification || 'Não Identificado'
+                                    return (
+                                      <div key={l.id} className="flex justify-between items-center text-slate-600 bg-white dark:bg-[#1A1A1A] px-4 py-3 rounded-xl border border-slate-200/50 dark:border-slate-800 shadow-sm transition-colors hover:border-slate-300 dark:hover:border-slate-700">
+                                        <span className="font-medium text-[13px] dark:text-slate-300 truncate max-w-[200px]">{entityName}</span>
+                                        <span className="font-mono text-[13px] font-bold dark:text-slate-200">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
-
+                  </TabsContent>
                 </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
+              </Tabs>
+            </div>
+          )}
+        </div>
+      </DialogContent>
 
-        <AlertDialog open={isReverting} onOpenChange={setIsReverting}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reverter Conferência do Caixa?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Você está prestes a <strong>desfazer</strong> o fechamento deste caixa. 
-                Todas as transações financeiras geradas por este lote serão <strong>excluídas</strong> do financeiro, 
-                e o caixa voltará para o status pendente para ser conferido novamente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => revertAudit(sessionId!)} 
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Sim, Reverter Caixa
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      {/* Alertas de reversão mantidos */}
+      <AlertDialog open={isReverting} onOpenChange={setIsReverting}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverter Conferência do Caixa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a <strong>desfazer</strong> o fechamento deste caixa. 
+              Todas as transações financeiras geradas por este lote serão <strong>excluídas</strong> do financeiro, 
+              e o caixa voltará para o status pendente para ser conferido novamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => revertAudit(sessionId!)} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Sim, Reverter Caixa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <AlertDialog open={!!transactionToToggle} onOpenChange={(open) => !open && setTransactionToToggle(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Alterar status de pagamento?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Você está prestes a marcar este lançamento como {transactionToToggle?.confirmed ? 'PENDENTE' : 'PAGO'}.
-                Isso irá refletir imediatamente no saldo da conta e nos relatórios.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleToggleConfirm} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                Confirmar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </Dialog>
-    )
-  }
+      <AlertDialog open={!!transactionToToggle} onOpenChange={(open) => !open && setTransactionToToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar status de pagamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a marcar este lançamento como {transactionToToggle?.confirmed ? 'PENDENTE' : 'PAGO'}.
+              Isso irá refletir imediatamente no saldo da conta e nos relatórios.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleConfirm} className="bg-blue-600 hover:bg-blue-700 text-white">
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Dialog>
+  )
+}

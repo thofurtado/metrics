@@ -5,7 +5,6 @@ export interface CreateAccountBody {
   description?: string | null
   balance: number
   goal?: number | null
-  is_transit?: boolean
 }
 
 export async function createAccount(data: CreateAccountBody) {

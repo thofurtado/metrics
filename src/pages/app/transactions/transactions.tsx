@@ -407,7 +407,7 @@ export function Transactions() {
             >
               <Link to="/transactions/settlements">
                 <CreditCard className="mr-2 h-5 w-5" />
-                <span>Liquidações</span>
+                <span>Recebíveis (Cartões)</span>
               </Link>
             </Button>
 

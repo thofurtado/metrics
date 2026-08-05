@@ -47,7 +47,6 @@ const createAccountSchema = z.object({
   description: z.string().optional(),
   balance: z.coerce.number(),
   goal: z.coerce.number().optional().nullable(),
-  is_transit: z.boolean().default(false).optional(),
 })
 
 const adjustBalanceSchema = z.object({
@@ -137,7 +136,6 @@ export function Accounts() {
         description: data.description || null,
         balance: data.balance,
         goal: data.goal || null,
-        is_transit: data.is_transit || false,
       })
     } catch {
       // handled in onError
@@ -306,22 +304,6 @@ export function Accounts() {
                         />
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2 pt-2">
-                    <Controller
-                      name="is_transit"
-                      control={control}
-                      render={({ field }) => (
-                        <Switch
-                          id="is_transit"
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      )}
-                    />
-                    <Label htmlFor="is_transit" className="text-sm cursor-pointer">
-                      Conta Transitória (Cartões)
-                    </Label>
                   </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full">

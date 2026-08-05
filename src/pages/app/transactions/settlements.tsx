@@ -59,10 +59,10 @@ export function Settlements() {
 
   return (
     <>
-      <Helmet title="Liquidações Automáticas" />
+      <Helmet title="Recebíveis (Cartões)" />
       <div className="flex flex-col gap-4">
         <PageHeader
-          title="Liquidações Automáticas"
+          title="Recebíveis (Cartões)"
           description="Gestão de transferências automáticas da Conta Transitória para as contas bancárias"
         >
           <div className="flex gap-2">
@@ -157,7 +157,7 @@ export function Settlements() {
                   {isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center">
-                        Carregando liquidações...
+                        Carregando recebíveis...
                       </TableCell>
                     </TableRow>
                   ) : settlements && settlements.length > 0 ? (
