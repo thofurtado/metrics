@@ -274,7 +274,9 @@ export function CashierSessionDetails() {
                 if (categoryNorm && machines && machines.length > 0) {
                     const machine = machines.find((m: any) => m.name.trim().toUpperCase() === bank.toUpperCase())
                     if (machine && machine.rates && machine.rates.length > 0) {
-                        const rate = machine.rates.find((r: any) => r.payment_category.toUpperCase() === categoryNorm)
+                        const normalizeStr = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+                        const target = normalizeStr(categoryNorm)
+                        const rate = machine.rates.find((r: any) => normalizeStr(r.payment_category).includes(target))
                         if (rate && rate.tax_percentage) {
                             taxa = (amount * rate.tax_percentage) / 100
                         }
