@@ -319,6 +319,7 @@ export function CashierSessionDetails() {
                 identification: dados.identificacao || (dados.mesa ? `Mesa ${dados.mesa}` : ''),
                 client_id: dados.client_id || null,
                 employee_id: dados.employee_id || null,
+                sector_id: dados.sector_id || null,
             })
         } catch (err: any) {
             console.error('Erro ao adicionar lançamento:', err)
@@ -343,7 +344,8 @@ export function CashierSessionDetails() {
                 payment_method: dados.formaPagamento,
                 bank: dados.banco,
                 identification: dados.identificacao || dados.mesa,
-                is_checked: dados.is_checked !== undefined ? dados.is_checked : dados.conferido
+                is_checked: dados.is_checked !== undefined ? dados.is_checked : dados.conferido,
+                sector_id: dados.sector_id || null,
             })
         } catch (err: any) {
             console.error('Erro ao editar lançamento:', err)

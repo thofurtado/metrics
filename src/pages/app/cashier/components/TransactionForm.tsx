@@ -8,6 +8,7 @@ import { getAccounts } from '@/api/get-accounts';
 import { getClients } from '@/api/get-clients';
 import { getCashierEmployees } from '@/api/cashier/cashier';
 import { QuickClientDialog } from './QuickClientDialog';
+import { getSectors } from '@/api/get-sectors';
 
 export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const { modules } = useModules();
@@ -83,6 +84,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         queryFn: getCashierEmployees,
     });
 
+    const { data: sectorsData } = useQuery({
+        queryKey: ['sectors'],
+        queryFn: getSectors,
+    });
+    const sectorsList = useMemo(() => {
+        if (Array.isArray(sectorsData)) return sectorsData;
+        if (sectorsData && Array.isArray((sectorsData as any).sectors)) return (sectorsData as any).sectors;
+        return [];
+    }, [sectorsData]);
+
     const clientsList = useMemo(() => {
         if (Array.isArray(clientsData)) return clientsData;
         if (clientsData && Array.isArray((clientsData as any).clients)) return (clientsData as any).clients;
@@ -122,6 +133,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     const [descricaoRetirada, setDescricaoRetirada] = useState('');
     const [funcionarioRetiradaId, setFuncionarioRetiradaId] = useState<string | null>(null);
+    const [sectorId, setSectorId] = useState<string | null>(null);
     const [incluirCaixinha, setIncluirCaixinha] = useState(false);
     const [caixinhaValor, setCaixinhaValor] = useState('');
     const [caixinhaParaQuem, setCaixinhaParaQuem] = useState('');
@@ -472,7 +484,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             isCaixinha: tipo === 'caixinha',
             isSaida: tipo === 'sangria',
             isSuprimento: tipo === 'suprimento',
-            type: tipo === 'sangria' ? 'WITHDRAWAL' : tipo === 'suprimento' ? 'ADDITION' : tipo === 'caixinha' ? 'TIP' : 'SALE'
+            type: tipo === 'sangria' ? 'WITHDRAWAL' : tipo === 'suprimento' ? 'ADDITION' : tipo === 'caixinha' ? 'TIP' : 'SALE',
+            sector_id: (tipo === 'sangria' || tipo === 'suprimento') ? sectorId : null
         });
 
         setTipo('venda');
@@ -887,6 +900,20 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     </select>
                                 </div>
                             )}
+
+                            <div className="col-span-2 md:w-48">
+                                <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Setor / Categoria (Opcional)</label>
+                                <select
+                                    value={sectorId || ''}
+                                    onChange={e => setSectorId(e.target.value || null)}
+                                    className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                >
+                                    <option value="">Nenhum Setor</option>
+                                    {sectorsList.map((sec: any) => (
+                                        <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </>
                     )}
 
