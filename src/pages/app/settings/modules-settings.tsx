@@ -270,11 +270,11 @@ export function ModulesSettings() {
               </div>
             </ModuleCard>
 
-            {/* Card: Caixa / PDV */}
+            {/* Card: Conferência Caixa */}
             <ModuleCard
               icon={<DollarSign className="h-6 w-6 text-white" />}
               color="bg-purple-600"
-              title="Caixa / PDV"
+              title="Conferência Caixa"
               description="Gestão de frente de caixa, PDV e conferência."
               isActive={cashier}
               control={

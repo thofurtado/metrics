@@ -26,6 +26,7 @@ import { getProfile } from '@/api/get-profile'
 import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 import { DivergenceModal } from './components/divergence-modal'
+import { SettlementModal } from './components/settlement-modal'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,6 +55,7 @@ export function CashierDashboard() {
 
   const [divergenceModalSession, setDivergenceModalSession] = useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
+  const [settlementModalOpen, setSettlementModalOpen] = useState(false)
 
   const token = localStorage.getItem('token')
 
@@ -361,11 +363,25 @@ export function CashierDashboard() {
       <div className={`grid grid-cols-1 gap-6 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
         {/* Formulário Horizontal Compacto para Abrir Caixa */}
         <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}>
-          <div className="flex items-center gap-2 mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
-            <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-              <Plus size={13} />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
+              <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                <Plus size={13} />
+              </div>
+              <span>Abrir Novo Caixa</span>
             </div>
-            <span>Abrir Novo Caixa</span>
+            
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSettlementModalOpen(true)}
+                className="h-7 text-[10px] font-bold text-blue-600 border-blue-200 hover:bg-blue-50"
+              >
+                <Banknote className="w-3 h-3 mr-1" />
+                Liquidações Pendentes
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -914,6 +930,11 @@ export function CashierDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SettlementModal
+        open={settlementModalOpen}
+        onOpenChange={setSettlementModalOpen}
+      />
     </div>
   )
 }

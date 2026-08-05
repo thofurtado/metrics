@@ -63,7 +63,7 @@ export function Sidebar() {
       access: hasAccess('finance'),
     },
     {
-      name: 'Caixa / PDV',
+      name: 'Conferência Caixa',
       path: '/cashier',
       icon: Wallet,
       access: hasAccess('cashier'),
