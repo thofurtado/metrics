@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-import { getSettlements, revertSettlement } from '@/api/get-settlements'
+import { getSettlements } from '@/api/get-settlements'
+import { revertSettlement } from '@/api/revert-settlement'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import {
