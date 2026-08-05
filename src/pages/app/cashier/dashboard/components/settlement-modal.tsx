@@ -47,10 +47,12 @@ export function SettlementModal({ open, onOpenChange }: SettlementModalProps) {
             </div>
             Liquidações Pendentes
           </DialogTitle>
-          <DialogDescription className="pt-2">
-            Isso forçará a execução do processo automático.
+          <DialogDescription className="pt-2 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+            Isso forçará a execução do repasse financeiro.
             <br/><br/>
-            Todas as transações na <strong>Conta Transitória</strong> que têm vencimento para <strong>hoje ou dias anteriores</strong> (incluindo as de D+0) serão imediatamente confirmadas e os valores cairão na sua Conta Real, já descontando as taxas configuradas na máquina no momento da venda.
+            O sistema buscará todas as vendas de cartões (Débito/Crédito) e Pix que atingiram o prazo de recebimento estipulado nas máquinas (seja no mesmo dia, em 1 dia, 2 dias ou 30 dias) e efetivará a entrada do dinheiro líquido (já com as taxas descontadas) nos saldos bancários do financeiro.
+            <br/><br/>
+            <strong>Nota:</strong> Essas vendas já constam no totalizador do seu relatório de faturamento do caixa desde o dia da venda, a liquidação serve apenas para atualizar os seus saldos bancários disponíveis.
           </DialogDescription>
         </DialogHeader>
 
