@@ -9,7 +9,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -19,6 +19,7 @@ import { getAccountHistory } from '@/api/get-account-history'
 import { getAccounts } from '@/api/get-accounts'
 import { getGeneralBalance } from '@/api/get-general-balance'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ const createAccountSchema = z.object({
   description: z.string().optional(),
   balance: z.coerce.number(),
   goal: z.coerce.number().optional().nullable(),
+  is_transit: z.boolean().default(false).optional(),
 })
 
 const adjustBalanceSchema = z.object({
@@ -86,7 +88,7 @@ export function Accounts() {
     queryFn: getGeneralBalance,
   })
 
-  const { register, handleSubmit, reset } = useForm<CreateAccountSchema>({
+  const { register, handleSubmit, reset, control } = useForm<CreateAccountSchema>({
     resolver: zodResolver(createAccountSchema),
   })
 
@@ -135,6 +137,7 @@ export function Accounts() {
         description: data.description || null,
         balance: data.balance,
         goal: data.goal || null,
+        is_transit: data.is_transit || false,
       })
     } catch {
       // handled in onError
@@ -303,6 +306,22 @@ export function Accounts() {
                         />
                       </div>
                     </div>
+                  </div>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Controller
+                      name="is_transit"
+                      control={control}
+                      render={({ field }) => (
+                        <Switch
+                          id="is_transit"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="is_transit" className="text-sm cursor-pointer">
+                      Conta Transitória (Cartões)
+                    </Label>
                   </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full">
@@ -473,6 +492,22 @@ export function Accounts() {
                       {...register('balance')}
                       className="h-11"
                     />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Controller
+                      name="is_transit"
+                      control={control}
+                      render={({ field }) => (
+                        <Switch
+                          id="is_transit_card"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="is_transit_card" className="text-sm cursor-pointer">
+                      Conta Transitória (Cartões)
+                    </Label>
                   </div>
                 </div>
                 <Button type="submit" size="lg" className="w-full">

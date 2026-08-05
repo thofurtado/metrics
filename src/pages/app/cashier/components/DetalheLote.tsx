@@ -502,7 +502,7 @@ export function DetalheLote({
                   type="text"
                   value={filtro.forma}
                   onChange={(e) =>
-                  setFiltro({ ...filtro, forma: e.target.value })
+                    setFiltro({ ...filtro, forma: e.target.value })
                   }
                   placeholder="Filtrar por forma..."
                   className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
@@ -511,158 +511,211 @@ export function DetalheLote({
             </div>
           )}
 
-          <div className="space-y-3">
-            {vendasFiltradas.length > 0 ? (
-              vendasFiltradas.map((l: any) => {
-                const isEdit = editandoId === l.id
-                const isChecked = !!l.conferido
-
-                // Definir ícone e cor baseado na forma de pagamento
-                let IconStyle = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                let PaymentIcon = Wallet2
-                const formaNorm = (l.formaPagamento || '').toLowerCase()
-                
-                if (formaNorm.includes('pix')) { IconStyle = 'bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400'; PaymentIcon = CheckCircle2 }
-                else if (formaNorm.includes('débito') || formaNorm.includes('debito')) { IconStyle = 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'; PaymentIcon = CheckCircle2 }
-                else if (formaNorm.includes('crédito') || formaNorm.includes('credito')) { IconStyle = 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400'; PaymentIcon = CheckCircle2 }
-                else if (formaNorm.includes('dinheiro')) { IconStyle = 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'; PaymentIcon = CheckCircle2 }
-
-                return (
-                  <div key={l.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-blue-100 transition-all dark:bg-slate-900/50 dark:border-slate-800">
-                    
-                    {isEdit ? (
-                      /* MODO EDIÇÃO */
-                      <div className="flex flex-col md:flex-row gap-3 w-full">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={!!dadosEdicao.conferido}
-                            onChange={(e) => setDadosEdicao({ ...dadosEdicao, conferido: e.target.checked })}
-                            className="h-5 w-5 rounded-md border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          value={dadosEdicao.mesa || ''}
-                          onChange={(e) => setDadosEdicao({ ...dadosEdicao, mesa: e.target.value })}
-                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50 p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Mesa/Origem"
-                        />
-                        <select
-                          value={dadosEdicao.banco}
-                          onChange={(e) => setDadosEdicao({ ...dadosEdicao, banco: e.target.value })}
-                          className="w-32 rounded-xl border border-blue-200 bg-blue-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="CAIXA">CAIXA</option>
-                          <option value="SAFRA">SAFRA</option>
-                          <option value="PAGBANK">PAGBANK</option>
-                          <option value="CIELO">CIELO</option>
-                          <option value="STONE">STONE</option>
-                          <option value="CONTA DA CASA">CONTA DA CASA</option>
-                        </select>
-                        <select
-                          value={dadosEdicao.formaPagamento}
-                          onChange={(e) => setDadosEdicao({ ...dadosEdicao, formaPagamento: e.target.value })}
-                          className="w-32 rounded-xl border border-blue-200 bg-blue-50 p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="Dinheiro">Dinheiro</option>
-                          <option value="PIX">PIX</option>
-                          <option value="Débito">Débito</option>
-                          <option value="Crédito">Crédito</option>
-                          <option value="Voucher">Voucher</option>
-                          <option value="Funcionário">Funcionário</option>
-                          <option value="Pró-labore">Pró-labore</option>
-                          <option value="Permuta">Permuta</option>
-                          <option value="Cortesia">Cortesia</option>
-                          <option value="A Prazo">A Prazo</option>
-                        </select>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={dadosEdicao.valor || 0}
-                          onChange={(e) => setDadosEdicao({ ...dadosEdicao, valor: Number(e.target.value) })}
-                          className="w-24 rounded-xl border border-blue-200 bg-blue-50 p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 text-right"
-                        />
-                        <div className="flex items-center gap-2 justify-end">
-                          <button onClick={() => { onEditarLancamento(l.id, dadosEdicao); setEditandoId(null) }} className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200">
-                            <Check size={16} />
-                          </button>
-                          <button onClick={() => setEditandoId(null)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* MODO VISUALIZAÇÃO (CARD PREMIUM) */
-                      <>
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${IconStyle}`}>
-                            <PaymentIcon size={20} />
-                          </div>
-                          
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm md:text-base">
-                              {renderOrigemLabel(l)}
-                            </span>
-                            <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                              {renderBancoConsumidor(l)} 
-                              <span className="w-1 h-1 rounded-full bg-slate-300"></span> 
-                              {l.formaPagamento}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between md:justify-end gap-6 mt-4 md:mt-0">
-                          <div className="flex flex-col items-start md:items-end">
-                            <span className="font-black text-slate-900 dark:text-white text-base">
-                              {Number(l.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                            {isChecked ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full mt-1">
-                                <Check size={10} /> Conferido
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full mt-1">
-                                <Clock size={10} /> Pendente
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            {loteAtivo.status === 'ABERTO' || loteAtivo.status === 'OPEN' ? (
-                              <>
+          <div className="overflow-hidden rounded-[1.5rem] border bg-white shadow-sm md:rounded-3xl">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] text-left text-sm">
+                <thead className="border-b bg-zinc-50 text-[9px] font-black uppercase text-zinc-400">
+                  <tr>
+                    <th className="w-12 p-4 text-center">
+                      <Check size={14} className="inline-block" />
+                    </th>
+                    <th className="p-4">Mesa / Origem</th>
+                    <th className="p-4">Banco / Consumidor</th>
+                    <th className="p-4">Forma</th>
+                    <th className="p-4 text-right">Valor</th>
+                    <th className="w-24 p-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {vendasFiltradas.length > 0 ? (
+                    vendasFiltradas.map((l: any) => (
+                      <tr
+                        key={l.id}
+                        className="transition-colors hover:bg-zinc-50"
+                      >
+                        {editandoId === l.id ? (
+                          <>
+                            <td className="p-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={!!dadosEdicao.conferido}
+                                onChange={(e) =>
+                                  setDadosEdicao({
+                                    ...dadosEdicao,
+                                    conferido: e.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={dadosEdicao.mesa || ''}
+                                onChange={(e) =>
+                                  setDadosEdicao({
+                                    ...dadosEdicao,
+                                    mesa: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-sm font-bold"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <select
+                                value={dadosEdicao.banco}
+                                onChange={(e) =>
+                                  setDadosEdicao({
+                                    ...dadosEdicao,
+                                    banco: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-[9px] font-bold"
+                              >
+                                <option value="CAIXA">CAIXA</option>
+                                <option value="SAFRA">SAFRA</option>
+                                <option value="PAGBANK">PAGBANK</option>
+                                <option value="CIELO">CIELO</option>
+                                <option value="STONE">STONE</option>
+                                <option value="CONTA DA CASA">
+                                  CONTA DA CASA
+                                </option>
+                              </select>
+                            </td>
+                            <td className="p-2">
+                              <select
+                                value={dadosEdicao.formaPagamento}
+                                onChange={(e) =>
+                                  setDadosEdicao({
+                                    ...dadosEdicao,
+                                    formaPagamento: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-[9px] font-bold"
+                              >
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="PIX">PIX</option>
+                                <option value="Débito">Débito</option>
+                                <option value="Crédito">Crédito</option>
+                                <option value="Voucher">Voucher</option>
+                              </select>
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={dadosEdicao.valor}
+                                onChange={(e) =>
+                                  setDadosEdicao({
+                                    ...dadosEdicao,
+                                    valor: parseFloat(e.target.value),
+                                  })
+                                }
+                                className="w-full rounded border border-blue-300 px-2 py-1 text-right text-sm font-bold"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <div className="flex justify-end gap-1">
                                 <button
-                                  onClick={() => {
-                                    setEditandoId(l.id)
-                                    setDadosEdicao({ ...l })
-                                  }}
-                                  className="p-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shadow-sm"
-                                  title="Editar"
+                                  onClick={salvarEdicao}
+                                  className="p-1 text-green-600"
                                 >
-                                  <Edit2 size={14} />
+                                  <Check size={18} />
+                                </button>
+                                <button
+                                  onClick={cancelarEdicao}
+                                  className="p-1 text-red-500"
+                                >
+                                  <X size={18} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={!!l.conferido || !!l.is_checked}
+                                onChange={(e) =>
+                                  onEditarLancamento(l.id, {
+                                    ...l,
+                                    is_checked: e.target.checked,
+                                    conferido: e.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="p-4">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-bold">{renderOrigemLabel(l)}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
+                              {renderBancoConsumidor(l)}
+                            </td>
+                            <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
+                              {l.formaPagamento}{' '}
+                              {l.valorCaixinha > 0 && (
+                                <span className="ml-1 text-pink-500 cursor-help" title={`Caixinha: R$ ${l.valorCaixinha.toFixed(2)} ${l.paraQuem ? `(${l.paraQuem})` : ''}`}>♥</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right font-mono font-black text-zinc-900">
+                              R$ {l.valor.toFixed(2)}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex justify-end gap-1">
+                                <button
+                                  onClick={() => iniciarEdicao(l)}
+                                  className="p-2 text-zinc-300 hover:text-blue-500"
+                                >
+                                  <Edit2 size={16} />
                                 </button>
                                 <button
                                   onClick={() => onRemoverLancamento(l.id)}
-                                  className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors shadow-sm"
-                                  title="Remover"
+                                  className="p-2 text-zinc-200 hover:text-red-500"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={18} />
                                 </button>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )
-              })
-            ) : (
-              <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-12 text-center flex flex-col items-center justify-center dark:border-slate-800 dark:bg-slate-900/20">
-                <ShoppingBag size={32} className="text-slate-300 mb-3" />
-                <p className="text-sm font-bold text-slate-500">Nenhum lançamento encontrado nesta categoria.</p>
-              </div>
-            )}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="p-8 text-center text-xs italic text-zinc-400"
+                      >
+                        Nenhum lançamento encontrado nesta categoria/filtro.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {vendasFiltradas.length > 0 && (
+                  <tfoot className="border-t bg-zinc-50">
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-4 text-right text-[10px] font-black uppercase text-zinc-500"
+                      >
+                        Total desta página
+                      </td>
+                      <td className="p-4 text-right font-mono font-black text-blue-600">
+                        R${' '}
+                        {vendasFiltradas
+                          .reduce((acc: number, cur: any) => acc + cur.valor, 0)
+                          .toFixed(2)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
           </div>
         </div>
 

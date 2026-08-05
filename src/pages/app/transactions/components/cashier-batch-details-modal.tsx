@@ -197,143 +197,154 @@ export function CashierBatchDetailsModal({
 
                         return (
                           <div key={bancoKey} className="flex flex-col rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
-                            <div className="flex flex-col p-3 hover:bg-slate-50 transition-colors">
-                              <div className="flex items-center justify-between">
-                                <button 
-                                  onClick={() => setExpandedSection(expandedSection === `banco-${bancoKey}` ? null : `banco-${bancoKey}`)}
-                                  className="flex items-center gap-2 text-left"
-                                >
-                                  <span className="font-bold text-slate-700 dark:text-slate-300">{bancoKey}</span>
-                                  {expandedSection === `banco-${bancoKey}` ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-                                </button>
-                                
-                                <div className="flex items-center gap-3">
-                                  {tx && (
-                                    <div className="flex flex-col items-end mr-2">
-                                      <span className={cn(
-                                        "flex items-center gap-1 text-[10px] font-black uppercase tracking-wider",
-                                        tx.confirmed ? "text-emerald-600" : "text-amber-500"
-                                      )}>
-                                        {tx.confirmed ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
-                                        {tx.confirmed ? 'Na Conta Real' : 'Na Transitória'}
-                                      </span>
-                                      {!tx.confirmed && tx.data_vencimento && (
-                                        <span className="text-[9px] text-slate-400">
-                                          Cai em: {dayjs(tx.data_vencimento).format('DD/MM/YYYY')}
-                                        </span>
-                                      )}
+                              <div className="flex flex-col p-4 hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <button 
+                                    onClick={() => setExpandedSection(expandedSection === `banco-${bancoKey}` ? null : `banco-${bancoKey}`)}
+                                    className="flex items-center gap-3 text-left"
+                                  >
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                                      <CreditCard className="h-5 w-5 text-slate-500" />
                                     </div>
-                                  )}
-                                  <span className="font-black text-emerald-600 text-base">
-                                    R$ {resumo.BANCOS[bancoKey].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
+                                    <div>
+                                      <span className="font-bold text-slate-700 dark:text-slate-300 block">{bancoKey}</span>
+                                      <span className="text-[10px] text-slate-400 font-medium">Liquidação Automática</span>
+                                    </div>
+                                    {expandedSection === `banco-${bancoKey}` ? <ChevronUp className="h-4 w-4 text-slate-400 ml-2" /> : <ChevronDown className="h-4 w-4 text-slate-400 ml-2" />}
+                                  </button>
+                                  
+                                  <div className="flex items-center gap-4">
+                                    {tx && (
+                                      <div className="flex flex-col items-end mr-2">
+                                        <span className={cn(
+                                          "flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                          tx.confirmed ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40" : "text-amber-500 bg-amber-50 dark:bg-amber-950/40"
+                                        )}>
+                                          {tx.confirmed ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+                                          {tx.confirmed ? 'PAGO / CONTA REAL' : 'PENDENTE (A RECEBER)'}
+                                        </span>
+                                        {!tx.confirmed && tx.data_vencimento && (
+                                          <span className="text-[10px] font-bold text-slate-500 mt-1">
+                                            Cai em: {dayjs(tx.data_vencimento).format('DD/MM/YYYY')}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    <span className="font-mono font-black text-emerald-600 text-lg">
+                                      R$ {resumo.BANCOS[bancoKey].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
+                              {expandedSection === `banco-${bancoKey}` && resumo.BANCOS_ENTRIES[bancoKey] && (
+                                <div className="bg-slate-50/80 p-4 pt-3 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-3">
+                                  {resumo.BANCOS_ENTRIES[bancoKey].map((l: any) => (
+                                    <div key={l.id} className="flex justify-between items-center text-slate-500 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm">
+                                      <span className="font-medium text-slate-600 dark:text-slate-300">{l.identification || l.origin || 'Venda Diversa'}</span>
+                                      <span className="font-mono text-slate-600 dark:text-slate-400 font-bold">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            {expandedSection === `banco-${bancoKey}` && resumo.BANCOS_ENTRIES[bancoKey] && (
-                              <div className="bg-slate-50/80 p-3 pt-2 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-2">
-                                {resumo.BANCOS_ENTRIES[bancoKey].map((l: any) => (
-                                  <div key={l.id} className="flex justify-between items-center text-slate-500">
-                                    <span>{l.identification || l.origin || 'Venda'}</span>
-                                    <span className="font-mono text-slate-600 dark:text-slate-400">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                  </div>
-                                ))}
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400">
+                      <Users className="h-4 w-4 text-rose-500" />
+                      Vales & A Prazo
+                    </h4>
+                    {casaKeys.length === 0 ? (
+                      <p className="text-sm text-slate-500">Nenhum lançamento a prazo.</p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {casaKeys.map(forma => (
+                          <div key={forma} className="flex flex-col rounded-2xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
+                            <button 
+                              onClick={() => setExpandedSection(expandedSection === `casa-${forma}` ? null : `casa-${forma}`)}
+                              className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 text-left">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                                  <Users className="h-5 w-5 text-slate-500" />
+                                </div>
+                                <span className="font-bold text-slate-700 dark:text-slate-300">{forma}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-mono font-black text-rose-600 text-lg">
+                                  R$ {resumo.CASA.detalhado[forma].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                {expandedSection === `casa-${forma}` ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                              </div>
+                            </button>
+                            {expandedSection === `casa-${forma}` && resumo.CASA.entries[forma] && (
+                              <div className="bg-slate-50/80 p-4 pt-0 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-3">
+                                {resumo.CASA.entries[forma].map((l: any) => {
+                                  const entityName = l.client?.name || l.employee?.name || l.identification || 'Não Identificado'
+                                  return (
+                                    <div key={l.id} className="flex justify-between items-center text-slate-500 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm mt-3">
+                                      <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">{entityName}</span>
+                                      <span className="font-mono text-slate-600 dark:text-slate-400 font-bold">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-                <div>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400">
-                    <Users className="h-4 w-4 text-rose-500" />
-                    Vales & A Prazo
-                  </h4>
-                  {casaKeys.length === 0 ? (
-                    <p className="text-sm text-slate-500">Nenhum lançamento a prazo.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {casaKeys.map(forma => (
-                        <div key={forma} className="flex flex-col rounded-xl bg-white shadow-sm dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
-                          <button 
-                            onClick={() => setExpandedSection(expandedSection === `casa-${forma}` ? null : `casa-${forma}`)}
-                            className="flex items-center justify-between p-3 hover:bg-slate-50 transition-colors"
-                          >
-                            <span className="font-bold text-slate-700 dark:text-slate-300">{forma}</span>
-                            <div className="flex items-center gap-3">
-                              <span className="font-black text-rose-600">
-                                R$ {resumo.CASA.detalhado[forma].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                              {expandedSection === `casa-${forma}` ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-                            </div>
-                          </button>
-                          {expandedSection === `casa-${forma}` && resumo.CASA.entries[forma] && (
-                            <div className="bg-slate-50/80 p-3 pt-0 text-xs border-t border-slate-100 dark:border-slate-800 dark:bg-slate-950/50 flex flex-col gap-2">
-                              {resumo.CASA.entries[forma].map((l: any) => {
-                                const entityName = l.client?.name || l.employee?.name || l.identification || 'Não Identificado'
-                                return (
-                                  <div key={l.id} className="flex justify-between items-center text-slate-500">
-                                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">{entityName}</span>
-                                    <span className="font-mono text-slate-600 dark:text-slate-400">R$ {Number(l.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-
               </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
+            )}
+          </div>
+        </DialogContent>
 
-      <AlertDialog open={isReverting} onOpenChange={setIsReverting}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reverter Conferência do Caixa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a <strong>desfazer</strong> o fechamento deste caixa. 
-              Todas as transações financeiras geradas por este lote serão <strong>excluídas</strong> do financeiro, 
-              e o caixa voltará para o status pendente para ser conferido novamente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => revertAudit(sessionId!)} 
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Sim, Reverter Caixa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={isReverting} onOpenChange={setIsReverting}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reverter Conferência do Caixa?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a <strong>desfazer</strong> o fechamento deste caixa. 
+                Todas as transações financeiras geradas por este lote serão <strong>excluídas</strong> do financeiro, 
+                e o caixa voltará para o status pendente para ser conferido novamente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => revertAudit(sessionId!)} 
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Sim, Reverter Caixa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <AlertDialog open={!!transactionToToggle} onOpenChange={(open) => !open && setTransactionToToggle(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Alterar status de pagamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a marcar este lançamento como {transactionToToggle?.confirmed ? 'PENDENTE' : 'PAGO'}.
-              Isso irá refletir imediatamente no saldo da conta e nos relatórios.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleToggleConfirm} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Dialog>
-  )
-}
+        <AlertDialog open={!!transactionToToggle} onOpenChange={(open) => !open && setTransactionToToggle(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Alterar status de pagamento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você está prestes a marcar este lançamento como {transactionToToggle?.confirmed ? 'PENDENTE' : 'PAGO'}.
+                Isso irá refletir imediatamente no saldo da conta e nos relatórios.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleToggleConfirm} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Dialog>
+    )
+  }

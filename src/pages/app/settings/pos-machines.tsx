@@ -373,10 +373,10 @@ export function POSMachinesSettings() {
                           type="number"
                           min={0}
                           max={365}
-                          value={rate.settlement_days ?? 1}
+                          value={rate.settlement_days ?? 0}
                           onChange={(e) => {
                             const newRates = [...rates]
-                            newRates[index].settlement_days = parseInt(e.target.value, 10) || 0
+                            newRates[index].settlement_days = e.target.value === '' ? 0 : parseInt(e.target.value, 10)
                             setRates(newRates)
                           }}
                           className="h-9 text-xs font-mono font-bold border-0 px-1 py-0 shadow-none focus-visible:ring-0 w-full"

@@ -11,6 +11,6 @@ export interface PendingSettlement {
 }
 
 export async function getPendingSettlements() {
-  const response = await api.get<PendingSettlement[]>('/api/pending-settlements')
+  const response = await api.get<PendingSettlement[]>('/pending-settlements')
   return response.data
 }
