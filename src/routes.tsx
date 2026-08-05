@@ -22,6 +22,7 @@ import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identif
 import { Permissions } from './pages/app/settings/permissions'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
+import { Settlements } from './pages/app/transactions/settlements'
 import { Transactions } from './pages/app/transactions/transactions'
 import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
@@ -134,6 +135,14 @@ export const router = createBrowserRouter([
             element: (
               <ModuleGuard module="financial">
                 <Transactions />
+              </ModuleGuard>
+            ),
+          },
+          {
+            path: 'transactions/settlements',
+            element: (
+              <ModuleGuard module="financial">
+                <Settlements />
               </ModuleGuard>
             ),
           },

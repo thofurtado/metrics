@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  CreditCard,
   Inbox,
   Plus,
   TrendingDown,
@@ -16,6 +17,8 @@ import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
+
+import { Link } from 'react-router-dom'
 
 import { bulkPayTransactions } from '@/api/bulk-pay-transactions'
 import { getFinanceMetrics } from '@/api/get-finance-metrics'
@@ -395,6 +398,17 @@ export function Transactions() {
                   {pendingCount}
                 </span>
               )}
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-12 w-full rounded-2xl px-6 py-2 font-bold shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 md:h-10 md:w-auto md:rounded-xl"
+              asChild
+            >
+              <Link to="/transactions/settlements">
+                <CreditCard className="mr-2 h-5 w-5" />
+                <span>Liquidações</span>
+              </Link>
             </Button>
 
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
