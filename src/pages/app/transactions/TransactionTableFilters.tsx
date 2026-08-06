@@ -210,7 +210,7 @@ export function TransactionTableFilters({
     (checkedParam && checkedParam !== 'all')
 
   return (
-    <div className="flex w-full flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900 md:p-6">
+    <div className="flex w-full flex-col gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900 md:p-5">
       <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 transition-all focus-within:border-indigo-500/40 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50 sm:col-span-2 lg:col-span-1">
           <Search className="h-4 w-4 shrink-0 text-indigo-500" />

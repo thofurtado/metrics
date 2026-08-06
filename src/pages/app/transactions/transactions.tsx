@@ -9,8 +9,10 @@ import {
   CreditCard,
   Inbox,
   Plus,
+  Search,
   TrendingDown,
   TrendingUp,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
@@ -104,17 +106,8 @@ export function Transactions() {
 
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false)
   const [isSummaryOpen, setIsSummaryOpen] = useState(false)
-  const [isOverdueExpanded, setIsOverdueExpanded] = useState(true)
-
-  useEffect(() => {
-    let timeout: NodeJS.Timeout
-    if (isOverdueExpanded) {
-      timeout = setTimeout(() => {
-        setIsOverdueExpanded(false)
-      }, 5000)
-    }
-    return () => clearTimeout(timeout)
-  }, [isOverdueExpanded])
+  const [isOverdueExpanded, setIsOverdueExpanded] = useState(false)
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
   // Query to fetch pending receipts count
   const { data: receiptsData } = useQuery({
@@ -385,37 +378,41 @@ export function Transactions() {
           title="Transações"
           description="Gerencie suas receitas, despesas e transferências."
         >
-          <div className="mb-8 flex w-full flex-col items-center gap-3 sm:flex-row md:mb-0 md:w-auto">
-            <Button
-              variant="outline"
-              className="relative h-12 w-full rounded-2xl px-6 py-2 font-bold shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 md:h-10 md:w-auto md:rounded-xl"
-              onClick={() => setIsPendingReceiptsOpen(true)}
-            >
-              <Inbox className="mr-2 h-5 w-5" />
-              <span>Caixa de Comprovantes</span>
-              {pendingCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-rose-500 text-xs font-black text-white ring-2 ring-background">
-                  {pendingCount}
-                </span>
-              )}
-            </Button>
+          <div className="mb-8 flex w-full flex-row items-center justify-between gap-2 md:mb-0 md:w-auto md:justify-end md:gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                className="relative h-12 w-12 rounded-2xl px-0 shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 sm:w-auto sm:px-4 md:h-10 md:rounded-xl"
+                onClick={() => setIsPendingReceiptsOpen(true)}
+                title="Caixa de Comprovantes"
+              >
+                <Inbox className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline font-bold">Caixa de Comprovantes</span>
+                {pendingCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-rose-500 text-xs font-black text-white ring-2 ring-background">
+                    {pendingCount}
+                  </span>
+                )}
+              </Button>
 
-            <Button
-              variant="outline"
-              className="h-12 w-full rounded-2xl px-6 py-2 font-bold shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 md:h-10 md:w-auto md:rounded-xl"
-              asChild
-            >
-              <Link to="/transactions/settlements">
-                <CreditCard className="mr-2 h-5 w-5" />
-                <span>Recebíveis (Cartões)</span>
-              </Link>
-            </Button>
+              <Button
+                variant="ghost"
+                className="h-12 w-12 rounded-2xl px-0 shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 sm:w-auto sm:px-4 md:h-10 md:rounded-xl"
+                asChild
+                title="Recebíveis (Cartões)"
+              >
+                <Link to="/transactions/settlements">
+                  <CreditCard className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline font-bold">Recebíveis (Cartões)</span>
+                </Link>
+              </Button>
+            </div>
 
             <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <PopoverTrigger asChild>
                 <Button
                   aria-label="Adicionar"
-                  className="h-12 w-full rounded-2xl bg-slate-900 px-6 py-2 font-bold text-white shadow-xl transition-all hover:bg-slate-800 md:h-10 md:w-auto md:rounded-xl"
+                  className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-6 py-2 font-bold text-white shadow-xl shadow-indigo-500/30 transition-all hover:from-indigo-700 hover:to-indigo-600 md:h-10 md:flex-none md:rounded-xl"
                 >
                   <Plus className="mr-2 h-5 w-5" />
                   <span>Nova Transação</span>
@@ -559,49 +556,16 @@ export function Transactions() {
         </Tabs>
 
         <div className="space-y-4">
-          {activeTab === 'payable' && overdueTotal > 0 && (
-            <AnimatePresence mode="wait">
-              {isOverdueExpanded ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <AnimatePresence>
+              {activeTab === 'payable' && overdueTotal > 0 && !isOverdueExpanded && (
                 <motion.div
-                  key="expanded"
+                  key="collapsed-overdue"
                   layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50, height: 0, overflow: 'hidden' }}
-                  transition={{ duration: 0.3 }}
-                  className="flex w-full flex-col items-start justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:flex-row sm:items-center"
-                >
-                  <div className="flex w-full min-w-0 flex-1 items-start gap-3 text-amber-700 sm:items-center">
-                    <AlertTriangle
-                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer sm:mt-0 sm:h-6 sm:w-6"
-                      onClick={() => setIsOverdueExpanded(false)}
-                      title="Ocultar aviso"
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="break-words text-sm font-bold leading-tight sm:text-base">
-                        Atenção: Existem transações em atraso!
-                      </span>
-                      <span className="mt-0.5 break-words text-xs font-medium text-amber-700/80">
-                        {overdueText}
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    className="w-full shrink-0 rounded-xl bg-amber-600 font-bold text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700 sm:w-auto"
-                    onClick={() => setIsOverdueModalOpen(true)}
-                  >
-                    Visualizar Vencidos
-                  </Button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="collapsed"
-                  layout
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-fit"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <Button
                     variant="outline"
@@ -609,65 +573,151 @@ export function Transactions() {
                     onClick={() => setIsOverdueExpanded(true)}
                   >
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-bold">Contas em Atraso</span>
+                    <span className="text-sm font-bold">
+                      Atrasado: {overdueTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
                   </Button>
                 </motion.div>
               )}
             </AnimatePresence>
-          )}
 
-          {activeTab !== 'transfers' && (
-            <div className="w-full">
-              <TransactionTableFilters>
-                {activeTab === 'payable' && (
-                  <div className="flex w-full items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
-                    <span className="hidden shrink-0 text-xs font-black uppercase tracking-widest text-slate-400 sm:inline">
-                      Ciclo
+            <AnimatePresence>
+              {activeTab !== 'transfers' && !isFiltersExpanded && (
+                <motion.div
+                  key="collapsed-filters"
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Button
+                    variant="outline"
+                    className="flex h-10 items-center gap-2 rounded-full border-slate-200 bg-slate-50 pl-3 pr-4 text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                    onClick={() => setIsFiltersExpanded(true)}
+                  >
+                    <Search className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-bold">Filtros e Buscas</span>
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence>
+            {activeTab === 'payable' && overdueTotal > 0 && isOverdueExpanded && (
+              <motion.div
+                key="expanded-overdue"
+                layout
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.3 }}
+                className="flex w-full flex-col items-start justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:flex-row sm:items-center"
+              >
+                <div className="flex w-full min-w-0 flex-1 items-start gap-3 text-amber-700 sm:items-center">
+                  <AlertTriangle
+                    className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer sm:mt-0 sm:h-6 sm:w-6"
+                    onClick={() => setIsOverdueExpanded(false)}
+                    title="Ocultar aviso"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="break-words text-sm font-bold leading-tight sm:text-base">
+                      Atenção: Existem transações em atraso!
                     </span>
-                    <Select
-                      value={timeHorizon}
-                      onValueChange={(val: any) => setTimeHorizon(val)}
-                    >
-                      <SelectTrigger className="h-8 w-full min-w-0 rounded-xl border-none text-sm font-bold text-slate-700 shadow-none focus:ring-0 dark:text-slate-300">
-                        <SelectValue placeholder="Selecione o período" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-none shadow-2xl">
-                        <SelectItem value="7" className="text-sm font-bold">
-                          Próximos 7 dias
-                        </SelectItem>
-                        <SelectItem value="15" className="text-sm font-bold">
-                          Próximos 15 dias
-                        </SelectItem>
-                        <SelectItem value="30" className="text-sm font-bold">
-                          Próximos 30 dias
-                        </SelectItem>
-                        <SelectItem value="all" className="text-sm font-bold">
-                          Todas as Pendentes
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <span className="mt-0.5 break-words text-xs font-medium text-amber-700/80">
+                      {overdueText}
+                    </span>
                   </div>
-                )}
-                {activeTab === 'history' && (
-                  <div className="flex w-full items-center gap-3">
-                    <MonthPicker date={historyDate} setDate={setHistoryDate} />
-                    <Button
-                      variant="outline"
-                      className="h-10 flex-1 rounded-2xl border-indigo-200 px-4 font-bold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 sm:flex-none md:h-11"
-                      onClick={() => setIsSummaryOpen(true)}
-                    >
-                      Resumo Consolidado
-                    </Button>
-                    <MonthlySummaryDialog
-                      open={isSummaryOpen}
-                      onOpenChange={setIsSummaryOpen}
-                      month={historyDate}
-                    />
-                  </div>
-                )}
-              </TransactionTableFilters>
-            </div>
-          )}
+                </div>
+                <div className="flex w-full gap-2 sm:w-auto">
+                  <Button
+                    variant="ghost"
+                    className="h-10 flex-1 rounded-xl text-amber-700 hover:bg-amber-200/50 sm:flex-none"
+                    onClick={() => setIsOverdueExpanded(false)}
+                  >
+                    Ocultar
+                  </Button>
+                  <Button
+                    className="h-10 flex-1 shrink-0 rounded-xl bg-amber-600 font-bold text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700 sm:w-auto sm:flex-none"
+                    onClick={() => setIsOverdueModalOpen(true)}
+                  >
+                    Visualizar Vencidos
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {activeTab !== 'transfers' && isFiltersExpanded && (
+              <motion.div
+                key="expanded-filters"
+                layout
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.3 }}
+                className="w-full relative"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute -top-3 -right-3 z-10 h-8 w-8 rounded-full border border-slate-200 bg-white shadow-sm text-slate-500 hover:text-slate-800 dark:border-slate-800 dark:bg-slate-900"
+                  onClick={() => setIsFiltersExpanded(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <TransactionTableFilters>
+                  {activeTab === 'payable' && (
+                    <div className="flex w-full items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-1.5 pl-4 pr-1.5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/50">
+                      <span className="hidden shrink-0 text-[10px] font-black uppercase tracking-widest text-slate-400 sm:inline">
+                        Ciclo
+                      </span>
+                      <div className="flex w-full items-center gap-1 rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900/50">
+                        {[
+                          { value: '7', label: '7d' },
+                          { value: '15', label: '15d' },
+                          { value: '30', label: '30d' },
+                          { value: 'all', label: '∞' },
+                        ].map((item) => (
+                          <button
+                            key={item.value}
+                            onClick={() => setTimeHorizon(item.value as any)}
+                            className={`flex h-7 flex-1 items-center justify-center rounded-lg text-xs font-bold transition-all ${
+                              timeHorizon === item.value
+                                ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-400'
+                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === 'history' && (
+                    <div className="flex w-full items-center gap-3">
+                      <MonthPicker date={historyDate} setDate={setHistoryDate} />
+                      <Button
+                        variant="outline"
+                        className="h-10 flex-1 rounded-2xl border-indigo-200 px-4 font-bold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 sm:flex-none md:h-11"
+                        onClick={() => setIsSummaryOpen(true)}
+                      >
+                        Resumo Consolidado
+                      </Button>
+                      <MonthlySummaryDialog
+                        open={isSummaryOpen}
+                        onOpenChange={setIsSummaryOpen}
+                        month={historyDate}
+                      />
+                    </div>
+                  )}
+                </TransactionTableFilters>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
           <div className="overflow-hidden border-none bg-transparent md:rounded-3xl md:bg-white md:px-2 md:shadow-sm dark:md:bg-slate-900">
             {/* DESKTOP TABLE */}
