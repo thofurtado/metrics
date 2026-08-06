@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession, submitSession } from '@/api/cashier/cashier'
+import { getSessionDetails, auditSession, createEntry, deleteEntry, updateEntry, closeSession, submitSession, updateSessionBalance } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { getPOSMachines } from '@/api/pos-machines'
 import { DetalheLote } from '../../components/DetalheLote'
@@ -53,6 +53,17 @@ export function CashierSessionDetails() {
         mutationFn: updateEntry,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }
+    })
+
+    const { mutateAsync: editBalance } = useMutation({
+        mutationFn: updateSessionBalance,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+            toast.success('Saldo inicial atualizado com sucesso!')
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Erro ao atualizar saldo inicial.')
         }
     })
 
@@ -407,7 +418,14 @@ export function CashierSessionDetails() {
                 onAdicionarLancamento={handleAdicionarLancamento}
                 onRemoverLancamento={handleRemoverLancamento}
                 onEditarLancamento={handleEditarLancamento}
-                onEditarAbertura={() => {}}
+                onEditarAbertura={async (novoValor) => {
+                    if (!id) return
+                    try {
+                        await editBalance({ session_id: id, initial_balance: novoValor })
+                    } catch (err) {
+                        console.error('Erro ao editar saldo:', err)
+                    }
+                }}
                 onAlterarStatus={handleAlterarStatus}
                 onConferirECaixaConferido={isAdmin ? handleConferirECaixaConferido : undefined}
                 onEnviarParaConferencia={

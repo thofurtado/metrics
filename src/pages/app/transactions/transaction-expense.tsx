@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import { Dialog } from '@/components/ui/dialog'
 import {
@@ -992,65 +993,16 @@ export function TransactionExpense({
                       <span>Emissão</span>
                       <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
-                    <Popover
-                      modal={false}
-                      open={isEmissaoPopoverOpen}
-                      onOpenChange={setIsEmissaoPopoverOpen}
-                    >
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            onFocus={() => setIsEmissaoPopoverOpen(true)}
-                            className={cn(
-                              'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
-                              !field.value && 'text-muted-foreground',
-                            )}
-                            onKeyDown={(e) => {
-                              if (e.key === 'ArrowUp') {
-                                e.preventDefault()
-                                const d = field.value
-                                  ? new Date(field.value)
-                                  : new Date()
-                                d.setDate(d.getDate() - 1)
-                                field.onChange(d)
-                              } else if (e.key === 'ArrowDown') {
-                                e.preventDefault()
-                                const d = field.value
-                                  ? new Date(field.value)
-                                  : new Date()
-                                d.setDate(d.getDate() + 1)
-                                field.onChange(d)
-                              }
-                            }}
-                          >
-                            <CalendarIcon className="mr-2 h-5 w-5 flex-shrink-0 text-slate-400" />
-                            {field.value ? (
-                              format(field.value, 'dd/MM/yyyy')
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="z-[9999] w-auto p-0"
-                        align="start"
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date)
-                              setIsEmissaoPopoverOpen(false)
-                            }
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <SimpleCalendar
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date)
+                          }
+                        }}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -1072,69 +1024,16 @@ export function TransactionExpense({
                         </span>
                       )}
                     </FormLabel>
-                    <Popover
-                      modal={false}
-                      open={isPopoverOpen}
-                      onOpenChange={setIsPopoverOpen}
-                    >
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            disabled={isCreditCard}
-                            onFocus={() => setIsPopoverOpen(true)}
-                            className={cn(
-                              'h-14 w-full justify-start rounded-2xl border-border/70 bg-background text-left text-base font-medium transition-colors hover:border-border hover:bg-muted/30 md:h-12 md:rounded-xl',
-                              !field.value && 'text-muted-foreground',
-                              isCreditCard &&
-                                'border-dashed bg-slate-50 text-slate-700 opacity-80 dark:bg-slate-900/40 dark:text-slate-300',
-                            )}
-                            onKeyDown={(e) => {
-                              if (isCreditCard) return
-                              if (e.key === 'ArrowUp') {
-                                e.preventDefault()
-                                const d = field.value
-                                  ? new Date(field.value)
-                                  : new Date()
-                                d.setDate(d.getDate() - 1)
-                                field.onChange(d)
-                              } else if (e.key === 'ArrowDown') {
-                                e.preventDefault()
-                                const d = field.value
-                                  ? new Date(field.value)
-                                  : new Date()
-                                d.setDate(d.getDate() + 1)
-                                field.onChange(d)
-                              }
-                            }}
-                          >
-                            <CalendarIcon className="mr-2 h-5 w-5 flex-shrink-0 text-slate-400" />
-                            {field.value ? (
-                              format(field.value, 'dd/MM/yyyy')
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="z-[9999] w-auto p-0"
-                        align="start"
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date)
-                              setIsPopoverOpen(false)
-                            }
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <SimpleCalendar
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date)
+                          }
+                        }}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

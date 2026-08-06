@@ -79,6 +79,14 @@ export async function submitSession(data: { session_id: string }) {
   return response.data
 }
 
+export async function updateSessionBalance(data: { session_id: string, initial_balance: number }) {
+  const response = await api.put(
+    `/api/cashier/session/${data.session_id}/balance`,
+    { initial_balance: data.initial_balance }
+  )
+  return response.data
+}
+
 export interface CreateEntryParams {
   session_id: string
   origin?: string
