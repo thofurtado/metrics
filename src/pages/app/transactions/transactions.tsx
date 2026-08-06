@@ -930,7 +930,6 @@ export function Transactions() {
             )}
           </div>
         </div>
-      </div>
     </>
   )
 }
