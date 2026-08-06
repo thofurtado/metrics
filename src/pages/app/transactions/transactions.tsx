@@ -372,10 +372,10 @@ export function Transactions() {
 
   return (
     <>
-      <Helmet title="Transações" />
+      <Helmet title="Transações Financeiras" />
       <div className="flex flex-col gap-6 px-5 font-manrope md:px-0">
         <PageHeader
-          title="Transações"
+          title="Transações Financeiras"
           description="Gerencie suas receitas, despesas e transferências."
         >
           <div className="mb-8 flex w-full flex-row items-center justify-between gap-2 md:mb-0 md:w-auto md:justify-end md:gap-3">
@@ -384,10 +384,10 @@ export function Transactions() {
                 variant="ghost"
                 className="relative h-12 w-12 rounded-2xl px-0 shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 sm:w-auto sm:px-4 md:h-10 md:rounded-xl"
                 onClick={() => setIsPendingReceiptsOpen(true)}
-                title="Caixa de Comprovantes"
+                title="Comprovantes"
               >
                 <Inbox className="h-5 w-5 sm:mr-2" />
-                <span className="hidden sm:inline font-bold">Caixa de Comprovantes</span>
+                <span className="hidden sm:inline font-bold">Comprovantes</span>
                 {pendingCount > 0 && (
                   <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-rose-500 text-xs font-black text-white ring-2 ring-background">
                     {pendingCount}
@@ -399,11 +399,11 @@ export function Transactions() {
                 variant="ghost"
                 className="h-12 w-12 rounded-2xl px-0 shadow-sm transition-all hover:bg-slate-100 dark:hover:bg-slate-800 sm:w-auto sm:px-4 md:h-10 md:rounded-xl"
                 asChild
-                title="Recebíveis (Cartões)"
+                title="Recebíveis"
               >
                 <Link to="/transactions/settlements">
                   <CreditCard className="h-5 w-5 sm:mr-2" />
-                  <span className="hidden sm:inline font-bold">Recebíveis (Cartões)</span>
+                  <span className="hidden sm:inline font-bold">Recebíveis</span>
                 </Link>
               </Button>
             </div>

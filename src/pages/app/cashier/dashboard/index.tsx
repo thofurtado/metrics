@@ -26,7 +26,7 @@ import { getProfile } from '@/api/get-profile'
 import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 import { DivergenceModal } from './components/divergence-modal'
-import { SettlementModal } from './components/settlement-modal'
+
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,7 +55,7 @@ export function CashierDashboard() {
 
   const [divergenceModalSession, setDivergenceModalSession] = useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
-  const [settlementModalOpen, setSettlementModalOpen] = useState(false)
+
 
   const token = localStorage.getItem('token')
 
@@ -370,18 +370,6 @@ export function CashierDashboard() {
               </div>
               <span>Abrir Novo Caixa</span>
             </div>
-            
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSettlementModalOpen(true)}
-                className="h-7 text-[10px] font-bold text-blue-600 border-blue-200 hover:bg-blue-50"
-              >
-                <Banknote className="w-3 h-3 mr-1" />
-                Liquidações Pendentes
-              </Button>
-            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -931,10 +919,7 @@ export function CashierDashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SettlementModal
-        open={settlementModalOpen}
-        onOpenChange={setSettlementModalOpen}
-      />
+
     </div>
   )
 }
