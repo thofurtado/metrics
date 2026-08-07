@@ -96,11 +96,20 @@ export function SummaryCards({
           // Separar operacional de a prazo dentro de CASA
           const padraoAPrazo = ['funcionario', 'permuta', 'a prazo']
           const normalizeStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-          const totalOperacional = identificadoresCasa.reduce((acc, forma) => {
+          
+          let totalOperacional = 0
+          let totalAPrazo = 0
+          identificadoresCasa.forEach((forma) => {
             const isAPrazo = padraoAPrazo.some(p => normalizeStr(forma).includes(p))
-            return acc + (isAPrazo ? 0 : safeGet(resumo, `CASA.${forma}`))
-          }, 0)
-          const vendasLiquidasCalc = totalEntradas - totalOperacional - saidasDinheiro - totalCaixinha
+            const val = safeGet(resumo, `CASA.${forma}`)
+            if (isAPrazo) {
+              totalAPrazo += val
+            } else {
+              totalOperacional += val
+            }
+          })
+          
+          const vendasLiquidasCalc = totalEntradas - totalOperacional - totalAPrazo - totalJuros - saidasDinheiro - totalCaixinha
 
           return (
             <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50/60 p-4 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:to-indigo-950/20">
@@ -164,6 +173,26 @@ export function SummaryCards({
                     </span>
                     <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
                       {totalOperacional.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {totalAPrazo > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                      <Minus size={8} /> A Prazo
+                    </span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      {totalAPrazo.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {totalJuros > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-purple-500">
+                      <Minus size={8} /> Taxas / Juros
+                    </span>
+                    <span className="font-mono font-bold text-purple-500">
+                      {totalJuros.toFixed(2)}
                     </span>
                   </div>
                 )}

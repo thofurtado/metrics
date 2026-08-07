@@ -75,18 +75,16 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
     })
   }
 
-  if (!session) return null
-
-  const isFaltando = session.divergencia < 0
-  const absDivergencia = Math.abs(session.divergencia).toFixed(2)
+  const isResolved = session.statusComparacao === 'RESOLVIDO'
+  const resolution = session.resolutionDetails
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle size={20} />
-            Resolver Divergência
+          <DialogTitle className={`flex items-center gap-2 ${isResolved ? 'text-indigo-600' : 'text-red-600'}`}>
+            {isResolved ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+            {isResolved ? 'Divergência Resolvida' : 'Resolver Divergência'}
           </DialogTitle>
           <DialogDescription>
             {isFaltando ? (
@@ -94,71 +92,122 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
             ) : (
               <>Sobram <strong className="text-emerald-500">R$ {absDivergencia}</strong> em relação à abertura do próximo caixa.</>
             )}
-            <br/>O que aconteceu com esse valor?
+            {!isResolved && <><br/>O que aconteceu com esse valor?</>}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              type="button" 
-              variant={action === 'JUSTIFY' ? 'default' : 'outline'}
-              onClick={() => setAction('JUSTIFY')}
-              className={action === 'JUSTIFY' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-            >
-              <Info className="w-4 h-4 mr-2" />
-              Dar Justificativa
-            </Button>
-            <Button 
-              type="button" 
-              variant={action === 'DESTINATION' ? 'default' : 'outline'}
-              onClick={() => setAction('DESTINATION')}
-              className={action === 'DESTINATION' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Determinar Destino
-            </Button>
-          </div>
+          {isResolved ? (
+            <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-indigo-900/30 dark:bg-indigo-950/20">
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">Ação Tomada</Label>
+                <div className="font-medium text-slate-700 dark:text-slate-300">
+                  {resolution?.type === 'SANGRIA_DESTINO' ? 'Destinado a Conta Bancária' : 'Justificativa Apenas'}
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">Motivo / Descrição</Label>
+                <div className="font-medium text-slate-700 dark:text-slate-300">
+                  {resolution?.reason || 'Sem justificativa informada'}
+                </div>
+              </div>
 
-          {action && (
-            <div className="space-y-4 animate-in fade-in zoom-in duration-200">
-              {action === 'DESTINATION' && (
-                <div className="space-y-2">
-                  <Label>Conta de Destino (Opcional)</Label>
-                  <Select value={accountId} onValueChange={setAccountId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione para onde foi o dinheiro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma (Apenas Ajuste)</SelectItem>
-                      {dbAccounts?.accounts?.map(acc => (
-                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Ao confirmar, uma Receita será gerada nesta conta para abater o dinheiro vivo que entrou pra empresa.
-                  </p>
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500">Resolvido por</Label>
+                <div className="font-medium text-slate-700 dark:text-slate-300">
+                  {resolution?.author || 'Sistema'}
+                </div>
+              </div>
+
+              {resolution?.type === 'SANGRIA_DESTINO' && (
+                <div className="space-y-2 pt-2 border-t border-indigo-100 dark:border-indigo-900/40">
+                  <Label className="text-xs text-slate-500">Conta de Destino</Label>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{resolution?.bank}</span>
+                    {resolution?.transaction_id && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs bg-white dark:bg-slate-900" asChild>
+                        <a href={`/app/transactions?search=${resolution.transaction_id}`} target="_blank" rel="noreferrer">
+                          Ver Transação
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label>Motivo / Descrição</Label>
-                <Input 
-                  placeholder={action === 'DESTINATION' ? "Ex: Depositado no Itaú, Levou pra casa..." : "Ex: Dinheiro perdido, troco errado..."}
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                />
-              </div>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  type="button" 
+                  variant={action === 'JUSTIFY' ? 'default' : 'outline'}
+                  onClick={() => setAction('JUSTIFY')}
+                  className={action === 'JUSTIFY' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Dar Justificativa
+                </Button>
+                <Button 
+                  type="button" 
+                  variant={action === 'DESTINATION' ? 'default' : 'outline'}
+                  onClick={() => setAction('DESTINATION')}
+                  className={action === 'DESTINATION' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                  disabled={!isFaltando} // Desabilita destino se for SOBRA (positivo)
+                  title={!isFaltando ? 'Não é possível destinar sobras de caixa' : undefined}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Determinar Destino
+                </Button>
+              </div>
+
+              {action && (
+                <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+                  {action === 'DESTINATION' && (
+                    <div className="space-y-2">
+                      <Label>Conta de Destino (Opcional)</Label>
+                      <Select value={accountId} onValueChange={setAccountId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione para onde foi o dinheiro" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma (Apenas Ajuste)</SelectItem>
+                          {dbAccounts?.accounts?.map(acc => (
+                            <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Ao confirmar, uma Receita será gerada nesta conta para abater o dinheiro vivo que entrou pra empresa.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Motivo / Descrição</Label>
+                    <Input 
+                      placeholder={action === 'DESTINATION' ? "Ex: Depositado no Itaú, Levou pra casa..." : "Ex: Dinheiro perdido, troco errado..."}
+                      value={reason}
+                      onChange={e => setReason(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button disabled={!action || isPending} onClick={handleSubmit}>
-            {isPending ? 'Salvando...' : 'Confirmar Resolução'}
-          </Button>
+          {isResolved ? (
+            <Button onClick={onClose}>Fechar</Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+              <Button disabled={!action || isPending} onClick={handleSubmit}>
+                {isPending ? 'Salvando...' : 'Confirmar Resolução'}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
