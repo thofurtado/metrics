@@ -7,6 +7,7 @@ import {
   Heart,
   Landmark,
   Minus,
+  Plus,
   Smartphone,
   Ticket,
   X,
@@ -112,6 +113,50 @@ export function SummaryCards({
               </p>
 
               <div className="mt-3 space-y-1 border-t border-blue-200/60 pt-2 dark:border-blue-800/40">
+                {/* Composição das Entradas */}
+                {entradasDinheiro > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
+                      <Plus size={8} /> Dinheiro
+                    </span>
+                    <span className="font-mono font-medium text-slate-600 dark:text-slate-300">
+                      {entradasDinheiro.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {totalPorForma('PIX') > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
+                      <Plus size={8} /> PIX
+                    </span>
+                    <span className="font-mono font-medium text-slate-600 dark:text-slate-300">
+                      {totalPorForma('PIX').toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {(totalPorForma('Débito') + totalPorForma('Crédito') + totalPorForma('Voucher')) > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
+                      <Plus size={8} /> Cartões
+                    </span>
+                    <span className="font-mono font-medium text-slate-600 dark:text-slate-300">
+                      {(totalPorForma('Débito') + totalPorForma('Crédito') + totalPorForma('Voucher')).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {totalCasa > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
+                      <Plus size={8} /> Consumo / A Prazo
+                    </span>
+                    <span className="font-mono font-medium text-slate-600 dark:text-slate-300">
+                      {totalCasa.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="my-1.5 border-t border-blue-200/40 dark:border-blue-800/30" />
+
                 {totalOperacional > 0 && (
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
