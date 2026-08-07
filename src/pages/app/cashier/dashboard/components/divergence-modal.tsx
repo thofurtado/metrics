@@ -125,14 +125,16 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
               </div>
 
               {resolution?.type === 'SANGRIA_DESTINO' && (
-                <div className="space-y-2 pt-2 border-t border-indigo-100 dark:border-indigo-900/40">
-                  <Label className="text-xs text-slate-500">Conta de Destino</Label>
+                <div className="space-y-2 pt-3 border-t border-indigo-100 dark:border-indigo-900/40 mt-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-700 dark:text-slate-300">{resolution?.bank}</span>
+                    <div>
+                      <Label className="text-xs text-slate-500">Conta de Destino</Label>
+                      <div className="font-medium text-slate-700 dark:text-slate-300">{resolution?.bank}</div>
+                    </div>
                     {resolution?.transaction_id && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs bg-white dark:bg-slate-900" asChild>
-                        <a href={`/app/transactions?search=${resolution.transaction_id}`} target="_blank" rel="noreferrer">
-                          Ver Transação
+                      <Button variant="default" size="sm" className="h-8 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
+                        <a href={`/cashier/session/${session.id}`} target="_blank" rel="noreferrer">
+                          Ver Caixa
                         </a>
                       </Button>
                     )}
