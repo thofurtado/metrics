@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertTriangle, Info, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Info, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { resolveDivergence } from '@/api/cashier/cashier'
 import { getAccounts } from '@/api/get-accounts'
@@ -131,11 +131,6 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
                       <Label className="text-xs text-slate-500">Conta de Destino</Label>
                       <div className="font-medium text-slate-700 dark:text-slate-300">{resolution?.bank}</div>
                     </div>
-                    <Button variant="default" size="sm" className="h-8 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
-                      <a href={`/transactions?openBatch=${session.id}`} target="_blank" rel="noreferrer">
-                        Ver no Financeiro
-                      </a>
-                    </Button>
                   </div>
                 </div>
               )}
@@ -201,9 +196,21 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className={isResolved ? "sm:justify-between w-full" : ""}>
           {isResolved ? (
-            <Button onClick={onClose}>Fechar</Button>
+            <>
+              {resolution?.type === 'SANGRIA_DESTINO' ? (
+                <Button variant="default" className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
+                  <a href={`/transactions?openBatch=${session.id}`} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Ver no Financeiro
+                  </a>
+                </Button>
+              ) : (
+                <div />
+              )}
+              <Button variant="outline" onClick={onClose}>Fechar</Button>
+            </>
           ) : (
             <>
               <Button variant="ghost" onClick={onClose}>Cancelar</Button>
