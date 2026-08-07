@@ -117,7 +117,7 @@ export function CashierSessionDetails() {
 
     const mapStatus = (apiStatus: string) => {
         const s = (apiStatus || '').toUpperCase().trim()
-        if (s === 'AUDITED' || s === 'CONFERIDO') return 'CONFERIDO'
+        if (s === 'AUDITED' || s === 'CHECKED' || s === 'CONFERIDO') return 'CHECKED'
         if (s === 'OPEN' || s === 'ABERTO') return 'ABERTO'
         return 'PENDENTE'
     }
@@ -304,7 +304,7 @@ export function CashierSessionDetails() {
 
     const handleAlterarStatus = async (novoStatus: string) => {
         if (!isAdmin) return
-        if (novoStatus === 'conferido' && session.status !== 'AUDITED' && session.status !== 'CONFERIDO') {
+        if (novoStatus === 'checked' && session.status !== 'AUDITED' && session.status !== 'CHECKED' && session.status !== 'CONFERIDO') {
             try {
                 await audit(id!)
             } catch (err) {

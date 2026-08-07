@@ -193,7 +193,7 @@ export function DetalheLote({
 
   const getStatusConfig = (status: string) => {
     const s = (status || '').toString().toLowerCase().trim()
-    if (s === 'conferido' || s === 'audited') {
+    if (s === 'checked' || s === 'audited') {
       return {
         label: 'CONFERIDO',
         color: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
@@ -217,8 +217,8 @@ export function DetalheLote({
   const alternarStatus = () => {
     const proximos: Record<string, string> = {
       pendente: 'alerta',
-      alerta: 'conferido',
-      conferido: 'pendente',
+      alerta: 'checked',
+      checked: 'pendente',
     }
     onAlterarStatus(proximos[loteAtivo.status || 'pendente'])
   }
@@ -329,7 +329,7 @@ export function DetalheLote({
 
         <div className="flex items-center gap-2">
           {/* Badge quando conferido */}
-          {(loteAtivo.status === 'conferido' || loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'AUDITED') ? (
+          {(loteAtivo.status === 'checked' || loteAtivo.status === 'CHECKED' || loteAtivo.status === 'AUDITED') ? (
             <div className="flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-xs font-black uppercase text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300">
               <CheckCircle2 size={16} /> Caixa Conferido
             </div>
@@ -423,7 +423,7 @@ export function DetalheLote({
           <TransactionForm onAdd={onAdicionarLancamento} />
         ) : (
           <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-center text-xs font-bold text-amber-900 flex items-center justify-center gap-2 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-            <Lock size={16} /> Caixa {loteAtivo.status === 'CONFERIDO' || loteAtivo.status === 'conferido' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
+            <Lock size={16} /> Caixa {loteAtivo.status === 'CHECKED' || loteAtivo.status === 'checked' || loteAtivo.status === 'AUDITED' ? 'Conferido' : 'Enviado para Conferência'} — Lançamentos bloqueados.
           </div>
         )}
 

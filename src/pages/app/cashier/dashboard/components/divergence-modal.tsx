@@ -78,6 +78,10 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
   const isResolved = session.statusComparacao === 'RESOLVIDO'
   const resolution = session.resolutionDetails
 
+  const divergencia = session.divergencia || 0
+  const isFaltando = divergencia < 0
+  const absDivergencia = Math.abs(divergencia).toFixed(2)
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[450px]">
