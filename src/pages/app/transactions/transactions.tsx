@@ -13,6 +13,7 @@ import {
   TrendingDown,
   TrendingUp,
   X,
+  FileText,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
@@ -67,14 +68,23 @@ import {
 } from './transaction-table-row'
 import { TransactionTransfer } from './transaction-transfer'
 import { TransactionTableFilters } from './TransactionTableFilters'
+import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const [openBatchId, setOpenBatchId] = useState<string | null>(null)
+
   // Limpar todos os filtros ao entrar na página (mount)
   useEffect(() => {
+    const batchId = searchParams.get('openBatch')
+    if (batchId) {
+      setOpenBatchId(batchId)
+    }
+
     setSearchParams(
       (state) => {
+        state.delete('openBatch')
         state.delete('description')
         state.delete('value')
         state.delete('sectorId')
@@ -602,6 +612,33 @@ export function Transactions() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            <AnimatePresence>
+              {activeTab === 'history' && !isFiltersExpanded && (
+                <motion.div
+                  key="pdf-summary"
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Button
+                    variant="outline"
+                    className="flex h-10 items-center gap-2 rounded-full border-indigo-200 bg-indigo-50 pl-3 pr-4 text-indigo-700 shadow-sm hover:bg-indigo-100 hover:text-indigo-800"
+                    onClick={() => setIsSummaryOpen(true)}
+                  >
+                    <FileText className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-bold">Resumo em PDF</span>
+                  </Button>
+                  <MonthlySummaryDialog
+                    open={isSummaryOpen}
+                    onOpenChange={setIsSummaryOpen}
+                    month={historyDate}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <AnimatePresence>
@@ -699,18 +736,6 @@ export function Transactions() {
                   {activeTab === 'history' && (
                     <div className="flex w-full items-center gap-3">
                       <MonthPicker date={historyDate} setDate={setHistoryDate} />
-                      <Button
-                        variant="outline"
-                        className="h-10 flex-1 rounded-2xl border-indigo-200 px-4 font-bold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 sm:flex-none md:h-11"
-                        onClick={() => setIsSummaryOpen(true)}
-                      >
-                        Resumo Consolidado
-                      </Button>
-                      <MonthlySummaryDialog
-                        open={isSummaryOpen}
-                        onOpenChange={setIsSummaryOpen}
-                        month={historyDate}
-                      />
                     </div>
                   )}
                 </TransactionTableFilters>
@@ -930,6 +955,12 @@ export function Transactions() {
             )}
           </div>
         </div>
+
+      <CashierBatchDetailsModal
+        open={!!openBatchId}
+        onOpenChange={(open) => !open && setOpenBatchId(null)}
+        sessionId={openBatchId}
+      />
     </>
   )
 }

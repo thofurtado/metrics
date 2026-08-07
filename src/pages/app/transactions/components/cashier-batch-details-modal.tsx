@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
-  Landmark, Users, CreditCard, Loader2, ChevronDown, ChevronUp, 
-  CheckCircle2, Circle, Undo2, Banknote, Wallet, Receipt, RefreshCcw
+  CheckCircle2, Circle, Undo2, Banknote, Wallet, Receipt, RefreshCcw, ExternalLink
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -115,9 +114,11 @@ export function CashierBatchDetailsModal({
       const method = (entry.payment_method || '').trim()
       const bank = (entry.bank || '').toUpperCase().trim()
 
-      if (entry.is_withdrawal || entry.is_tip) continue
+      if ((entry.is_withdrawal && entry.type !== 'SANGRIA_DESTINO') || entry.is_tip) continue
       
-      res.TOTAL += amount
+      if (entry.type !== 'SANGRIA_DESTINO') {
+        res.TOTAL += amount
+      }
 
       const normMethod = method.toLowerCase()
       
@@ -129,8 +130,8 @@ export function CashierBatchDetailsModal({
         if (!res.CASA.entries[key]) res.CASA.entries[key] = []
         res.CASA.entries[key].push(entry)
       } 
-      else if (bank && bank !== 'CAIXA' && normMethod !== 'dinheiro') {
-        const bankKey = `${bank} ${method}`
+      else if ((bank && bank !== 'CAIXA' && normMethod !== 'dinheiro') || entry.type === 'SANGRIA_DESTINO') {
+        const bankKey = entry.type === 'SANGRIA_DESTINO' ? `${bank} Dinheiro (Físico)` : `${bank} ${method}`
         res.BANCOS[bankKey] = (res.BANCOS[bankKey] || 0) + amount
         
         if (!res.BANCOS_ENTRIES[bankKey]) res.BANCOS_ENTRIES[bankKey] = []
@@ -167,13 +168,24 @@ export function CashierBatchDetailsModal({
             )}
           </div>
 
-          <button
-            onClick={() => onOpenChange(false)}
-            className="relative z-10 flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-[13px] font-semibold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-            title="Fechar Janela"
-          >
-            <span className="hidden sm:inline">Fechar</span>
-          </button>
+          <div className="relative z-10 flex items-center gap-3">
+            <a 
+              href={`/cashier/session/${sessionId}`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-[13px] font-bold text-blue-700 transition-all hover:bg-blue-100 active:scale-95 dark:border-blue-800 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="hidden sm:inline">Ver no Caixa</span>
+            </a>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-[13px] font-semibold text-slate-700 transition-all hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              title="Fechar Janela"
+            >
+              <span className="hidden sm:inline">Fechar</span>
+            </button>
+          </div>
         </DialogHeader>
 
         <div className="px-8 py-6">
@@ -207,7 +219,7 @@ export function CashierBatchDetailsModal({
                 
                 <div className="hidden sm:flex gap-4">
                   <div className="rounded-xl bg-emerald-50 px-4 py-3 dark:bg-emerald-500/10">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-500/70">Cartões</span>
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600/70 dark:text-emerald-500/70">Valores Imediatos</span>
                     <span className="block mt-0.5 text-base font-bold text-emerald-700 dark:text-emerald-400">
                       R$ {Object.values(resumo.BANCOS).reduce((a:any, b:any) => a + b, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
@@ -225,7 +237,7 @@ export function CashierBatchDetailsModal({
               <Tabs defaultValue="cartoes" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-slate-200/50 dark:bg-[#1A1A1A] rounded-xl p-1 h-12">
                   <TabsTrigger value="cartoes" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#2A2A2A] text-[13px] font-medium h-full">
-                    <CreditCard className="mr-2 h-4 w-4" /> Cartões (Crédito/Débito)
+                    <CreditCard className="mr-2 h-4 w-4" /> Valores Imediatos (Cartões e Dinheiro)
                   </TabsTrigger>
                   <TabsTrigger value="prazo" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-[#2A2A2A] text-[13px] font-medium h-full">
                     <Users className="mr-2 h-4 w-4" /> Vales, Cortesias & Fiado

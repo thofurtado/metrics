@@ -133,8 +133,8 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
                     </div>
                     {resolution?.transaction_id && (
                       <Button variant="default" size="sm" className="h-8 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
-                        <a href={`/cashier/session/${session.id}`} target="_blank" rel="noreferrer">
-                          Ver Caixa
+                        <a href={`/transactions?openBatch=${session.id}`} target="_blank" rel="noreferrer">
+                          Ver no Financeiro
                         </a>
                       </Button>
                     )}
