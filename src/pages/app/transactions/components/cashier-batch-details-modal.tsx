@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   Landmark, Users, CreditCard, Loader2, ChevronDown, ChevronUp, 
-  CheckCircle2, Circle, Undo2, Banknote, Wallet, Receipt, RefreshCcw, ExternalLink
+  CheckCircle2, Circle, Undo2, Banknote, Wallet, Receipt, RefreshCcw, ExternalLink, Info
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -143,7 +143,11 @@ export function CashierBatchDetailsModal({
   }
 
   const resumo = data?.entries ? computeResumo(data.entries) : null
-  const bancosKeys = resumo ? Object.keys(resumo.BANCOS) : []
+  const bancosKeys = (resumo ? Object.keys(resumo.BANCOS) : []).sort((a, b) => {
+    if (a.includes('Dinheiro')) return -1
+    if (b.includes('Dinheiro')) return 1
+    return a.localeCompare(b)
+  })
   const casaKeys = resumo ? Object.keys(resumo.CASA.detalhado) : []
 
   return (
@@ -207,9 +211,17 @@ export function CashierBatchDetailsModal({
               {/* Grand Total Card */}
               <div className="flex items-center justify-between rounded-2xl bg-white p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:bg-[#111] border border-slate-200/50 dark:border-slate-800/50">
                 <div>
-                  <h3 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">
-                    Total Declarado no Lote
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400 uppercase">
+                      Faturamento (Vendas)
+                    </h3>
+                    <div 
+                      className="text-slate-400 hover:text-slate-600 transition-colors cursor-help"
+                      title="Soma de todas as vendas do turno. Pode ser diferente dos Valores Imediatos caso haja depósito do fundo de troco ou retenção de dinheiro pelo auditor."
+                    >
+                      <Info className="h-4 w-4" />
+                    </div>
+                  </div>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-lg font-medium text-slate-400">R$</span>
                     <span className="text-4xl font-bold tracking-tighter text-slate-900 dark:text-white">
