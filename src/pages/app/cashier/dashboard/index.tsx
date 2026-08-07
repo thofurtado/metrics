@@ -870,11 +870,13 @@ export function CashierDashboard() {
       )}
 
       {/* MODAL DE RESOLUÇÃO DE DIVERGÊNCIA */}
-      <DivergenceModal
-        isOpen={!!divergenceModalSession}
-        onClose={() => setDivergenceModalSession(null)}
-        session={divergenceModalSession}
-      />
+      {divergenceModalSession && (
+        <DivergenceModal
+          isOpen={!!divergenceModalSession}
+          onClose={() => setDivergenceModalSession(null)}
+          session={divergenceModalSession}
+        />
+      )}
 
       {/* MODAL DE CONFIRMAÇÃO DE DELETAR CAIXA COMPLETO (COM TIMER DE 5s) */}
       <AlertDialog
