@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, RefreshCw, Trash2, Banknote, CheckCircle2, Rocket, History } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Trash2, Banknote, CheckCircle2, Rocket } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -44,36 +44,60 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Pagination } from '@/components/pagination'
 
 export function Settlements() {
   const queryClient = useQueryClient()
+  
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pendingPageIndex, setPendingPageIndex] = useState(0)
   
   // Modals state
   const [triggerModalOpen, setTriggerModalOpen] = useState(false)
   const [termModalOpen, setTermModalOpen] = useState(false)
   const [selectedTermTx, setSelectedTermTx] = useState<any>(null)
   
+  // Selection
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([])
+  
   // Term Debt Form state
   const [targetAccountId, setTargetAccountId] = useState('')
   const [actualMethod, setActualMethod] = useState('PIX')
 
   // Queries
-  const { data: settlements, isLoading } = useQuery({
-    queryKey: ['settlements'],
-    queryFn: getSettlements,
+  const { data: settlementsResult, isLoading } = useQuery({
+    queryKey: ['settlements', pageIndex],
+    queryFn: () => getSettlements({ pageIndex }),
   })
+  const settlements = settlementsResult?.data || []
 
-  const { data: pendingSettlements, isLoading: isLoadingPending } = useQuery({
-    queryKey: ['pending-settlements'],
-    queryFn: getPendingSettlements,
+  const { data: pendingSettlementsResult, isLoading: isLoadingPending } = useQuery({
+    queryKey: ['pending-settlements', pendingPageIndex],
+    queryFn: () => getPendingSettlements({ pageIndex: pendingPageIndex }),
   })
+  const pendingSettlements = pendingSettlementsResult?.data || []
   
   const { data: accounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: getAccounts,
   })
+
+  // Auto-Settle on mount
+  useEffect(() => {
+    const autoSettle = async () => {
+      try {
+        await api.post('/trigger-settlement', undefined, { params: { onlyToday: 'true' } })
+        queryClient.invalidateQueries({ queryKey: ['settlements'] })
+        queryClient.invalidateQueries({ queryKey: ['pending-settlements'] })
+        queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
+      } catch (e) {
+        console.error('Failed to auto-settle', e)
+      }
+    }
+    autoSettle()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mutations
   const { mutateAsync: revert } = useMutation({
@@ -88,11 +112,9 @@ export function Settlements() {
   })
 
   const { mutateAsync: triggerSettlement, isPending: isTriggering } = useMutation({
-    mutationFn: async () => {
-      const response = await api.post('/api/trigger-settlement') // Note: if the route is just /trigger-settlement in backend, maybe api.post('/trigger-settlement') depending on prefix. Actually routes.ts is in /api
-      // Wait, in previous settlement-modal it was api.post('/api/trigger-settlement'). Let's use the same.
-      // Wait, the routes in financialRoutes are often not prefixed with /api here, it's configured in fastify. I'll use '/trigger-settlement' or '/api/trigger-settlement' as it was. Let's use '/trigger-settlement' if api handles the prefix.
-      const res = await api.post('/trigger-settlement')
+    mutationFn: async (ids?: string[]) => {
+      const payload = ids && ids.length > 0 ? { transactionIds: ids } : undefined
+      const res = await api.post('/trigger-settlement', payload)
       return res.data
     },
     onSuccess: (data) => {
@@ -101,6 +123,7 @@ export function Settlements() {
       queryClient.invalidateQueries({ queryKey: ['pending-settlements'] })
       queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
       setTriggerModalOpen(false)
+      setSelectedTxIds([])
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Erro ao processar liquidações.'),
   })
@@ -123,8 +146,20 @@ export function Settlements() {
   })
 
   // Filter pending transactions
-  const automaticPending = pendingSettlements?.filter(tx => !['A PRAZO', 'PERMUTA'].includes(tx.payment_method?.toUpperCase())) || []
-  const termPending = pendingSettlements?.filter(tx => ['A PRAZO', 'PERMUTA'].includes(tx.payment_method?.toUpperCase())) || []
+  const automaticPending = pendingSettlements.filter(tx => !['A PRAZO', 'PERMUTA'].includes(tx.payment_method?.toUpperCase()))
+  const termPending = pendingSettlements.filter(tx => ['A PRAZO', 'PERMUTA'].includes(tx.payment_method?.toUpperCase()))
+  
+  const allAutomaticIds = automaticPending.map(t => t.id)
+  const isAllSelected = allAutomaticIds.length > 0 && selectedTxIds.length === allAutomaticIds.length
+
+  const handleSelectAll = () => {
+    if (isAllSelected) setSelectedTxIds([])
+    else setSelectedTxIds(allAutomaticIds)
+  }
+
+  const toggleSelection = (id: string) => {
+    setSelectedTxIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
 
   return (
     <>
@@ -170,7 +205,7 @@ export function Settlements() {
               <div>
                 <h3 className="font-bold text-blue-900 dark:text-blue-300">Liquidações Automáticas</h3>
                 <p className="text-sm text-blue-700/80 dark:text-blue-400/80 mt-1">
-                  Adiantamento de recebimentos garantidos (Cartões e Pix).
+                  Adiantamento de recebimentos de cartões e Pix (Liquidação invisível já roda ao abrir a tela).
                 </p>
               </div>
               <Button 
@@ -178,7 +213,7 @@ export function Settlements() {
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
               >
                 <Rocket className="w-4 h-4 mr-2" />
-                Adiantar Liquidações
+                {selectedTxIds.length > 0 ? `Adiantar ${selectedTxIds.length} Selecionados` : 'Adiantar Liquidações de Hoje'}
               </Button>
             </div>
 
@@ -186,47 +221,61 @@ export function Settlements() {
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
+                    <TableHead className="w-[50px] text-center">
+                      <Checkbox 
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        disabled={automaticPending.length === 0}
+                      />
+                    </TableHead>
                     <TableHead>Vencimento Previsto</TableHead>
                     <TableHead>Venda/Descrição</TableHead>
                     <TableHead>Forma Pag.</TableHead>
                     <TableHead className="text-right">Bruto (R$)</TableHead>
-                    <TableHead className="text-right">Taxa Prevista</TableHead>
+                    <TableHead className="text-right">Taxa</TableHead>
                     <TableHead className="text-right">Líquido Estimado (R$)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingPending ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">Carregando pendentes...</TableCell>
+                      <TableCell colSpan={7} className="text-center h-24">Carregando pendentes...</TableCell>
                     </TableRow>
                   ) : automaticPending.length > 0 ? (
                     automaticPending.map((tx) => {
                       const taxPerc = tx.interest || 0
-                      const feeAmt = (tx.amount * taxPerc) / 100
-                      const netAmt = tx.amount - feeAmt
+                      // Como a transação já foi criada líquida, tx.amount é o líquido. tx.totalValue é o bruto.
+                      const bruto = tx.totalValue || tx.amount
+                      const liquido = tx.amount
                       
                       return (
                         <TableRow key={tx.id}>
+                          <TableCell className="text-center">
+                            <Checkbox 
+                              checked={selectedTxIds.includes(tx.id)}
+                              onCheckedChange={() => toggleSelection(tx.id)}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium text-amber-600 dark:text-amber-500">
                             {format(new Date(tx.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
                           <TableCell>{tx.description}</TableCell>
                           <TableCell className="capitalize">{tx.payment_method}</TableCell>
                           <TableCell className="text-right">
-                            {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {bruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </TableCell>
                           <TableCell className="text-right text-red-500">
                             {taxPerc}%
                           </TableCell>
                           <TableCell className="text-right text-emerald-600 font-bold">
-                            {netAmt.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {liquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </TableCell>
                         </TableRow>
                       )
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                         Nenhuma venda de cartão ou Pix aguardando liquidação.
                       </TableCell>
                     </TableRow>
@@ -234,6 +283,14 @@ export function Settlements() {
                 </TableBody>
               </Table>
             </div>
+            {pendingSettlementsResult?.meta && pendingSettlementsResult.meta.totalPages > 1 && (
+              <Pagination
+                pageIndex={pendingPageIndex}
+                totalCount={pendingSettlementsResult.meta.total}
+                perPage={pendingSettlementsResult.meta.limit}
+                onPageChange={setPendingPageIndex}
+              />
+            )}
           </TabsContent>
 
           {/* TAB: A PRAZO / PERMUTA */}
@@ -305,6 +362,14 @@ export function Settlements() {
                 </TableBody>
               </Table>
             </div>
+            {pendingSettlementsResult?.meta && pendingSettlementsResult.meta.totalPages > 1 && (
+              <Pagination
+                pageIndex={pendingPageIndex}
+                totalCount={pendingSettlementsResult.meta.total}
+                perPage={pendingSettlementsResult.meta.limit}
+                onPageChange={setPendingPageIndex}
+              />
+            )}
           </TabsContent>
 
           {/* TAB: HISTORICO */}
@@ -313,11 +378,11 @@ export function Settlements() {
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Data Emissão</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Conta Destino</TableHead>
-                    <TableHead className="text-right">Taxa Paga</TableHead>
-                    <TableHead className="text-right">Valor Recebido</TableHead>
+                    <TableHead className="text-right">Bruto Original</TableHead>
+                    <TableHead className="text-right">Líquido Depositado</TableHead>
                     <TableHead className="w-[100px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -332,19 +397,19 @@ export function Settlements() {
                     settlements.map((settlement) => (
                       <TableRow key={settlement.id}>
                         <TableCell className="font-medium text-slate-500">
-                          {format(new Date(settlement.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {format(new Date(settlement.data_emissao), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
-                          {settlement.description || 'Liquidação de Cartão'}
+                          {settlement.description || 'Liquidação'}
                         </TableCell>
                         <TableCell>
-                          {settlement.destTransaction?.accounts?.name || 'Conta Padrão'}
+                          {settlement.accounts?.name || 'Conta Padrão'}
                         </TableCell>
-                        <TableCell className="text-right text-red-500 font-medium">
-                          {settlement.fee_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        <TableCell className="text-right font-medium">
+                          {(settlement.totalValue || settlement.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </TableCell>
                         <TableCell className="text-right text-emerald-600 font-bold">
-                          {settlement.destTransaction?.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          {settlement.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </TableCell>
                         <TableCell>
                           <AlertDialog>
@@ -357,7 +422,7 @@ export function Settlements() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Reverter liquidação?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Esta ação desfará a transferência e restaurará os valores na Conta Transitória.
+                                  Esta ação marcará esta transação como Pendente novamente, e ela sairá dos relatórios de saldo atual.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -384,6 +449,14 @@ export function Settlements() {
                 </TableBody>
               </Table>
             </div>
+            {settlementsResult?.meta && settlementsResult.meta.totalPages > 1 && (
+              <Pagination
+                pageIndex={pageIndex}
+                totalCount={settlementsResult.meta.total}
+                perPage={settlementsResult.meta.limit}
+                onPageChange={setPageIndex}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -396,23 +469,25 @@ export function Settlements() {
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                 <Banknote size={16} />
               </div>
-              Liquidações Pendentes
+              {selectedTxIds.length > 0 ? `Adiantar ${selectedTxIds.length} Liquidações` : 'Liquidações Pendentes de Hoje'}
             </DialogTitle>
             <DialogDescription className="pt-2 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-              O sistema buscará todas as vendas de cartões (Débito/Crédito) e Pix que atingiram o prazo de recebimento estipulado nas máquinas e efetivará a entrada do dinheiro líquido nos saldos bancários.
+              {selectedTxIds.length > 0 
+                ? 'Ao confirmar, as transações selecionadas entrarão no seu saldo imediatamente, independente de suas datas de vencimento reais.' 
+                : 'O sistema efetivará a entrada do dinheiro líquido nos saldos bancários para os cartões vencidos até hoje.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-3 mt-4">
             <Button 
-              onClick={() => triggerSettlement()} 
+              onClick={() => triggerSettlement(selectedTxIds.length > 0 ? selectedTxIds : undefined)} 
               disabled={isTriggering}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 text-sm gap-2"
             >
               {isTriggering ? 'Processando...' : (
                 <>
                   <Rocket size={16} />
-                  Adiantar Liquidações de Hoje
+                  Confirmar Liquidação
                 </>
               )}
             </Button>
