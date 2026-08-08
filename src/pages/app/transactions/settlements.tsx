@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, RefreshCw, Trash2, Banknote, CheckCircle2, Rocket } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Undo2, Banknote, CheckCircle2, Rocket } from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -66,16 +66,22 @@ export function Settlements() {
   const [targetAccountId, setTargetAccountId] = useState('')
   const [actualMethod, setActualMethod] = useState('PIX')
 
+  const [sortFieldPending, setSortFieldPending] = useState('data_vencimento')
+  const [sortDirPending, setSortDirPending] = useState('asc')
+
+  const [sortFieldHistory, setSortFieldHistory] = useState('data_emissao')
+  const [sortDirHistory, setSortDirHistory] = useState('desc')
+
   // Queries
   const { data: settlementsResult, isLoading } = useQuery({
-    queryKey: ['settlements', pageIndex],
-    queryFn: () => getSettlements({ pageIndex }),
+    queryKey: ['settlements', pageIndex, sortFieldHistory, sortDirHistory],
+    queryFn: () => getSettlements({ pageIndex, sortBy: sortFieldHistory, sortDir: sortDirHistory }),
   })
   const settlements = settlementsResult?.data || []
 
   const { data: pendingSettlementsResult, isLoading: isLoadingPending } = useQuery({
-    queryKey: ['pending-settlements', pendingPageIndex],
-    queryFn: () => getPendingSettlements({ pageIndex: pendingPageIndex }),
+    queryKey: ['pending-settlements', pendingPageIndex, sortFieldPending, sortDirPending],
+    queryFn: () => getPendingSettlements({ pageIndex: pendingPageIndex, sortBy: sortFieldPending, sortDir: sortDirPending }),
   })
   const pendingSettlements = pendingSettlementsResult?.data || []
   
@@ -208,13 +214,30 @@ export function Settlements() {
                   Adiantamento de recebimentos de cartões e Pix (Liquidação invisível já roda ao abrir a tela).
                 </p>
               </div>
-              <Button 
-                onClick={() => setTriggerModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-              >
-                <Rocket className="w-4 h-4 mr-2" />
-                {selectedTxIds.length > 0 ? `Adiantar ${selectedTxIds.length} Selecionados` : 'Adiantar Liquidações de Hoje'}
-              </Button>
+              <div className="flex gap-2">
+                <Select value={`${sortFieldPending}-${sortDirPending}`} onValueChange={(val) => {
+                  const [field, dir] = val.split('-')
+                  setSortFieldPending(field)
+                  setSortDirPending(dir)
+                }}>
+                  <SelectTrigger className="w-[200px] bg-white">
+                    <SelectValue placeholder="Ordenar por..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="data_vencimento-asc">Vencimento (Próximos)</SelectItem>
+                    <SelectItem value="data_vencimento-desc">Vencimento (Distantes)</SelectItem>
+                    <SelectItem value="amount-desc">Maior Valor</SelectItem>
+                    <SelectItem value="amount-asc">Menor Valor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={() => setTriggerModalOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
+                  {selectedTxIds.length > 0 ? `Adiantar ${selectedTxIds.length} Selecionados` : 'Adiantar Liquidações de Hoje'}
+                </Button>
+              </div>
             </div>
 
             <div className="rounded-xl border bg-white dark:bg-slate-950 overflow-hidden">
@@ -374,6 +397,23 @@ export function Settlements() {
 
           {/* TAB: HISTORICO */}
           <TabsContent value="history">
+            <div className="flex justify-end items-center mb-4">
+              <Select value={`${sortFieldHistory}-${sortDirHistory}`} onValueChange={(val) => {
+                const [field, dir] = val.split('-')
+                setSortFieldHistory(field)
+                setSortDirHistory(dir)
+              }}>
+                <SelectTrigger className="w-[220px] bg-white">
+                  <SelectValue placeholder="Ordenar por..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="data_emissao-desc">Emissão (Mais recentes)</SelectItem>
+                  <SelectItem value="data_emissao-asc">Emissão (Mais antigas)</SelectItem>
+                  <SelectItem value="amount-desc">Maior Valor</SelectItem>
+                  <SelectItem value="amount-asc">Menor Valor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="rounded-xl border bg-white dark:bg-slate-950 overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
@@ -414,8 +454,8 @@ export function Settlements() {
                         <TableCell>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                                <Trash2 className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="text-orange-500 hover:text-orange-600 hover:bg-orange-50" title="Desfazer e voltar para pendentes">
+                                <Undo2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -429,7 +469,7 @@ export function Settlements() {
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => revert({ id: settlement.id })}
-                                  className="bg-red-500 hover:bg-red-600 font-bold"
+                                  className="bg-orange-500 hover:bg-orange-600 font-bold"
                                 >
                                   Sim, Reverter
                                 </AlertDialogAction>

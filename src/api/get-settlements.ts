@@ -25,10 +25,20 @@ export interface HistorySettlement {
   }
 }
 
-export async function getSettlements({ pageIndex = 0 }: { pageIndex?: number } = {}) {
+export async function getSettlements({ 
+  pageIndex = 0,
+  sortBy = 'data_emissao',
+  sortDir = 'desc'
+}: { 
+  pageIndex?: number,
+  sortBy?: string,
+  sortDir?: string
+} = {}) {
   const response = await api.get<PaginatedResponse<HistorySettlement>>('/settlements', {
     params: {
       page: pageIndex + 1,
+      sortBy,
+      sortDir
     }
   })
   return response.data
