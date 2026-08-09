@@ -69,7 +69,7 @@ export function Settlements() {
   const [sortFieldPending, setSortFieldPending] = useState('data_vencimento')
   const [sortDirPending, setSortDirPending] = useState('asc')
 
-  const [sortFieldHistory, setSortFieldHistory] = useState('data_emissao')
+  const [sortFieldHistory, setSortFieldHistory] = useState('data_vencimento')
   const [sortDirHistory, setSortDirHistory] = useState('desc')
 
   // Queries
@@ -407,8 +407,8 @@ export function Settlements() {
                   <SelectValue placeholder="Ordenar por..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="data_emissao-desc">Emissão (Mais recentes)</SelectItem>
-                  <SelectItem value="data_emissao-asc">Emissão (Mais antigas)</SelectItem>
+                  <SelectItem value="data_vencimento-desc">Baixa (Mais recentes)</SelectItem>
+                  <SelectItem value="data_vencimento-asc">Baixa (Mais antigas)</SelectItem>
                   <SelectItem value="amount-desc">Maior Valor</SelectItem>
                   <SelectItem value="amount-asc">Menor Valor</SelectItem>
                 </SelectContent>
@@ -418,7 +418,7 @@ export function Settlements() {
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
-                    <TableHead>Data Emissão</TableHead>
+                    <TableHead>Data da Baixa</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Conta Destino</TableHead>
                     <TableHead className="text-right">Bruto Original</TableHead>
@@ -437,7 +437,7 @@ export function Settlements() {
                     settlements.map((settlement) => (
                       <TableRow key={settlement.id}>
                         <TableCell className="font-medium text-slate-500">
-                          {format(new Date(settlement.data_emissao), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(new Date(settlement.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           {settlement.description || 'Liquidação'}

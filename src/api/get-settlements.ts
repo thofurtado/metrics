@@ -27,7 +27,7 @@ export interface HistorySettlement {
 
 export async function getSettlements({ 
   pageIndex = 0,
-  sortBy = 'data_emissao',
+  sortBy = 'data_vencimento',
   sortDir = 'desc'
 }: { 
   pageIndex?: number,
