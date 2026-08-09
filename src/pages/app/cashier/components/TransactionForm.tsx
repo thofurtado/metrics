@@ -91,6 +91,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     const sectorsList = useMemo(() => {
         if (Array.isArray(sectorsData)) return sectorsData;
         if (sectorsData && Array.isArray((sectorsData as any).sectors)) return (sectorsData as any).sectors;
+        if (sectorsData && (sectorsData as any).data && Array.isArray((sectorsData as any).data.sectors)) return (sectorsData as any).data.sectors;
         return [];
     }, [sectorsData]);
 
@@ -890,8 +891,13 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                     <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Funcionário (Vale RH - Opcional)</label>
                                     <select
                                         value={funcionarioRetiradaId || ''}
-                                        onChange={e => setFuncionarioRetiradaId(e.target.value || null)}
-                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                        disabled={!!sectorId}
+                                        onChange={e => {
+                                            const val = e.target.value || null;
+                                            setFuncionarioRetiradaId(val);
+                                            if (val) setSectorId(null);
+                                        }}
+                                        className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
                                     >
                                         <option value="">Não vincular (Sangria Comum)</option>
                                         {employeesList.map((emp: any) => (
@@ -905,8 +911,13 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                                 <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1 ml-1">Setor / Categoria (Opcional)</label>
                                 <select
                                     value={sectorId || ''}
-                                    onChange={e => setSectorId(e.target.value || null)}
-                                    className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                    disabled={!!funcionarioRetiradaId}
+                                    onChange={e => {
+                                        const val = e.target.value || null;
+                                        setSectorId(val);
+                                        if (val) setFuncionarioRetiradaId(null);
+                                    }}
+                                    className="w-full border border-zinc-200 rounded-xl p-4 md:p-3 text-base md:text-sm font-bold outline-none bg-white focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
                                 >
                                     <option value="">Nenhum Setor</option>
                                     {sectorsList.map((sec: any) => (
