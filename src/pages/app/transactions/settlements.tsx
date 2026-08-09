@@ -419,6 +419,7 @@ export function Settlements() {
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>Data da Baixa</TableHead>
+                    <TableHead>Data Emissão</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Conta Destino</TableHead>
                     <TableHead className="text-right">Bruto Original</TableHead>
@@ -429,15 +430,18 @@ export function Settlements() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
+                      <TableCell colSpan={7} className="text-center h-24">
                         Carregando histórico...
                       </TableCell>
                     </TableRow>
                   ) : settlements && settlements.length > 0 ? (
                     settlements.map((settlement) => (
                       <TableRow key={settlement.id}>
-                        <TableCell className="font-medium text-slate-500">
+                        <TableCell className="font-medium text-emerald-600 dark:text-emerald-500">
                           {format(new Date(settlement.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-500">
+                          {format(new Date(settlement.data_emissao), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           {settlement.description || 'Liquidação'}
@@ -481,7 +485,7 @@ export function Settlements() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                         Nenhuma liquidação automática encontrada.
                       </TableCell>
                     </TableRow>
