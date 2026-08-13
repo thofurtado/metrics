@@ -49,7 +49,6 @@ export function LinkReceiptModal({
       })
       return res.data
     },
-    },
     enabled: open,
   })
 
