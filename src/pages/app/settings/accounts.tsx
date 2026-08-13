@@ -18,6 +18,7 @@ import { createAccount } from '@/api/create-account'
 import { getAccountHistory } from '@/api/get-account-history'
 import { getAccounts } from '@/api/get-accounts'
 import { getGeneralBalance } from '@/api/get-general-balance'
+import { recalculateAccountBalance } from '@/api/recalculate-account-balance'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -126,6 +127,19 @@ export function Accounts() {
     },
     onError: () => {
       toast.error('Erro ao ajustar saldo.')
+    },
+  })
+
+  const { mutateAsync: recalculateBalance } = useMutation({
+    mutationFn: recalculateAccountBalance,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      toast.success('Saldo recalculado com sucesso!')
+    },
+    onError: () => {
+      toast.error('Erro ao recalcular saldo.')
     },
   })
 
@@ -393,6 +407,16 @@ export function Accounts() {
                           <FileText className="mr-2 h-4 w-4" />
                           Visualizar Histórico
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (confirm('Isso irá sobrescrever o saldo atual com a soma de todas as transações confirmadas. Deseja continuar?')) {
+                              recalculateBalance({ id: account.id })
+                            }
+                          }}
+                        >
+                          <Wallet className="mr-2 h-4 w-4" />
+                          Recalcular Saldo
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -416,6 +440,25 @@ export function Accounts() {
                         })}
                       </span>
                     </div>
+
+                    {/* Pending Balance Section */}
+                    {account.pending_balance > 0 && (
+                      <div className="mt-3 rounded-lg bg-orange-50/50 p-2.5 border border-orange-100 dark:bg-orange-500/10 dark:border-orange-500/20">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                          Lançamentos Pendentes
+                        </span>
+                        <div className="mt-0.5 flex items-baseline gap-1">
+                          <span className="text-xs font-medium text-orange-500 dark:text-orange-400/80">
+                            R$
+                          </span>
+                          <span className="text-sm font-semibold tracking-tight text-orange-600 dark:text-orange-400">
+                            {account.pending_balance.toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Background decoration */}

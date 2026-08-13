@@ -7,6 +7,7 @@ export interface GetAccountsResponse {
     description: string | null
     goal: number | null
     balance: number
+    pending_balance: number
   }[]
 }
 
