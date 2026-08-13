@@ -36,16 +36,18 @@ export function LinkReceiptModal({
 
   // Fetch transactions
   const { data: transactionsData, isLoading } = useQuery({
-    queryKey: ['transactions-for-link', search],
+    queryKey: ['transactions-for-link', search, includePaid],
     queryFn: async () => {
       // Just fetching the first page of recent transactions
       const res = await api.get('/transactions', {
         params: {
           page: 1,
-          per_page: 20,
+          per_page: 50,
           description: search || undefined,
           status: includePaid ? undefined : 'pending',
           month: includePaid ? 'all' : undefined,
+          sortBy: 'data_vencimento',
+          sortDirection: 'desc'
         },
       })
       return res.data
