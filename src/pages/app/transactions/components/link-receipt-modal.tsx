@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 
 import { PaymentModal } from '../payment-modal'
@@ -30,8 +32,9 @@ export function LinkReceiptModal({
   const [search, setSearch] = useState('')
   const [selectedTransactionForPayment, setSelectedTransactionForPayment] =
     useState<any>(null)
+  const [includePaid, setIncludePaid] = useState(false)
 
-  // Fetch only pending/recent transactions
+  // Fetch transactions
   const { data: transactionsData, isLoading } = useQuery({
     queryKey: ['transactions-for-link', search],
     queryFn: async () => {
@@ -41,10 +44,11 @@ export function LinkReceiptModal({
           page: 1,
           per_page: 20,
           description: search || undefined,
-          status: 'pending',
+          status: includePaid ? undefined : 'pending',
         },
       })
       return res.data
+    },
     },
     enabled: open,
   })
@@ -66,26 +70,31 @@ export function LinkReceiptModal({
         (t: any) => t.id === transactionId,
       )
       if (transaction) {
-        let initialInterest = 0
-        let initialDiscount = 0
+        if (transaction.confirmed) {
+          // Se já está paga, não precisa abrir o modal de pagamento
+          onOpenChange(false)
+        } else {
+          let initialInterest = 0
+          let initialDiscount = 0
 
-        if (receipt.value && receipt.value > 0) {
-          const diff = receipt.value - transaction.amount
-          if (diff > 0.01) {
-            initialInterest = diff
-          } else if (diff < -0.01) {
-            initialDiscount = Math.abs(diff)
+          if (receipt.value && receipt.value > 0) {
+            const diff = receipt.value - transaction.amount
+            if (diff > 0.01) {
+              initialInterest = diff
+            } else if (diff < -0.01) {
+              initialDiscount = Math.abs(diff)
+            }
           }
-        }
 
-        setSelectedTransactionForPayment({
-          ...transaction,
-          attachment_url: data?.attachment_url,
-          sectorId: transaction.sectors?.id || null,
-          accountId: transaction.accounts?.id || null,
-          suggestedInterest: initialInterest > 0 ? initialInterest : undefined,
-          suggestedDiscount: initialDiscount > 0 ? initialDiscount : undefined,
-        })
+          setSelectedTransactionForPayment({
+            ...transaction,
+            attachment_url: data?.attachment_url,
+            sectorId: transaction.sectors?.id || null,
+            accountId: transaction.accounts?.id || null,
+            suggestedInterest: initialInterest > 0 ? initialInterest : undefined,
+            suggestedDiscount: initialDiscount > 0 ? initialDiscount : undefined,
+          })
+        }
       } else {
         onOpenChange(false)
       }
@@ -154,14 +163,26 @@ export function LinkReceiptModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Buscar despesa por descrição..."
-              className="h-11 rounded-xl pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="mt-2 flex items-center justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Buscar despesa por descrição..."
+                className="h-11 rounded-xl pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="ml-4 flex items-center space-x-2">
+              <Switch
+                id="include-paid"
+                checked={includePaid}
+                onCheckedChange={setIncludePaid}
+              />
+              <Label htmlFor="include-paid" className="text-sm cursor-pointer whitespace-nowrap">
+                Incluir já pagas
+              </Label>
+            </div>
           </div>
 
           <div className="mt-2 flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
@@ -173,7 +194,7 @@ export function LinkReceiptModal({
 
             {!isLoading && availableTransactions.length === 0 && (
               <p className="py-4 text-center text-sm text-slate-500">
-                Nenhuma despesa pendente sem anexo encontrada.
+                Nenhuma despesa sem anexo encontrada.
               </p>
             )}
 
@@ -183,10 +204,19 @@ export function LinkReceiptModal({
                 className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300"
               >
                 <div>
-                  <p className="text-sm font-bold text-slate-800">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
                     {t.description}
+                    {t.confirmed ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                        Paga
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                        Aberta
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 mt-1">
                     {new Date(t.data_vencimento).toLocaleDateString()} -{' '}
                     {t.amount.toLocaleString('pt-BR', {
                       style: 'currency',
