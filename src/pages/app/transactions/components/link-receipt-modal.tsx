@@ -45,6 +45,7 @@ export function LinkReceiptModal({
           per_page: 20,
           description: search || undefined,
           status: includePaid ? undefined : 'pending',
+          month: includePaid ? 'all' : undefined,
         },
       })
       return res.data
