@@ -117,11 +117,24 @@ export function PendingReceiptsModal({
   const handleConfirmDeleteReceipt = async () => {
     if (!receiptToDelete) return
     const { filename, isFullscreen } = receiptToDelete
-    setReceiptToDelete(null)
-    if (isFullscreen) {
-      await handleDeleteInFullscreen(filename)
-    } else {
-      await deleteReceipt(filename)
+
+    try {
+      if (isFullscreen) {
+        await handleDeleteInFullscreen(filename)
+      } else {
+        await deleteReceipt(filename)
+      }
+    } finally {
+      // Pequeno delay para garantir a transição de estados do Radix UI
+      setTimeout(() => {
+        setReceiptToDelete(null)
+      }, 50)
+      
+      // Fallback de segurança para garantir que a tela destrave caso o Radix falhe 
+      // ao tentar devolver o foco para um elemento que foi recém excluído da DOM.
+      setTimeout(() => {
+        document.body.style.pointerEvents = 'auto'
+      }, 500)
     }
   }
 
