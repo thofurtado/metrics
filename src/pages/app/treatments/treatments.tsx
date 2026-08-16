@@ -23,6 +23,7 @@ import {
 
 import { TreatmentTableRow } from './treatment-table-row'
 import { TreatmentTableFilters } from './TreatmentTableFilters'
+import { ClientsEquipmentsModal } from './components/clients-equipments-modal'
 
 export function Treatments() {
   const navigate = useNavigate()
@@ -102,14 +103,17 @@ export function Treatments() {
           title="Atendimentos"
           description="Gerencie seus atendimentos e suporte ao cliente."
         >
-          <Button
-            onClick={handleCreateTreatment}
-            className="h-10 w-auto rounded-xl bg-slate-900 px-6 py-2 font-bold text-white shadow-xl transition-all hover:bg-slate-800"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            <span className="hidden sm:inline">Novo Atendimento</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <ClientsEquipmentsModal />
+            <Button
+              onClick={handleCreateTreatment}
+              className="h-10 w-auto rounded-xl bg-slate-900 px-6 py-2 font-bold text-white shadow-xl transition-all hover:bg-slate-800"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              <span className="hidden sm:inline">Novo Atendimento</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          </div>
         </PageHeader>
 
         <Tabs
