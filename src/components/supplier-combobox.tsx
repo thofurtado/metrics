@@ -3,9 +3,20 @@ import * as React from 'react'
 
 import { Supplier } from '@/api/get-suppliers'
 import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 
 interface SupplierComboboxProps {
   value?: string
@@ -84,10 +95,10 @@ export function SupplierCombobox({
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0" align="start" portal={false}>
           <Command shouldFilter={false}>
-            <CommandInput 
-              placeholder="Buscar por Nome ou Documento..." 
-              value={search} 
-              onValueChange={setSearch} 
+            <CommandInput
+              placeholder="Buscar por Nome ou Documento..."
+              value={search}
+              onValueChange={setSearch}
               autoFocus
             />
             <CommandList>
@@ -106,7 +117,7 @@ export function SupplierCombobox({
                     <Check
                       className={cn(
                         'mr-2 h-4 w-4 shrink-0',
-                        value === supplier.id ? 'opacity-100' : 'opacity-0'
+                        value === supplier.id ? 'opacity-100' : 'opacity-0',
                       )}
                     />
                     <div className="flex flex-col overflow-hidden">

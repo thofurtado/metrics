@@ -79,10 +79,13 @@ export async function submitSession(data: { session_id: string }) {
   return response.data
 }
 
-export async function updateSessionBalance(data: { session_id: string, initial_balance: number }) {
+export async function updateSessionBalance(data: {
+  session_id: string
+  initial_balance: number
+}) {
   const response = await api.put(
     `/api/cashier/session/${data.session_id}/balance`,
-    { initial_balance: data.initial_balance }
+    { initial_balance: data.initial_balance },
   )
   return response.data
 }
@@ -121,7 +124,10 @@ export async function updateEntry(data: {
   is_checked?: boolean
   sector_id?: string | null
 }) {
-  const response = await api.put<CashierEntry>('/api/cashier/entry/' + data.id, data)
+  const response = await api.put<CashierEntry>(
+    '/api/cashier/entry/' + data.id,
+    data,
+  )
   return response.data
 }
 
@@ -134,7 +140,6 @@ export async function deleteSession(id: string) {
   const response = await api.delete('/api/cashier/sessions/' + id)
   return response.data
 }
-
 
 export async function getSessionDetails(id: string) {
   const response = await api.get<{
@@ -168,7 +173,10 @@ export interface ResolveDivergenceParams {
 }
 
 export async function resolveDivergence(data: ResolveDivergenceParams) {
-  const response = await api.post('/api/cashier/session/resolve-divergence', data)
+  const response = await api.post(
+    '/api/cashier/session/resolve-divergence',
+    data,
+  )
   return response.data
 }
 
@@ -223,31 +231,42 @@ export async function getMonthlyCashAudit(month?: number, year?: number) {
   const response = await api.get('/api/cashier/monthly-audit', {
     params: {
       month: month !== undefined ? month + 1 : undefined,
-      year
-    }
+      year,
+    },
   })
   return response.data
 }
 
 export async function getCashierUsers() {
-  const response = await api.get<{ id: string; name: string; role: string }[]>('/api/cashier/users')
+  const response =
+    await api.get<{ id: string; name: string; role: string }[]>(
+      '/api/cashier/users',
+    )
   return response.data
 }
 
 export async function getCashierEmployees() {
   try {
-    const response = await api.get<{ data: { id: string; name: string; role?: string }[] }>('/hr/employees?limit=100')
+    const response = await api.get<{
+      data: { id: string; name: string; role?: string }[]
+    }>('/hr/employees?limit=100')
     const list = response.data?.data
     if (Array.isArray(list) && list.length > 0) return list
   } catch (e) {}
 
   try {
-    const response = await api.get<{ id: string; name: string; role?: string }[]>('/hr/employees/sync')
-    if (Array.isArray(response.data) && response.data.length > 0) return response.data
+    const response =
+      await api.get<{ id: string; name: string; role?: string }[]>(
+        '/hr/employees/sync',
+      )
+    if (Array.isArray(response.data) && response.data.length > 0)
+      return response.data
   } catch (e) {}
 
   try {
-    const response = await api.get<{ users: { id: string; name: string; role?: string }[] }>('/api/cashier/users')
+    const response = await api.get<{
+      users: { id: string; name: string; role?: string }[]
+    }>('/api/cashier/users')
     return response.data?.users || response.data
   } catch (e) {
     return []

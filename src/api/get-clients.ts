@@ -1,4 +1,4 @@
-﻿import { api } from '@/lib/axios'
+import { api } from '@/lib/axios'
 
 export interface GetClientsResponse {
   clients: {
@@ -23,9 +23,11 @@ export async function getClients() {
   return response.data.clients
 }
 
-export async function createQuickClient(data: { name: string; identification?: string; phone?: string }) {
+export async function createQuickClient(data: {
+  name: string
+  identification?: string
+  phone?: string
+}) {
   const response = await api.post('/client', data)
   return response.data
 }
-
-

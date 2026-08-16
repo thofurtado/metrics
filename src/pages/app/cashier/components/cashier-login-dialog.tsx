@@ -1,9 +1,9 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, KeyRound, Loader2, Lock, UserCheck } from 'lucide-react'
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Lock, UserCheck, KeyRound, Loader2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { getCashierUsers, CashierUser } from '@/api/cashier/get-cashier-users'
+import { CashierUser, getCashierUsers } from '@/api/cashier/get-cashier-users'
 import { signIn } from '@/api/sign-in'
 
 export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
@@ -11,7 +11,12 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [selectedUser, setSelectedUser] = useState<CashierUser | null>(null)
   const [password, setPassword] = useState('')
 
-  const { data: cashierUsers = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data: cashierUsers = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['cashier-users'],
     queryFn: getCashierUsers,
     staleTime: 1000 * 60 * 2,
@@ -34,7 +39,9 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
       if (onSuccess) onSuccess()
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Senha incorreta. Tente novamente.')
+      toast.error(
+        err?.response?.data?.message || 'Senha incorreta. Tente novamente.',
+      )
     },
   })
 
@@ -45,12 +52,11 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950 space-y-6">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md duration-300 animate-in fade-in">
+      <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
         {/* Topo do Modal */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 flex items-center justify-center font-bold shadow-inner">
+        <div className="space-y-2 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 font-bold text-blue-600 shadow-inner dark:bg-blue-950/50 dark:text-blue-400">
             <Lock size={22} />
           </div>
           <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-slate-100">
@@ -69,22 +75,22 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
             </span>
 
             {isLoading ? (
-              <div className="p-8 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2 p-8 text-center text-xs font-bold text-slate-400">
                 <Loader2 size={16} className="animate-spin text-blue-600" />
                 Carregando operadores...
               </div>
             ) : isError ? (
-              <div className="p-4 text-center text-xs font-bold text-red-500 space-y-2">
+              <div className="space-y-2 p-4 text-center text-xs font-bold text-red-500">
                 <p>Erro ao carregar operadores do caixa.</p>
                 <button
                   onClick={() => refetch()}
-                  className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-[10px] font-black uppercase"
+                  className="rounded-xl bg-red-50 px-3 py-1.5 text-[10px] font-black uppercase text-red-600"
                 >
                   Tentar Novamente
                 </button>
               </div>
             ) : cashierUsers.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
+              <div className="grid max-h-[280px] grid-cols-1 gap-2.5 overflow-y-auto pr-1">
                 {cashierUsers.map((user) => (
                   <button
                     key={user.id}
@@ -92,14 +98,14 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
                       setSelectedUser(user)
                       setPassword('')
                     }}
-                    className="flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-blue-50/50 hover:border-blue-300 transition-all text-left group dark:border-slate-800 dark:bg-slate-900"
+                    className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 flex items-center justify-center font-black text-xs uppercase">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-xs font-black uppercase text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                         {user.name.charAt(0)}
                       </div>
                       <div>
-                        <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600">
+                        <span className="block text-sm font-bold text-slate-800 group-hover:text-blue-600 dark:text-slate-100">
                           {user.name}
                         </span>
                         <span className="block text-[10px] font-medium text-slate-400">
@@ -108,7 +114,7 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
                       </div>
                     </div>
 
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-200/60 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded-md bg-slate-200/60 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {user.role === 'ADMIN' ? 'Admin' : 'Caixa'}
                     </span>
                   </button>
@@ -121,11 +127,14 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
             )}
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-4 animate-in fade-in duration-200">
+          <form
+            onSubmit={handleLogin}
+            className="space-y-4 duration-200 animate-in fade-in"
+          >
             {/* Usuário Selecionado */}
-            <div className="flex items-center justify-between p-3 rounded-2xl border border-blue-200 bg-blue-50/40 dark:border-blue-900/50 dark:bg-blue-950/20">
+            <div className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900/50 dark:bg-blue-950/20">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs uppercase">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-xs font-black uppercase text-white">
                   {selectedUser.name.charAt(0)}
                 </div>
                 <div>
@@ -141,7 +150,7 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
               <button
                 type="button"
                 onClick={() => setSelectedUser(null)}
-                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
               >
                 <ArrowLeft size={12} /> Alterar
               </button>
@@ -149,7 +158,7 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
 
             {/* Input de Senha */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold uppercase text-slate-400 block ml-1">
+              <label className="ml-1 block text-[10px] font-extrabold uppercase text-slate-400">
                 Digite sua Senha
               </label>
               <div className="relative">
@@ -162,14 +171,17 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
                   placeholder="******"
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3.5 pl-10 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900"
                 />
-                <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <KeyRound
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                />
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoggingIn || !password}
-              className="w-full py-3.5 rounded-2xl bg-blue-600 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 disabled:opacity-50"
             >
               {isLoggingIn ? (
                 <>

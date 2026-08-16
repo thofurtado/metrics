@@ -1,9 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm as useReactHookForm } from 'react-hook-form'
-import { z } from 'zod'
-import { toast } from 'sonner'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
   Clock,
@@ -17,15 +13,32 @@ import {
   Store,
   Truck,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Controller, useForm as useReactHookForm } from 'react-hook-form'
+import { toast } from 'sonner'
+import { z } from 'zod'
 
-import { api } from '@/lib/axios'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Switch } from '@/components/ui/switch'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { api } from '@/lib/axios'
 
 const businessHourSchema = z.object({
   dayOfWeek: z.number(),
@@ -91,7 +104,9 @@ async function updateProfile(data: ProfileFormData) {
 }
 
 function hexToHSL(hex: string) {
-  let r = 0, g = 0, b = 0
+  let r = 0
+  let g = 0
+  let b = 0
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16)
     g = parseInt(hex[2] + hex[2], 16)
@@ -104,11 +119,11 @@ function hexToHSL(hex: string) {
   r /= 255
   g /= 255
   b /= 255
-  const max = Math.max(r, g, b),
-    min = Math.min(r, g, b)
-  let h = 0,
-    s = 0,
-    l = (max + min) / 2
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
   if (max !== min) {
     const d = max - min
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
@@ -125,7 +140,11 @@ function hexToHSL(hex: string) {
     }
     h /= 6
   }
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  }
 }
 
 function hslToHex(h: number, s: number, l: number) {
@@ -153,11 +172,36 @@ export function MenuSettings() {
 
   const THEMES = [
     { name: 'Neutro', primary: '#475569', secondary: '#ffffff', bg: '#f8fafc' },
-    { name: 'Vibrante (Laranja)', primary: '#f97316', secondary: '#ffffff', bg: '#fff7ed' },
-    { name: 'Elegante (Preto)', primary: '#171717', secondary: '#ffffff', bg: '#f5f5f5' },
-    { name: 'Natural (Verde)', primary: '#16a34a', secondary: '#ffffff', bg: '#f0fdf4' },
-    { name: 'Oceano (Azul)', primary: '#2563eb', secondary: '#ffffff', bg: '#eff6ff' },
-    { name: 'Romântico (Vermelho)', primary: '#dc2626', secondary: '#ffffff', bg: '#fef2f2' },
+    {
+      name: 'Vibrante (Laranja)',
+      primary: '#f97316',
+      secondary: '#ffffff',
+      bg: '#fff7ed',
+    },
+    {
+      name: 'Elegante (Preto)',
+      primary: '#171717',
+      secondary: '#ffffff',
+      bg: '#f5f5f5',
+    },
+    {
+      name: 'Natural (Verde)',
+      primary: '#16a34a',
+      secondary: '#ffffff',
+      bg: '#f0fdf4',
+    },
+    {
+      name: 'Oceano (Azul)',
+      primary: '#2563eb',
+      secondary: '#ffffff',
+      bg: '#eff6ff',
+    },
+    {
+      name: 'Romântico (Vermelho)',
+      primary: '#dc2626',
+      secondary: '#ffffff',
+      bg: '#fef2f2',
+    },
   ]
 
   const { data: profile, isLoading: isFetching } = useQuery({
@@ -208,7 +252,7 @@ export function MenuSettings() {
     if (profile) {
       // Formata os horários salvos do backend mantendo a ordem dos 7 dias
       const savedHoursMap = new Map(
-        (profile.businessHours || []).map((bh: any) => [bh.dayOfWeek, bh])
+        (profile.businessHours || []).map((bh: any) => [bh.dayOfWeek, bh]),
       )
 
       const businessHours = DAYS_OF_WEEK.map((_, index) => {
@@ -217,7 +261,7 @@ export function MenuSettings() {
           dayOfWeek: index,
           openTime: saved?.openTime || '18:00',
           closeTime: saved?.closeTime || '23:00',
-          isOpen: saved?.isOpen ?? (index !== 0),
+          isOpen: saved?.isOpen ?? index !== 0,
         }
       })
 
@@ -278,7 +322,10 @@ export function MenuSettings() {
       if (!res.ok) throw new Error()
       const data = await res.json()
 
-      setValue('tradeName', data.nome_fantasia || data.razao_social || getValues('tradeName'))
+      setValue(
+        'tradeName',
+        data.nome_fantasia || data.razao_social || getValues('tradeName'),
+      )
       setValue('companyName', data.razao_social || getValues('companyName'))
       setValue('street', data.logradouro || getValues('street'))
       setValue('number', data.numero || getValues('number'))
@@ -344,7 +391,12 @@ export function MenuSettings() {
 
     const updated = hours.map((h) => {
       if (h.dayOfWeek >= 1 && h.dayOfWeek <= 5) {
-        return { ...h, openTime: monday.openTime, closeTime: monday.closeTime, isOpen: monday.isOpen }
+        return {
+          ...h,
+          openTime: monday.openTime,
+          closeTime: monday.closeTime,
+          isOpen: monday.isOpen,
+        }
       }
       return h
     })
@@ -361,11 +413,14 @@ export function MenuSettings() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Cardápio & Estabelecimento (White Label)</h2>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Cardápio & Estabelecimento (White Label)
+        </h2>
         <p className="text-muted-foreground">
-          Configure as informações da sua empresa, regras de entrega, horários de funcionamento e identidade visual.
+          Configure as informações da sua empresa, regras de entrega, horários
+          de funcionamento e identidade visual.
         </p>
       </div>
       <Separator />
@@ -379,26 +434,39 @@ export function MenuSettings() {
               Dados do Estabelecimento
             </CardTitle>
             <CardDescription>
-              Informações do perfil da sua empresa para exibições no cardápio e impressões de comandas.
+              Informações do perfil da sua empresa para exibições no cardápio e
+              impressões de comandas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="tradeName">Nome Fantasia *</Label>
-                <Input id="tradeName" {...register('tradeName')} placeholder="Ex: Marujo Gastrobar" />
+                <Input
+                  id="tradeName"
+                  {...register('tradeName')}
+                  placeholder="Ex: Marujo Gastrobar"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="companyName">Razão Social</Label>
-                <Input id="companyName" {...register('companyName')} placeholder="Ex: Marujo Alimenticios LTDA" />
+                <Input
+                  id="companyName"
+                  {...register('companyName')}
+                  placeholder="Ex: Marujo Alimenticios LTDA"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="document">CNPJ / CPF</Label>
                 <div className="flex gap-2">
-                  <Input id="document" {...register('document')} placeholder="00.000.000/0001-00" />
+                  <Input
+                    id="document"
+                    {...register('document')}
+                    placeholder="00.000.000/0001-00"
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -415,12 +483,22 @@ export function MenuSettings() {
                     Buscar CNPJ
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">Clique para preencher os dados automaticamente</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Clique para preencher os dados automaticamente
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="whatsappNumber">WhatsApp (Recebimento de Pedidos) *</Label>
-                <Input id="whatsappNumber" {...register('whatsappNumber')} placeholder="5511999999999" />
-                <p className="text-[11px] text-muted-foreground">Formato: 55 + DDD + Número</p>
+                <Label htmlFor="whatsappNumber">
+                  WhatsApp (Recebimento de Pedidos) *
+                </Label>
+                <Input
+                  id="whatsappNumber"
+                  {...register('whatsappNumber')}
+                  placeholder="5511999999999"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Formato: 55 + DDD + Número
+                </p>
               </div>
             </div>
 
@@ -428,14 +506,21 @@ export function MenuSettings() {
 
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5 font-semibold">
-                <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço Completo
+                <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço
+                Completo
               </Label>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="zipcode" className="text-xs">CEP</Label>
+                  <Label htmlFor="zipcode" className="text-xs">
+                    CEP
+                  </Label>
                   <div className="flex gap-2">
-                    <Input id="zipcode" {...register('zipcode')} placeholder="00000-000" />
+                    <Input
+                      id="zipcode"
+                      {...register('zipcode')}
+                      placeholder="00000-000"
+                    />
                     <Button
                       type="button"
                       variant="outline"
@@ -455,27 +540,58 @@ export function MenuSettings() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="street" className="text-xs">Logradouro / Rua</Label>
-                  <Input id="street" {...register('street')} placeholder="Av. Principal" />
+                  <Label htmlFor="street" className="text-xs">
+                    Logradouro / Rua
+                  </Label>
+                  <Input
+                    id="street"
+                    {...register('street')}
+                    placeholder="Av. Principal"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="number" className="text-xs">Número</Label>
-                  <Input id="number" {...register('number')} placeholder="123" />
+                  <Label htmlFor="number" className="text-xs">
+                    Número
+                  </Label>
+                  <Input
+                    id="number"
+                    {...register('number')}
+                    placeholder="123"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 gap-4 pt-2 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="neighborhood" className="text-xs">Bairro</Label>
-                  <Input id="neighborhood" {...register('neighborhood')} placeholder="Centro" />
+                  <Label htmlFor="neighborhood" className="text-xs">
+                    Bairro
+                  </Label>
+                  <Input
+                    id="neighborhood"
+                    {...register('neighborhood')}
+                    placeholder="Centro"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="city" className="text-xs">Cidade</Label>
-                  <Input id="city" {...register('city')} placeholder="São Paulo" />
+                  <Label htmlFor="city" className="text-xs">
+                    Cidade
+                  </Label>
+                  <Input
+                    id="city"
+                    {...register('city')}
+                    placeholder="São Paulo"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="state" className="text-xs">Estado (UF)</Label>
-                  <Input id="state" {...register('state')} placeholder="SP" maxLength={2} />
+                  <Label htmlFor="state" className="text-xs">
+                    Estado (UF)
+                  </Label>
+                  <Input
+                    id="state"
+                    {...register('state')}
+                    placeholder="SP"
+                    maxLength={2}
+                  />
                 </div>
               </div>
             </div>
@@ -490,10 +606,11 @@ export function MenuSettings() {
               Regras de Entrega e Pedidos
             </CardTitle>
             <CardDescription>
-              Defina os parâmetros de frete, valor mínimo do pedido e prazos estimados de entrega.
+              Defina os parâmetros de frete, valor mínimo do pedido e prazos
+              estimados de entrega.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="deliveryFee">Taxa de Entrega (R$)</Label>
               <Input
@@ -503,7 +620,9 @@ export function MenuSettings() {
                 {...register('deliveryFee')}
                 placeholder="0.00"
               />
-              <p className="text-[11px] text-muted-foreground">Deixe 0 para entrega grátis</p>
+              <p className="text-[11px] text-muted-foreground">
+                Deixe 0 para entrega grátis
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -534,7 +653,9 @@ export function MenuSettings() {
                   className="w-1/2"
                 />
               </div>
-              <p className="text-[11px] text-muted-foreground">Ex: 30 a 60 minutos</p>
+              <p className="text-[11px] text-muted-foreground">
+                Ex: 30 a 60 minutos
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -548,7 +669,8 @@ export function MenuSettings() {
                 Horário de Funcionamento
               </CardTitle>
               <CardDescription>
-                Defina o horário de abertura e fechamento para cada dia da semana.
+                Defina o horário de abertura e fechamento para cada dia da
+                semana.
               </CardDescription>
             </div>
             <Button
@@ -578,7 +700,9 @@ export function MenuSettings() {
                     const isOpen = watch(`businessHours.${index}.isOpen`)
                     return (
                       <TableRow key={dayName}>
-                        <TableCell className="font-semibold text-slate-700">{dayName}</TableCell>
+                        <TableCell className="font-semibold text-slate-700">
+                          {dayName}
+                        </TableCell>
                         <TableCell className="text-center">
                           <Controller
                             control={control}
@@ -628,11 +752,14 @@ export function MenuSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between rounded-lg border p-4 bg-slate-50/50">
+            <div className="flex items-center justify-between rounded-lg border bg-slate-50/50 p-4">
               <div className="space-y-0.5">
-                <Label className="text-base font-semibold">Aceitar Pedidos (Loja Aberta)</Label>
+                <Label className="text-base font-semibold">
+                  Aceitar Pedidos (Loja Aberta)
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  Se desativado, o cardápio exibirá "Fechado" e bloqueará novas compras imediatamente.
+                  Se desativado, o cardápio exibirá "Fechado" e bloqueará novas
+                  compras imediatamente.
                 </p>
               </div>
               <Controller
@@ -664,19 +791,29 @@ export function MenuSettings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="logo_url">URL da Logo</Label>
-                <Input id="logo_url" {...register('logo_url')} placeholder="https://..." />
+                <Input
+                  id="logo_url"
+                  {...register('logo_url')}
+                  placeholder="https://..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="banner_url">URL do Banner</Label>
-                <Input id="banner_url" {...register('banner_url')} placeholder="https://..." />
+                <Input
+                  id="banner_url"
+                  {...register('banner_url')}
+                  placeholder="https://..."
+                />
               </div>
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Paleta de Cores do Tema:</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <Label className="text-sm font-semibold">
+                Paleta de Cores do Tema:
+              </Label>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {THEMES.map((theme) => (
                   <button
                     key={theme.name}
@@ -691,12 +828,23 @@ export function MenuSettings() {
                     }}
                     className="flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary"
                     style={{
-                      borderColor: watch('primaryColor') === theme.primary ? theme.primary : 'transparent',
-                      backgroundColor: watch('primaryColor') === theme.primary ? theme.bg : undefined,
+                      borderColor:
+                        watch('primaryColor') === theme.primary
+                          ? theme.primary
+                          : 'transparent',
+                      backgroundColor:
+                        watch('primaryColor') === theme.primary
+                          ? theme.bg
+                          : undefined,
                     }}
                   >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full shadow-sm" style={{ backgroundColor: theme.primary }} />
-                    <span className="text-xs font-medium text-slate-700">{theme.name}</span>
+                    <div
+                      className="flex h-7 w-7 items-center justify-center rounded-full shadow-sm"
+                      style={{ backgroundColor: theme.primary }}
+                    />
+                    <span className="text-xs font-medium text-slate-700">
+                      {theme.name}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -717,10 +865,11 @@ export function MenuSettings() {
                     backgroundColor: bg,
                   })
                 }}
-                className="h-12 w-20 p-1 cursor-pointer"
+                className="h-12 w-20 cursor-pointer p-1"
               />
-              <p className="text-xs text-muted-foreground flex-1">
-                Selecione a cor primária para ajustar automaticamente as cores de fundo.
+              <p className="flex-1 text-xs text-muted-foreground">
+                Selecione a cor primária para ajustar automaticamente as cores
+                de fundo.
               </p>
             </div>
           </CardContent>
@@ -734,28 +883,52 @@ export function MenuSettings() {
               Integrações & Pagamento Pix
             </CardTitle>
             <CardDescription>
-              Configure sua Chave Pix para recebimento de pedidos no checkout e identificadores de marketplaces.
+              Configure sua Chave Pix para recebimento de pedidos no checkout e
+              identificadores de marketplaces.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="pixKey" className="font-semibold text-primary">Chave Pix (Recebimento de Pedidos)</Label>
-              <Input id="pixKey" {...register('pixKey')} placeholder="CNPJ, Telefone, E-mail ou Aleatória" />
-              <p className="text-[11px] text-muted-foreground">Exibida no checkout para retira no balcão e Pix adiantado</p>
+              <Label htmlFor="pixKey" className="font-semibold text-primary">
+                Chave Pix (Recebimento de Pedidos)
+              </Label>
+              <Input
+                id="pixKey"
+                {...register('pixKey')}
+                placeholder="CNPJ, Telefone, E-mail ou Aleatória"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Exibida no checkout para retira no balcão e Pix adiantado
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ifoodMerchantId">ID da Loja iFood (Merchant ID)</Label>
-              <Input id="ifoodMerchantId" {...register('ifoodMerchantId')} placeholder="Ex: uuid-ifood-merchant" />
+              <Label htmlFor="ifoodMerchantId">
+                ID da Loja iFood (Merchant ID)
+              </Label>
+              <Input
+                id="ifoodMerchantId"
+                {...register('ifoodMerchantId')}
+                placeholder="Ex: uuid-ifood-merchant"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="anotaAiApiKey">Chave API Anota AI</Label>
-              <Input id="anotaAiApiKey" {...register('anotaAiApiKey')} placeholder="Ex: token_anota_ai_secret" />
+              <Input
+                id="anotaAiApiKey"
+                {...register('anotaAiApiKey')}
+                placeholder="Ex: token_anota_ai_secret"
+              />
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" size="lg" disabled={isSubmitting} className="px-8 font-bold">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            className="px-8 font-bold"
+          >
             {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
             Salvar Configurações da Empresa
           </Button>

@@ -1,27 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Store,
-  ShoppingBag,
-  Plus,
-  Minus,
-  Info,
-  Search,
-  X,
-  ChevronRight,
-  UtensilsCrossed,
-  Clock,
-  Truck,
-  MapPin,
-  FileText,
-  QrCode,
-  Copy,
   Check,
-  User,
   CheckCircle2,
+  ChevronRight,
+  Clock,
+  Copy,
+  FileText,
+  Info,
+  MapPin,
+  Minus,
+  Plus,
+  QrCode,
+  Search,
+  ShoppingBag,
+  Store,
+  Truck,
+  User,
+  UtensilsCrossed,
+  X,
 } from 'lucide-react'
-import { useState, useMemo, useEffect } from 'react'
-import { api } from '@/lib/axios'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useState } from 'react'
+
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { api } from '@/lib/axios'
 
 interface GenericMenuProps {
   tenantName: string
@@ -103,7 +104,11 @@ function normalizePixKey(key: string): string {
   }
 
   // 2. Chave Aleatória (EVP / UUID): 36 caracteres
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean)) {
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      clean,
+    )
+  ) {
     return clean.toLowerCase()
   }
 
@@ -115,7 +120,11 @@ function normalizePixKey(key: string): string {
   }
 
   // 4. Telefone com 55 mas sem o sinal de +: ex: 5512992193644 -> +5512992193644
-  if ((digitsOnly.length === 12 || digitsOnly.length === 13) && digitsOnly.startsWith('55') && !clean.startsWith('+')) {
+  if (
+    (digitsOnly.length === 12 || digitsOnly.length === 13) &&
+    digitsOnly.startsWith('55') &&
+    !clean.startsWith('+')
+  ) {
     return `+${digitsOnly}`
   }
 
@@ -163,13 +172,21 @@ function generatePixBRCode({
 
   const payload =
     '000201' +
-    '26' + merchantAccountInfo.length.toString().padStart(2, '0') + merchantAccountInfo +
+    '26' +
+    merchantAccountInfo.length.toString().padStart(2, '0') +
+    merchantAccountInfo +
     '52040000' +
     '5303986' +
-    '54' + formattedAmount.length.toString().padStart(2, '0') + formattedAmount +
+    '54' +
+    formattedAmount.length.toString().padStart(2, '0') +
+    formattedAmount +
     '5802BR' +
-    '59' + cleanName.length.toString().padStart(2, '0') + cleanName +
-    '60' + cleanCity.length.toString().padStart(2, '0') + cleanCity +
+    '59' +
+    cleanName.length.toString().padStart(2, '0') +
+    cleanName +
+    '60' +
+    cleanCity.length.toString().padStart(2, '0') +
+    cleanCity +
     '62070503***' +
     '6304'
 
@@ -192,7 +209,7 @@ function checkIsOpen(profile: any) {
 
   const businessHours = profile.businessHours || []
   const todaySchedule = businessHours.find(
-    (bh: any) => bh.dayOfWeek === currentDayOfWeek
+    (bh: any) => bh.dayOfWeek === currentDayOfWeek,
   )
 
   if (!todaySchedule || !todaySchedule.isOpen) {
@@ -242,7 +259,7 @@ const DynamicHero = ({ profile }: { profile: any }) => {
       />
 
       {/* Padrão Geométrico Sutil */}
-      <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:28px_28px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:28px_28px] opacity-15" />
 
       {/* Orbes de Luz Flutuantes Animadas (Bokeh) */}
       <motion.div
@@ -252,7 +269,7 @@ const DynamicHero = ({ profile }: { profile: any }) => {
           y: [0, -15, 0],
         }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-white/30 blur-3xl pointer-events-none"
+        className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/30 blur-3xl"
       />
 
       <motion.div
@@ -262,7 +279,7 @@ const DynamicHero = ({ profile }: { profile: any }) => {
           y: [0, 20, 0],
         }}
         transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -bottom-24 -left-20 h-96 w-96 rounded-full bg-black/40 blur-3xl pointer-events-none"
+        className="pointer-events-none absolute -bottom-24 -left-20 h-96 w-96 rounded-full bg-black/40 blur-3xl"
       />
     </div>
   )
@@ -278,7 +295,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
   const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3>(1)
-  const [fulfillmentType, setFulfillmentType] = useState<'DELIVERY' | 'TAKEOUT'>('DELIVERY')
+  const [fulfillmentType, setFulfillmentType] = useState<
+    'DELIVERY' | 'TAKEOUT'
+  >('DELIVERY')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [street, setStreet] = useState('')
@@ -288,7 +307,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [state, setState] = useState('')
   const [zipcode, setZipcode] = useState('')
   const [complement, setComplement] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'>('PIX')
+  const [paymentMethod, setPaymentMethod] = useState<
+    'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'
+  >('PIX')
   const [changeAmount, setChangeAmount] = useState('')
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
   const [isCopiedPix, setIsCopiedPix] = useState(false)
@@ -355,7 +376,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         if (client.addresses && client.addresses.length > 0) {
           setSavedAddresses(client.addresses)
           const addr = client.addresses[0]
-          setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
+          setZipcode(
+            addr.zipcode
+              ? formatCep(addr.zipcode.toString().padStart(8, '0'))
+              : '',
+          )
           setStreet(addr.street || '')
           setNumber(addr.number ? addr.number.toString() : '')
           setNeighborhood(addr.neighborhood || '')
@@ -391,7 +416,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       setPhoneSearchToast({
         type: 'info',
-        message: 'Cliente não cadastrado. Preencha seus dados abaixo para se cadastrar!',
+        message:
+          'Cliente não cadastrado. Preencha seus dados abaixo para se cadastrar!',
       })
 
       // Pula para o campo Nome automaticamente
@@ -406,7 +432,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleSelectSavedAddress = (addr: any) => {
-    setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
+    setZipcode(
+      addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '',
+    )
     setStreet(addr.street || '')
     setNumber(addr.number ? addr.number.toString() : '')
     setNeighborhood(addr.neighborhood || '')
@@ -493,10 +521,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q))
+          (p.description && p.description.toLowerCase().includes(q)),
       )
     } else if (activeCategory !== 'All') {
-      filtered = filtered.filter((p) => (p.category || 'Geral') === activeCategory)
+      filtered = filtered.filter(
+        (p) => (p.category || 'Geral') === activeCategory,
+      )
     }
     return filtered
   }, [products, searchQuery, activeCategory])
@@ -509,7 +539,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         acc[cat].push(product)
         return acc
       },
-      {} as Record<string, Product[]>
+      {} as Record<string, Product[]>,
     )
   }, [filteredProducts])
 
@@ -526,7 +556,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           },
         }
       }
-      return { ...prev, [product.id]: { product, quantity: 1, observation: obs || '' } }
+      return {
+        ...prev,
+        [product.id]: { product, quantity: 1, observation: obs || '' },
+      }
     })
   }
 
@@ -547,16 +580,20 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         delete newCart[productId]
         return newCart
       }
-      return { ...prev, [productId]: { ...existing, quantity: existing.quantity - 1 } }
+      return {
+        ...prev,
+        [productId]: { ...existing, quantity: existing.quantity - 1 },
+      }
     })
   }
 
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
-    0
+    0,
   )
-  const deliveryFee = fulfillmentType === 'DELIVERY' ? Number(profile?.deliveryFee || 0) : 0
+  const deliveryFee =
+    fulfillmentType === 'DELIVERY' ? Number(profile?.deliveryFee || 0) : 0
   const cartTotal = cartSubtotal + deliveryFee
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -597,11 +634,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         name: customerName,
         phone: rawPhone,
         street: fulfillmentType === 'DELIVERY' ? street : 'Retirada no Balcão',
-        number: fulfillmentType === 'DELIVERY' ? (number || '0') : '0',
+        number: fulfillmentType === 'DELIVERY' ? number || '0' : '0',
         neighborhood: fulfillmentType === 'DELIVERY' ? neighborhood : 'Balcão',
-        city: fulfillmentType === 'DELIVERY' ? (city || profile?.city || 'Local') : (profile?.city || 'Local'),
-        state: fulfillmentType === 'DELIVERY' ? (state || profile?.state || 'SP') : (profile?.state || 'SP'),
-        zipcode: fulfillmentType === 'DELIVERY' && rawZipcode ? rawZipcode : undefined,
+        city:
+          fulfillmentType === 'DELIVERY'
+            ? city || profile?.city || 'Local'
+            : profile?.city || 'Local',
+        state:
+          fulfillmentType === 'DELIVERY'
+            ? state || profile?.state || 'SP'
+            : profile?.state || 'SP',
+        zipcode:
+          fulfillmentType === 'DELIVERY' && rawZipcode ? rawZipcode : undefined,
         isNewAddress,
       }
 
@@ -624,7 +668,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       return
     }
 
-    if (fulfillmentType === 'DELIVERY' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
+    if (
+      fulfillmentType === 'DELIVERY' &&
+      (!street.trim() || !number.trim() || !neighborhood.trim())
+    ) {
       alert('Por favor, preencha o endereço completo de entrega.')
       setCheckoutWizardStep(2)
       return
@@ -643,8 +690,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         fulfillmentType === 'DELIVERY'
           ? '🚀 Entrega (Delivery)'
           : fulfillmentType === 'TAKEOUT'
-          ? '🛍️ Retirada no Balcão'
-          : '🍽️ Consumo no Local'
+            ? '🛍️ Retirada no Balcão'
+            : '🍽️ Consumo no Local'
       }\n`
 
       if (fulfillmentType === 'DELIVERY') {
@@ -674,10 +721,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         paymentMethod === 'PIX'
           ? 'Pix'
           : paymentMethod === 'CREDIT'
-          ? 'Cartão de Crédito (na entrega)'
-          : paymentMethod === 'DEBIT'
-          ? 'Cartão de Débito (na entrega)'
-          : `Dinheiro ${changeAmount ? `(Troco para R$ ${changeAmount})` : '(Sem troco)'}`
+            ? 'Cartão de Crédito (na entrega)'
+            : paymentMethod === 'DEBIT'
+              ? 'Cartão de Débito (na entrega)'
+              : `Dinheiro ${changeAmount ? `(Troco para R$ ${changeAmount})` : '(Sem troco)'}`
       }\n`
 
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
@@ -692,7 +739,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const renderCartSection = () => (
     <div className="flex h-full flex-col bg-white">
       <div className="flex items-center justify-between border-b border-slate-100 p-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Seu Pedido</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">
+          Seu Pedido
+        </h2>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-[13px] font-bold text-slate-600">
           {cartCount} itens
         </span>
@@ -703,7 +752,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           <div className="flex h-full flex-col items-center justify-center text-slate-400">
             <ShoppingBag className="mb-4 h-16 w-16 opacity-20" />
             <p className="text-center font-medium">Sua sacola está vazia.</p>
-            <p className="mt-1 text-[13px]">Adicione deliciosos itens ao seu pedido.</p>
+            <p className="mt-1 text-[13px]">
+              Adicione deliciosos itens ao seu pedido.
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -719,14 +770,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h4 className="font-bold text-slate-800 text-[15px] leading-snug">
+                      <h4 className="text-[15px] font-bold leading-snug text-slate-800">
                         {item.product.name}
                       </h4>
-                      <p className="font-black mt-0.5 text-[14px]" style={{ color: 'var(--primary-color)' }}>
+                      <p
+                        className="mt-0.5 text-[14px] font-black"
+                        style={{ color: 'var(--primary-color)' }}
+                      >
                         {formatCurrency(item.product.price * item.quantity)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-inner shrink-0">
+                    <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-inner">
                       <button
                         onClick={() => handleRemoveFromCart(item.product.id)}
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-sm transition-transform active:scale-90"
@@ -750,8 +804,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     <Input
                       placeholder="Observação (ex: Sem cebola)..."
                       value={item.observation || ''}
-                      onChange={(e) => handleUpdateItemObs(item.product.id, e.target.value)}
-                      className="h-8 text-xs bg-white/80"
+                      onChange={(e) =>
+                        handleUpdateItemObs(item.product.id, e.target.value)
+                      }
+                      className="h-8 bg-white/80 text-xs"
                     />
                   </div>
                 </motion.div>
@@ -761,32 +817,44 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         )}
       </div>
 
-      <div className="border-t border-slate-100 bg-slate-50 p-6 space-y-4">
+      <div className="space-y-4 border-t border-slate-100 bg-slate-50 p-6">
         {minOrderValue > 0 && (
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>Pedido mínimo:</span>
-            <span className={isMinOrderSatisfied ? 'font-bold text-emerald-600' : 'font-bold text-amber-600'}>
+            <span
+              className={
+                isMinOrderSatisfied
+                  ? 'font-bold text-emerald-600'
+                  : 'font-bold text-amber-600'
+              }
+            >
               {formatCurrency(minOrderValue)}
             </span>
           </div>
         )}
 
         <div className="flex items-end justify-between text-slate-900">
-          <span className="text-[15px] font-bold text-slate-500 uppercase tracking-wide">Subtotal</span>
-          <span className="text-2xl font-black tracking-tight">{formatCurrency(cartSubtotal)}</span>
+          <span className="text-[15px] font-bold uppercase tracking-wide text-slate-500">
+            Subtotal
+          </span>
+          <span className="text-2xl font-black tracking-tight">
+            {formatCurrency(cartSubtotal)}
+          </span>
         </div>
 
         <button
           onClick={handleOpenCheckout}
-          disabled={cartCount === 0 || !storeStatus.isOpen || !isMinOrderSatisfied}
+          disabled={
+            cartCount === 0 || !storeStatus.isOpen || !isMinOrderSatisfied
+          }
           className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           style={{ backgroundColor: 'var(--primary-color)' }}
         >
           {!storeStatus.isOpen
             ? 'Restaurante Fechado'
             : !isMinOrderSatisfied
-            ? `Mínimo ${formatCurrency(minOrderValue)}`
-            : 'Avançar para o Checkout'}
+              ? `Mínimo ${formatCurrency(minOrderValue)}`
+              : 'Avançar para o Checkout'}
           {storeStatus.isOpen && isMinOrderSatisfied && (
             <ChevronRight className="h-5 w-5 stroke-[3]" />
           )}
@@ -797,36 +865,43 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   return (
     <div className="flex min-h-[100dvh] w-full flex-col bg-[#F8FAFC] font-sans text-slate-800 lg:flex-row">
-      <main className="flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0 relative">
+      <main className="relative flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
         <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
           {/* Banner Hero Container com Conteúdo 100% Sobreposto */}
-          <div className="relative min-h-[220px] sm:min-h-[250px] md:min-h-[270px] w-full overflow-hidden flex flex-col justify-end p-5 lg:p-10 shadow-lg">
+          <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden p-5 shadow-lg sm:min-h-[250px] md:min-h-[270px] lg:p-10">
             {/* Fundo do Banner (Imagem ou Mesh Gerativo Animado) */}
             <DynamicHero profile={profile} />
 
             {/* Máscara de Gradiente para Leitura Perfeita dos Textos */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-black/20 z-10 pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-black/20" />
 
             {/* Conteúdo Posicionado Sobre o Banner */}
-            <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-end gap-4 text-white">
+            <div className="relative z-20 flex flex-col items-start gap-4 text-white sm:flex-row sm:items-end">
               {/* Box do Logo */}
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white/90 bg-white shadow-2xl lg:h-24 lg:w-24 transition-transform hover:scale-105">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white/90 bg-white shadow-2xl transition-transform hover:scale-105 lg:h-24 lg:w-24">
                 {profile?.logo_url ? (
-                  <img src={profile.logo_url} alt="Logo" className="h-full w-full object-cover" />
+                  <img
+                    src={profile.logo_url}
+                    alt="Logo"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <Store className="h-full w-full p-4" style={{ color: 'var(--primary-color, #FF5722)' }} />
+                  <Store
+                    className="h-full w-full p-4"
+                    style={{ color: 'var(--primary-color, #FF5722)' }}
+                  />
                 )}
               </div>
 
               {/* Título e Badges da Loja */}
-              <div className="flex flex-col gap-2 flex-1 drop-shadow-md">
+              <div className="flex flex-1 flex-col gap-2 drop-shadow-md">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                  <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">
                     {profile?.tradeName || tenantName}
                   </h1>
                   <button
                     onClick={() => setIsStoreInfoOpen(true)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-white/90 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 transition-all"
+                    className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3 py-1 text-xs font-bold text-white/90 backdrop-blur-md transition-all hover:bg-white/30 hover:text-white"
                   >
                     <Info className="h-3.5 w-3.5" /> Informações
                   </button>
@@ -835,25 +910,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 {/* Badges de Atendimento */}
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {!storeStatus.isOpen ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20 shadow-sm">
-                      <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span> {storeStatus.reason}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-rose-500/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-white"></span>{' '}
+                      {storeStatus.reason}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider backdrop-blur-md border border-white/20 shadow-sm">
-                      <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span> Aberto agora
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-emerald-500/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-white"></span>{' '}
+                      Aberto agora
                     </span>
                   )}
 
                   {profile?.deliveryTimeMin && (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md">
                       <Clock className="h-3.5 w-3.5 text-indigo-300" />
-                      {profile.deliveryTimeMin}-{profile.deliveryTimeMax || 60} min
+                      {profile.deliveryTimeMin}-{profile.deliveryTimeMax || 60}{' '}
+                      min
                     </span>
                   )}
 
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md">
                     <Truck className="h-3.5 w-3.5 text-indigo-300" />
-                    {profile?.deliveryFee > 0 ? formatCurrency(profile.deliveryFee) : 'Entrega Grátis'}
+                    {profile?.deliveryFee > 0
+                      ? formatCurrency(profile.deliveryFee)
+                      : 'Entrega Grátis'}
                   </span>
                 </div>
               </div>
@@ -861,8 +941,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           </div>
 
           {/* Barra de Pesquisa (Abaixo do Banner) */}
-          <div className="px-5 lg:px-12 pt-4 pb-2">
-            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/60 focus-within:ring-2 focus-within:ring-[var(--primary-color)] transition-all">
+          <div className="px-5 pb-2 pt-4 lg:px-12">
+            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/60 transition-all focus-within:ring-2 focus-within:ring-[var(--primary-color)]">
               <Search className="h-5 w-5 text-slate-400" />
               <input
                 type="text"
@@ -874,7 +954,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100"
+                  className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -885,14 +965,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
         {/* Categorias Navegáveis */}
         {!searchQuery && categories.length > 0 && (
-          <div className="sticky top-0 z-30 shrink-0 border-b border-slate-200/60 bg-white/80 px-5 pt-4 pb-0 backdrop-blur-xl lg:px-12 mt-4">
-            <div className="flex gap-6 overflow-x-auto no-scrollbar">
+          <div className="sticky top-0 z-30 mt-4 shrink-0 border-b border-slate-200/60 bg-white/80 px-5 pb-0 pt-4 backdrop-blur-xl lg:px-12">
+            <div className="no-scrollbar flex gap-6 overflow-x-auto">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`relative whitespace-nowrap pb-3 text-[15px] font-bold transition-colors ${
-                    activeCategory === cat ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+                    activeCategory === cat
+                      ? 'text-slate-900'
+                      : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
                   <span>{cat === 'All' ? 'Menu Completo' : cat}</span>
@@ -901,7 +983,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       layoutId="activeTabIndicator"
                       className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full"
                       style={{ backgroundColor: 'var(--primary-color)' }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 300,
+                        damping: 30,
+                      }}
                     />
                   )}
                 </button>
@@ -919,12 +1005,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           ) : !products?.length ? (
             <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
               <UtensilsCrossed className="mb-4 h-16 w-16 opacity-20" />
-              <h3 className="text-lg font-bold text-slate-600">Nenhum produto cadastrado</h3>
+              <h3 className="text-lg font-bold text-slate-600">
+                Nenhum produto cadastrado
+              </h3>
             </div>
           ) : Object.keys(groupedProducts).length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
               <Search className="mb-4 h-12 w-12 opacity-20" />
-              <p className="font-medium text-slate-600">Nenhum resultado para "{searchQuery}"</p>
+              <p className="font-medium text-slate-600">
+                Nenhum resultado para "{searchQuery}"
+              </p>
             </div>
           ) : (
             <div className="space-y-12">
@@ -933,7 +1023,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   {!searchQuery && (
                     <h2 className="mb-5 flex items-center gap-2 text-[20px] font-black tracking-tight text-slate-900">
                       {catName}
-                      <span className="text-[13px] font-bold text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-full">
+                      <span className="rounded-full bg-slate-200/50 px-2 py-0.5 text-[13px] font-bold text-slate-400">
                         {prods.length}
                       </span>
                     </h2>
@@ -954,22 +1044,23 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           </div>
                         )}
                         <div className="flex flex-1 flex-col p-5">
-                          <h3 className="text-[17px] font-bold text-slate-900 leading-tight">
+                          <h3 className="text-[17px] font-bold leading-tight text-slate-900">
                             {product.name}
                           </h3>
                           {product.description && (
-                            <p className="mt-2 text-[14px] leading-snug text-slate-500 line-clamp-2">
+                            <p className="mt-2 line-clamp-2 text-[14px] leading-snug text-slate-500">
                               {product.description}
                             </p>
                           )}
 
                           <div className="mt-6 flex items-end justify-between gap-4">
                             <div className="flex flex-col">
-                              {product.measureUnit && product.measureUnit !== 'UN' && (
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                                  {product.measureUnit}
-                                </span>
-                              )}
+                              {product.measureUnit &&
+                                product.measureUnit !== 'UN' && (
+                                  <span className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    {product.measureUnit}
+                                  </span>
+                                )}
                               <p className="text-lg font-black tracking-tight text-slate-900">
                                 {formatCurrency(product.price)}
                               </p>
@@ -979,7 +1070,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               {cart[product.id] ? (
                                 <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-inner">
                                   <button
-                                    onClick={() => handleRemoveFromCart(product.id)}
+                                    onClick={() =>
+                                      handleRemoveFromCart(product.id)
+                                    }
                                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-transform active:scale-90"
                                   >
                                     <Minus className="h-4 w-4 stroke-[3]" />
@@ -990,7 +1083,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                   <button
                                     onClick={() => handleAddToCart(product)}
                                     className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
-                                    style={{ backgroundColor: 'var(--primary-color)' }}
+                                    style={{
+                                      backgroundColor: 'var(--primary-color)',
+                                    }}
                                   >
                                     <Plus className="h-4 w-4 stroke-[3]" />
                                   </button>
@@ -999,7 +1094,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                 <button
                                   onClick={() => handleAddToCart(product)}
                                   className="flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:scale-95"
-                                  style={{ backgroundColor: 'var(--primary-color)' }}
+                                  style={{
+                                    backgroundColor: 'var(--primary-color)',
+                                  }}
                                 >
                                   <Plus className="h-4 w-4 stroke-[3]" />
                                   Adicionar
@@ -1019,7 +1116,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </main>
 
       {/* Sidebar Carrinho Desktop */}
-      <aside className="hidden w-[400px] shrink-0 border-l border-slate-200 bg-white shadow-2xl lg:block z-30">
+      <aside className="z-30 hidden w-[400px] shrink-0 border-l border-slate-200 bg-white shadow-2xl lg:block">
         {renderCartSection()}
       </aside>
 
@@ -1041,7 +1138,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   {cartCount}
                 </span>
               </div>
-              <span className="text-[15px] font-bold tracking-wide">Ver Pedido</span>
+              <span className="text-[15px] font-bold tracking-wide">
+                Ver Pedido
+              </span>
             </div>
             <span className="text-[17px] font-black tracking-tight">
               {formatCurrency(cartTotal)}
@@ -1068,12 +1167,14 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
               className="fixed bottom-0 left-0 right-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl lg:hidden"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 p-6 pt-8 relative">
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 h-1.5 w-12 rounded-full bg-slate-200" />
-                <h2 className="text-2xl font-black tracking-tight text-slate-900">Seu Pedido</h2>
+              <div className="relative flex items-center justify-between border-b border-slate-100 p-6 pt-8">
+                <div className="absolute left-1/2 top-3 h-1.5 w-12 -translate-x-1/2 rounded-full bg-slate-200" />
+                <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                  Seu Pedido
+                </h2>
                 <button
                   onClick={() => setIsCartModalOpen(false)}
-                  className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 transition-colors"
+                  className="rounded-full bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1101,14 +1202,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           <div className="space-y-4 text-sm">
             {profile?.street && (
               <div className="flex items-start gap-2.5 text-slate-700">
-                <MapPin className="h-4 w-4 shrink-0 text-slate-400 mt-0.5" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                 <div>
                   <p className="font-semibold">Endereço:</p>
                   <p>
                     {profile.street}, {profile.number} - {profile.neighborhood}
                   </p>
                   <p>
-                    {profile.city} - {profile.state} {profile.zipcode ? `(CEP: ${profile.zipcode})` : ''}
+                    {profile.city} - {profile.state}{' '}
+                    {profile.zipcode ? `(CEP: ${profile.zipcode})` : ''}
                   </p>
                 </div>
               </div>
@@ -1122,17 +1224,27 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             )}
 
             <div className="border-t pt-3">
-              <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" /> Horários de Funcionamento
+              <h4 className="mb-2 flex items-center gap-2 font-bold text-slate-900">
+                <Clock className="h-4 w-4 text-primary" /> Horários de
+                Funcionamento
               </h4>
               <div className="space-y-1 text-xs">
                 {DAYS_OF_WEEK.map((dayName, idx) => {
-                  const bh = (profile?.businessHours || []).find((b: any) => b.dayOfWeek === idx)
+                  const bh = (profile?.businessHours || []).find(
+                    (b: any) => b.dayOfWeek === idx,
+                  )
                   return (
-                    <div key={dayName} className="flex items-center justify-between py-1 border-b border-slate-100">
-                      <span className="font-medium text-slate-600">{dayName}</span>
+                    <div
+                      key={dayName}
+                      className="flex items-center justify-between border-b border-slate-100 py-1"
+                    >
+                      <span className="font-medium text-slate-600">
+                        {dayName}
+                      </span>
                       {bh && bh.isOpen ? (
-                        <span className="font-bold text-emerald-600">{bh.openTime} - {bh.closeTime}</span>
+                        <span className="font-bold text-emerald-600">
+                          {bh.openTime} - {bh.closeTime}
+                        </span>
                       ) : (
                         <span className="text-slate-400">Fechado</span>
                       )}
@@ -1147,23 +1259,29 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       {/* Modal de Checkout Robusto em Etapas (Padrão iFood / Anota AI / Marujo Sliding Wizard) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-2 text-xl font-bold">
               <span className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-primary" />
                 Finalizar Pedido
               </span>
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
                 Etapa {checkoutWizardStep} de 3
               </span>
             </DialogTitle>
 
             {/* Barra de Progresso das Etapas */}
             <div className="grid grid-cols-3 gap-1.5 pt-2">
-              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-primary' : 'bg-slate-200'}`} />
-              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-primary' : 'bg-slate-200'}`} />
-              <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-primary' : 'bg-slate-200'}`} />
+              <div
+                className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-primary' : 'bg-slate-200'}`}
+              />
+              <div
+                className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-primary' : 'bg-slate-200'}`}
+              />
+              <div
+                className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-primary' : 'bg-slate-200'}`}
+              />
             </div>
           </DialogHeader>
 
@@ -1176,30 +1294,38 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-5 py-4 text-sm"
             >
-              <div className="space-y-1 text-center py-2">
-                <h3 className="text-base font-black text-slate-900">Como deseja receber seu pedido?</h3>
-                <p className="text-xs text-slate-500">Selecione uma das opções abaixo para continuar:</p>
+              <div className="space-y-1 py-2 text-center">
+                <h3 className="text-base font-black text-slate-900">
+                  Como deseja receber seu pedido?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Selecione uma das opções abaixo para continuar:
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => {
                     setFulfillmentType('DELIVERY')
                     setCheckoutWizardStep(2)
                   }}
-                  className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 font-bold gap-3 transition-all hover:scale-[1.02] ${
+                  className={`flex flex-col items-center justify-center gap-3 rounded-3xl border-2 p-6 font-bold transition-all hover:scale-[1.02] ${
                     fulfillmentType === 'DELIVERY'
-                      ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20 shadow-md'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      ? 'border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Truck className="h-7 w-7" />
                   </div>
                   <div className="text-center">
-                    <p className="font-extrabold text-sm">🚀 Entrega Delivery</p>
-                    <p className="text-[11px] font-normal text-slate-500 mt-1">Receba no seu endereço</p>
+                    <p className="text-sm font-extrabold">
+                      🚀 Entrega Delivery
+                    </p>
+                    <p className="mt-1 text-[11px] font-normal text-slate-500">
+                      Receba no seu endereço
+                    </p>
                   </div>
                 </button>
 
@@ -1210,18 +1336,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     setPaymentMethod('PIX')
                     setCheckoutWizardStep(2)
                   }}
-                  className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 font-bold gap-3 transition-all hover:scale-[1.02] ${
+                  className={`flex flex-col items-center justify-center gap-3 rounded-3xl border-2 p-6 font-bold transition-all hover:scale-[1.02] ${
                     fulfillmentType === 'TAKEOUT'
-                      ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/20 shadow-md'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      ? 'border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Store className="h-7 w-7" />
                   </div>
                   <div className="text-center">
-                    <p className="font-extrabold text-sm">🛍️ Retirada no Balcão</p>
-                    <p className="text-[11px] font-normal text-slate-500 mt-1">Retire na loja (Pix Antecipado)</p>
+                    <p className="text-sm font-extrabold">
+                      🛍️ Retirada no Balcão
+                    </p>
+                    <p className="mt-1 text-[11px] font-normal text-slate-500">
+                      Retire na loja (Pix Antecipado)
+                    </p>
                   </div>
                 </button>
               </div>
@@ -1238,14 +1368,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               className="space-y-4 py-2 text-sm"
             >
               {/* Etapa 1: Telefone / WhatsApp com Botão de Busca Marujo */}
-              <div className="space-y-2 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="customerPhone" className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                  <Label
+                    htmlFor="customerPhone"
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-900"
+                  >
                     <User className="h-4 w-4 text-primary" />
                     <span>1. Seu Telefone / WhatsApp *</span>
                   </Label>
                   {clientFound && (
-                    <span className="flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-sm">
+                    <span className="flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/90 px-2.5 py-0.5 text-[11px] font-black text-emerald-700 shadow-sm">
                       <CheckCircle2 className="h-3 w-3" /> Cliente Identificado
                     </span>
                   )}
@@ -1263,13 +1396,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       }
                     }}
                     placeholder="(11) 99999-9999"
-                    className="flex-1 bg-white border-slate-300 focus-visible:ring-primary font-medium"
+                    className="flex-1 border-slate-300 bg-white font-medium focus-visible:ring-primary"
                   />
                   <button
                     type="button"
                     onClick={() => handlePhoneSearch()}
-                    disabled={customerPhone.replace(/\D/g, '').length < 10 || isLoadingPhone}
-                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors disabled:opacity-50 shadow-sm"
+                    disabled={
+                      customerPhone.replace(/\D/g, '').length < 10 ||
+                      isLoadingPhone
+                    }
+                    className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
                   >
                     {isLoadingPhone ? (
                       <span className="animate-spin text-sm">⏳</span>
@@ -1283,30 +1419,38 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 {/* Banner de Notificação Toast (Busca de Cliente) */}
                 {phoneSearchToast && (
                   <div
-                    className={`p-3 rounded-xl font-bold text-xs flex items-center gap-2 border shadow-sm ${
+                    className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-bold shadow-sm ${
                       phoneSearchToast.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                         : phoneSearchToast.type === 'info'
-                        ? 'bg-amber-50 border-amber-300 text-amber-900'
-                        : 'bg-rose-50 border-rose-300 text-rose-800'
+                          ? 'border-amber-300 bg-amber-50 text-amber-900'
+                          : 'border-rose-300 bg-rose-50 text-rose-800'
                     }`}
                   >
                     <span className="text-sm">
-                      {phoneSearchToast.type === 'success' ? '✅' : phoneSearchToast.type === 'info' ? 'ℹ️' : '⚠️'}
+                      {phoneSearchToast.type === 'success'
+                        ? '✅'
+                        : phoneSearchToast.type === 'info'
+                          ? 'ℹ️'
+                          : '⚠️'}
                     </span>
                     <span>{phoneSearchToast.message}</span>
                   </div>
                 )}
 
                 <p className="text-[11px] text-slate-500">
-                  Digite seu WhatsApp e aperte Enter ou clique em Buscar para recuperar seus dados e endereços salvos.
+                  Digite seu WhatsApp e aperte Enter ou clique em Buscar para
+                  recuperar seus dados e endereços salvos.
                 </p>
               </div>
 
               {/* Formulário de Nome e Endereço */}
               <div className="space-y-3 pt-1">
                 <div className="space-y-1">
-                  <Label htmlFor="name-input" className="text-xs font-bold text-slate-800">
+                  <Label
+                    htmlFor="name-input"
+                    className="text-xs font-bold text-slate-800"
+                  >
                     2. Seu Nome Completo *
                   </Label>
                   <Input
@@ -1315,7 +1459,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     onChange={(e) => setCustomerName(e.target.value)}
                     disabled={addressReadonly}
                     placeholder="Ex: João Silva"
-                    className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 disabled:text-slate-700 font-medium"
+                    className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100 disabled:text-slate-700"
                   />
                 </div>
 
@@ -1323,8 +1467,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 {fulfillmentType === 'DELIVERY' && (
                   <div className="space-y-3 border-t pt-3">
                     <div className="flex items-center justify-between">
-                      <Label className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4 text-primary" /> Endereço de Entrega *
+                      <Label className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <MapPin className="h-4 w-4 text-primary" /> Endereço de
+                        Entrega *
                       </Label>
 
                       <div className="flex items-center gap-3">
@@ -1332,16 +1477,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           <button
                             type="button"
                             onClick={() => setIsAddressesModalOpen(true)}
-                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/20"
+                            className="flex items-center gap-1 rounded-lg border border-primary/20 bg-primary/5 px-2 py-0.5 text-xs font-bold text-primary hover:underline"
                           >
-                            <MapPin className="h-3.5 w-3.5" /> {savedAddresses.length} Endereços
+                            <MapPin className="h-3.5 w-3.5" />{' '}
+                            {savedAddresses.length} Endereços
                           </button>
                         )}
                         {addressReadonly && (
                           <button
                             type="button"
                             onClick={handleNewAddress}
-                            className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                            className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
                           >
                             <Plus className="h-3.5 w-3.5" /> Novo Endereço
                           </button>
@@ -1351,28 +1497,29 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                     {/* Exibição do Endereço Selecionado */}
                     {savedAddresses.length > 0 && !isNewAddress && (
-                      <div className="p-3.5 rounded-2xl border-2 border-primary/30 bg-primary/5 space-y-2">
+                      <div className="space-y-2 rounded-2xl border-2 border-primary/30 bg-primary/5 p-3.5">
                         <div className="flex items-start justify-between">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary">
                               Endereço Selecionado
                             </span>
-                            <p className="font-bold text-sm text-slate-900 mt-1">
+                            <p className="mt-1 text-sm font-bold text-slate-900">
                               {street}, {number}
                             </p>
-                            <p className="text-xs text-slate-600 font-medium">
-                              {neighborhood} - {city}/{state} {zipcode ? `(CEP: ${zipcode})` : ''}
+                            <p className="text-xs font-medium text-slate-600">
+                              {neighborhood} - {city}/{state}{' '}
+                              {zipcode ? `(CEP: ${zipcode})` : ''}
                             </p>
                             {complement && (
-                              <p className="text-xs text-slate-500 italic mt-0.5">
+                              <p className="mt-0.5 text-xs italic text-slate-500">
                                 Comp: {complement}
                               </p>
                             )}
                           </div>
-                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-1" />
+                          <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-primary" />
                         </div>
 
-                        <div className="flex items-center gap-3 pt-1 border-t border-primary/10">
+                        <div className="flex items-center gap-3 border-t border-primary/10 pt-1">
                           {savedAddresses.length > 1 && (
                             <button
                               type="button"
@@ -1397,9 +1544,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     {(savedAddresses.length === 0 || isNewAddress) && (
                       <div className="space-y-3 pt-1">
                         <div className="space-y-1">
-                          <Label htmlFor="zipcode-input" className="text-xs flex items-center justify-between">
+                          <Label
+                            htmlFor="zipcode-input"
+                            className="flex items-center justify-between text-xs"
+                          >
                             <span>Buscar CEP</span>
-                            {isSearchingCEPCheckout && <span className="text-[10px] text-emerald-600 font-bold animate-pulse">Buscando endereço...</span>}
+                            {isSearchingCEPCheckout && (
+                              <span className="animate-pulse text-[10px] font-bold text-emerald-600">
+                                Buscando endereço...
+                              </span>
+                            )}
                           </Label>
                           <Input
                             id="zipcode-input"
@@ -1407,74 +1561,86 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             onChange={handleCepChange}
                             disabled={addressReadonly}
                             placeholder="00000-000"
-                            className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                            className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                           />
                         </div>
 
                         <div className="grid grid-cols-3 gap-2">
                           <div className="col-span-2 space-y-1">
-                            <Label htmlFor="street" className="text-xs">Rua / Logradouro *</Label>
+                            <Label htmlFor="street" className="text-xs">
+                              Rua / Logradouro *
+                            </Label>
                             <Input
                               id="street"
                               value={street}
                               onChange={(e) => setStreet(e.target.value)}
                               disabled={addressReadonly}
                               placeholder="Ex: Av. Paulista"
-                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label htmlFor="number" className="text-xs">Número *</Label>
+                            <Label htmlFor="number" className="text-xs">
+                              Número *
+                            </Label>
                             <Input
                               id="number-input"
                               value={number}
                               onChange={(e) => setNumber(e.target.value)}
                               disabled={addressReadonly}
                               placeholder="Ex: 1000"
-                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
-                            <Label htmlFor="neighborhood" className="text-xs">Bairro *</Label>
+                            <Label htmlFor="neighborhood" className="text-xs">
+                              Bairro *
+                            </Label>
                             <Input
                               id="neighborhood"
                               value={neighborhood}
                               onChange={(e) => setNeighborhood(e.target.value)}
                               disabled={addressReadonly}
                               placeholder="Bairro"
-                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label htmlFor="complement" className="text-xs">Complemento / Ref.</Label>
+                            <Label htmlFor="complement" className="text-xs">
+                              Complemento / Ref.
+                            </Label>
                             <Input
                               id="complement"
                               value={complement}
                               onChange={(e) => setComplement(e.target.value)}
                               disabled={addressReadonly}
                               placeholder="Apto, Bloco, etc."
-                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-2">
                           <div className="col-span-2 space-y-1">
-                            <Label htmlFor="city" className="text-xs">Cidade *</Label>
+                            <Label htmlFor="city" className="text-xs">
+                              Cidade *
+                            </Label>
                             <Input
                               id="city"
                               value={city}
                               onChange={(e) => setCity(e.target.value)}
                               disabled={addressReadonly}
                               placeholder="Cidade"
-                              className="bg-white border-slate-300 focus-visible:ring-primary disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label htmlFor="state" className="text-xs">Estado *</Label>
+                            <Label htmlFor="state" className="text-xs">
+                              Estado *
+                            </Label>
                             <Input
                               id="state"
                               value={state}
@@ -1482,7 +1648,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               disabled={addressReadonly}
                               maxLength={2}
                               placeholder="UF"
-                              className="bg-white border-slate-300 focus-visible:ring-primary uppercase disabled:bg-slate-100 font-medium"
+                              className="border-slate-300 bg-white font-medium uppercase focus-visible:ring-primary disabled:bg-slate-100"
                             />
                           </div>
                         </div>
@@ -1492,11 +1658,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t gap-3">
+              <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <button
                   type="button"
                   onClick={() => setCheckoutWizardStep(1)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors"
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
                 >
                   ← Voltar
                 </button>
@@ -1508,16 +1674,23 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       alert('Por favor, preencha seu nome e telefone.')
                       return
                     }
-                    if (fulfillmentType === 'DELIVERY' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
-                      alert('Por favor, preencha o endereço completo de entrega.')
+                    if (
+                      fulfillmentType === 'DELIVERY' &&
+                      (!street.trim() || !number.trim() || !neighborhood.trim())
+                    ) {
+                      alert(
+                        'Por favor, preencha o endereço completo de entrega.',
+                      )
                       return
                     }
                     await registerClientInBackend()
                     setCheckoutWizardStep(3)
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-colors shadow-sm"
+                  className="rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary/90"
                 >
-                  {isNewAddress || !clientFound ? 'Cadastrar e Avançar para Pagamento →' : 'Avançar para Pagamento →'}
+                  {isNewAddress || !clientFound
+                    ? 'Cadastrar e Avançar para Pagamento →'
+                    : 'Avançar para Pagamento →'}
                 </button>
               </div>
             </motion.div>
@@ -1539,7 +1712,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('PIX')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
                       paymentMethod === 'PIX'
                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                         : 'border-slate-200 text-slate-600'
@@ -1553,7 +1726,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('CREDIT')}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
                           paymentMethod === 'CREDIT'
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-slate-200 text-slate-600'
@@ -1564,7 +1737,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('DEBIT')}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
                           paymentMethod === 'DEBIT'
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-slate-200 text-slate-600'
@@ -1575,7 +1748,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('CASH')}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
                           paymentMethod === 'CASH'
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-slate-200 text-slate-600'
@@ -1589,46 +1762,65 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 {/* Caixa da Chave Pix & QR Code Oficial (Retirada ou Opção Pix) */}
                 {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3 shadow-sm">
+                  <div className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
                         <QrCode className="h-4 w-4 text-emerald-600" />
                         <span>QR Code Pix & Copia e Cola Oficial</span>
                       </div>
-                      <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                      <span className="rounded-full border border-emerald-300 bg-emerald-100/90 px-2.5 py-0.5 text-[11px] font-black text-emerald-800">
                         {formatCurrency(cartTotal)}
                       </span>
                     </div>
 
                     {/* Renderização do QR Code Visual Oficial BACEN */}
                     {pixBRCodePayload && (
-                      <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
+                      <div className="flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-white p-3 shadow-sm">
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixBRCodePayload)}`}
                           alt="QR Code Pix do Pedido"
-                          className="h-44 w-44 object-contain rounded-lg"
+                          className="h-44 w-44 rounded-lg object-contain"
                         />
-                        <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center">
+                        <p className="mt-2 text-center text-[11px] font-semibold text-slate-500">
                           Abra o app do seu banco e escaneie o QR Code acima
                         </p>
                       </div>
                     )}
 
-                    <p className="text-[11px] text-emerald-700 leading-snug">
-                      Ou copie o código <strong>Pix Copia e Cola</strong> abaixo. Ao colar no seu banco, o valor exato de <strong>{formatCurrency(cartTotal)}</strong> será preenchido automaticamente!
+                    <p className="text-[11px] leading-snug text-emerald-700">
+                      Ou copie o código <strong>Pix Copia e Cola</strong>{' '}
+                      abaixo. Ao colar no seu banco, o valor exato de{' '}
+                      <strong>{formatCurrency(cartTotal)}</strong> será
+                      preenchido automaticamente!
                     </p>
 
-                    <div className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 p-2.5 shadow-sm">
-                      <span className="flex-1 font-mono text-[11px] text-slate-800 truncate font-semibold">
-                        {pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-2.5 shadow-sm">
+                      <span className="flex-1 truncate font-mono text-[11px] font-semibold text-slate-800">
+                        {pixBRCodePayload ||
+                          profile?.pixKey ||
+                          profile?.whatsappNumber ||
+                          'Contate a loja'}
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors shadow-sm"
+                        onClick={() =>
+                          handleCopyPixKey(
+                            pixBRCodePayload ||
+                              profile?.pixKey ||
+                              profile?.whatsappNumber ||
+                              '',
+                          )
+                        }
+                        className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700"
                       >
-                        {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                        {isCopiedPix ? 'Pix Copiado!' : 'Copiar Pix Copia e Cola'}
+                        {isCopiedPix ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        {isCopiedPix
+                          ? 'Pix Copiado!'
+                          : 'Copiar Pix Copia e Cola'}
                       </button>
                     </div>
                   </div>
@@ -1636,7 +1828,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
                   <div className="space-y-1 pt-1">
-                    <Label htmlFor="changeAmount" className="text-xs">Precisa de troco para quanto?</Label>
+                    <Label htmlFor="changeAmount" className="text-xs">
+                      Precisa de troco para quanto?
+                    </Label>
                     <Input
                       id="changeAmount"
                       value={changeAmount}
@@ -1648,7 +1842,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               </div>
 
               {/* Resumo de Valores */}
-              <div className="rounded-xl border bg-slate-50 p-4 space-y-2">
+              <div className="space-y-2 rounded-xl border bg-slate-50 p-4">
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Subtotal dos itens</span>
                   <span>{formatCurrency(cartSubtotal)}</span>
@@ -1656,12 +1850,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 {fulfillmentType === 'DELIVERY' && (
                   <div className="flex items-center justify-between text-xs text-slate-600">
                     <span>Taxa de Entrega</span>
-                    <span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Grátis'}</span>
+                    <span>
+                      {deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Grátis'}
+                    </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-base font-black text-slate-900 border-t pt-2">
+                <div className="flex items-center justify-between border-t pt-2 text-base font-black text-slate-900">
                   <span>Total a Pagar</span>
-                  <span style={{ color: 'var(--primary-color)' }}>{formatCurrency(cartTotal)}</span>
+                  <span style={{ color: 'var(--primary-color)' }}>
+                    {formatCurrency(cartTotal)}
+                  </span>
                 </div>
               </div>
 
@@ -1669,7 +1867,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={() => setCheckoutWizardStep(2)}
-                  className="px-4 py-3 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors"
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
                 >
                   ← Voltar
                 </button>
@@ -1677,7 +1875,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={handleFinalizeOrder}
-                  className="flex-1 py-3.5 rounded-xl font-black text-white text-sm shadow-lg transition-transform active:scale-98"
+                  className="active:scale-98 flex-1 rounded-xl py-3.5 text-sm font-black text-white shadow-lg transition-transform"
                   style={{ backgroundColor: 'var(--primary-color)' }}
                 >
                   Confirmar e Enviar Pedido via WhatsApp 🚀
@@ -1689,71 +1887,81 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </Dialog>
 
       {/* Modal Dialog de Meus Endereços Cadastrados (Padrão Marujo) */}
-      <Dialog open={isAddressesModalOpen} onOpenChange={setIsAddressesModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+      <Dialog
+        open={isAddressesModalOpen}
+        onOpenChange={setIsAddressesModalOpen}
+      >
+        <DialogContent className="rounded-3xl p-6 sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
-              <MapPin className="h-5 w-5 text-primary" /> Meus Endereços Cadastrados
+              <MapPin className="h-5 w-5 text-primary" /> Meus Endereços
+              Cadastrados
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Selecione em qual endereço deseja receber seu pedido:
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2.5 max-h-[60vh] overflow-y-auto py-2 pr-1">
+          <div className="max-h-[60vh] space-y-2.5 overflow-y-auto py-2 pr-1">
             {savedAddresses.map((addr, index) => {
-              const isSelected = addressReadonly && street === addr.street && number === addr.number?.toString()
+              const isSelected =
+                addressReadonly &&
+                street === addr.street &&
+                number === addr.number?.toString()
               return (
                 <div
                   key={index}
                   onClick={() => handleSelectSavedAddress(addr)}
-                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                  className={`flex cursor-pointer items-start justify-between gap-3 rounded-2xl border-2 p-3.5 transition-all ${
                     isSelected
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
+                      ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary'
                       : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-slate-900">
+                      <p className="text-sm font-bold text-slate-900">
                         {addr.street}, {addr.number}
                       </p>
                       {addr.is_main && (
-                        <span className="bg-primary/10 text-primary text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase text-primary">
                           Principal
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 font-medium">
+                    <p className="text-xs font-medium text-slate-600">
                       {addr.neighborhood} - {addr.city}/{addr.state}
                     </p>
                     {addr.zipcode && (
                       <p className="text-[11px] text-slate-400">
-                        CEP: {formatCep(addr.zipcode.toString().padStart(8, '0'))}
+                        CEP:{' '}
+                        {formatCep(addr.zipcode.toString().padStart(8, '0'))}
                       </p>
                     )}
                   </div>
-                  {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />}
+                  {isSelected && (
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  )}
                 </div>
               )
             })}
           </div>
 
-          <div className="pt-2 border-t flex items-center justify-between">
+          <div className="flex items-center justify-between border-t pt-2">
             <button
               type="button"
               onClick={() => {
                 handleNewAddress()
                 setIsAddressesModalOpen(false)
               }}
-              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+              className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
             >
               <Plus className="h-4 w-4" /> Cadastrar novo endereço
             </button>
             <button
               type="button"
               onClick={() => setIsAddressesModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"
             >
               Fechar
             </button>

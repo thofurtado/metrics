@@ -86,13 +86,9 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
             !i.isSaida &&
             !i.is_withdrawal &&
             ((i.formaPagamento &&
-              i.formaPagamento
-                .toLowerCase()
-                .includes(forma.toLowerCase())) ||
+              i.formaPagamento.toLowerCase().includes(forma.toLowerCase())) ||
               (i.payment_method &&
-                i.payment_method
-                  .toLowerCase()
-                  .includes(forma.toLowerCase()))),
+                i.payment_method.toLowerCase().includes(forma.toLowerCase()))),
         )
         .reduce(
           (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),

@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   Boxes,
   ChevronLeft,
@@ -299,5 +299,3 @@ export function Sidebar() {
     </>
   )
 }
-
-

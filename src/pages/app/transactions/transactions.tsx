@@ -7,21 +7,19 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
+  FileText,
   Inbox,
   Plus,
   Search,
   TrendingDown,
   TrendingUp,
   X,
-  FileText,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
-
-import { Link } from 'react-router-dom'
 
 import { bulkPayTransactions } from '@/api/bulk-pay-transactions'
 import { getFinanceMetrics } from '@/api/get-finance-metrics'
@@ -56,6 +54,7 @@ import {
 import { api } from '@/lib/axios'
 import { OverdueTransactionsModal } from '@/pages/app/dashboard/overdue-transactions-modal'
 
+import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { LinkReceiptModal } from './components/link-receipt-modal'
 import { MonthlySummaryDialog } from './components/monthly-summary-dialog'
 import { PendingReceiptsModal } from './components/pending-receipts-modal'
@@ -68,7 +67,6 @@ import {
 } from './transaction-table-row'
 import { TransactionTransfer } from './transaction-transfer'
 import { TransactionTableFilters } from './TransactionTableFilters'
-import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 
 export function Transactions() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -345,17 +343,26 @@ export function Transactions() {
     for (const [sessionId, groupItems] of cashierMap.entries()) {
       if (groupItems.length === 1) {
         const item = groupItems[0]
-        const cleanDesc = item.description ? item.description.replace(/\s*-\s*[^-]+$/, '') : 'Fechamento de Caixa'
+        const cleanDesc = item.description
+          ? item.description.replace(/\s*-\s*[^-]+$/, '')
+          : 'Fechamento de Caixa'
         result.push({
           ...item,
           description: cleanDesc,
-          accounts: item.accounts?.name ? item.accounts : { name: 'Caixa / Bancos' }
+          accounts: item.accounts?.name
+            ? item.accounts
+            : { name: 'Caixa / Bancos' },
         })
       } else {
         const first = groupItems[0]
-        const totalSum = groupItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
-        const cleanDesc = first.description ? first.description.replace(/\s*-\s*[^-]+$/, '') : 'Fechamento de Caixa'
-        
+        const totalSum = groupItems.reduce(
+          (acc, curr) => acc + Number(curr.amount || 0),
+          0,
+        )
+        const cleanDesc = first.description
+          ? first.description.replace(/\s*-\s*[^-]+$/, '')
+          : 'Fechamento de Caixa'
+
         result.push({
           ...first,
           id: `cashier-group-${sessionId}`,
@@ -365,7 +372,7 @@ export function Transactions() {
           accounts: { name: 'Vários Bancos' },
           childTransactions: groupItems,
           isCashierGroup: true,
-          cashier_session_id: sessionId
+          cashier_session_id: sessionId,
         })
       }
     }
@@ -397,7 +404,7 @@ export function Transactions() {
                 title="Comprovantes"
               >
                 <Inbox className="h-5 w-5 sm:mr-2" />
-                <span className="hidden sm:inline font-bold">Comprovantes</span>
+                <span className="hidden font-bold sm:inline">Comprovantes</span>
                 {pendingCount > 0 && (
                   <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-rose-500 text-xs font-black text-white ring-2 ring-background">
                     {pendingCount}
@@ -413,7 +420,7 @@ export function Transactions() {
               >
                 <Link to="/transactions/settlements">
                   <CreditCard className="h-5 w-5 sm:mr-2" />
-                  <span className="hidden sm:inline font-bold">Recebíveis</span>
+                  <span className="hidden font-bold sm:inline">Recebíveis</span>
                 </Link>
               </Button>
             </div>
@@ -568,27 +575,33 @@ export function Transactions() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <AnimatePresence>
-              {activeTab === 'payable' && overdueTotal > 0 && !isOverdueExpanded && (
-                <motion.div
-                  key="collapsed-overdue"
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Button
-                    variant="outline"
-                    className="flex h-10 items-center gap-2 rounded-full border-amber-200 bg-amber-50 pl-3 pr-4 text-amber-700 shadow-sm hover:bg-amber-100 hover:text-amber-800"
-                    onClick={() => setIsOverdueExpanded(true)}
+              {activeTab === 'payable' &&
+                overdueTotal > 0 &&
+                !isOverdueExpanded && (
+                  <motion.div
+                    key="collapsed-overdue"
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-bold">
-                      Atrasado: {overdueTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </span>
-                  </Button>
-                </motion.div>
-              )}
+                    <Button
+                      variant="outline"
+                      className="flex h-10 items-center gap-2 rounded-full border-amber-200 bg-amber-50 pl-3 pr-4 text-amber-700 shadow-sm hover:bg-amber-100 hover:text-amber-800"
+                      onClick={() => setIsOverdueExpanded(true)}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      <span className="text-sm font-bold">
+                        Atrasado:{' '}
+                        {overdueTotal.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        })}
+                      </span>
+                    </Button>
+                  </motion.div>
+                )}
             </AnimatePresence>
 
             <AnimatePresence>
@@ -642,48 +655,50 @@ export function Transactions() {
           </div>
 
           <AnimatePresence>
-            {activeTab === 'payable' && overdueTotal > 0 && isOverdueExpanded && (
-              <motion.div
-                key="expanded-overdue"
-                layout
-                initial={{ opacity: 0, y: -10, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -10, height: 0, overflow: 'hidden' }}
-                transition={{ duration: 0.3 }}
-                className="flex w-full flex-col items-start justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:flex-row sm:items-center"
-              >
-                <div className="flex w-full min-w-0 flex-1 items-start gap-3 text-amber-700 sm:items-center">
-                  <AlertTriangle
-                    className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer sm:mt-0 sm:h-6 sm:w-6"
-                    onClick={() => setIsOverdueExpanded(false)}
-                    title="Ocultar aviso"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="break-words text-sm font-bold leading-tight sm:text-base">
-                      Atenção: Existem transações em atraso!
-                    </span>
-                    <span className="mt-0.5 break-words text-xs font-medium text-amber-700/80">
-                      {overdueText}
-                    </span>
+            {activeTab === 'payable' &&
+              overdueTotal > 0 &&
+              isOverdueExpanded && (
+                <motion.div
+                  key="expanded-overdue"
+                  layout
+                  initial={{ opacity: 0, y: -10, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -10, height: 0, overflow: 'hidden' }}
+                  transition={{ duration: 0.3 }}
+                  className="flex w-full flex-col items-start justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:flex-row sm:items-center"
+                >
+                  <div className="flex w-full min-w-0 flex-1 items-start gap-3 text-amber-700 sm:items-center">
+                    <AlertTriangle
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer sm:mt-0 sm:h-6 sm:w-6"
+                      onClick={() => setIsOverdueExpanded(false)}
+                      title="Ocultar aviso"
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="break-words text-sm font-bold leading-tight sm:text-base">
+                        Atenção: Existem transações em atraso!
+                      </span>
+                      <span className="mt-0.5 break-words text-xs font-medium text-amber-700/80">
+                        {overdueText}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex w-full gap-2 sm:w-auto">
-                  <Button
-                    variant="ghost"
-                    className="h-10 flex-1 rounded-xl text-amber-700 hover:bg-amber-200/50 sm:flex-none"
-                    onClick={() => setIsOverdueExpanded(false)}
-                  >
-                    Ocultar
-                  </Button>
-                  <Button
-                    className="h-10 flex-1 shrink-0 rounded-xl bg-amber-600 font-bold text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700 sm:w-auto sm:flex-none"
-                    onClick={() => setIsOverdueModalOpen(true)}
-                  >
-                    Visualizar Vencidos
-                  </Button>
-                </div>
-              </motion.div>
-            )}
+                  <div className="flex w-full gap-2 sm:w-auto">
+                    <Button
+                      variant="ghost"
+                      className="h-10 flex-1 rounded-xl text-amber-700 hover:bg-amber-200/50 sm:flex-none"
+                      onClick={() => setIsOverdueExpanded(false)}
+                    >
+                      Ocultar
+                    </Button>
+                    <Button
+                      className="h-10 flex-1 shrink-0 rounded-xl bg-amber-600 font-bold text-white shadow-lg shadow-amber-600/20 hover:bg-amber-700 sm:w-auto sm:flex-none"
+                      onClick={() => setIsOverdueModalOpen(true)}
+                    >
+                      Visualizar Vencidos
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
           </AnimatePresence>
 
           <AnimatePresence>
@@ -695,12 +710,12 @@ export function Transactions() {
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -10, height: 0, overflow: 'hidden' }}
                 transition={{ duration: 0.3 }}
-                className="w-full relative"
+                className="relative w-full"
               >
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute -top-3 -right-3 z-10 h-8 w-8 rounded-full border border-slate-200 bg-white shadow-sm text-slate-500 hover:text-slate-800 dark:border-slate-800 dark:bg-slate-900"
+                  className="absolute -right-3 -top-3 z-10 h-8 w-8 rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-slate-800 dark:border-slate-800 dark:bg-slate-900"
                   onClick={() => setIsFiltersExpanded(false)}
                 >
                   <X className="h-4 w-4" />
@@ -735,7 +750,10 @@ export function Transactions() {
                   )}
                   {activeTab === 'history' && (
                     <div className="flex w-full items-center gap-3">
-                      <MonthPicker date={historyDate} setDate={setHistoryDate} />
+                      <MonthPicker
+                        date={historyDate}
+                        setDate={setHistoryDate}
+                      />
                     </div>
                   )}
                 </TransactionTableFilters>
@@ -744,217 +762,214 @@ export function Transactions() {
           </AnimatePresence>
         </div>
 
-          <div className="overflow-hidden border-none bg-transparent md:rounded-3xl md:bg-white md:px-2 md:shadow-sm dark:md:bg-slate-900">
-            {/* DESKTOP TABLE */}
-            <div className="hidden overflow-x-auto md:block">
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow className="border-none bg-slate-50/50 hover:bg-slate-50/50 dark:bg-slate-800/50">
-                    {/* Different Headers for Transfers */}
-                    {activeTab === 'transfers' ? (
-                      <>
-                        <TableHead className="w-1/6 py-5 pl-8 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
-                          Data
-                        </TableHead>
-                        <TableHead className="w-2/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
-                          Descrição
-                        </TableHead>
-                        <TableHead className="w-1/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
-                          Origem
-                        </TableHead>
-                        <TableHead className="w-1/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
-                          Destino
-                        </TableHead>
-                        <TableHead className="w-1/6 pr-8 text-right text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
-                          Valor
-                        </TableHead>
-                      </>
-                    ) : (
-                      <>
-                        <TableHead className="w-[60px] py-5 pl-8">
-                          <Checkbox
-                            checked={
+        <div className="overflow-hidden border-none bg-transparent md:rounded-3xl md:bg-white md:px-2 md:shadow-sm dark:md:bg-slate-900">
+          {/* DESKTOP TABLE */}
+          <div className="hidden overflow-x-auto md:block">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-none bg-slate-50/50 hover:bg-slate-50/50 dark:bg-slate-800/50">
+                  {/* Different Headers for Transfers */}
+                  {activeTab === 'transfers' ? (
+                    <>
+                      <TableHead className="w-1/6 py-5 pl-8 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
+                        Data
+                      </TableHead>
+                      <TableHead className="w-2/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
+                        Descrição
+                      </TableHead>
+                      <TableHead className="w-1/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
+                        Origem
+                      </TableHead>
+                      <TableHead className="w-1/6 text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
+                        Destino
+                      </TableHead>
+                      <TableHead className="w-1/6 pr-8 text-right text-xs font-bold uppercase tracking-widest text-slate-500 sm:text-sm">
+                        Valor
+                      </TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead className="w-[60px] py-5 pl-8">
+                        <Checkbox
+                          checked={
+                            transactionsResult?.data.transactions.transactions
+                              .length! > 0 &&
+                            selectedIds.length ===
                               transactionsResult?.data.transactions.transactions
-                                .length! > 0 &&
-                              selectedIds.length ===
-                                transactionsResult?.data.transactions
-                                  .transactions.length
-                            }
-                            onCheckedChange={(checked) =>
-                              handleSelectAll(
-                                !!checked,
-                                transactionsResult?.data.transactions
-                                  .transactions || [],
-                              )
-                            }
-                            className="rounded-md border-slate-300"
-                          />
-                        </TableHead>
-                        <TableHead className="w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
-                          Controle
-                        </TableHead>
-                        <TableHead className="w-[120px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
-                          Vencimento
-                        </TableHead>
-                        <TableHead className="px-6 text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
-                          Descrição da Transação
-                        </TableHead>
-                        <TableHead className="hidden w-[160px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm lg:table-cell">
-                          Fornecedor
-                        </TableHead>
-                        <TableHead className="hidden w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm lg:table-cell">
-                          Setor
-                        </TableHead>
-                        <TableHead className="hidden w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm xl:table-cell">
-                          Conta Fluxo
-                        </TableHead>
-                        <TableHead className="pr-8 text-right text-sm font-black uppercase tracking-widest text-slate-700 md:text-base">
-                          Montante
-                        </TableHead>
-                        <TableHead className="w-[60px] pr-8"></TableHead>
-                      </>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeTab !== 'transfers' &&
-                    displayTransactions.map(
-                      (transaction: any) => {
-                        return (
-                          <TransactionTableRow
-                            key={transaction.id}
-                            transactions={transaction}
-                            customPrefix={
-                              <TableCell className="w-[50px] px-4 text-center">
-                                <Checkbox
-                                  checked={selectedIds.includes(transaction.id)}
-                                  onCheckedChange={(checked) =>
-                                    handleSelectOne(!!checked, transaction.id)
-                                  }
-                                />
-                              </TableCell>
-                            }
-                          />
-                        )
-                      },
-                    )}
+                                .length
+                          }
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(
+                              !!checked,
+                              transactionsResult?.data.transactions
+                                .transactions || [],
+                            )
+                          }
+                          className="rounded-md border-slate-300"
+                        />
+                      </TableHead>
+                      <TableHead className="w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
+                        Controle
+                      </TableHead>
+                      <TableHead className="w-[120px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
+                        Vencimento
+                      </TableHead>
+                      <TableHead className="px-6 text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm">
+                        Descrição da Transação
+                      </TableHead>
+                      <TableHead className="hidden w-[160px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm lg:table-cell">
+                        Fornecedor
+                      </TableHead>
+                      <TableHead className="hidden w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm lg:table-cell">
+                        Setor
+                      </TableHead>
+                      <TableHead className="hidden w-[140px] text-center text-xs font-bold uppercase tracking-widest text-slate-500 md:text-sm xl:table-cell">
+                        Conta Fluxo
+                      </TableHead>
+                      <TableHead className="pr-8 text-right text-sm font-black uppercase tracking-widest text-slate-700 md:text-base">
+                        Montante
+                      </TableHead>
+                      <TableHead className="w-[60px] pr-8"></TableHead>
+                    </>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activeTab !== 'transfers' &&
+                  displayTransactions.map((transaction: any) => {
+                    return (
+                      <TransactionTableRow
+                        key={transaction.id}
+                        transactions={transaction}
+                        customPrefix={
+                          <TableCell className="w-[50px] px-4 text-center">
+                            <Checkbox
+                              checked={selectedIds.includes(transaction.id)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOne(!!checked, transaction.id)
+                              }
+                            />
+                          </TableCell>
+                        }
+                      />
+                    )
+                  })}
 
-                  {/* TRANSFERS LIST */}
-                  {activeTab === 'transfers' &&
-                    transfersResult &&
-                    transfersResult.transferTransactions
-                      .slice((currentPage - 1) * perPage, currentPage * perPage)
-                      .map((transfer: any) => {
-                        return (
-                          <TableRow key={transfer.id}>
-                            <TableCell className="font-mono text-xs font-medium">
-                              {new Date(
-                                transfer.transaction.data_vencimento ??
-                                  transfer.transaction.date,
-                              ).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="font-medium text-foreground/80">
-                              {transfer.transaction.description || '-'}
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/10">
-                                {transfer.transaction.accounts?.name ||
-                                  'Origem'}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-sm font-semibold text-green-700 ring-1 ring-inset ring-green-600/10">
-                                {transfer.accounts?.name || 'Destino'}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {transfer.transaction.amount.toLocaleString(
-                                'pt-BR',
-                                { style: 'currency', currency: 'BRL' },
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
+                {/* TRANSFERS LIST */}
+                {activeTab === 'transfers' &&
+                  transfersResult &&
+                  transfersResult.transferTransactions
+                    .slice((currentPage - 1) * perPage, currentPage * perPage)
+                    .map((transfer: any) => {
+                      return (
+                        <TableRow key={transfer.id}>
+                          <TableCell className="font-mono text-xs font-medium">
+                            {new Date(
+                              transfer.transaction.data_vencimento ??
+                                transfer.transaction.date,
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground/80">
+                            {transfer.transaction.description || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/10">
+                              {transfer.transaction.accounts?.name || 'Origem'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-sm font-semibold text-green-700 ring-1 ring-inset ring-green-600/10">
+                              {transfer.accounts?.name || 'Destino'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {transfer.transaction.amount.toLocaleString(
+                              'pt-BR',
+                              { style: 'currency', currency: 'BRL' },
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
 
-                  {/* EMPTY STATES */}
-                  {activeTab !== 'transfers' &&
-                    transactionsResult &&
-                    transactionsResult.data.transactions.transactions.length ===
-                      0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="h-24 text-center text-sm font-medium text-muted-foreground"
-                        >
-                          Nenhuma transação encontrada nesta categoria.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  {activeTab === 'transfers' &&
-                    transfersResult &&
-                    transfersResult.transferTransactions.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="h-24 text-center text-sm font-medium text-muted-foreground"
-                        >
-                          Nenhuma transferência realizada.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* MOBILE CARD LIST */}
-            <div className="flex flex-col gap-4 md:hidden">
-              {activeTab !== 'transfers' &&
-                transactionsResult &&
-                transactionsResult.data.transactions.transactions.map(
-                  (transaction: any) => (
-                    <TransactionMobileCard
-                      key={transaction.id}
-                      transactions={transaction}
-                    />
-                  ),
-                )}
-            </div>
+                {/* EMPTY STATES */}
+                {activeTab !== 'transfers' &&
+                  transactionsResult &&
+                  transactionsResult.data.transactions.transactions.length ===
+                    0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-24 text-center text-sm font-medium text-muted-foreground"
+                      >
+                        Nenhuma transação encontrada nesta categoria.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                {activeTab === 'transfers' &&
+                  transfersResult &&
+                  transfersResult.transferTransactions.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="h-24 text-center text-sm font-medium text-muted-foreground"
+                      >
+                        Nenhuma transferência realizada.
+                      </TableCell>
+                    </TableRow>
+                  )}
+              </TableBody>
+            </Table>
           </div>
 
-          <div className="flex justify-end">
-            <Pagination
-              onPageChange={handlePaginate}
-              onPerPageChange={handlePerPageChange}
-              pageIndex={currentPage - 1}
-              totalCount={
-                activeTab === 'transfers'
-                  ? transfersResult
-                    ? transfersResult.transferTransactions.length
-                    : 0
-                  : transactionsResult
-                    ? transactionsResult.data.transactions.totalCount
-                    : 0
-              }
-              perPage={
-                activeTab === 'transfers'
-                  ? perPage
-                  : transactionsResult
-                    ? transactionsResult.data.transactions.perPage
-                    : perPage
-              }
-            />
-
-            {activeTab !== 'transfers' && (
-              <TransactionTableBulkActions
-                selectedCount={selectedIds.length}
-                onBulkPay={handleBulkPay}
-                isPending={isBulkPaying}
-                onClearSelection={() => setSelectedIds([])}
-              />
-            )}
+          {/* MOBILE CARD LIST */}
+          <div className="flex flex-col gap-4 md:hidden">
+            {activeTab !== 'transfers' &&
+              transactionsResult &&
+              transactionsResult.data.transactions.transactions.map(
+                (transaction: any) => (
+                  <TransactionMobileCard
+                    key={transaction.id}
+                    transactions={transaction}
+                  />
+                ),
+              )}
           </div>
         </div>
+
+        <div className="flex justify-end">
+          <Pagination
+            onPageChange={handlePaginate}
+            onPerPageChange={handlePerPageChange}
+            pageIndex={currentPage - 1}
+            totalCount={
+              activeTab === 'transfers'
+                ? transfersResult
+                  ? transfersResult.transferTransactions.length
+                  : 0
+                : transactionsResult
+                  ? transactionsResult.data.transactions.totalCount
+                  : 0
+            }
+            perPage={
+              activeTab === 'transfers'
+                ? perPage
+                : transactionsResult
+                  ? transactionsResult.data.transactions.perPage
+                  : perPage
+            }
+          />
+
+          {activeTab !== 'transfers' && (
+            <TransactionTableBulkActions
+              selectedCount={selectedIds.length}
+              onBulkPay={handleBulkPay}
+              isPending={isBulkPaying}
+              onClearSelection={() => setSelectedIds([])}
+            />
+          )}
+        </div>
+      </div>
 
       <CashierBatchDetailsModal
         open={!!openBatchId}

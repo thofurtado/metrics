@@ -15,10 +15,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { exportarParaCSV } from '../utils/exportCSV'
-import { exportarGeralCSV } from '../utils/exportGeralCSV'
-import { exportarRelatorioGeralPDF } from '../utils/exportGeralPDF'
-import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -28,6 +24,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+
+import { exportarParaCSV } from '../utils/exportCSV'
+import { exportarGeralCSV } from '../utils/exportGeralCSV'
+import { exportarRelatorioGeralPDF } from '../utils/exportGeralPDF'
 
 interface DashboardProps {
   lotes: any[]
@@ -411,7 +412,12 @@ export function DashboardCaixa({
               Deletar Caixa Completo?
             </AlertDialogTitle>
             <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Atenção: Esta ação excluirá permanentemente este caixa, seus lançamentos internos, sangrias e, caso tenha sido conferido, <strong>todas as transações geradas no financeiro e vales criados no RH</strong>. Esta ação é irreversível.
+              Atenção: Esta ação excluirá permanentemente este caixa, seus
+              lançamentos internos, sangrias e, caso tenha sido conferido,{' '}
+              <strong>
+                todas as transações geradas no financeiro e vales criados no RH
+              </strong>
+              . Esta ação é irreversível.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
@@ -427,11 +433,9 @@ export function DashboardCaixa({
               disabled={deleteCountdown > 0}
               onClick={handleConfirmDelete}
             >
-              {deleteCountdown > 0 ? (
-                `Aguarde (${deleteCountdown}s)`
-              ) : (
-                'Sim, Deletar Caixa'
-              )}
+              {deleteCountdown > 0
+                ? `Aguarde (${deleteCountdown}s)`
+                : 'Sim, Deletar Caixa'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

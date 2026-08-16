@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+
 import { PaymentShortcutsOrganizer } from './components/payment-shortcuts-organizer'
 
 const createPaymentSchema = z.object({
@@ -117,105 +118,108 @@ export function Payments() {
         <div className="flex items-center gap-2">
           <PaymentShortcutsOrganizer />
           <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25 transition-all hover:to-primary active:scale-95"
-            >
-              <Plus className="mr-2 h-5 w-5" /> Nova Forma
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Nova Forma de Pagamento</DialogTitle>
-              <DialogDescription>
-                Configure métodos de recebimento e vincule a contas.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogTrigger asChild>
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25 transition-all hover:to-primary active:scale-95"
+              >
+                <Plus className="mr-2 h-5 w-5" /> Nova Forma
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Nova Forma de Pagamento</DialogTitle>
+                <DialogDescription>
+                  Configure métodos de recebimento e vincule a contas.
+                </DialogDescription>
+              </DialogHeader>
 
-            <form
-              onSubmit={handleSubmit(handleRegisterPayment)}
-              className="space-y-6 py-4"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome (Ex: Cartão Crédito)</Label>
-                <Input
-                  id="name"
-                  placeholder="Digite o nome..."
-                  {...register('name')}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <form
+                onSubmit={handleSubmit(handleRegisterPayment)}
+                className="space-y-6 py-4"
+              >
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="installment_limit"
-                    className={inSight ? 'text-muted-foreground' : ''}
-                  >
-                    Limite Parcelas
-                  </Label>
+                  <Label htmlFor="name">Nome (Ex: Cartão Crédito)</Label>
                   <Input
-                    id="installment_limit"
-                    type="number"
-                    {...register('installment_limit')}
-                    disabled={inSight}
+                    id="name"
+                    placeholder="Digite o nome..."
+                    {...register('name')}
                     className="h-11"
                   />
                 </div>
-                <div className="flex items-center space-x-2 pt-8">
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="installment_limit"
+                      className={inSight ? 'text-muted-foreground' : ''}
+                    >
+                      Limite Parcelas
+                    </Label>
+                    <Input
+                      id="installment_limit"
+                      type="number"
+                      {...register('installment_limit')}
+                      disabled={inSight}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-8">
+                    <Controller
+                      control={control}
+                      name="in_sight"
+                      render={({ field }) => (
+                        <Checkbox
+                          id="in_sight"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label
+                      htmlFor="in_sight"
+                      className="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      À Vista / Entrada Imediata
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="account_id">Conta Vinculada (Opcional)</Label>
                   <Controller
+                    name="account_id"
                     control={control}
-                    name="in_sight"
                     render={({ field }) => (
-                      <Checkbox
-                        id="in_sight"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione uma conta..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {accountsResult?.accounts?.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
-                  <Label
-                    htmlFor="in_sight"
-                    className="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    À Vista / Entrada Imediata
-                  </Label>
+                  <p className="text-[0.8rem] text-muted-foreground">
+                    O valor entrará automaticamente nesta conta ao receber.
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="account_id">Conta Vinculada (Opcional)</Label>
-                <Controller
-                  name="account_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Selecione uma conta..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {accountsResult?.accounts?.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <p className="text-[0.8rem] text-muted-foreground">
-                  O valor entrará automaticamente nesta conta ao receber.
-                </p>
-              </div>
-
-              <Button type="submit" size="lg" className="w-full">
-                Criar Forma de Pagamento
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" size="lg" className="w-full">
+                  Criar Forma de Pagamento
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

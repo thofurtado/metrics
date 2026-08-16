@@ -2,7 +2,10 @@ import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
 
 const fmt = (valor: number) =>
-  (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  (Number(valor) || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
 
 const formatarDataBR = (dataString: string) => {
   if (!dataString) return '--/--/----'
@@ -76,8 +79,16 @@ export function computeResumoFromLote(lote: any) {
       }
       let formaKey = forma
       if (forma.toUpperCase() === 'PIX') formaKey = 'PIX'
-      else if (forma.toLowerCase().includes('débito') || forma.toLowerCase().includes('debito')) formaKey = 'Débito'
-      else if (forma.toLowerCase().includes('crédito') || forma.toLowerCase().includes('credito')) formaKey = 'Crédito'
+      else if (
+        forma.toLowerCase().includes('débito') ||
+        forma.toLowerCase().includes('debito')
+      )
+        formaKey = 'Débito'
+      else if (
+        forma.toLowerCase().includes('crédito') ||
+        forma.toLowerCase().includes('credito')
+      )
+        formaKey = 'Crédito'
       else if (forma.toLowerCase().includes('voucher')) formaKey = 'Voucher'
 
       if (res[banco][formaKey] !== undefined) {
@@ -103,7 +114,9 @@ export const exportarLotePDF = (lote: any, resumoParam?: any) => {
 
   const doc = new jsPDF()
   const dataFormatada = formatarDataBR(lote.dataReferencia)
-  const periodoStr = lote.periodo ? String(lote.periodo).toUpperCase() : 'EXPEDIENTE'
+  const periodoStr = lote.periodo
+    ? String(lote.periodo).toUpperCase()
+    : 'EXPEDIENTE'
 
   // --- HEADER DESIGN ---
   doc.setFillColor(15, 23, 42) // Navy Dark
@@ -167,7 +180,9 @@ export const exportarLotePDF = (lote: any, resumoParam?: any) => {
     .filter(
       (i: any) =>
         !i.isSaida &&
-        ['Funcionário', 'Cortesia', 'Pró-labore', 'Permuta'].includes(i.formaPagamento),
+        ['Funcionário', 'Cortesia', 'Pró-labore', 'Permuta'].includes(
+          i.formaPagamento,
+        ),
     )
     .reduce((acc: number, i: any) => acc + (Number(i.valor) || 0), 0)
 
@@ -303,7 +318,9 @@ export const exportarLotePDF = (lote: any, resumoParam?: any) => {
 
   autoTable(doc, {
     startY: lastY + 16,
-    head: [['Banco / Operadora', 'PIX', 'Débito', 'Crédito', 'Voucher', 'Total']],
+    head: [
+      ['Banco / Operadora', 'PIX', 'Débito', 'Crédito', 'Voucher', 'Total'],
+    ],
     body: bodyBancos,
     theme: 'grid',
     headStyles: { fillColor: [21, 128, 61] },

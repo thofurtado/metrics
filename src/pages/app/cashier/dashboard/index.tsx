@@ -1,34 +1,35 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Banknote,
+  Calendar,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-  Calendar,
-  User,
-  Banknote,
   Eye,
-  AlertTriangle,
-  X,
-  ArrowRight,
   FileText,
+  Plus,
   Printer,
   Trash2,
+  User,
+  X,
 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
-import { getSessions, openSession, deleteSession, getMonthlyCashAudit, getCashierUsers } from '@/api/cashier/cashier'
+import {
+  deleteSession,
+  getCashierUsers,
+  getMonthlyCashAudit,
+  getSessions,
+  openSession,
+} from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
-import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
-import { exportarLotePDF } from '@/utils/cashier/exportPDF'
-import { DivergenceModal } from './components/divergence-modal'
-
 import { PageHeader } from '@/components/page-header'
-import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -38,6 +39,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
+import { exportarLotePDF } from '@/utils/cashier/exportPDF'
+
+import { DivergenceModal } from './components/divergence-modal'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -48,14 +54,16 @@ export function CashierDashboard() {
   const [periodo, setPeriodo] = useState('Almoço')
   const [selectedUser, setSelectedUser] = useState('')
   const [dataAbertura, setDataAbertura] = useState(
-    `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`
+    `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`,
   )
   const [mesVisualizacao, setMesVisualizacao] = useState(new Date().getMonth())
-  const [anoVisualizacao, setAnoVisualizacao] = useState(new Date().getFullYear())
+  const [anoVisualizacao, setAnoVisualizacao] = useState(
+    new Date().getFullYear(),
+  )
 
-  const [divergenceModalSession, setDivergenceModalSession] = useState<any>(null)
+  const [divergenceModalSession, setDivergenceModalSession] =
+    useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
-
 
   const token = localStorage.getItem('token')
 
@@ -85,8 +93,9 @@ export function CashierDashboard() {
     queryFn: getCashierUsers,
     enabled: !!profile && isAdmin,
   })
-  
-  const possibleUsers = (usersData as any)?.users || (Array.isArray(usersData) ? usersData : [])
+
+  const possibleUsers =
+    (usersData as any)?.users || (Array.isArray(usersData) ? usersData : [])
 
   const { mutateAsync: openSessionFn } = useMutation({
     mutationFn: openSession,
@@ -122,25 +131,33 @@ export function CashierDashboard() {
     setDeleteCountdown(5)
   }
 
-  const { mutateAsync: deleteSessionFn, isPending: isDeletingSession } = useMutation({
-    mutationFn: deleteSession,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
-      queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
-      toast.success('Caixa excluído com sucesso!')
-      handleCloseDeleteSessionModal()
-    },
-    onError: () => {
-      toast.error('Erro ao excluir o caixa.')
-    },
-  })
-
-
-
+  const { mutateAsync: deleteSessionFn, isPending: isDeletingSession } =
+    useMutation({
+      mutationFn: deleteSession,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
+        queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
+        toast.success('Caixa excluído com sucesso!')
+        handleCloseDeleteSessionModal()
+      },
+      onError: () => {
+        toast.error('Erro ao excluir o caixa.')
+      },
+    })
 
   const nomesMeses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
   ]
 
   const navegarMes = (direcao: number) => {
@@ -166,7 +183,7 @@ export function CashierDashboard() {
         timeZone: 'America/Sao_Paulo',
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       }).format(d)
     } catch {
       return dateString
@@ -180,7 +197,7 @@ export function CashierDashboard() {
       const hourStr = new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit',
-        hour12: false
+        hour12: false,
       }).format(d)
       const hour = parseInt(hourStr, 10)
       return hour < 16 ? 'Almoço' : 'Jantar'
@@ -197,11 +214,27 @@ export function CashierDashboard() {
         }
         if (!s.opened_at) return false
         const d = new Date(s.opened_at)
-        const monthBRT = parseInt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'numeric' }).format(d), 10) - 1
-        const yearBRT = parseInt(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', year: 'numeric' }).format(d), 10)
+        const monthBRT =
+          parseInt(
+            new Intl.DateTimeFormat('pt-BR', {
+              timeZone: 'America/Sao_Paulo',
+              month: 'numeric',
+            }).format(d),
+            10,
+          ) - 1
+        const yearBRT = parseInt(
+          new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+          }).format(d),
+          10,
+        )
         return monthBRT === mesVisualizacao && yearBRT === anoVisualizacao
       })
-      .sort((a: any, b: any) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime(),
+      )
   }, [sessions, mesVisualizacao, anoVisualizacao, profile])
 
   const handleExportarGeralPDF = () => {
@@ -261,19 +294,19 @@ export function CashierDashboard() {
 
   const handleCriar = async () => {
     try {
-      let opened_at = undefined;
+      let opened_at
       if (dataAbertura) {
-        const now = new Date();
-        const [year, month, day] = dataAbertura.split('-');
-        now.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day));
-        opened_at = now.toISOString();
+        const now = new Date()
+        const [year, month, day] = dataAbertura.split('-')
+        now.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+        opened_at = now.toISOString()
       }
 
       await openSessionFn({
         initial_balance: parseFloat(saldoAbertura) || 0,
         period: periodo,
         opened_at,
-        ...(isAdmin && selectedUser ? { user_id: selectedUser } : {})
+        ...(isAdmin && selectedUser ? { user_id: selectedUser } : {}),
       } as any)
     } catch (error) {
       alert('Erro ao abrir caixa.')
@@ -285,26 +318,26 @@ export function CashierDashboard() {
       case 'AUDITED':
       case 'CHECKED':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
             <CheckCircle2 size={11} /> Conferido
           </span>
         )
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
             <Clock size={11} /> Enviado P/ Conferência
           </span>
         )
       case 'CLOSED':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <AlertCircle size={11} /> Fechado
           </span>
         )
       case 'OPEN':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
             <Clock size={11} /> Aberto
           </span>
         )
@@ -312,28 +345,60 @@ export function CashierDashboard() {
   }
 
   const METHOD_ORDER = [
-    'dinheiro', 'pix', 'débito', 'debito', 'crédito', 'credito',
-    'voucher', 'funcionário', 'funcionario', 'pró-labore', 'pro-labore',
-    'permuta', 'cortesia', 'a prazo'
+    'dinheiro',
+    'pix',
+    'débito',
+    'debito',
+    'crédito',
+    'credito',
+    'voucher',
+    'funcionário',
+    'funcionario',
+    'pró-labore',
+    'pro-labore',
+    'permuta',
+    'cortesia',
+    'a prazo',
   ]
 
   const getMethodOrder = (method: string) => {
     const m = (method || '').toLowerCase()
-    const idx = METHOD_ORDER.findIndex(o => m.includes(o))
+    const idx = METHOD_ORDER.findIndex((o) => m.includes(o))
     return idx === -1 ? 99 : idx
   }
 
   const getMethodBadgeStyle = (method: string) => {
     const m = (method || '').toLowerCase()
-    if (m.includes('dinheiro')) return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: '💵' }
-    if (m.includes('pix')) return { bg: 'bg-teal-50 text-teal-700 border-teal-200', icon: '⚡' }
-    if (m.includes('débito') || m.includes('debito')) return { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: '💳' }
-    if (m.includes('crédito') || m.includes('credito')) return { bg: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: '💳' }
-    if (m.includes('voucher')) return { bg: 'bg-purple-50 text-purple-700 border-purple-200', icon: '🎟️' }
-    if (m.includes('funcionário') || m.includes('funcionario')) return { bg: 'bg-orange-50 text-orange-700 border-orange-200', icon: '👤' }
-    if (m.includes('pró-labore') || m.includes('pro-labore')) return { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: '💼' }
-    if (m.includes('cortesia')) return { bg: 'bg-pink-50 text-pink-700 border-pink-200', icon: '🎁' }
-    if (m.includes('permuta')) return { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: '🔄' }
+    if (m.includes('dinheiro'))
+      return {
+        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: '💵',
+      }
+    if (m.includes('pix'))
+      return { bg: 'bg-teal-50 text-teal-700 border-teal-200', icon: '⚡' }
+    if (m.includes('débito') || m.includes('debito'))
+      return { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: '💳' }
+    if (m.includes('crédito') || m.includes('credito'))
+      return {
+        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        icon: '💳',
+      }
+    if (m.includes('voucher'))
+      return {
+        bg: 'bg-purple-50 text-purple-700 border-purple-200',
+        icon: '🎟️',
+      }
+    if (m.includes('funcionário') || m.includes('funcionario'))
+      return {
+        bg: 'bg-orange-50 text-orange-700 border-orange-200',
+        icon: '👤',
+      }
+    if (m.includes('pró-labore') || m.includes('pro-labore'))
+      return { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: '💼' }
+    if (m.includes('cortesia'))
+      return { bg: 'bg-pink-50 text-pink-700 border-pink-200', icon: '🎁' }
+    if (m.includes('permuta'))
+      return { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: '🔄' }
     return { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: '💰' }
   }
 
@@ -360,12 +425,16 @@ export function CashierDashboard() {
       />
 
       {/* PAINEL DE CONTROLE SUPERIOR (LADO A LADO) */}
-      <div className={`grid grid-cols-1 gap-6 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}>
+      <div
+        className={`grid grid-cols-1 gap-6 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}
+      >
         {/* Formulário Horizontal Compacto para Abrir Caixa */}
-        <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}>
-          <div className="flex items-center justify-between mb-3">
+        <div
+          className={`flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}
+        >
+          <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-              <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-50 font-bold text-blue-600">
                 <Plus size={13} />
               </div>
               <span>Abrir Novo Caixa</span>
@@ -378,22 +447,24 @@ export function CashierDashboard() {
                 <select
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                 >
                   <option value="">Selecione o Operador (Você mesmo)</option>
                   {possibleUsers.map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
-            
+
             <div className="col-span-1">
               <input
                 type="date"
                 value={dataAbertura}
                 onChange={(e) => setDataAbertura(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
               />
             </div>
 
@@ -401,7 +472,7 @@ export function CashierDashboard() {
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
               >
                 <option value="Almoço">Período: Almoço</option>
                 <option value="Jantar">Período: Jantar</option>
@@ -416,14 +487,14 @@ export function CashierDashboard() {
                 value={saldoAbertura}
                 onChange={(e) => setSaldoAbertura(e.target.value)}
                 placeholder="Abertura R$ 0.00"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
               />
             </div>
 
-            <div className="sm:col-span-3 mt-1">
+            <div className="mt-1 sm:col-span-3">
               <button
                 onClick={handleCriar}
-                className="w-full h-[40px] rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95"
               >
                 <Plus size={14} /> Iniciar Expediente
               </button>
@@ -431,19 +502,18 @@ export function CashierDashboard() {
           </div>
         </div>
 
-
         {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (EXCLUSIVO ADMIN) */}
         {isAdmin && (
           <div
             onClick={() => setModalAuditOpen(true)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-4 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-6 lg:col-start-7 flex flex-col justify-between"
+            className="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-4 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-6 lg:col-start-7"
           >
             <Banknote
               size={70}
               className="absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
             />
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
@@ -456,7 +526,7 @@ export function CashierDashboard() {
                 <p className="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
                   R$ {summary.saldoFisicoAtualMes.toFixed(2)}
                 </p>
-                <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                   <Eye size={11} /> Clique para auditoria comparativa
                 </p>
               </div>
@@ -497,14 +567,14 @@ export function CashierDashboard() {
       {/* Seção Principal: Caixas do Mês */}
       <div className="space-y-3">
         {/* Barra de Navegação de Mês */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col items-stretch justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
               <Calendar size={14} className="text-blue-500" /> Caixas do Mês
             </span>
             <button
               onClick={handleExportarGeralPDF}
-              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-black text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 cursor-pointer"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-black text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
               title="Exportar relatório gerencial consolidado do mês em PDF"
             >
               <FileText size={14} />
@@ -521,7 +591,8 @@ export function CashierDashboard() {
               <ChevronLeft size={16} />
             </button>
             <span className="min-w-[110px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-100">
-              {nomesMeses[mesVisualizacao]} <span className="text-blue-600">{anoVisualizacao}</span>
+              {nomesMeses[mesVisualizacao]}{' '}
+              <span className="text-blue-600">{anoVisualizacao}</span>
             </span>
             <button
               onClick={() => navegarMes(1)}
@@ -542,7 +613,7 @@ export function CashierDashboard() {
           <div className="grid grid-cols-1 gap-2">
             {sessionsFiltradas.map((s: any) => {
               const entries = s.entries || []
-              
+
               let totalSangrias = 0
               let totalSuprimentos = 0
               let totalCaixinhas = 0
@@ -573,7 +644,11 @@ export function CashierDashboard() {
               }
 
               const valorAbertura = Number(s.initial_balance || 0)
-              const valorFinalCaixa = valorAbertura + totalEntradasSemSaida + totalSuprimentos - totalSangrias
+              const valorFinalCaixa =
+                valorAbertura +
+                totalEntradasSemSaida +
+                totalSuprimentos -
+                totalSangrias
               const activeMethods = Object.entries(totalsByMethod)
                 .filter(([_, val]) => val > 0)
                 .sort(([a], [b]) => getMethodOrder(a) - getMethodOrder(b))
@@ -582,12 +657,12 @@ export function CashierDashboard() {
                 <div
                   key={s.id}
                   onClick={() => navigate(`/cashier/session/${s.id}`)}
-                  className="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-950 cursor-pointer"
+                  className="group flex cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
                 >
                   {/* Linha Principal Unificada */}
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     {/* Identificação do Caixa */}
-                    <div className="flex flex-wrap items-center gap-2 min-w-[200px]">
+                    <div className="flex min-w-[200px] flex-wrap items-center gap-2">
                       <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                         {formatDateBRT(s.opened_at)}
                       </span>
@@ -605,7 +680,9 @@ export function CashierDashboard() {
                     {/* Resumo Financeiro Compacto */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                       <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-black uppercase text-slate-400">Abertura:</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400">
+                          Abertura:
+                        </span>
                         <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
                           R$ {valorAbertura.toFixed(2)}
                         </span>
@@ -613,7 +690,9 @@ export function CashierDashboard() {
 
                       {totalSangrias > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-red-500">Sangrias:</span>
+                          <span className="text-[9px] font-black uppercase text-red-500">
+                            Sangrias:
+                          </span>
                           <span className="font-mono font-bold text-red-600">
                             R$ -{totalSangrias.toFixed(2)}
                           </span>
@@ -622,7 +701,9 @@ export function CashierDashboard() {
 
                       {totalSuprimentos > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-emerald-500">Suprimentos:</span>
+                          <span className="text-[9px] font-black uppercase text-emerald-500">
+                            Suprimentos:
+                          </span>
                           <span className="font-mono font-bold text-emerald-600">
                             R$ +{totalSuprimentos.toFixed(2)}
                           </span>
@@ -631,7 +712,9 @@ export function CashierDashboard() {
 
                       {totalCaixinhas > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-pink-500">Caixinhas:</span>
+                          <span className="text-[9px] font-black uppercase text-pink-500">
+                            Caixinhas:
+                          </span>
                           <span className="font-mono font-bold text-pink-600">
                             R$ {totalCaixinhas.toFixed(2)}
                           </span>
@@ -639,7 +722,9 @@ export function CashierDashboard() {
                       )}
 
                       <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-black uppercase text-blue-600">Final em Caixa:</span>
+                        <span className="text-[9px] font-black uppercase text-blue-600">
+                          Final em Caixa:
+                        </span>
                         <span className="font-mono font-black text-blue-700 dark:text-blue-400">
                           R$ {valorFinalCaixa.toFixed(2)}
                         </span>
@@ -647,14 +732,14 @@ export function CashierDashboard() {
                     </div>
 
                     {/* Status Badge + Exportar PDF + Deletar Caixa (Admin) */}
-                    <div className="shrink-0 flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           handleExportarSessaoPDF(s)
                         }}
                         title="Exportar PDF deste caixa"
-                        className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+                        className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                       >
                         <FileText size={13} className="text-red-500" />
                         <span>PDF</span>
@@ -667,7 +752,7 @@ export function CashierDashboard() {
                             handleOpenDeleteSessionModal(s.id)
                           }}
                           title="Excluir este caixa completo"
-                          className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60 cursor-pointer"
+                          className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60"
                         >
                           <Trash2 size={13} />
                           <span>Excluir</span>
@@ -680,17 +765,21 @@ export function CashierDashboard() {
 
                   {/* Linha Secundária: Formas de Pagamento */}
                   {activeMethods.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-dashed border-slate-100 dark:border-slate-850">
+                    <div className="dark:border-slate-850 flex flex-wrap items-center gap-1.5 border-t border-dashed border-slate-100 pt-0.5">
                       {activeMethods.map(([method, total]) => {
                         const badgeStyle = getMethodBadgeStyle(method)
                         return (
                           <div
                             key={method}
-                            className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-extrabold ${badgeStyle.bg}`}
+                            className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-extrabold ${badgeStyle.bg}`}
                           >
-                            <span className="text-[11px]">{badgeStyle.icon}</span>
+                            <span className="text-[11px]">
+                              {badgeStyle.icon}
+                            </span>
                             <span>{method}:</span>
-                            <span className="font-mono font-black">R$ {total.toFixed(2)}</span>
+                            <span className="font-mono font-black">
+                              R$ {total.toFixed(2)}
+                            </span>
                           </div>
                         )
                       })}
@@ -703,7 +792,8 @@ export function CashierDashboard() {
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-950">
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Nenhum caixa registrado em {nomesMeses[mesVisualizacao]} de {anoVisualizacao}
+              Nenhum caixa registrado em {nomesMeses[mesVisualizacao]} de{' '}
+              {anoVisualizacao}
             </p>
           </div>
         )}
@@ -714,32 +804,35 @@ export function CashierDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
             {/* Cabecalho Modal */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 p-6 dark:border-slate-800">
+            <div className="flex flex-col justify-between gap-4 border-b border-slate-200 p-6 dark:border-slate-800 sm:flex-row sm:items-center">
               <div>
                 <h2 className="flex items-center gap-2 text-lg font-black text-slate-900 dark:text-slate-100">
-                  <Banknote className="text-emerald-600" /> Auditoria Mensal do Dinheiro Físico em Espécie
+                  <Banknote className="text-emerald-600" /> Auditoria Mensal do
+                  Dinheiro Físico em Espécie
                 </h2>
                 <p className="text-xs font-medium text-slate-500">
-                  Validação contínua do saldo físico da gaveta e conferência entre fechamentos e aberturas sucessivas.
+                  Validação contínua do saldo físico da gaveta e conferência
+                  entre fechamentos e aberturas sucessivas.
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-3 self-end sm:self-auto">
                 {/* Seletor de Mês da Auditoria */}
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900">
                   <button
                     onClick={() => navegarMes(-1)}
-                    className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800 transition-colors"
+                    className="rounded p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
                     title="Mês anterior"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <span className="min-w-[120px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-100">
-                    {nomesMeses[mesVisualizacao]} <span className="text-blue-600">{anoVisualizacao}</span>
+                    {nomesMeses[mesVisualizacao]}{' '}
+                    <span className="text-blue-600">{anoVisualizacao}</span>
                   </span>
                   <button
                     onClick={() => navegarMes(1)}
-                    className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800 transition-colors"
+                    className="rounded p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
                     title="Próximo mês"
                   >
                     <ChevronRight size={16} />
@@ -764,9 +857,15 @@ export function CashierDashboard() {
                       <th className="p-3">Data / Turno</th>
                       <th className="p-3">Operador</th>
                       <th className="p-3 text-right">Abertura</th>
-                      <th className="p-3 text-right text-emerald-600">+ Vendas Dinheiro</th>
-                      <th className="p-3 text-right text-red-500">- Sangrias Depósito</th>
-                      <th className="p-3 text-right text-blue-600">Saldo Físico Final</th>
+                      <th className="p-3 text-right text-emerald-600">
+                        + Vendas Dinheiro
+                      </th>
+                      <th className="p-3 text-right text-red-500">
+                        - Sangrias Depósito
+                      </th>
+                      <th className="p-3 text-right text-blue-600">
+                        Saldo Físico Final
+                      </th>
                       <th className="p-3 text-right">Próxima Abertura</th>
                       <th className="p-3 text-center">Conferência</th>
                       <th className="p-3 text-center">Ação</th>
@@ -775,9 +874,13 @@ export function CashierDashboard() {
                   <tbody className="divide-y divide-slate-200 font-medium dark:divide-slate-800">
                     {auditSessionsList.length > 0 ? (
                       auditSessionsList.map((item: any) => {
-                        const isDivergent = item.statusComparacao === 'DIVERGENTE'
+                        const isDivergent =
+                          item.statusComparacao === 'DIVERGENTE'
                         return (
-                          <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                          <tr
+                            key={item.id}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          >
                             <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
                               {formatDateBRT(item.opened_at)} ({item.period})
                             </td>
@@ -797,26 +900,42 @@ export function CashierDashboard() {
                               R$ {item.saldoFisicoFinal.toFixed(2)}
                             </td>
                             <td className="p-3 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                              {item.hasNextSession || item.proximaAbertura !== null 
-                                ? `R$ ${Number(item.proximaAbertura || 0).toFixed(2)}` 
+                              {item.hasNextSession ||
+                              item.proximaAbertura !== null
+                                ? `R$ ${Number(item.proximaAbertura || 0).toFixed(2)}`
                                 : '-'}
                             </td>
                             <td className="p-3 text-center">
-                              {item.hasNextSession || item.proximaAbertura !== null ? (
+                              {item.hasNextSession ||
+                              item.proximaAbertura !== null ? (
                                 item.statusComparacao === 'RESOLVIDO' ? (
                                   <button
-                                    onClick={() => setDivergenceModalSession(item)}
-                                    className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 hover:bg-indigo-200 transition-colors cursor-pointer"
-                                    title={item.resolutionDetails?.reason ? `Motivo: ${item.resolutionDetails.reason}` : 'Divergência tratada'}
+                                    onClick={() =>
+                                      setDivergenceModalSession(item)
+                                    }
+                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400"
+                                    title={
+                                      item.resolutionDetails?.reason
+                                        ? `Motivo: ${item.resolutionDetails.reason}`
+                                        : 'Divergência tratada'
+                                    }
                                   >
-                                    <CheckCircle2 size={11} /> Resolvido ({item.resolutionDetails?.type === 'SANGRIA_DESTINO' ? item.resolutionDetails.bank || 'Destino' : 'Justificado'})
+                                    <CheckCircle2 size={11} /> Resolvido (
+                                    {item.resolutionDetails?.type ===
+                                    'SANGRIA_DESTINO'
+                                      ? item.resolutionDetails.bank || 'Destino'
+                                      : 'Justificado'}
+                                    )
                                   </button>
                                 ) : isDivergent ? (
                                   <button
-                                    onClick={() => setDivergenceModalSession(item)}
-                                    className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-200 transition-colors cursor-pointer"
+                                    onClick={() =>
+                                      setDivergenceModalSession(item)
+                                    }
+                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 transition-colors hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400"
                                   >
-                                    <AlertTriangle size={11} /> Dif: R$ {item.divergencia.toFixed(2)}
+                                    <AlertTriangle size={11} /> Dif: R${' '}
+                                    {item.divergencia.toFixed(2)}
                                   </button>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
@@ -824,7 +943,9 @@ export function CashierDashboard() {
                                   </span>
                                 )
                               ) : (
-                                <span className="text-[10px] font-bold text-slate-400">Último do Mês</span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  Último do Mês
+                                </span>
                               )}
                             </td>
                             <td className="p-3 text-center">
@@ -843,7 +964,10 @@ export function CashierDashboard() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan={9} className="p-8 text-center text-slate-400 font-bold">
+                        <td
+                          colSpan={9}
+                          className="p-8 text-center font-bold text-slate-400"
+                        >
                           Nenhum registro de caixa encontrado no mês.
                         </td>
                       </tr>
@@ -854,7 +978,7 @@ export function CashierDashboard() {
             </div>
 
             {/* Rodape Modal */}
-            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900 rounded-b-3xl">
+            <div className="flex items-center justify-between rounded-b-3xl border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
               <span className="text-xs font-bold text-slate-500">
                 Auditoria em tempo real das aberturas e fechamentos de espécie.
               </span>
@@ -892,7 +1016,12 @@ export function CashierDashboard() {
               Deletar Caixa Completo?
             </AlertDialogTitle>
             <AlertDialogDescription className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Atenção: Esta ação excluirá permanentemente este caixa e <strong>todos os seus lançamentos, sangrias, suprimentos e caixinhas vinculadas</strong>. Esta ação é irreversível.
+              Atenção: Esta ação excluirá permanentemente este caixa e{' '}
+              <strong>
+                todos os seus lançamentos, sangrias, suprimentos e caixinhas
+                vinculadas
+              </strong>
+              . Esta ação é irreversível.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row sm:gap-3">
@@ -907,21 +1036,19 @@ export function CashierDashboard() {
               variant="destructive"
               className="rounded-xl font-bold"
               disabled={deleteCountdown > 0 || isDeletingSession}
-              onClick={() => sessionToDelete && deleteSessionFn(sessionToDelete)}
+              onClick={() =>
+                sessionToDelete && deleteSessionFn(sessionToDelete)
+              }
             >
-              {isDeletingSession ? (
-                'Excluindo...'
-              ) : deleteCountdown > 0 ? (
-                `Aguarde (${deleteCountdown}s)`
-              ) : (
-                'Sim, Deletar Caixa'
-              )}
+              {isDeletingSession
+                ? 'Excluindo...'
+                : deleteCountdown > 0
+                  ? `Aguarde (${deleteCountdown}s)`
+                  : 'Sim, Deletar Caixa'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-
     </div>
   )
 }

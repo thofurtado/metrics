@@ -355,16 +355,19 @@ export function TimeSheetPage() {
                     : r.status
 
         const list = timeClocks?.timeClocks || timeClocks?.data || []
-        const dayClock: any = list.find((tc: any) => tc.date?.split('T')[0] === r.date)
+        const dayClock: any = list.find(
+          (tc: any) => tc.date?.split('T')[0] === r.date,
+        )
 
         const getOvertimeStr = (row: any, originalDayClock: any) => {
           let ovtMins = originalDayClock?.overtimeMinutes ?? row.overtimeMinutes
-          let calcMem = originalDayClock?.calculation_memory ?? row.calculation_memory
+          const calcMem =
+            originalDayClock?.calculation_memory ?? row.calculation_memory
           let multiplier = calcMem?.multiplier
 
           if (!ovtMins || ovtMins <= 0) {
             if (row.status !== 'PRESENCA') return '--'
-            
+
             const setTime = (t: string, isNext?: boolean) => {
               if (!t) return null
               const [h, m] = t.split(':').map(Number)
@@ -374,7 +377,7 @@ export function TimeSheetPage() {
               if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
               return d
             }
-            
+
             let total = 0
             const cin = setTime(row.clockIn)
             const bout = setTime(row.breakStart)
@@ -382,22 +385,26 @@ export function TimeSheetPage() {
             const cout = setTime(row.clockOut, row.clockOutNextDay)
             const xcin = setTime(row.extraClockIn)
             const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
-            
+
             if (cin && bout) total += differenceInMinutes(bout, cin)
-            else if (cin && cout && !bout && !bin) total += differenceInMinutes(cout, cin)
+            else if (cin && cout && !bout && !bin)
+              total += differenceInMinutes(cout, cin)
             if (bin && cout) total += differenceInMinutes(cout, bin)
             if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
-            
+
             if (total > 0) {
               const DAILY_WORKLOAD = 440
               const TOLERANCE = 10
               const excess = total - DAILY_WORKLOAD
               const dailyOvt = excess > TOLERANCE ? excess : 0
-              
+
               const isSunday = parseDateOnly(row.date).getDay() === 0
               // holidaysData might be undefined in the exact scope, let's use holidaysData?.holidays or fallback to false
-              const isHoliday = holidaysData?.holidays?.some((h: any) => h.date.startsWith(row.date)) ?? false
-              
+              const isHoliday =
+                holidaysData?.holidays?.some((h: any) =>
+                  h.date.startsWith(row.date),
+                ) ?? false
+
               if (isHoliday) {
                 ovtMins = total
                 multiplier = 2.0
@@ -415,11 +422,11 @@ export function TimeSheetPage() {
           const h = Math.floor(ovtMins / 60)
           const m = ovtMins % 60
           const timeStr = `${h}h${m > 0 ? ` ${m.toString().padStart(2, '0')}m` : ''}`
-          
+
           let percent = ''
           if (multiplier) {
-              if (multiplier === 1.6) percent = ' (60%)'
-              else if (multiplier >= 2.0) percent = ' (100%)'
+            if (multiplier === 1.6) percent = ' (60%)'
+            else if (multiplier >= 2.0) percent = ' (100%)'
           }
           return timeStr + percent
         }
@@ -491,67 +498,71 @@ export function TimeSheetPage() {
 
       // Calculate Total Hours if '--'
       let totalHoursFormatted = timeClocks?.summary?.totalHours || '--'
-      
+
       let ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
       let ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
-      
+
       // Fallback para estimativa global se backend não forneceu
       if (ovt60 === 0 && ovt100 === 0) {
-         const DAILY_WORKLOAD = 440
-         const TOLERANCE = 10
-         let totalAllMinutes = 0
-         
-         rows.forEach((row: any) => {
-            if (row.status !== 'PRESENCA') return
-            
-            const setTime = (t: string, isNext?: boolean) => {
-              if (!t) return null
-              const [h, m] = t.split(':').map(Number)
-              const d = parseDateOnly(row.date)
-              d.setHours(h, m, 0, 0)
-              const isAutoNextDay = h < 4
-              if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
-              return d
+        const DAILY_WORKLOAD = 440
+        const TOLERANCE = 10
+        let totalAllMinutes = 0
+
+        rows.forEach((row: any) => {
+          if (row.status !== 'PRESENCA') return
+
+          const setTime = (t: string, isNext?: boolean) => {
+            if (!t) return null
+            const [h, m] = t.split(':').map(Number)
+            const d = parseDateOnly(row.date)
+            d.setHours(h, m, 0, 0)
+            const isAutoNextDay = h < 4
+            if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
+            return d
+          }
+
+          let total = 0
+          const cin = setTime(row.clockIn)
+          const bout = setTime(row.breakStart)
+          const bin = setTime(row.breakEnd)
+          const cout = setTime(row.clockOut, row.clockOutNextDay)
+          const xcin = setTime(row.extraClockIn)
+          const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
+
+          if (cin && bout) total += differenceInMinutes(bout, cin)
+          else if (cin && cout && !bout && !bin)
+            total += differenceInMinutes(cout, cin)
+          if (bin && cout) total += differenceInMinutes(cout, bin)
+          if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
+
+          if (total > 0) {
+            totalAllMinutes += total
+            const excess = total - DAILY_WORKLOAD
+            const dailyOvt = excess > TOLERANCE ? excess : 0
+
+            const isSunday = parseDateOnly(row.date).getDay() === 0
+            const isHoliday =
+              holidaysData?.holidays?.some((h: any) =>
+                h.date.startsWith(row.date),
+              ) ?? false
+
+            if (isHoliday) {
+              ovt100 += total
+            } else if (isSunday) {
+              ovt100 += dailyOvt
+            } else {
+              ovt60 += dailyOvt
             }
-            
-            let total = 0
-            const cin = setTime(row.clockIn)
-            const bout = setTime(row.breakStart)
-            const bin = setTime(row.breakEnd)
-            const cout = setTime(row.clockOut, row.clockOutNextDay)
-            const xcin = setTime(row.extraClockIn)
-            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
-            
-            if (cin && bout) total += differenceInMinutes(bout, cin)
-            else if (cin && cout && !bout && !bin) total += differenceInMinutes(cout, cin)
-            if (bin && cout) total += differenceInMinutes(cout, bin)
-            if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
-            
-            if (total > 0) {
-              totalAllMinutes += total
-              const excess = total - DAILY_WORKLOAD
-              const dailyOvt = excess > TOLERANCE ? excess : 0
-              
-              const isSunday = parseDateOnly(row.date).getDay() === 0
-              const isHoliday = holidaysData?.holidays?.some((h: any) => h.date.startsWith(row.date)) ?? false
-              
-              if (isHoliday) {
-                ovt100 += total
-              } else if (isSunday) {
-                ovt100 += dailyOvt
-              } else {
-                ovt60 += dailyOvt
-              }
-            }
-         })
-         
-         if (totalHoursFormatted === '--') {
-           const isNegative = totalAllMinutes < 0
-           const absMins = Math.abs(totalAllMinutes)
-           const h = Math.floor(absMins / 60)
-           const m = absMins % 60
-           totalHoursFormatted = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`
-         }
+          }
+        })
+
+        if (totalHoursFormatted === '--') {
+          const isNegative = totalAllMinutes < 0
+          const absMins = Math.abs(totalAllMinutes)
+          const h = Math.floor(absMins / 60)
+          const m = absMins % 60
+          totalHoursFormatted = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`
+        }
       }
 
       // UX: Resumo Financeiro (Estimativa) Box
@@ -563,34 +574,36 @@ export function TimeSheetPage() {
       doc.setDrawColor(200, 200, 200)
       doc.setFillColor(248, 250, 252) // slate-50
       doc.roundedRect(15, finalY, 120, 44, 3, 3, 'FD')
-      
+
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
       doc.setTextColor(30, 41, 59) // slate-800
       doc.text('Resumo e Estimativas', 20, finalY + 7)
-      
+
       doc.line(15, finalY + 10, 135, finalY + 10)
-      
+
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(71, 85, 105) // slate-600
-      
+
       doc.text('Total de Horas Trabalhadas:', 20, finalY + 16)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(15, 23, 42)
       doc.text(totalHoursFormatted, 73, finalY + 16)
-      
+
       const rate = Number(employee?.salary) || 0
       const hourlyRate = rate / 220
       const overtimeHourlyRate60 = hourlyRate * 1.6
       const overtimeHourlyRate100 = hourlyRate * 2.0
-      
+
       const value60 = (ovt60 / 60) * overtimeHourlyRate60
       const value100 = (ovt100 / 60) * overtimeHourlyRate100
       const totalValue = value60 + value100
-      
-      const fmtCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      const fmtHours = (mins: number) => `${Math.floor(mins/60)}h${(mins%60).toString().padStart(2,'0')}m`
+
+      const fmtCurrency = (val: number) =>
+        val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const fmtHours = (mins: number) =>
+        `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, '0')}m`
 
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(71, 85, 105)
@@ -604,7 +617,11 @@ export function TimeSheetPage() {
       doc.text(`Valor de Horas Extras (100%):`, 20, finalY + 30)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(15, 23, 42)
-      doc.text(`${fmtHours(ovt100)} = ${fmtCurrency(value100)}`, 73, finalY + 30)
+      doc.text(
+        `${fmtHours(ovt100)} = ${fmtCurrency(value100)}`,
+        73,
+        finalY + 30,
+      )
 
       doc.setDrawColor(226, 232, 240) // slate-200
       doc.line(20, finalY + 34, 130, finalY + 34)

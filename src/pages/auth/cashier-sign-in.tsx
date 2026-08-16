@@ -1,10 +1,17 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  ArrowLeft,
+  KeyRound,
+  Loader2,
+  Lock,
+  UserCheck,
+  Wallet,
+} from 'lucide-react'
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Lock, UserCheck, KeyRound, Loader2, ArrowLeft, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { getCashierUsers, CashierUser } from '@/api/cashier/get-cashier-users'
+import { CashierUser, getCashierUsers } from '@/api/cashier/get-cashier-users'
 import { signIn } from '@/api/sign-in'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +23,12 @@ export function CashierSignIn() {
   const [selectedUser, setSelectedUser] = useState<CashierUser | null>(null)
   const [password, setPassword] = useState('')
 
-  const { data: cashierUsers = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data: cashierUsers = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['cashier-users'],
     queryFn: getCashierUsers,
     staleTime: 1000 * 60 * 2,
@@ -39,7 +51,9 @@ export function CashierSignIn() {
       navigate('/cashier', { replace: true })
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Senha incorreta. Tente novamente.')
+      toast.error(
+        err?.response?.data?.message || 'Senha incorreta. Tente novamente.',
+      )
     },
   })
 
@@ -50,19 +64,18 @@ export function CashierSignIn() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-4 font-manrope text-slate-100">
+    <div className="flex min-h-screen w-full items-center justify-center bg-slate-950 p-4 font-manrope text-slate-100">
       <div className="w-full max-w-md space-y-8 rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl backdrop-blur-xl">
-        
         {/* Topo / Header */}
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold shadow-lg">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-600/20 font-bold text-blue-400 shadow-lg">
             <Wallet size={28} />
           </div>
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight text-white">
               Login do Caixa
             </h1>
-            <p className="text-xs font-medium text-slate-400 mt-1">
+            <p className="mt-1 text-xs font-medium text-slate-400">
               Selecione seu usuário para acessar a conferência de caixa
             </p>
           </div>
@@ -76,12 +89,12 @@ export function CashierSignIn() {
             </span>
 
             {isLoading ? (
-              <div className="p-8 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2 p-8 text-center text-xs font-bold text-slate-400">
                 <Loader2 size={18} className="animate-spin text-blue-500" />
                 Carregando operadores...
               </div>
             ) : isError ? (
-              <div className="p-4 text-center text-xs font-bold text-red-400 space-y-2">
+              <div className="space-y-2 p-4 text-center text-xs font-bold text-red-400">
                 <p>Erro ao carregar operadores do caixa.</p>
                 <Button
                   variant="outline"
@@ -92,7 +105,7 @@ export function CashierSignIn() {
                 </Button>
               </div>
             ) : cashierUsers.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 max-h-[320px] overflow-y-auto pr-1">
+              <div className="grid max-h-[320px] grid-cols-1 gap-3 overflow-y-auto pr-1">
                 {cashierUsers.map((user) => (
                   <button
                     key={user.id}
@@ -100,10 +113,10 @@ export function CashierSignIn() {
                       setSelectedUser(user)
                       setPassword('')
                     }}
-                    className="flex items-center justify-between p-4 rounded-2xl border border-slate-800 bg-slate-950/60 hover:bg-blue-950/40 hover:border-blue-500/50 transition-all text-left group"
+                    className="group flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left transition-all hover:border-blue-500/50 hover:bg-blue-950/40"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/30 flex items-center justify-center font-black text-sm uppercase">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-600/30 text-sm font-black uppercase text-blue-300">
                         {user.name.charAt(0)}
                       </div>
                       <div>
@@ -116,7 +129,7 @@ export function CashierSignIn() {
                       </div>
                     </div>
 
-                    <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-md bg-slate-800 text-slate-300">
+                    <span className="rounded-md bg-slate-800 px-2.5 py-1 text-[9px] font-black uppercase text-slate-300">
                       {user.role === 'ADMIN' ? 'Admin' : 'Caixa'}
                     </span>
                   </button>
@@ -129,11 +142,14 @@ export function CashierSignIn() {
             )}
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-5 animate-in fade-in duration-200">
+          <form
+            onSubmit={handleLogin}
+            className="space-y-5 duration-200 animate-in fade-in"
+          >
             {/* Usuário Selecionado */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl border border-blue-500/30 bg-blue-950/30">
+            <div className="flex items-center justify-between rounded-2xl border border-blue-500/30 bg-blue-950/30 p-3.5">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs uppercase">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-xs font-black uppercase text-white">
                   {selectedUser.name.charAt(0)}
                 </div>
                 <div>
@@ -149,7 +165,7 @@ export function CashierSignIn() {
               <button
                 type="button"
                 onClick={() => setSelectedUser(null)}
-                className="text-xs font-bold text-blue-400 hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-xs font-bold text-blue-400 hover:underline"
               >
                 <ArrowLeft size={14} /> Trocar
               </button>
@@ -157,7 +173,7 @@ export function CashierSignIn() {
 
             {/* Input de Senha */}
             <div className="space-y-2">
-              <Label className="text-xs font-extrabold uppercase text-slate-300 block">
+              <Label className="block text-xs font-extrabold uppercase text-slate-300">
                 Digite sua Senha
               </Label>
               <div className="relative">
@@ -170,14 +186,17 @@ export function CashierSignIn() {
                   placeholder="******"
                   className="w-full rounded-2xl border-slate-700 bg-slate-950 p-4 pl-11 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <KeyRound
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                />
               </div>
             </div>
 
             <Button
               type="submit"
               disabled={isLoggingIn || !password}
-              className="w-full py-6 rounded-2xl bg-blue-600 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-6 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 disabled:opacity-50"
             >
               {isLoggingIn ? (
                 <>
@@ -191,7 +210,6 @@ export function CashierSignIn() {
             </Button>
           </form>
         )}
-
       </div>
     </div>
   )

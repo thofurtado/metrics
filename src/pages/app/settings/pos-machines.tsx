@@ -1,14 +1,28 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Calculator,
+  CheckCircle2,
+  Cpu,
+  CreditCard,
+  Edit2,
+  Percent,
+  Plus,
+  Trash2,
+  Wallet,
+} from 'lucide-react'
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, CreditCard, Wallet, Trash2, Edit2, CheckCircle2, Percent, Calculator, Cpu } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { getPOSMachines, createPOSMachine, updatePOSMachine, deletePOSMachine, POSMachineRate } from '@/api/pos-machines'
 import { getAccounts } from '@/api/get-accounts'
+import {
+  createPOSMachine,
+  deletePOSMachine,
+  getPOSMachines,
+  POSMachineRate,
+  updatePOSMachine,
+} from '@/api/pos-machines'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +31,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -30,11 +46,11 @@ export function POSMachinesSettings() {
   const queryClient = useQueryClient()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  
+
   // Form State
   const [name, setName] = useState('')
   const [accountId, setAccountId] = useState<string>('none')
-  
+
   // Rate Matrix State
   const [rates, setRates] = useState<POSMachineRate[]>([])
 
@@ -70,7 +86,11 @@ export function POSMachinesSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-machines'] })
-      toast.success(editingId ? 'Maquininha atualizada com sucesso!' : 'Maquininha criada com sucesso!')
+      toast.success(
+        editingId
+          ? 'Maquininha atualizada com sucesso!'
+          : 'Maquininha criada com sucesso!',
+      )
       handleCloseModal()
     },
     onError: (err: any) => {
@@ -109,7 +129,7 @@ export function POSMachinesSettings() {
             tax_percentage: r.tax_percentage,
             settlement_days: r.settlement_days || 1,
           }))
-        : []
+        : [],
     )
     setIsModalOpen(true)
   }
@@ -128,7 +148,15 @@ export function POSMachinesSettings() {
   }
 
   const handleAddRateRow = () => {
-    setRates([...rates, { payment_category: 'DÉBITO', installments: 1, tax_percentage: 0, settlement_days: 1 }])
+    setRates([
+      ...rates,
+      {
+        payment_category: 'DÉBITO',
+        installments: 1,
+        tax_percentage: 0,
+        settlement_days: 1,
+      },
+    ])
   }
 
   const handleRemoveRateRow = (index: number) => {
@@ -139,12 +167,13 @@ export function POSMachinesSettings() {
     <div className="mx-auto flex max-w-5xl flex-col gap-6 pb-10">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground">
             <Cpu className="h-8 w-8 text-primary" />
             Maquininhas & Taxas de Cartão
           </h1>
           <p className="text-sm text-muted-foreground">
-            Cadastre operadoras de cartão (Stone, Safra, PagBank), vincule à conta bancária e configure as taxas de cada modalidade.
+            Cadastre operadoras de cartão (Stone, Safra, PagBank), vincule à
+            conta bancária e configure as taxas de cada modalidade.
           </p>
         </div>
 
@@ -161,7 +190,7 @@ export function POSMachinesSettings() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {isLoading ? (
           Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border bg-card p-6 space-y-4">
+            <div key={i} className="space-y-4 rounded-2xl border bg-card p-6">
               <Skeleton className="h-6 w-1/2" />
               <Skeleton className="h-4 w-1/3" />
               <Skeleton className="h-20 w-full" />
@@ -169,11 +198,14 @@ export function POSMachinesSettings() {
           ))
         ) : (machines || []).length === 0 ? (
           <div className="col-span-2 rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
-            Nenhuma maquininha cadastrada ainda. Clique em "Nova Maquininha" para começar.
+            Nenhuma maquininha cadastrada ainda. Clique em "Nova Maquininha"
+            para começar.
           </div>
         ) : (
           machines?.map((machine) => {
-            const account = accountsResult?.accounts?.find((a) => a.id === machine.account_id)
+            const account = accountsResult?.accounts?.find(
+              (a) => a.id === machine.account_id,
+            )
             const ratesCount = machine.rates?.length || 0
 
             return (
@@ -184,18 +216,23 @@ export function POSMachinesSettings() {
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                      <h3 className="flex items-center gap-2 text-xl font-bold tracking-tight">
                         <CreditCard className="h-5 w-5 text-primary" />
                         {machine.name}
                       </h3>
                       <div className="mt-1 flex items-center gap-2">
                         {account ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400">
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          >
                             <Wallet className="mr-1 h-3 w-3" />
                             {account.name}
                           </Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Sem conta bancária vinculada</span>
+                          <span className="text-xs text-muted-foreground">
+                            Sem conta bancária vinculada
+                          </span>
                         )}
                       </div>
                     </div>
@@ -221,16 +258,22 @@ export function POSMachinesSettings() {
                   </div>
 
                   {/* Resumo de Taxas */}
-                  <div className="rounded-xl bg-muted/40 p-3 space-y-2">
+                  <div className="space-y-2 rounded-xl bg-muted/40 p-3">
                     <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                       Taxas Configuradas ({ratesCount})
                     </span>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {(machine.rates || []).slice(0, 4).map((r, idx) => (
-                        <div key={idx} className="flex items-center justify-between rounded-lg bg-background p-2 border">
-                          <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                            {r.payment_category} {r.installments > 1 ? `${r.installments}x` : 'À vista'}
-                            <span className="text-[9px] bg-slate-100 dark:bg-slate-800 px-1 rounded text-slate-500 font-bold ml-1">
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between rounded-lg border bg-background p-2"
+                        >
+                          <span className="flex items-center gap-1 font-semibold text-muted-foreground">
+                            {r.payment_category}{' '}
+                            {r.installments > 1
+                              ? `${r.installments}x`
+                              : 'À vista'}
+                            <span className="ml-1 rounded bg-slate-100 px-1 text-[9px] font-bold text-slate-500 dark:bg-slate-800">
                               D+{r.settlement_days || 1}
                             </span>
                           </span>
@@ -241,7 +284,7 @@ export function POSMachinesSettings() {
                       ))}
                     </div>
                     {ratesCount > 4 && (
-                      <p className="text-[10px] text-center text-muted-foreground font-semibold pt-1">
+                      <p className="pt-1 text-center text-[10px] font-semibold text-muted-foreground">
                         + {ratesCount - 4} outras faixas de taxas
                       </p>
                     )}
@@ -255,14 +298,15 @@ export function POSMachinesSettings() {
 
       {/* Modal de Criação / Edição de Maquininha */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Cpu className="h-5 w-5 text-primary" />
               {editingId ? 'Editar Maquininha' : 'Nova Maquininha'}
             </DialogTitle>
             <DialogDescription>
-              Configure o nome da maquininha, a conta bancária de recebimento e a matriz de taxas por modalidade.
+              Configure o nome da maquininha, a conta bancária de recebimento e
+              a matriz de taxas por modalidade.
             </DialogDescription>
           </DialogHeader>
 
@@ -286,7 +330,9 @@ export function POSMachinesSettings() {
                     <SelectValue placeholder="Selecione a conta..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nenhuma (Conta Genérica)</SelectItem>
+                    <SelectItem value="none">
+                      Nenhuma (Conta Genérica)
+                    </SelectItem>
                     {accountsResult?.accounts?.map((acc) => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.name}
@@ -298,15 +344,16 @@ export function POSMachinesSettings() {
             </div>
 
             {/* Matriz Interativa de Taxas */}
-            <div className="space-y-3 rounded-2xl border p-4 bg-muted/20">
+            <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold flex items-center gap-1.5">
+                  <h4 className="flex items-center gap-1.5 text-sm font-bold">
                     <Percent className="h-4 w-4 text-primary" />
                     Tabela de Taxas % por Categoria e Parcela
                   </h4>
                   <p className="text-xs text-muted-foreground">
-                    Define a taxa cobrada pela maquininha em cada tipo de pagamento no PDV.
+                    Define a taxa cobrada pela maquininha em cada tipo de
+                    pagamento no PDV.
                   </p>
                 </div>
                 <Button size="sm" variant="outline" onClick={handleAddRateRow}>
@@ -316,7 +363,10 @@ export function POSMachinesSettings() {
 
               <div className="space-y-2">
                 {rates.map((rate, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-center rounded-xl bg-background p-2 border">
+                  <div
+                    key={index}
+                    className="grid grid-cols-12 items-center gap-2 rounded-xl border bg-background p-2"
+                  >
                     <div className="col-span-3">
                       <Select
                         value={rate.payment_category}
@@ -326,13 +376,15 @@ export function POSMachinesSettings() {
                           setRates(newRates)
                         }}
                       >
-                        <SelectTrigger className="h-9 text-[10px] font-bold px-2">
+                        <SelectTrigger className="h-9 px-2 text-[10px] font-bold">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="DÉBITO">Débito</SelectItem>
                           <SelectItem value="CRÉDITO">Crédito</SelectItem>
-                          <SelectItem value="VOUCHER">Voucher (VR/VA)</SelectItem>
+                          <SelectItem value="VOUCHER">
+                            Voucher (VR/VA)
+                          </SelectItem>
                           <SelectItem value="PIX">Pix Maquininha</SelectItem>
                         </SelectContent>
                       </Select>
@@ -346,7 +398,8 @@ export function POSMachinesSettings() {
                         value={rate.installments}
                         onChange={(e) => {
                           const newRates = [...rates]
-                          newRates[index].installments = parseInt(e.target.value, 10) || 1
+                          newRates[index].installments =
+                            parseInt(e.target.value, 10) || 1
                           setRates(newRates)
                         }}
                         className="h-9 text-xs"
@@ -354,21 +407,30 @@ export function POSMachinesSettings() {
                       />
                     </div>
 
-                    <div className="col-span-4 relative">
+                    <div className="relative col-span-4">
                       <Input
                         type="number"
                         step="0.01"
                         value={rate.tax_percentage}
-                        onChange={(e) => handleUpdateRatePercentage(index, parseFloat(e.target.value) || 0)}
-                        className="h-9 text-xs pr-6 font-mono font-bold"
+                        onChange={(e) =>
+                          handleUpdateRatePercentage(
+                            index,
+                            parseFloat(e.target.value) || 0,
+                          )
+                        }
+                        className="h-9 pr-6 font-mono text-xs font-bold"
                         placeholder="Taxa"
                       />
-                      <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">%</span>
+                      <span className="absolute right-2 top-2 text-xs font-bold text-muted-foreground">
+                        %
+                      </span>
                     </div>
 
                     <div className="col-span-3">
-                      <div className="flex items-center border rounded-md px-2 focus-within:ring-1 focus-within:ring-primary/50">
-                        <span className="text-[10px] font-bold text-muted-foreground mr-1">D+</span>
+                      <div className="flex items-center rounded-md border px-2 focus-within:ring-1 focus-within:ring-primary/50">
+                        <span className="mr-1 text-[10px] font-bold text-muted-foreground">
+                          D+
+                        </span>
                         <Input
                           type="number"
                           min={0}
@@ -376,10 +438,13 @@ export function POSMachinesSettings() {
                           value={rate.settlement_days ?? 0}
                           onChange={(e) => {
                             const newRates = [...rates]
-                            newRates[index].settlement_days = e.target.value === '' ? 0 : parseInt(e.target.value, 10)
+                            newRates[index].settlement_days =
+                              e.target.value === ''
+                                ? 0
+                                : parseInt(e.target.value, 10)
                             setRates(newRates)
                           }}
-                          className="h-9 text-xs font-mono font-bold border-0 px-1 py-0 shadow-none focus-visible:ring-0 w-full"
+                          className="h-9 w-full border-0 px-1 py-0 font-mono text-xs font-bold shadow-none focus-visible:ring-0"
                           placeholder="Dias"
                         />
                       </div>
@@ -401,33 +466,45 @@ export function POSMachinesSettings() {
             </div>
 
             {/* Simulador de Taxas ao Vivo */}
-            <div className="rounded-2xl border bg-emerald-50/50 p-4 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 space-y-2">
+            <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                  <Calculator className="h-4 w-4" /> Simulador de Recebimento Líquido
+                <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                  <Calculator className="h-4 w-4" /> Simulador de Recebimento
+                  Líquido
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Valor Venda R$:</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Valor Venda R$:
+                  </span>
                   <Input
                     type="number"
                     value={simulatedAmount}
                     onChange={(e) => setSimulatedAmount(e.target.value)}
-                    className="h-8 w-24 text-xs font-mono font-bold bg-background"
+                    className="h-8 w-24 bg-background font-mono text-xs font-bold"
                   />
                 </div>
               </div>
 
               {rates.length > 0 && (
-                <div className="text-xs grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
                   {rates.slice(0, 2).map((r, i) => {
                     const amt = parseFloat(simulatedAmount) || 0
                     const fee = (amt * r.tax_percentage) / 100
                     const net = amt - fee
                     return (
-                      <div key={i} className="rounded-lg bg-background p-2 border font-mono">
-                        <span className="text-muted-foreground">{r.payment_category} {r.installments}x: </span>
-                        <span className="font-bold text-emerald-600">R$ {net.toFixed(2)}</span>
-                        <span className="text-[10px] text-muted-foreground ml-1">(Taxa R$ {fee.toFixed(2)})</span>
+                      <div
+                        key={i}
+                        className="rounded-lg border bg-background p-2 font-mono"
+                      >
+                        <span className="text-muted-foreground">
+                          {r.payment_category} {r.installments}x:{' '}
+                        </span>
+                        <span className="font-bold text-emerald-600">
+                          R$ {net.toFixed(2)}
+                        </span>
+                        <span className="ml-1 text-[10px] text-muted-foreground">
+                          (Taxa R$ {fee.toFixed(2)})
+                        </span>
                       </div>
                     )
                   })}
@@ -441,7 +518,11 @@ export function POSMachinesSettings() {
               size="lg"
               className="w-full"
             >
-              {isSaving ? 'Salvando...' : editingId ? 'Salvar Alterações' : 'Criar Maquininha'}
+              {isSaving
+                ? 'Salvando...'
+                : editingId
+                  ? 'Salvar Alterações'
+                  : 'Criar Maquininha'}
             </Button>
           </div>
         </DialogContent>

@@ -1,14 +1,28 @@
-import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { AlertTriangle, Info, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, CheckCircle2, ExternalLink, Info } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+
 import { resolveDivergence } from '@/api/cashier/cashier'
 import { getAccounts } from '@/api/get-accounts'
-import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface DivergenceModalProps {
   isOpen: boolean
@@ -16,7 +30,11 @@ interface DivergenceModalProps {
   session: any
 }
 
-export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalProps) {
+export function DivergenceModal({
+  isOpen,
+  onClose,
+  session,
+}: DivergenceModalProps) {
   const queryClient = useQueryClient()
   const [action, setAction] = useState<'JUSTIFY' | 'DESTINATION' | null>(null)
   const [reason, setReason] = useState('')
@@ -25,13 +43,21 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
   const { data: dbAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: getAccounts,
-    enabled: isOpen && action === 'DESTINATION'
+    enabled: isOpen && action === 'DESTINATION',
   })
 
   // Auto-select "Caixa Central" if exists
   useEffect(() => {
-    if (dbAccounts?.accounts && action === 'DESTINATION' && accountId === 'none') {
-      const central = dbAccounts.accounts.find(a => a.name.toLowerCase().includes('caixa central') || a.name.toLowerCase().includes('cofre'))
+    if (
+      dbAccounts?.accounts &&
+      action === 'DESTINATION' &&
+      accountId === 'none'
+    ) {
+      const central = dbAccounts.accounts.find(
+        (a) =>
+          a.name.toLowerCase().includes('caixa central') ||
+          a.name.toLowerCase().includes('cofre'),
+      )
       if (central) {
         setAccountId(central.id)
       } else if (dbAccounts.accounts.length > 0) {
@@ -58,20 +84,25 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
       onClose()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Erro ao resolver divergência')
-    }
+      toast.error(
+        error?.response?.data?.message || 'Erro ao resolver divergência',
+      )
+    },
   })
 
   const handleSubmit = async () => {
     if (!action) return toast.error('Escolha uma ação')
     if (!reason) return toast.error('Digite uma justificativa ou destino')
-    
+
     await resolveMutate({
       session_id: session.id,
       amount: session.divergencia,
       action,
       reason,
-      account_id: action === 'DESTINATION' && accountId !== 'none' ? accountId : undefined
+      account_id:
+        action === 'DESTINATION' && accountId !== 'none'
+          ? accountId
+          : undefined,
     })
   }
 
@@ -86,17 +117,37 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle className={`flex items-center gap-2 ${isResolved ? 'text-indigo-600' : 'text-red-600'}`}>
-            {isResolved ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+          <DialogTitle
+            className={`flex items-center gap-2 ${isResolved ? 'text-indigo-600' : 'text-red-600'}`}
+          >
+            {isResolved ? (
+              <CheckCircle2 size={20} />
+            ) : (
+              <AlertTriangle size={20} />
+            )}
             {isResolved ? 'Divergência Resolvida' : 'Resolver Divergência'}
           </DialogTitle>
           <DialogDescription>
             {isFaltando ? (
-              <>Faltam <strong className="text-red-500">R$ {absDivergencia}</strong> em relação à abertura do próximo caixa.</>
+              <>
+                Faltam{' '}
+                <strong className="text-red-500">R$ {absDivergencia}</strong> em
+                relação à abertura do próximo caixa.
+              </>
             ) : (
-              <>Sobram <strong className="text-emerald-500">R$ {absDivergencia}</strong> em relação à abertura do próximo caixa.</>
+              <>
+                Sobram{' '}
+                <strong className="text-emerald-500">
+                  R$ {absDivergencia}
+                </strong>{' '}
+                em relação à abertura do próximo caixa.
+              </>
             )}
-            {!isResolved && <><br/>O que aconteceu com esse valor?</>}
+            {!isResolved && (
+              <>
+                <br />O que aconteceu com esse valor?
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,12 +157,16 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Ação Tomada</Label>
                 <div className="font-medium text-slate-700 dark:text-slate-300">
-                  {resolution?.type === 'SANGRIA_DESTINO' ? 'Destinado a Conta Bancária' : 'Justificativa Apenas'}
+                  {resolution?.type === 'SANGRIA_DESTINO'
+                    ? 'Destinado a Conta Bancária'
+                    : 'Justificativa Apenas'}
                 </div>
               </div>
-              
+
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Motivo / Descrição</Label>
+                <Label className="text-xs text-slate-500">
+                  Motivo / Descrição
+                </Label>
                 <div className="font-medium text-slate-700 dark:text-slate-300">
                   {resolution?.reason || 'Sem justificativa informada'}
                 </div>
@@ -125,11 +180,15 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
               </div>
 
               {resolution?.type === 'SANGRIA_DESTINO' && (
-                <div className="space-y-2 pt-3 border-t border-indigo-100 dark:border-indigo-900/40 mt-2">
+                <div className="mt-2 space-y-2 border-t border-indigo-100 pt-3 dark:border-indigo-900/40">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-xs text-slate-500">Conta de Destino</Label>
-                      <div className="font-medium text-slate-700 dark:text-slate-300">{resolution?.bank}</div>
+                      <Label className="text-xs text-slate-500">
+                        Conta de Destino
+                      </Label>
+                      <div className="font-medium text-slate-700 dark:text-slate-300">
+                        {resolution?.bank}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -138,30 +197,42 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant={action === 'JUSTIFY' ? 'default' : 'outline'}
                   onClick={() => setAction('JUSTIFY')}
-                  className={action === 'JUSTIFY' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                  className={
+                    action === 'JUSTIFY'
+                      ? 'bg-amber-500 hover:bg-amber-600'
+                      : ''
+                  }
                 >
-                  <Info className="w-4 h-4 mr-2" />
+                  <Info className="mr-2 h-4 w-4" />
                   Dar Justificativa
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant={action === 'DESTINATION' ? 'default' : 'outline'}
                   onClick={() => setAction('DESTINATION')}
-                  className={action === 'DESTINATION' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                  className={
+                    action === 'DESTINATION'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : ''
+                  }
                   disabled={!isFaltando} // Desabilita destino se for SOBRA (positivo)
-                  title={!isFaltando ? 'Não é possível destinar sobras de caixa' : undefined}
+                  title={
+                    !isFaltando
+                      ? 'Não é possível destinar sobras de caixa'
+                      : undefined
+                  }
                 >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
                   Determinar Destino
                 </Button>
               </div>
 
               {action && (
-                <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+                <div className="space-y-4 duration-200 animate-in fade-in zoom-in">
                   {action === 'DESTINATION' && (
                     <div className="space-y-2">
                       <Label>Conta de Destino (Opcional)</Label>
@@ -170,24 +241,33 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
                           <SelectValue placeholder="Selecione para onde foi o dinheiro" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Nenhuma (Apenas Ajuste)</SelectItem>
-                          {dbAccounts?.accounts?.map(acc => (
-                            <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                          <SelectItem value="none">
+                            Nenhuma (Apenas Ajuste)
+                          </SelectItem>
+                          {dbAccounts?.accounts?.map((acc) => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                              {acc.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Ao confirmar, uma Receita será gerada nesta conta para abater o dinheiro vivo que entrou pra empresa.
+                        Ao confirmar, uma Receita será gerada nesta conta para
+                        abater o dinheiro vivo que entrou pra empresa.
                       </p>
                     </div>
                   )}
 
                   <div className="space-y-2">
                     <Label>Motivo / Descrição</Label>
-                    <Input 
-                      placeholder={action === 'DESTINATION' ? "Ex: Depositado no Itaú, Levou pra casa..." : "Ex: Dinheiro perdido, troco errado..."}
+                    <Input
+                      placeholder={
+                        action === 'DESTINATION'
+                          ? 'Ex: Depositado no Itaú, Levou pra casa...'
+                          : 'Ex: Dinheiro perdido, troco errado...'
+                      }
                       value={reason}
-                      onChange={e => setReason(e.target.value)}
+                      onChange={(e) => setReason(e.target.value)}
                     />
                   </div>
                 </div>
@@ -196,12 +276,20 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
           )}
         </div>
 
-        <DialogFooter className={isResolved ? "sm:justify-between w-full" : ""}>
+        <DialogFooter className={isResolved ? 'w-full sm:justify-between' : ''}>
           {isResolved ? (
             <>
               {resolution?.type === 'SANGRIA_DESTINO' ? (
-                <Button variant="default" className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
-                  <a href={`/transactions?openBatch=${session.id}`} target="_blank" rel="noreferrer">
+                <Button
+                  variant="default"
+                  className="gap-2 bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
+                  asChild
+                >
+                  <a
+                    href={`/transactions?openBatch=${session.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     <ExternalLink className="h-4 w-4" />
                     Ver no Financeiro
                   </a>
@@ -209,11 +297,15 @@ export function DivergenceModal({ isOpen, onClose, session }: DivergenceModalPro
               ) : (
                 <div />
               )}
-              <Button variant="outline" onClick={onClose}>Fechar</Button>
+              <Button variant="outline" onClick={onClose}>
+                Fechar
+              </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+              <Button variant="ghost" onClick={onClose}>
+                Cancelar
+              </Button>
               <Button disabled={!action || isPending} onClick={handleSubmit}>
                 {isPending ? 'Salvando...' : 'Confirmar Resolução'}
               </Button>

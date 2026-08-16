@@ -47,10 +47,10 @@ import { cn } from '@/lib/utils'
 
 import { TreatmentDetails } from '../treatments/treatment-details'
 import { AttachmentModal } from './components/attachment-modal'
+import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { CreditCardDetailsDialog } from './components/credit-card-details-dialog'
 import { TransactionDetailsModal } from './components/transaction-details-modal'
 import { TransactionGroupDetailsDialog } from './components/transaction-group-details-dialog'
-import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { PaymentModal } from './payment-modal'
 
 // Interface de Transação Original do seu backend/query
@@ -323,7 +323,8 @@ export function TransactionMobileCard({
               onClick={(e) => {
                 e.stopPropagation()
                 if (transactions.isVirtual) setOpenCreditCardDialog(true)
-                if (transactions.isCashierGroup) setOpenCashierDetailsModal(true)
+                if (transactions.isCashierGroup)
+                  setOpenCashierDetailsModal(true)
               }}
             >
               {transactions.isVirtual ? 'Ver Fatura' : 'Ver Caixa'}

@@ -9,7 +9,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -20,7 +20,6 @@ import { getAccounts } from '@/api/get-accounts'
 import { getGeneralBalance } from '@/api/get-general-balance'
 import { recalculateAccountBalance } from '@/api/recalculate-account-balance'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -38,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { exportAccountHistoryPDF } from '@/utils/export-account-history-pdf'
 
@@ -88,9 +88,10 @@ export function Accounts() {
     queryFn: getGeneralBalance,
   })
 
-  const { register, handleSubmit, reset, control } = useForm<CreateAccountSchema>({
-    resolver: zodResolver(createAccountSchema),
-  })
+  const { register, handleSubmit, reset, control } =
+    useForm<CreateAccountSchema>({
+      resolver: zodResolver(createAccountSchema),
+    })
 
   const {
     register: registerAdjust,
@@ -409,7 +410,11 @@ export function Accounts() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            if (confirm('Isso irá sobrescrever o saldo atual com a soma de todas as transações confirmadas. Deseja continuar?')) {
+                            if (
+                              confirm(
+                                'Isso irá sobrescrever o saldo atual com a soma de todas as transações confirmadas. Deseja continuar?',
+                              )
+                            ) {
                               recalculateBalance({ id: account.id })
                             }
                           }}
@@ -443,7 +448,7 @@ export function Accounts() {
 
                     {/* Pending Balance Section */}
                     {account.pending_balance > 0 && (
-                      <div className="mt-3 rounded-lg bg-orange-50/50 p-2.5 border border-orange-100 dark:bg-orange-500/10 dark:border-orange-500/20">
+                      <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50/50 p-2.5 dark:border-orange-500/20 dark:bg-orange-500/10">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
                           Lançamentos Pendentes
                         </span>
@@ -530,7 +535,10 @@ export function Accounts() {
                         />
                       )}
                     />
-                    <Label htmlFor="is_transit_card" className="text-sm cursor-pointer">
+                    <Label
+                      htmlFor="is_transit_card"
+                      className="cursor-pointer text-sm"
+                    >
                       Conta Transitória (Cartões)
                     </Label>
                   </div>

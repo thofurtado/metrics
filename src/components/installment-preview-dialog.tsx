@@ -205,20 +205,21 @@ export function InstallmentPreviewDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent 
+      <ResponsiveDialogContent
         onInteractOutside={(e) => e.preventDefault()}
         onKeyDown={(e) => {
           if (
             e.key === 'Enter' &&
             (e.target instanceof HTMLInputElement ||
               (e.target as HTMLElement).getAttribute('role') === 'switch' ||
-              (e.target as HTMLElement).getAttribute('aria-haspopup') === 'dialog')
+              (e.target as HTMLElement).getAttribute('aria-haspopup') ===
+                'dialog')
           ) {
             e.preventDefault()
             const inputs = Array.from(
               e.currentTarget.querySelectorAll(
-                'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])'
-              )
+                'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])',
+              ),
             ) as HTMLElement[]
             const index = inputs.indexOf(e.target as HTMLElement)
             if (index > -1 && index < inputs.length - 1) {

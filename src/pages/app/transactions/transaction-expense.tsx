@@ -9,7 +9,7 @@ import {
   ListChecks,
   TrendingDown,
 } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -50,7 +50,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
 import { Dialog } from '@/components/ui/dialog'
 import {
@@ -81,6 +80,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { Switch } from '@/components/ui/switch'
 import { API_BASE_URL } from '@/lib/axios'
 import { calculateCreditCardDueDate } from '@/lib/credit-card-due-date'
@@ -922,14 +922,17 @@ export function TransactionExpense({
                           field.onChange(val)
                           setTimeout(() => {
                             if (frequencyTriggerRef.current) {
-                              const form = frequencyTriggerRef.current.closest('form')
+                              const form =
+                                frequencyTriggerRef.current.closest('form')
                               if (form) {
                                 const inputs = Array.from(
                                   form.querySelectorAll(
                                     'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
                                   ),
                                 ) as HTMLElement[]
-                                const index = inputs.indexOf(frequencyTriggerRef.current)
+                                const index = inputs.indexOf(
+                                  frequencyTriggerRef.current,
+                                )
                                 if (index > -1 && index < inputs.length - 1) {
                                   const nextElement = inputs[index + 1]
                                   if (nextElement) nextElement.focus()
@@ -941,7 +944,10 @@ export function TransactionExpense({
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger ref={frequencyTriggerRef} className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                          <SelectTrigger
+                            ref={frequencyTriggerRef}
+                            className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
+                          >
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                         </FormControl>
@@ -1084,14 +1090,19 @@ export function TransactionExpense({
                             field.onChange(val)
                             setTimeout(() => {
                               if (paymentMethodTriggerRef.current) {
-                                const form = paymentMethodTriggerRef.current.closest('form')
+                                const form =
+                                  paymentMethodTriggerRef.current.closest(
+                                    'form',
+                                  )
                                 if (form) {
                                   const inputs = Array.from(
                                     form.querySelectorAll(
                                       'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
                                     ),
                                   ) as HTMLElement[]
-                                  const index = inputs.indexOf(paymentMethodTriggerRef.current)
+                                  const index = inputs.indexOf(
+                                    paymentMethodTriggerRef.current,
+                                  )
                                   if (index > -1 && index < inputs.length - 1) {
                                     const nextElement = inputs[index + 1]
                                     if (nextElement) nextElement.focus()
@@ -1104,7 +1115,10 @@ export function TransactionExpense({
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger ref={paymentMethodTriggerRef} className="h-12 rounded-xl border-border/70 bg-background text-base font-medium">
+                            <SelectTrigger
+                              ref={paymentMethodTriggerRef}
+                              className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
+                            >
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                           </FormControl>

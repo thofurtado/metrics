@@ -162,7 +162,10 @@ export function ImageZoomViewer({
       {/* Dica visual de navegação */}
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/10 bg-black/75 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-xl backdrop-blur-md animate-in fade-in">
         <Move className="h-3.5 w-3.5 text-blue-400" />
-        <span>Roda do mouse rola a imagem • Arraste para mover • Duplo clique para zoom</span>
+        <span>
+          Roda do mouse rola a imagem • Arraste para mover • Duplo clique para
+          zoom
+        </span>
       </div>
 
       {/* Container da Imagem com Pan/Zoom */}

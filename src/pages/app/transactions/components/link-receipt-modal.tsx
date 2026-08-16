@@ -13,8 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/axios'
 
 import { PaymentModal } from '../payment-modal'
@@ -47,7 +47,7 @@ export function LinkReceiptModal({
           status: includePaid ? undefined : 'pending',
           month: includePaid ? 'all' : undefined,
           sortBy: 'data_vencimento',
-          sortDirection: 'desc'
+          sortDirection: 'desc',
         },
       })
       return res.data
@@ -93,8 +93,10 @@ export function LinkReceiptModal({
             attachment_url: data?.attachment_url,
             sectorId: transaction.sectors?.id || null,
             accountId: transaction.accounts?.id || null,
-            suggestedInterest: initialInterest > 0 ? initialInterest : undefined,
-            suggestedDiscount: initialDiscount > 0 ? initialDiscount : undefined,
+            suggestedInterest:
+              initialInterest > 0 ? initialInterest : undefined,
+            suggestedDiscount:
+              initialDiscount > 0 ? initialDiscount : undefined,
           })
         }
       } else {
@@ -181,7 +183,10 @@ export function LinkReceiptModal({
                 checked={includePaid}
                 onCheckedChange={setIncludePaid}
               />
-              <Label htmlFor="include-paid" className="text-sm cursor-pointer whitespace-nowrap">
+              <Label
+                htmlFor="include-paid"
+                className="cursor-pointer whitespace-nowrap text-sm"
+              >
                 Incluir já pagas
               </Label>
             </div>
@@ -218,7 +223,7 @@ export function LinkReceiptModal({
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="mt-1 text-xs text-slate-500">
                     {new Date(t.data_vencimento).toLocaleDateString()} -{' '}
                     {t.amount.toLocaleString('pt-BR', {
                       style: 'currency',

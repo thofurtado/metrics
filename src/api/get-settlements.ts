@@ -25,21 +25,24 @@ export interface HistorySettlement {
   }
 }
 
-export async function getSettlements({ 
+export async function getSettlements({
   pageIndex = 0,
   sortBy = 'data_vencimento',
-  sortDir = 'desc'
-}: { 
-  pageIndex?: number,
-  sortBy?: string,
+  sortDir = 'desc',
+}: {
+  pageIndex?: number
+  sortBy?: string
   sortDir?: string
 } = {}) {
-  const response = await api.get<PaginatedResponse<HistorySettlement>>('/settlements', {
-    params: {
-      page: pageIndex + 1,
-      sortBy,
-      sortDir
-    }
-  })
+  const response = await api.get<PaginatedResponse<HistorySettlement>>(
+    '/settlements',
+    {
+      params: {
+        page: pageIndex + 1,
+        sortBy,
+        sortDir,
+      },
+    },
+  )
   return response.data
 }

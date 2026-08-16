@@ -1,7 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { getProfile } from '@/api/get-profile'
 import { Sidebar } from '@/components/sidebar'

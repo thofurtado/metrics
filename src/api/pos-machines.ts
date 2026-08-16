@@ -42,7 +42,10 @@ export async function createPOSMachine(data: CreatePOSMachineParams) {
   return response.data
 }
 
-export async function updatePOSMachine({ id, ...data }: UpdatePOSMachineParams) {
+export async function updatePOSMachine({
+  id,
+  ...data
+}: UpdatePOSMachineParams) {
   const response = await api.put<POSMachine>(`/api/pos-machines/${id}`, data)
   return response.data
 }

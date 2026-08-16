@@ -21,9 +21,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import { ClientsEquipmentsModal } from './components/clients-equipments-modal'
 import { TreatmentTableRow } from './treatment-table-row'
 import { TreatmentTableFilters } from './TreatmentTableFilters'
-import { ClientsEquipmentsModal } from './components/clients-equipments-modal'
 
 export function Treatments() {
   const navigate = useNavigate()

@@ -229,11 +229,15 @@ export function Permissions() {
                   user.role === 'ADMIN'
                     ? 'mb-4 border-amber-600/30 bg-amber-500/10 text-amber-600'
                     : user.role === 'CASHIER'
-                    ? 'mb-4 border-purple-600/30 bg-purple-500/10 text-purple-600'
-                    : 'mb-4 text-slate-500'
+                      ? 'mb-4 border-purple-600/30 bg-purple-500/10 text-purple-600'
+                      : 'mb-4 text-slate-500'
                 }
               >
-                {user.role === 'ADMIN' ? 'Administrador' : user.role === 'CASHIER' ? 'Operador de Caixa' : 'Membro'}
+                {user.role === 'ADMIN'
+                  ? 'Administrador'
+                  : user.role === 'CASHIER'
+                    ? 'Operador de Caixa'
+                    : 'Membro'}
               </Badge>
 
               <div className="mt-auto flex flex-wrap gap-1.5">
@@ -361,13 +365,18 @@ export function Permissions() {
                   <div
                     key={mod.id}
                     className={`flex items-start space-x-3 rounded-md border p-3 transition-colors ${
-                      formData.role === 'CASHIER' ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/50'
+                      formData.role === 'CASHIER'
+                        ? 'bg-muted/20 opacity-50'
+                        : 'hover:bg-muted/50'
                     }`}
                   >
                     <Checkbox
                       id={`mod-${mod.id}`}
                       disabled={formData.role === 'CASHIER'}
-                      checked={formData.role !== 'CASHIER' && formData.modules.includes(mod.slug)}
+                      checked={
+                        formData.role !== 'CASHIER' &&
+                        formData.modules.includes(mod.slug)
+                      }
                       onCheckedChange={(checked) =>
                         toggleModule(mod.slug, checked as boolean)
                       }

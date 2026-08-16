@@ -14,14 +14,6 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ImageZoomViewer } from '@/components/image-zoom-viewer'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -31,6 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { api, API_BASE_URL } from '@/lib/axios'
 
 interface PendingReceiptsModalProps {
@@ -129,8 +129,8 @@ export function PendingReceiptsModal({
       setTimeout(() => {
         setReceiptToDelete(null)
       }, 50)
-      
-      // Fallback de segurança para garantir que a tela destrave caso o Radix falhe 
+
+      // Fallback de segurança para garantir que a tela destrave caso o Radix falhe
       // ao tentar devolver o foco para um elemento que foi recém excluído da DOM.
       setTimeout(() => {
         document.body.style.pointerEvents = 'auto'

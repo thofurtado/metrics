@@ -1,7 +1,8 @@
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { UserPlus, X, Check } from 'lucide-react'
+import { Check, UserPlus, X } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+
 import { createQuickClient } from '@/api/get-clients'
 
 interface QuickClientDialogProps {
@@ -10,7 +11,11 @@ interface QuickClientDialogProps {
   onSuccess: (client: { id: string; name: string }) => void
 }
 
-export function QuickClientDialog({ isOpen, onClose, onSuccess }: QuickClientDialogProps) {
+export function QuickClientDialog({
+  isOpen,
+  onClose,
+  onSuccess,
+}: QuickClientDialogProps) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [identification, setIdentification] = useState('')
@@ -30,7 +35,9 @@ export function QuickClientDialog({ isOpen, onClose, onSuccess }: QuickClientDia
       onClose()
     },
     onError: () => {
-      toast.error('Erro ao cadastrar cliente. Verifique se o CPF/CNPJ já existe.')
+      toast.error(
+        'Erro ao cadastrar cliente. Verifique se o CPF/CNPJ já existe.',
+      )
     },
   })
 
@@ -57,7 +64,9 @@ export function QuickClientDialog({ isOpen, onClose, onSuccess }: QuickClientDia
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
               <UserPlus size={18} />
             </div>
-            <h3 className="text-sm font-black uppercase tracking-wider">Novo Cliente Rápido</h3>
+            <h3 className="text-sm font-black uppercase tracking-wider">
+              Novo Cliente Rápido
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -124,7 +133,8 @@ export function QuickClientDialog({ isOpen, onClose, onSuccess }: QuickClientDia
               disabled={isPending}
               className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-black uppercase text-white shadow-md transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
             >
-              <Check size={14} /> {isPending ? 'Salvando...' : 'Salvar & Selecionar'}
+              <Check size={14} />{' '}
+              {isPending ? 'Salvando...' : 'Salvar & Selecionar'}
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
 
 import { api } from '@/lib/axios'
 
@@ -36,7 +36,11 @@ async function fetchCompanyProfile() {
 }
 
 export function MenuResolver() {
-  const { data: tenant, isLoading: isLoadingTenant, error: tenantError } = useQuery({
+  const {
+    data: tenant,
+    isLoading: isLoadingTenant,
+    error: tenantError,
+  } = useQuery({
     queryKey: ['tenant-landing-info'],
     queryFn: fetchTenantInfo,
     retry: false,
@@ -78,7 +82,10 @@ export function MenuResolver() {
   }
 
   // Se for cliente VIP (Marujo) com layout customizado (preservando o funcionamento antigo)
-  if (tenant.landingPageType === 'CUSTOM' && tenant.landingPageSlug === 'marujo') {
+  if (
+    tenant.landingPageType === 'CUSTOM' &&
+    tenant.landingPageSlug === 'marujo'
+  ) {
     return (
       <div className="theme-marujo">
         <Suspense

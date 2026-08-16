@@ -31,17 +31,30 @@ export interface UpdatePaymentIdentifierParams {
 }
 
 export async function getPaymentIdentifiers() {
-  const response = await api.get<PaymentIdentifier[]>('/api/payment-identifiers')
+  const response = await api.get<PaymentIdentifier[]>(
+    '/api/payment-identifiers',
+  )
   return response.data
 }
 
-export async function createPaymentIdentifier(data: CreatePaymentIdentifierParams) {
-  const response = await api.post<PaymentIdentifier>('/api/payment-identifiers', data)
+export async function createPaymentIdentifier(
+  data: CreatePaymentIdentifierParams,
+) {
+  const response = await api.post<PaymentIdentifier>(
+    '/api/payment-identifiers',
+    data,
+  )
   return response.data
 }
 
-export async function updatePaymentIdentifier({ id, ...data }: UpdatePaymentIdentifierParams) {
-  const response = await api.put<PaymentIdentifier>(`/api/payment-identifiers/${id}`, data)
+export async function updatePaymentIdentifier({
+  id,
+  ...data
+}: UpdatePaymentIdentifierParams) {
+  const response = await api.put<PaymentIdentifier>(
+    `/api/payment-identifiers/${id}`,
+    data,
+  )
   return response.data
 }
 

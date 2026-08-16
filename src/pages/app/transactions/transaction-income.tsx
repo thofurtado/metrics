@@ -614,8 +614,12 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                         onValueChange={(val) => {
                           field.onChange(val)
                           setTimeout(() => {
-                            const trigger = document.activeElement as HTMLElement
-                            if (trigger && trigger.getAttribute('role') === 'combobox') {
+                            const trigger =
+                              document.activeElement as HTMLElement
+                            if (
+                              trigger &&
+                              trigger.getAttribute('role') === 'combobox'
+                            ) {
                               const form = trigger.closest('form')
                               if (form) {
                                 const inputs = Array.from(
@@ -635,12 +639,14 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger 
+                          <SelectTrigger
                             className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
                             onKeyUp={(e) => {
                               if (
                                 (e.key === 'Tab' || e.key === 'Enter') &&
-                                e.currentTarget.getAttribute('aria-expanded') === 'false'
+                                e.currentTarget.getAttribute(
+                                  'aria-expanded',
+                                ) === 'false'
                               ) {
                                 e.currentTarget.click()
                               }

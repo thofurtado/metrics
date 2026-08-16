@@ -1,4 +1,4 @@
-﻿import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
@@ -339,7 +339,8 @@ export function Treatment() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {clients?.find((client) => client.id === clientId)
+                            {clients
+                              ?.find((client) => client.id === clientId)
                               ?.equipments?.map((equipment) => (
                                 <SelectItem
                                   value={equipment.id}
@@ -384,8 +385,8 @@ export function Treatment() {
                     onClick={() => setShowContact(true)}
                     className="h-auto p-0 text-xs text-minsk-500 underline"
                   >
-                    + Adicionar responsÃ¡vel pelo acompanhamento (se diferente do
-                    cliente)
+                    + Adicionar responsÃ¡vel pelo acompanhamento (se diferente
+                    do cliente)
                   </Button>
                 </div>
               ) : (
@@ -490,6 +491,3 @@ export function Treatment() {
     </>
   )
 }
-
-
-

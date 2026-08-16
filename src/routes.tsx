@@ -1,4 +1,4 @@
-﻿// routes.tsx
+// routes.tsx
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
@@ -10,37 +10,37 @@ import { NotFound } from './pages/404'
 import { PaymentConfig } from './pages/app/admin-cashier/payment-config'
 import { CashierDashboard } from './pages/app/cashier/dashboard'
 import { CashierSessionDetails } from './pages/app/cashier/session/[id]'
+import { ClientsEquipments } from './pages/app/clients-equipments'
 import { Dashboard } from './pages/app/dashboard/dashboard'
 import { Items } from './pages/app/items'
 import { Accounts } from './pages/app/settings/accounts'
 import { CreditCards } from './pages/app/settings/credit-cards'
-import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { MenuSettings } from './pages/app/settings/menu-settings'
-import { Payments } from './pages/app/settings/payments'
-import { POSMachinesSettings } from './pages/app/settings/pos-machines'
+import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identifiers'
+import { Payments } from './pages/app/settings/payments'
 import { Permissions } from './pages/app/settings/permissions'
+import { POSMachinesSettings } from './pages/app/settings/pos-machines'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { Settlements } from './pages/app/transactions/settlements'
-import { ClientsEquipments } from './pages/app/clients-equipments'
 import { Transactions } from './pages/app/transactions/transactions'
 import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
+import { CashierSignIn } from './pages/auth/cashier-sign-in'
 import { SignIn } from './pages/auth/sign-in'
 import { SignUp } from './pages/auth/sign-up'
-import { CashierSignIn } from './pages/auth/cashier-sign-in'
 import { DownloadsPage } from './pages/downloads'
 import { HRDashboard } from './pages/hr/dashboard'
 import { PayrollHistory } from './pages/hr/payroll/history'
 import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
 import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
 import { LandingInterceptor } from './pages/landings/LandingInterceptor'
+import { MenuResolver } from './pages/landings/MenuResolver'
 import { ReceiptPage } from './pages/public/receipt-page'
 
 const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
 const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
-import { MenuResolver } from './pages/landings/MenuResolver'
 
 const isDev = import.meta.env.DEV || process.env.NODE_ENV === 'development'
 
@@ -89,7 +89,7 @@ export const router = createBrowserRouter([
         : []),
       {
         path: 'cardapio',
-        element: <MenuResolver />
+        element: <MenuResolver />,
       },
       {
         path: 'comprovante/:transactionId',
@@ -115,7 +115,14 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: 'dashboard', element: <Dashboard /> },
-          { path: 'clients-equipments', element: <ModuleGuard module="treatments"><ClientsEquipments /></ModuleGuard> },
+          {
+            path: 'clients-equipments',
+            element: (
+              <ModuleGuard module="treatments">
+                <ClientsEquipments />
+              </ModuleGuard>
+            ),
+          },
           {
             path: 'treatments',
             element: (
@@ -186,7 +193,10 @@ export const router = createBrowserRouter([
               { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
               { path: 'pos-machines', element: <POSMachinesSettings /> },
-              { path: 'payment-identifiers', element: <PaymentIdentifiersSettings /> },
+              {
+                path: 'payment-identifiers',
+                element: <PaymentIdentifiersSettings />,
+              },
               { path: 'modules', element: <ModulesSettings /> },
               { path: 'cardapio', element: <MenuSettings /> },
               { path: 'permissions', element: <Permissions /> },
@@ -226,4 +236,3 @@ export const router = createBrowserRouter([
     element: <NotFound />,
   },
 ])
-

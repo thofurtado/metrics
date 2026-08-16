@@ -1,4 +1,12 @@
-import { Blocks, Cpu, CreditCard, Shield, Tag, Wallet, Store } from 'lucide-react'
+import {
+  Blocks,
+  Cpu,
+  CreditCard,
+  Shield,
+  Store,
+  Tag,
+  Wallet,
+} from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'

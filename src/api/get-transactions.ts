@@ -99,11 +99,16 @@ export async function getTransactions({
   }
 
   // Inject isCashierGroup for cashier summaries
-  if (response.data && response.data.transactions && response.data.transactions.transactions) {
-    response.data.transactions.transactions = response.data.transactions.transactions.map((tx: any) => ({
-      ...tx,
-      isCashierGroup: tx.operation === 'cashier_summary',
-    }))
+  if (
+    response.data &&
+    response.data.transactions &&
+    response.data.transactions.transactions
+  ) {
+    response.data.transactions.transactions =
+      response.data.transactions.transactions.map((tx: any) => ({
+        ...tx,
+        isCashierGroup: tx.operation === 'cashier_summary',
+      }))
   }
 
   return response
