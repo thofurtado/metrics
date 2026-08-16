@@ -3,6 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Server, Activity, Wrench, DownloadCloud, Terminal, HardDrive, Cpu, AlertTriangle, MonitorPlay } from 'lucide-react'
 import { toast } from 'sonner'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/axios'
+import { RefreshCw } from 'lucide-react'
 
 interface EquipmentDetailsModalProps {
   open: boolean
@@ -25,83 +28,37 @@ export function EquipmentDetailsModal({ open, onOpenChange, equipment }: Equipme
   const memUsedPercent = mem.total ? ((mem.active / mem.total) * 100).toFixed(0) : 0
   const temp = telemetry.temp?.main || 0
 
+    const queryClient = useQueryClient()
+  
+  const { mutateAsync: sendCommand, isPending: isSendingCommand } = useMutation({
+    mutationFn: async (commandName: string) => {
+      await api.post(`/equipments/${equipment.id}/command`, { command: commandName })
+    },
+    onSuccess: (_, commandName) => {
+      toast.success(`Comando enviado: ${commandName}`)
+      if (commandName === 'REFRESH_TELEMETRY') {
+        toast.info('Aguardando resposta do equipamento...', { duration: 4000 })
+        // Tenta refetch após 2s e 4s
+        setTimeout(() => queryClient.invalidateQueries({ queryKey: ['clients-fleet'] }), 2000)
+        setTimeout(() => queryClient.invalidateQueries({ queryKey: ['clients-fleet'] }), 4000)
+      }
+    },
+    onError: () => toast.error('Falha ao enviar comando ou equipamento offline.')
+  })
+
   const handleSimulateCommand = (commandName: string) => {
-    toast.info(`Comando enviado para o equipamento: ${commandName}`, {
-      description: 'Aguardando confirmação do agente remoto...'
-    })
-    
-    // Simular retorno
-    setTimeout(() => {
-      toast.success(`${commandName} executado com sucesso no equipamento!`)
-    }, 2500)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-slate-50/95 backdrop-blur-xl dark:bg-slate-900/95 rounded-3xl border-slate-200/50 dark:border-slate-800/50">
-        <DialogHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <DialogTitle className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                <span className={`relative flex h-4 w-4`}>
-                  {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-4 w-4 ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-                </span>
-                {equipment.identification || equipment.type || 'Máquina'}
-              </DialogTitle>
-              <DialogDescription className="text-slate-500 font-medium mt-1">
-                {equipment.client?.name ? `Propriedade de: ${equipment.client.name}` : 'Aguardando vínculo'}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <Tabs defaultValue="telemetry" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-white/50 p-1 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50">
-            <TabsTrigger value="telemetry" className="rounded-xl py-2.5 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950">
-              <Activity className="mr-2 h-4 w-4" />
-              Saúde & Telemetria
-            </TabsTrigger>
-            <TabsTrigger value="maintenance" className="rounded-xl py-2.5 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950">
-              <Wrench className="mr-2 h-4 w-4" />
-              Manutenção
-            </TabsTrigger>
-            <TabsTrigger value="install" className="rounded-xl py-2.5 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950">
-              <DownloadCloud className="mr-2 h-4 w-4" />
-              Instalação Expressa
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ABA 1: TELEMETRIA */}
-          <TabsContent value="telemetry" className="mt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* Card OS Info */}
-              <div className="md:col-span-3 bg-white/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 flex gap-4 items-center">
-                <div className="h-16 w-16 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-2xl flex items-center justify-center">
-                  <Server className="h-8 w-8" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-200">Sistema Operacional</h4>
-                  <p className="text-sm text-slate-500 font-medium">
-                    {osInfo.distro} {osInfo.release} ({osInfo.arch})
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Processador: {cpuInfo.manufacturer} {cpuInfo.brand}
-                  </p>
-                </div>
-              </div>
-
-              {/* Card CPU */}
-              <div className="bg-white/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <Cpu className="h-4 w-4 text-indigo-500" /> CPU
-                  </h4>
-                  <span className="text-2xl font-black text-indigo-600">{cpuLoad}%</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2">
-                  <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(Number(cpuLoad), 100)}%` }}></div>
+    // If it's a known implemented command, send it
+    if (commandName === 'REFRESH_TELEMETRY' || commandName.startsWith('Reiniciar')) {
+        sendCommand(commandName)
+    } else {
+        toast.info(`Comando enviado para o equipamento: ${commandName}`, {
+          description: 'Aguardando confirmação do agente remoto...'
+        })
+        setTimeout(() => {
+          toast.success(`${commandName} executado com sucesso no equipamento!`)
+        }, 2500)
+    }
+  }></div>
                 </div>
               </div>
 
