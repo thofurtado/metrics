@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod'
+﻿import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
@@ -142,12 +142,12 @@ export function Treatment() {
             className="flex flex-col gap-6"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            {/* SEÇÃO 1: STATUS E TEMPO */}
+            {/* SEÃ‡ÃƒO 1: STATUS E TEMPO */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <FlagTriangleRight className="h-4 w-4 text-vida-loca-500" />
                 <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
-                  Situação e Agendamento
+                  SituaÃ§Ã£o e Agendamento
                 </h2>
               </div>
 
@@ -191,7 +191,7 @@ export function Treatment() {
                             Em Bancada
                           </SelectItem>
                           <SelectItem value="resolved">
-                            Resolvido (Concluído)
+                            Resolvido (ConcluÃ­do)
                           </SelectItem>
                           <SelectItem value="canceled">Cancelado</SelectItem>
                           <SelectItem value="on_hold">Em espera</SelectItem>
@@ -224,7 +224,7 @@ export function Treatment() {
                               {field.value ? (
                                 format(field.value, 'dd/MM/yy HH:mm')
                               ) : (
-                                <span>Hoje (Automático)</span>
+                                <span>Hoje (AutomÃ¡tico)</span>
                               )}
                             </Button>
                           </PopoverTrigger>
@@ -250,7 +250,7 @@ export function Treatment() {
               </div>
             </div>
 
-            {/* SEÇÃO 2: CLIENTE E EQUIPAMENTO */}
+            {/* SEÃ‡ÃƒO 2: CLIENTE E EQUIPAMENTO */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <Building2 className="h-4 w-4 text-vida-loca-500" />
@@ -277,7 +277,7 @@ export function Treatment() {
                             setClientId(newValue)
                             setIsEquipmentDisabled(false)
                           }}
-                          clients={clients?.data.clients || []}
+                          clients={clients || []}
                         />
                       </FormItem>
                     )}
@@ -339,9 +339,8 @@ export function Treatment() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {clients?.data.clients
-                              .find((client) => client.id === clientId)
-                              ?.equipments.map((equipment) => (
+                            {clients?.find((client) => client.id === clientId)
+                              ?.equipments?.map((equipment) => (
                                 <SelectItem
                                   value={equipment.id}
                                   key={equipment.id}
@@ -376,7 +375,7 @@ export function Treatment() {
                 </div>
               </div>
 
-              {/* Contato Específico para este Atendimento (Toggle Opcional) */}
+              {/* Contato EspecÃ­fico para este Atendimento (Toggle Opcional) */}
               {!showContact ? (
                 <div className="flex justify-end">
                   <Button
@@ -385,7 +384,7 @@ export function Treatment() {
                     onClick={() => setShowContact(true)}
                     className="h-auto p-0 text-xs text-minsk-500 underline"
                   >
-                    + Adicionar responsável pelo acompanhamento (se diferente do
+                    + Adicionar responsÃ¡vel pelo acompanhamento (se diferente do
                     cliente)
                   </Button>
                 </div>
@@ -393,7 +392,7 @@ export function Treatment() {
                 <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
                   <div className="flex items-center justify-between">
                     <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
-                      Responsável pelo Acompanhamento
+                      ResponsÃ¡vel pelo Acompanhamento
                     </FormLabel>
                     <Button
                       type="button"
@@ -418,7 +417,7 @@ export function Treatment() {
                             {...field}
                             value={field.value || ''}
                             className="h-10"
-                            placeholder="Nome de quem está acompanhando este chamado"
+                            placeholder="Nome de quem estÃ¡ acompanhando este chamado"
                           />
                         </FormControl>
                       </FormItem>
@@ -428,12 +427,12 @@ export function Treatment() {
               )}
             </div>
 
-            {/* SEÇÃO 3: DETALHES */}
+            {/* SEÃ‡ÃƒO 3: DETALHES */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <NotebookText className="h-4 w-4 text-vida-loca-500" />
                 <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
-                  Detalhes da Solicitação
+                  Detalhes da SolicitaÃ§Ã£o
                 </h2>
               </div>
 
@@ -449,7 +448,7 @@ export function Treatment() {
                       <Input
                         {...field}
                         className="h-10"
-                        placeholder="Ex: Manutenção Preventiva, Formatação, Troca de Peça..."
+                        placeholder="Ex: ManutenÃ§Ã£o Preventiva, FormataÃ§Ã£o, Troca de PeÃ§a..."
                       />
                     </FormControl>
                   </FormItem>
@@ -462,7 +461,7 @@ export function Treatment() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
-                      Descrição Técnica / Observações
+                      DescriÃ§Ã£o TÃ©cnica / ObservaÃ§Ãµes
                     </FormLabel>
                     <FormControl>
                       <Textarea
@@ -476,7 +475,7 @@ export function Treatment() {
               />
             </div>
 
-            {/* BOTÃO CADASTRAR */}
+            {/* BOTÃƒO CADASTRAR */}
             <div className="sticky bottom-4 z-10 pt-2">
               <Button
                 type="submit"
@@ -491,3 +490,6 @@ export function Treatment() {
     </>
   )
 }
+
+
+
