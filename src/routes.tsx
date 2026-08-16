@@ -1,4 +1,4 @@
-// routes.tsx
+﻿// routes.tsx
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
@@ -23,6 +23,7 @@ import { Permissions } from './pages/app/settings/permissions'
 import { SettingsLayout } from './pages/app/settings/settings-layout'
 import { SuppliersList } from './pages/app/suppliers/suppliers-list'
 import { Settlements } from './pages/app/transactions/settlements'
+import { ClientsEquipments } from './pages/app/clients-equipments'
 import { Transactions } from './pages/app/transactions/transactions'
 import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
@@ -114,6 +115,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: 'dashboard', element: <Dashboard /> },
+          { path: 'clients-equipments', element: <ModuleGuard module="treatments"><ClientsEquipments /></ModuleGuard> },
           {
             path: 'treatments',
             element: (
@@ -224,3 +226,4 @@ export const router = createBrowserRouter([
     element: <NotFound />,
   },
 ])
+

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import {
   Boxes,
   ChevronLeft,
@@ -63,10 +63,16 @@ export function Sidebar() {
       access: hasAccess('finance'),
     },
     {
-      name: 'Conferência Caixa',
+      name: 'ConferÃªncia Caixa',
       path: '/cashier',
       icon: Wallet,
       access: hasAccess('cashier'),
+    },
+    {
+      name: 'Clientes & Equipamentos',
+      path: '/clients-equipments',
+      icon: Users,
+      access: hasAccess('service') || hasAccess('finance'),
     },
     {
       name: 'Recursos Humanos',
@@ -245,7 +251,7 @@ export function Sidebar() {
                 )}
               >
                 <Settings className="h-4 w-4" />
-                {!collapsed && <span>Configurações</span>}
+                {!collapsed && <span>ConfiguraÃ§Ãµes</span>}
               </Link>
             )}
           </div>
@@ -293,3 +299,5 @@ export function Sidebar() {
     </>
   )
 }
+
+
