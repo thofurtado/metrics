@@ -177,7 +177,7 @@ export function EquipmentDetailsModal({
             </TabsList>
           </div>
 
-          <div className="custom-scrollbar h-[400px] overflow-y-auto p-6">
+          <div className="custom-scrollbar max-h-[75vh] overflow-y-auto p-6">
             {/* ABA 1: TELEMETRIA */}
             <TabsContent value="telemetry" className="mt-0">
               <div className="grid grid-cols-2 gap-4">
