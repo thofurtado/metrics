@@ -50,6 +50,11 @@ export function EquipmentDetailsModal({
     ? ((mem.active / mem.total) * 100).toFixed(0)
     : 0
   const temp = telemetry.temp?.main || 0
+  const fsSize = telemetry.fsSize || []
+  const mainDrive = fsSize[0] || {}
+  const driveTotalGB = mainDrive.size ? (mainDrive.size / 1024 ** 3).toFixed(1) : 0
+  const driveUsedPercent = mainDrive.use ? mainDrive.use.toFixed(0) : 0
+  const driveFreeGB = mainDrive.size && mainDrive.use ? ((mainDrive.size - (mainDrive.size * (mainDrive.use / 100))) / 1024 ** 3).toFixed(1) : 0
 
   const queryClient = useQueryClient()
 
@@ -257,6 +262,29 @@ export function EquipmentDetailsModal({
                       {temp}°C
                     </span>
                   </div>
+                </div>
+
+                {/* Card Disco */}
+                <div className="rounded-2xl border border-slate-200/50 bg-white/80 p-5 dark:border-slate-700/50 dark:bg-slate-800/80">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h4 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                      <HardDrive className="h-4 w-4 text-purple-500" /> Armazenamento
+                    </h4>
+                    <span className="text-2xl font-black text-purple-600">
+                      {driveUsedPercent}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
+                    <div
+                      className="h-2 rounded-full bg-purple-500"
+                      style={{
+                        width: `${Math.min(Number(driveUsedPercent), 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <p className="mt-2 text-right text-xs font-medium text-slate-400">
+                    {driveFreeGB} GB Livres de {driveTotalGB} GB ({mainDrive.fs || 'C:'})
+                  </p>
                 </div>
               </div>
             </TabsContent>
