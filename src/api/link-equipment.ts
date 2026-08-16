@@ -1,4 +1,4 @@
-import { api } from '@/lib/axios'
+﻿import { api } from '@/lib/axios'
 
 export interface LinkEquipmentRequest {
   id: string
@@ -6,5 +6,5 @@ export interface LinkEquipmentRequest {
 }
 
 export async function linkEquipment({ id, client_id }: LinkEquipmentRequest) {
-  await api.put(/equipments//link-client, { client_id })
+  await api.put(`/equipments/${id}/link-client`, { client_id })
 }
