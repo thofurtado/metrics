@@ -193,7 +193,7 @@ export function EquipmentDetailsModal({
                       </h3>
                       <p className="mt-1 flex items-center gap-2 text-sm text-blue-200">
                         <Server className="h-4 w-4" />{' '}
-                        {osInfo.hostname || 'N/A'} • {osInfo.arch || 'N/A'}
+                        {osInfo.hostname || 'N/A'} • {osInfo.arch || 'N/A'} {osInfo.motherboard ? `• ${osInfo.motherboard}` : ''}
                       </p>
                     </div>
                     <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
@@ -243,7 +243,7 @@ export function EquipmentDetailsModal({
                     ></div>
                   </div>
                   <p className="mt-2 text-right text-xs font-medium text-slate-400">
-                    {memTotalGB} GB Total
+                    {memTotalGB} GB Total {mem.clock ? `• ${mem.clock} MHz` : ''}
                   </p>
                 </div>
 
