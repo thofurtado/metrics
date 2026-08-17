@@ -132,8 +132,8 @@ export function EquipmentDetailsModal({
               <span>•</span>
               <span>
                 Visto por último:{' '}
-                {equipment.last_seen
-                  ? new Date(equipment.last_seen).toLocaleString()
+                {equipment.last_seen_at
+                  ? new Date(equipment.last_seen_at).toLocaleString()
                   : 'Nunca'}
               </span>
             </DialogDescription>
