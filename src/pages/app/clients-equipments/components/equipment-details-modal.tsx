@@ -1,4 +1,5 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query'
+﻿import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
   AlertTriangle,
@@ -6,6 +7,9 @@ import {
   Cpu,
   DownloadCloud,
   ExternalLink,
+  Eye,
+  EyeOff,
+  Key,
   HardDrive,
   MonitorPlay,
   RefreshCw,
@@ -62,6 +66,8 @@ export function EquipmentDetailsModal({
   const rustdesk = telemetry.rustdesk || {}
   const rustdeskId = rustdesk.id || ''
   const isRustDeskInstalled = !!rustdesk.isInstalled || !!rustdeskId
+  const rustdeskPassword = rustdesk.password || 'T0p1nf0r!!!'
+  const [showPassword, setShowPassword] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -154,7 +160,7 @@ export function EquipmentDetailsModal({
                 onClick={() => {
                   const cleanId = String(rustdeskId).replace(/\s+/g, '')
                   navigator.clipboard.writeText(cleanId)
-                  toast.success(`ID ${cleanId} copiado! Abrindo RustDesk...`)
+                  toast.success(`ID ${cleanId} copiado! Senha de acesso: ${rustdeskPassword}`)
                   window.location.href = `rustdesk://${cleanId}`
                 }}
               >
@@ -230,43 +236,25 @@ export function EquipmentDetailsModal({
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           Servidor: <span className="font-mono font-medium text-blue-600 dark:text-blue-400">suporte.metrics.dev.br</span>
-                          {rustdeskId && (
-                            <> • ID do Terminal: <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{rustdeskId}</span></>
-                          )}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       {rustdeskId ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-xs font-semibold"
-                            onClick={() => {
-                              const cleanId = String(rustdeskId).replace(/\s+/g, '')
-                              navigator.clipboard.writeText(cleanId)
-                              toast.success(`ID ${cleanId} copiado para a área de transferência!`)
-                            }}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                            Copiar ID
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm shadow-blue-500/20"
-                            onClick={() => {
-                              const cleanId = String(rustdeskId).replace(/\s+/g, '')
-                              navigator.clipboard.writeText(cleanId)
-                              toast.success(`Iniciando conexão com ${cleanId}...`)
-                              window.location.href = `rustdesk://${cleanId}`
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Conectar
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold shadow-md shadow-blue-500/20"
+                          onClick={() => {
+                            const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                            navigator.clipboard.writeText(cleanId)
+                            toast.success(`ID ${cleanId} copiado! Senha: ${rustdeskPassword}`)
+                            window.location.href = `rustdesk://${cleanId}`
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Conectar Agora
+                        </Button>
                       ) : (
                         <Button
                           variant="outline"
@@ -281,6 +269,60 @@ export function EquipmentDetailsModal({
                       )}
                     </div>
                   </div>
+
+                  {rustdeskId && (
+                    <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-blue-100/80 pt-3 dark:border-blue-900/40">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">ID do Terminal:</span>
+                        <span className="rounded-md border border-blue-200 bg-white px-2.5 py-1 font-mono text-sm font-bold text-blue-900 shadow-sm dark:border-blue-800 dark:bg-slate-800 dark:text-blue-200">
+                          {rustdeskId}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                          onClick={() => {
+                            const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                            navigator.clipboard.writeText(cleanId)
+                            toast.success('ID copiado!')
+                          }}
+                          title="Copiar ID"
+                        >
+                          <Copy className="mr-1 h-3 w-3" />
+                          Copiar ID
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Senha Fixa:</span>
+                        <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1 font-mono text-sm font-bold text-slate-800 shadow-sm dark:border-slate-800 dark:bg-slate-800 dark:text-slate-100">
+                          {showPassword ? rustdeskPassword : '••••••••••'}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                          onClick={() => setShowPassword(!showPassword)}
+                          title={showPassword ? 'Ocultar Senha' : 'Ver Senha'}
+                        >
+                          {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                          onClick={() => {
+                            navigator.clipboard.writeText(rustdeskPassword)
+                            toast.success('Senha copiada: ' + rustdeskPassword)
+                          }}
+                          title="Copiar Senha"
+                        >
+                          <Copy className="mr-1 h-3 w-3" />
+                          Copiar Senha
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card OS */}
