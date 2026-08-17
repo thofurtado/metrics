@@ -248,21 +248,21 @@ export function EquipmentDetailsModal({
                 </div>
 
                 {/* Card Temperatura */}
-                <div className="rounded-2xl border border-slate-200/50 bg-white/80 p-5 dark:border-slate-700/50 dark:bg-slate-800/80">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h4 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
-                      <AlertTriangle
-                        className={`h-4 w-4 ${temp > 80 ? 'text-red-500' : 'text-amber-500'}`}
-                      />{' '}
-                      Temperatura
-                    </h4>
-                    <span
-                      className={`text-2xl font-black ${temp > 80 ? 'text-red-600' : 'text-amber-600'}`}
-                    >
-                      {temp}°C
-                    </span>
+                  <div className="rounded-2xl border border-slate-200/50 bg-white/80 p-5 dark:border-slate-700/50 dark:bg-slate-800/80">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h4 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                        <AlertTriangle
+                         className={`h-4 w-4 ${temp > 0 ? (temp > 80 ? 'text-red-500' : 'text-amber-500') : 'text-slate-400'}`}
+                        />{' '}
+                       Temperatura
+                      </h4>
+                      <span
+                       className={`text-2xl font-black ${temp > 0 ? (temp > 80 ? 'text-red-600' : 'text-amber-600') : 'text-slate-400'}`}
+                      >
+                       {temp > 0 ? `${temp} °C` : 'N/D'}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
                 {/* Card Disco */}
                 <div className="rounded-2xl border border-slate-200/50 bg-white/80 p-5 dark:border-slate-700/50 dark:bg-slate-800/80">
