@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Link2,
   MonitorSmartphone,
+  MonitorPlay,
   Plus,
   RefreshCw,
   Users,
@@ -161,7 +162,7 @@ export function ClientsEquipments() {
                 <TableBody>
                   {isLoadingClients ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         Carregando clientes...
                       </TableCell>
                     </TableRow>
@@ -201,7 +202,7 @@ export function ClientsEquipments() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={6}
                         className="h-24 text-center text-muted-foreground"
                       >
                         Nenhum cliente cadastrado.
