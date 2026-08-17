@@ -43,13 +43,14 @@ import { EquipmentDetailsModal } from './components/equipment-details-modal'
 export function ClientsEquipments() {
   const queryClient = useQueryClient()
 
-  const [selectedEquipment, setSelectedEquipment] = useState<any>(null)
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
 
   // Queries
   const { data: clients, isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients-fleet'],
     queryFn: getClients,
+      refetchInterval: 10000,
   })
 
   const { data: orphans, isLoading: isLoadingOrphans } = useQuery({
@@ -407,9 +408,12 @@ export function ClientsEquipments() {
       <EquipmentDetailsModal
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
-        equipment={selectedEquipment}
+        equipment={selectedEquipmentId ? (vinculados.find((eq: any) => eq.id === selectedEquipmentId) || orphans?.find((eq: any) => eq.id === selectedEquipmentId)) : null}
       />
     </>
   )
 }
+
+
+
 

@@ -113,7 +113,7 @@ export function EquipmentDetailsModal({
         <div className="flex items-start justify-between border-b border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <div>
             <DialogTitle className="flex items-center gap-3 text-2xl font-black text-slate-800 dark:text-slate-100">
-              {equipment.name}
+              {osInfo?.hostname || equipment.identification || equipment.type || 'Equipamento'}
               {isOnline ? (
                 <span className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>{' '}
@@ -445,3 +445,4 @@ export function EquipmentDetailsModal({
     </Dialog>
   )
 }
+
