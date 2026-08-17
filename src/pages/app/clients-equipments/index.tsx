@@ -76,7 +76,7 @@ export function ClientsEquipments() {
     ) || []
 
   const handleOpenDetails = (equipment: any) => {
-    setSelectedEquipment(equipment)
+    setSelectedEquipmentId(equipment.id)
     setDetailsModalOpen(true)
   }
 
@@ -413,6 +413,7 @@ export function ClientsEquipments() {
     </>
   )
 }
+
 
 
 
