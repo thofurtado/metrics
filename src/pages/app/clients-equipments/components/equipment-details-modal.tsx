@@ -1,9 +1,11 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
   AlertTriangle,
+  Copy,
   Cpu,
   DownloadCloud,
+  ExternalLink,
   HardDrive,
   MonitorPlay,
   RefreshCw,
@@ -55,6 +57,11 @@ export function EquipmentDetailsModal({
   const driveTotalGB = mainDrive.size ? (mainDrive.size / 1024 ** 3).toFixed(1) : 0
   const driveUsedPercent = mainDrive.use ? mainDrive.use.toFixed(0) : 0
   const driveFreeGB = mainDrive.size && mainDrive.use ? ((mainDrive.size - (mainDrive.size * (mainDrive.use / 100))) / 1024 ** 3).toFixed(1) : 0
+
+  // Dados do RustDesk no JSONB de telemetria
+  const rustdesk = telemetry.rustdesk || {}
+  const rustdeskId = rustdesk.id || ''
+  const isRustDeskInstalled = !!rustdesk.isInstalled || !!rustdeskId
 
   const queryClient = useQueryClient()
 
@@ -139,18 +146,36 @@ export function EquipmentDetailsModal({
             </DialogDescription>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            disabled={!isOnline || isSendingCommand}
-            onClick={() => handleSimulateCommand('REFRESH_TELEMETRY')}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isSendingCommand ? 'animate-spin' : ''}`}
-            />
-            Atualizar Agora
-          </Button>
+          <div className="flex items-center gap-2">
+            {rustdeskId ? (
+              <Button
+                size="sm"
+                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700"
+                onClick={() => {
+                  const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                  navigator.clipboard.writeText(cleanId)
+                  toast.success(`ID ${cleanId} copiado! Abrindo RustDesk...`)
+                  window.location.href = `rustdesk://${cleanId}`
+                }}
+              >
+                <MonitorPlay className="h-4 w-4" />
+                Acesso Remoto
+              </Button>
+            ) : null}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={!isOnline || isSendingCommand}
+              onClick={() => handleSimulateCommand('REFRESH_TELEMETRY')}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isSendingCommand ? 'animate-spin' : ''}`}
+              />
+              Atualizar Agora
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="telemetry" className="w-full">
@@ -181,6 +206,83 @@ export function EquipmentDetailsModal({
             {/* ABA 1: TELEMETRIA */}
             <TabsContent value="telemetry" className="mt-0">
               <div className="grid grid-cols-2 gap-4">
+                {/* Card RustDesk */}
+                <div className="col-span-2 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/70 to-indigo-50/70 p-5 dark:border-blue-900/40 dark:bg-slate-900/60">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-blue-600 p-3 text-white shadow-md shadow-blue-500/30">
+                        <MonitorPlay className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-800 dark:text-slate-100">
+                            Acesso Remoto RustDesk (Servidor Próprio)
+                          </h4>
+                          {isRustDeskInstalled ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                              Ativo
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-slate-800">
+                              Não detectado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Servidor: <span className="font-mono font-medium text-blue-600 dark:text-blue-400">suporte.metrics.dev.br</span>
+                          {rustdeskId && (
+                            <> • ID do Terminal: <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{rustdeskId}</span></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {rustdeskId ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs font-semibold"
+                            onClick={() => {
+                              const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                              navigator.clipboard.writeText(cleanId)
+                              toast.success(`ID ${cleanId} copiado para a área de transferência!`)
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar ID
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm shadow-blue-500/20"
+                            onClick={() => {
+                              const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                              navigator.clipboard.writeText(cleanId)
+                              toast.success(`Iniciando conexão com ${cleanId}...`)
+                              window.location.href = `rustdesk://${cleanId}`
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Conectar
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                          disabled={!isOnline || isSendingCommand}
+                          onClick={() => handleSimulateCommand('Instalar RustDesk')}
+                        >
+                          <DownloadCloud className="h-4 w-4" />
+                          Instalar RustDesk no Terminal
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Card OS */}
                 <div className="col-span-2 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-lg shadow-blue-500/20">
                   <div className="flex items-start justify-between">
@@ -412,9 +514,9 @@ export function EquipmentDetailsModal({
                     color: 'bg-slate-100 text-slate-700',
                   },
                   {
-                    name: 'AnyDesk',
+                    name: 'RustDesk',
                     desc: 'Acesso Remoto',
-                    color: 'bg-rose-50 text-rose-600',
+                    color: 'bg-blue-50 text-blue-600',
                   },
                 ].map((app) => (
                   <div
