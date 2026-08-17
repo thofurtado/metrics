@@ -272,7 +272,7 @@ export function ClientsEquipments() {
                             </div>
                           </TableCell>
                           <TableCell className="font-bold text-slate-800 dark:text-slate-200">
-                            {eq.identification || eq.type || 'Equipamento'}
+                            {eq.last_telemetry?.osInfo?.hostname || eq.identification || eq.type || 'Equipamento'}
                           </TableCell>
                           <TableCell className="font-medium text-slate-600 dark:text-slate-400">
                             {eq.client?.name}
@@ -346,7 +346,7 @@ export function ClientsEquipments() {
                             onClick={() => handleOpenDetails(orphan)}
                             title="Clique para ver detalhes do equipamento"
                           >
-                            {orphan.details ||
+                            {orphan.last_telemetry?.osInfo?.hostname || orphan.details ||
                               orphan.identification ||
                               'Desconhecido'}
                           </div>
@@ -412,3 +412,4 @@ export function ClientsEquipments() {
     </>
   )
 }
+
