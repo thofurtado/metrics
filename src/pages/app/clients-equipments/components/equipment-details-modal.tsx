@@ -105,19 +105,20 @@ export function EquipmentDetailsModal({
   )
 
   const handleSimulateCommand = (commandName: string) => {
-    // If it's a known implemented command, send it
-    if (
+    if (commandName === 'UPDATE_AGENT' || commandName === 'ATUALIZAR_WINDY') {
+      toast.info('Solicitando atualização silenciosa do Windy...', {
+        description: 'O terminal vai baixar a última versão do GitHub Releases e se reiniciar em segundo plano.',
+        duration: 5000,
+      })
+      sendCommand('ATUALIZAR_WINDY')
+    } else if (
       commandName === 'REFRESH_TELEMETRY' ||
-      commandName.startsWith('Reiniciar')
+      commandName.startsWith('Reiniciar') ||
+      commandName === 'Limpeza de Disco'
     ) {
       sendCommand(commandName)
     } else {
-      toast.info(`Comando enviado para o equipamento: ${commandName}`, {
-        description: 'Aguardando confirmação do agente remoto...',
-      })
-      setTimeout(() => {
-        toast.success(`${commandName} executado com sucesso no equipamento!`)
-      }, 2500)
+      sendCommand(commandName)
     }
   }
 
