@@ -1,7 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Banknote,
   Building2,
+  CreditCard,
+  Wallet,
   Clock,
   Copy,
   Download,
@@ -47,6 +50,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
 import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
+import { getPayments } from '@/api/get-payments'
+import { updatePayment } from '@/api/update-payment'
 
 const businessHourSchema = z.object({
   dayOfWeek: z.number(),
@@ -229,6 +234,22 @@ export function MenuSettings() {
   const { data: profile, isLoading: isFetching } = useQuery({
     queryKey: ['company-profile'],
     queryFn: fetchProfile,
+  })
+
+  const { data: paymentsList, isLoading: isLoadingPayments } = useQuery({
+    queryKey: ['payments'],
+    queryFn: getPayments,
+  })
+
+  const { mutate: togglePaymentMenuStatus } = useMutation({
+    mutationFn: updatePayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      toast.success('Forma de pagamento atualizada para o cardápio!')
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar forma de pagamento.')
+    },
   })
 
   const {
@@ -606,28 +627,34 @@ export function MenuSettings() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Tabs defaultValue="delivery" className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 h-12 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 gap-1">
             <TabsTrigger
               value="store"
-              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
             >
               <Store className="h-4 w-4" /> Loja & Visual
             </TabsTrigger>
             <TabsTrigger
               value="delivery"
-              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
             >
               <Truck className="h-4 w-4" /> Entrega & Bairros
             </TabsTrigger>
             <TabsTrigger
+              value="payments"
+              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+            >
+              <CreditCard className="h-4 w-4" /> Pagamentos
+            </TabsTrigger>
+            <TabsTrigger
               value="hours"
-              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
             >
               <Clock className="h-4 w-4" /> Horários
             </TabsTrigger>
             <TabsTrigger
               value="integrations"
-              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
             >
               <Sparkles className="h-4 w-4" /> Pix & Integrações
             </TabsTrigger>
@@ -1293,7 +1320,115 @@ export function MenuSettings() {
             </Card>
           </TabsContent>
 
-          {/* ABA 3: HORÁRIOS DE ATENDIMENTO */}
+          {/* ABA 3: FORMAS DE PAGAMENTO NO DELIVERY */}
+          <TabsContent value="payments" className="space-y-6">
+            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base font-black text-slate-800 dark:text-slate-100">
+                      <CreditCard className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      Formas de Pagamento Aceitas no Cardápio
+                    </CardTitle>
+                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold text-xs">
+                      {paymentsList?.filter((p) => p.show_in_menu !== false).length || 0} de {paymentsList?.length || 0} Ativas no Delivery
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs mt-1">
+                    Marque quais formas de pagamento da sua loja (as mesmas usadas no Caixa) estarão disponíveis para os clientes escolherem no pedido online.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoadingPayments ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400">
+                    <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                    <span className="text-xs font-semibold">Carregando formas de pagamento...</span>
+                  </div>
+                ) : !paymentsList || paymentsList.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-800 dark:bg-slate-900/20">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                      Nenhuma forma de pagamento cadastrada na empresa.
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Acesse Configurações ➔ Formas de Pagamento para cadastrar opções como Dinheiro, Cartão e Pix.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {paymentsList.map((payment) => {
+                      const isEnabled = payment.show_in_menu !== false
+                      const isCash = payment.name.toLowerCase().includes('dinheiro')
+                      const isPix = payment.name.toLowerCase().includes('pix')
+
+                      return (
+                        <div
+                          key={payment.id}
+                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all shadow-sm ${
+                            isEnabled
+                              ? 'border-indigo-200 bg-white dark:border-indigo-900/60 dark:bg-slate-950 ring-1 ring-indigo-100 dark:ring-indigo-950/40'
+                              : 'border-slate-200 bg-slate-50/60 opacity-60 dark:border-slate-800 dark:bg-slate-900/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl flex items-center justify-center ${
+                              isEnabled
+                                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300'
+                                : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                            }`}>
+                              {isCash ? (
+                                <Banknote className="h-5 w-5" />
+                              ) : isPix ? (
+                                <Wallet className="h-5 w-5" />
+                              ) : (
+                                <CreditCard className="h-5 w-5" />
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                                  {payment.name}
+                                </h4>
+                                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                                  {payment.in_sight ? 'À vista (1x)' : `Até ${payment.installment_limit}x`}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                {isEnabled
+                                  ? 'Disponível no checkout do cardápio'
+                                  : 'Oculto no cardápio (só no caixa físico)'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2 pl-3">
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={(checked) =>
+                                togglePaymentMenuStatus({
+                                  id: payment.id,
+                                  data: {
+                                    name: payment.name,
+                                    installment_limit: payment.installment_limit,
+                                    in_sight: payment.in_sight,
+                                    account_id: payment.account_id || undefined,
+                                    show_in_menu: checked,
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 4: HORÁRIOS DE ATENDIMENTO */}
           <TabsContent value="hours" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -6,9 +6,10 @@ export interface Payment {
   installment_limit: number
   in_sight: boolean
   account_id: string | null
+  show_in_menu?: boolean
 }
 
 export async function getPayments() {
-  const response = await api.get<Payment[]>('/payments') // A API retorna Payment[] diretamente
-  return response.data // Retorna o array diretamente
+  const response = await api.get<Payment[]>('/payments')
+  return response.data
 }
