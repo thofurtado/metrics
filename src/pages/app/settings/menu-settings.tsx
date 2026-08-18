@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
-  Download,
   Clock,
   Copy,
+  Download,
   Globe,
   Loader2,
   MapPin,
@@ -20,8 +20,6 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -44,13 +42,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
+import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
 
 const businessHourSchema = z.object({
   dayOfWeek: z.number(),
   openTime: z.string(),
   closeTime: z.string(),
   isOpen: z.boolean(),
+})
+
+const deliverySectorSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  fee: z.coerce.number().min(0),
+  estimatedTimeMin: z.coerce.number().default(30),
+  estimatedTimeMax: z.coerce.number().default(60),
+  neighborhoods: z.array(z.string()),
 })
 
 const profileSchema = z.object({
@@ -77,6 +86,7 @@ const profileSchema = z.object({
   ifoodMerchantId: z.string().optional(),
   anotaAiApiKey: z.string().optional(),
   pixKey: z.string().optional(),
+  deliverySectors: z.array(deliverySectorSchema).optional().default([]),
   businessHours: z.array(businessHourSchema),
 })
 
@@ -96,7 +106,7 @@ const DEFAULT_BUSINESS_HOURS = DAYS_OF_WEEK.map((_, index) => ({
   dayOfWeek: index,
   openTime: '18:00',
   closeTime: '23:00',
-  isOpen: index !== 0, // Por padrão aberto de Seg a Sáb
+  isOpen: index !== 0,
 }))
 
 async function fetchProfile() {
@@ -173,7 +183,8 @@ function generatePremiumPalette(hex: string) {
   return { secondary: premiumSecondary, bg: premiumBg }
 }
 
-const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+const formatCurrency = (val: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
 export function MenuSettings() {
   const queryClient = useQueryClient()
@@ -259,7 +270,6 @@ export function MenuSettings() {
 
   useEffect(() => {
     if (profile) {
-      // Formata os horários salvos do backend mantendo a ordem dos 7 dias
       const savedHoursMap = new Map(
         (profile.businessHours || []).map((bh: any) => [bh.dayOfWeek, bh]),
       )
@@ -317,6 +327,8 @@ export function MenuSettings() {
 
   const [isSearchingCNPJ, setIsSearchingCNPJ] = useState(false)
   const [isSearchingCEP, setIsSearchingCEP] = useState(false)
+  const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
 
   const handleSearchCNPJ = async () => {
     const documentVal = getValues('document') || ''
@@ -390,13 +402,6 @@ export function MenuSettings() {
     }
   }
 
-  const onSubmit = async (data: ProfileFormData) => {
-    await updateProfileFn(data)
-  }
-
-  const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-
   const handleImportModalConfirm = (
     selectedNeighborhoods: string[],
     targetSectorId: string,
@@ -440,114 +445,6 @@ export function MenuSettings() {
       toast.success(`${selectedNeighborhoods.length} bairros adicionados ao setor com sucesso!`)
     }
   }
-  const [isImportingNeighborhoods, setIsImportingNeighborhoods] = useState(false)
-
-  // Função para importar bairros da cidade cadastrada via IBGE / BrasilAPI
-  const handleImportCityNeighborhoods = async () => {
-    const city = getValues('city') || ''
-    const state = getValues('state') || ''
-
-    if (!city) {
-      toast.error('Preencha a Cidade no endereço da empresa antes de importar os bairros.')
-      return
-    }
-
-    setIsImportingNeighborhoods(true)
-    try {
-      // 1. Consulta municípios no IBGE para achar o código da cidade
-      const cleanCity = city.trim().toLowerCase()
-      const cleanUf = state.trim().toUpperCase()
-      
-      const ibgeRes = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
-      const municipios = await ibgeRes.json()
-      
-      const foundCity = municipios.find((m: any) => 
-        m.nome.toLowerCase() === cleanCity || 
-        (cleanUf && m.microrregiao?.mesorregiao?.UF?.sigla === cleanUf && m.nome.toLowerCase().includes(cleanCity))
-      )
-
-      let importedList: string[] = []
-
-      if (foundCity && foundCity.id) {
-        // Busca distritos / subdistritos do município
-        const distRes = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${foundCity.id}/distritos`)
-        const distritos = await distRes.json()
-        importedList = distritos.map((d: any) => d.nome).filter(Boolean)
-      }
-
-      // Se a lista de distritos do IBGE for curta, busca também bairros conhecidos
-      if (importedList.length === 0) {
-        importedList = ['Centro', 'Bairro Novo', 'Jardim América', 'São Cristóvão', 'Bela Vista', 'Vila Nova', 'Planalto', 'Santa Cruz', 'Santo Antônio', 'Boa Vista']
-      }
-
-      const currentSectors = getValues('deliverySectors') || []
-      
-      // Coleta todos os bairros já cadastrados em outros setores para não duplicar
-      const alreadyAssigned = new Set<string>()
-      currentSectors.forEach((s: any) => {
-        (s.neighborhoods || []).forEach((n: string) => alreadyAssigned.add(n.toLowerCase().trim()))
-      })
-
-      const newNeighborhoods = importedList.filter(n => !alreadyAssigned.has(n.toLowerCase().trim()))
-
-      if (newNeighborhoods.length === 0) {
-        toast.info(`Todos os bairros de ${city} já estão distribuídos em seus setores!`)
-        return
-      }
-
-      if (currentSectors.length === 0) {
-        // Cria um setor inicial com os bairros importados
-        const newSector = {
-          id: crypto.randomUUID(),
-          name: `Setor 1 - ${city}`,
-          fee: 5.0,
-          estimatedTimeMin: 30,
-          estimatedTimeMax: 50,
-          neighborhoods: newNeighborhoods,
-        }
-        setValue('deliverySectors', [newSector], { shouldDirty: true })
-      } else {
-        // Adiciona ao primeiro setor
-        const updated = currentSectors.map((s: any, idx: number) => {
-          if (idx === 0) {
-            return { ...s, neighborhoods: Array.from(new Set([...(s.neighborhoods || []), ...newNeighborhoods])) }
-          }
-          return s
-        })
-        setValue('deliverySectors', updated, { shouldDirty: true })
-      }
-
-      toast.success(`${newNeighborhoods.length} bairros importados de ${city} com sucesso!`)
-    } catch (err) {
-      console.error(err)
-      toast.error('Não foi possível conectar à base do IBGE no momento.')
-    } finally {
-      setIsImportingNeighborhoods(false)
-    }
-  }
-
-  const handleAddNeighborhoodToSector = (sectorId: string) => {
-    const raw = (newNeighborhoodInputs[sectorId] || '').trim()
-    if (!raw) return
-
-    const splitted = raw.split(',').map(s => s.trim()).filter(Boolean)
-    if (splitted.length === 0) return
-
-    const splittedLower = new Set(splitted.map(s => s.toLowerCase()))
-    const current = getValues('deliverySectors') || []
-
-    // REGRA DE EXCLUSIVIDADE: Remove o bairro de qualquer outro setor onde ele possa estar
-    const updated = current.map((s: any) => {
-      const remainingNeighborhoods = (s.neighborhoods || []).filter((n: string) => !splittedLower.has(n.toLowerCase()))
-      if (s.id === sectorId) {
-        return { ...s, neighborhoods: [...remainingNeighborhoods, ...splitted] }
-      }
-      return { ...s, neighborhoods: remainingNeighborhoods }
-    })
-
-    setValue('deliverySectors', updated, { shouldDirty: true })
-    setNewNeighborhoodInputs(prev => ({ ...prev, [sectorId]: '' }))
-  }
 
   const handleAddSector = () => {
     const current = getValues('deliverySectors') || []
@@ -569,13 +466,39 @@ export function MenuSettings() {
     toast.info('Setor de entrega removido.')
   }
 
+  const handleAddNeighborhoodToSector = (sectorId: string) => {
+    const raw = (newNeighborhoodInputs[sectorId] || '').trim()
+    if (!raw) return
 
+    const splitted = raw.split(',').map((s) => s.trim()).filter(Boolean)
+    if (splitted.length === 0) return
+
+    const splittedLower = new Set(splitted.map((s) => s.toLowerCase()))
+    const current = getValues('deliverySectors') || []
+
+    // REGRA DE EXCLUSIVIDADE: Remove o bairro de qualquer outro setor onde ele possa estar
+    const updated = current.map((s: any) => {
+      const remainingNeighborhoods = (s.neighborhoods || []).filter(
+        (n: string) => !splittedLower.has(n.toLowerCase())
+      )
+      if (s.id === sectorId) {
+        return { ...s, neighborhoods: [...remainingNeighborhoods, ...splitted] }
+      }
+      return { ...s, neighborhoods: remainingNeighborhoods }
+    })
+
+    setValue('deliverySectors', updated, { shouldDirty: true })
+    setNewNeighborhoodInputs((prev) => ({ ...prev, [sectorId]: '' }))
+  }
 
   const handleRemoveNeighborhoodFromSector = (sectorId: string, neighborhood: string) => {
     const current = getValues('deliverySectors') || []
     const updated = current.map((s: any) => {
       if (s.id === sectorId) {
-        return { ...s, neighborhoods: (s.neighborhoods || []).filter((n: string) => n !== neighborhood) }
+        return {
+          ...s,
+          neighborhoods: (s.neighborhoods || []).filter((n: string) => n !== neighborhood),
+        }
       }
       return s
     })
@@ -584,7 +507,7 @@ export function MenuSettings() {
 
   const copyMondayToWeekdays = () => {
     const hours = getValues('businessHours')
-    const monday = hours[1] // Segunda-feira
+    const monday = hours[1]
     if (!monday) return
 
     const updated = hours.map((h) => {
@@ -602,6 +525,10 @@ export function MenuSettings() {
     toast.success('Horário de Segunda aplicado para os dias úteis (Seg-Sex)!')
   }
 
+  const onSubmit = async (data: ProfileFormData) => {
+    await updateProfileFn(data)
+  }
+
   if (isFetching) {
     return (
       <div className="flex h-40 items-center justify-center">
@@ -612,699 +539,765 @@ export function MenuSettings() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Cardápio & Estabelecimento (White Label)
-        </h2>
-        <p className="text-muted-foreground">
-          Configure as informações da sua empresa, regras de entrega, horários
-          de funcionamento e identidade visual.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Cardápio & Estabelecimento (White Label)
+          </h2>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            Configure informações da loja, zonas de entrega por bairro, horários e integrações.
+          </p>
+        </div>
       </div>
       <Separator />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Card 1: Informações Gerais da Empresa */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5 text-primary" />
-              Dados do Estabelecimento
-            </CardTitle>
-            <CardDescription>
-              Informações do perfil da sua empresa para exibições no cardápio e
-              impressões de comandas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="tradeName">Nome Fantasia *</Label>
-                <Input
-                  id="tradeName"
-                  {...register('tradeName')}
-                  placeholder="Ex: Marujo Gastrobar"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Razão Social</Label>
-                <Input
-                  id="companyName"
-                  {...register('companyName')}
-                  placeholder="Ex: Marujo Alimenticios LTDA"
-                />
-              </div>
-            </div>
+        <Tabs defaultValue="store" className="space-y-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 h-12 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <TabsTrigger
+              value="store"
+              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+            >
+              <Store className="h-4 w-4" /> Loja & Visual
+            </TabsTrigger>
+            <TabsTrigger
+              value="delivery"
+              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+            >
+              <Truck className="h-4 w-4" /> Entrega & Bairros
+            </TabsTrigger>
+            <TabsTrigger
+              value="hours"
+              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+            >
+              <Clock className="h-4 w-4" /> Horários
+            </TabsTrigger>
+            <TabsTrigger
+              value="integrations"
+              className="gap-2 text-xs font-bold rounded-xl data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
+            >
+              <Sparkles className="h-4 w-4" /> Pix & Integrações
+            </TabsTrigger>
+          </TabsList>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="document">CNPJ / CPF</Label>
-                <div className="flex gap-2">
+          {/* ABA 1: DADOS DA LOJA & VISUAL */}
+          <TabsContent value="store" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Dados do Estabelecimento
+                </CardTitle>
+                <CardDescription>
+                  Informações do perfil da sua empresa para exibições no cardápio e impressões de comandas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="tradeName">Nome Fantasia *</Label>
+                    <Input
+                      id="tradeName"
+                      {...register('tradeName')}
+                      placeholder="Ex: Marujo Gastrobar"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Razão Social</Label>
+                    <Input
+                      id="companyName"
+                      {...register('companyName')}
+                      placeholder="Ex: Marujo Alimenticios LTDA"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="document">CNPJ / CPF</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="document"
+                        {...register('document')}
+                        placeholder="00.000.000/0001-00"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSearchCNPJ}
+                        disabled={isSearchingCNPJ}
+                        className="shrink-0 gap-1 text-xs"
+                        title="Consultar CNPJ via BrasilAPI"
+                      >
+                        {isSearchingCNPJ ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4 text-primary" />
+                        )}
+                        Buscar CNPJ
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Clique para preencher os dados automaticamente
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsappNumber">
+                      WhatsApp (Recebimento de Pedidos) *
+                    </Label>
+                    <Input
+                      id="whatsappNumber"
+                      {...register('whatsappNumber')}
+                      placeholder="5511999999999"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Formato: 55 + DDD + Número
+                    </p>
+                  </div>
+                </div>
+
+                <Separator className="my-2" />
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 font-semibold">
+                    <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço Completo
+                  </Label>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="zipcode" className="text-xs">CEP</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="zipcode"
+                          {...register('zipcode')}
+                          placeholder="00000-000"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleSearchCEP}
+                          disabled={isSearchingCEP}
+                          title="Consultar CEP via BrasilAPI"
+                          className="shrink-0"
+                        >
+                          {isSearchingCEP ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4 text-primary" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="street" className="text-xs">Logradouro / Rua</Label>
+                      <Input
+                        id="street"
+                        {...register('street')}
+                        placeholder="Av. Principal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="number" className="text-xs">Número</Label>
+                      <Input
+                        id="number"
+                        {...register('number')}
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="neighborhood" className="text-xs">Bairro</Label>
+                      <Input
+                        id="neighborhood"
+                        {...register('neighborhood')}
+                        placeholder="Centro"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city" className="text-xs">Cidade</Label>
+                      <Input
+                        id="city"
+                        {...register('city')}
+                        placeholder="Vitória"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state" className="text-xs">Estado (UF)</Label>
+                      <Input
+                        id="state"
+                        {...register('state')}
+                        placeholder="ES"
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Palette className="h-5 w-5 text-primary" />
+                  Identidade Visual & Tema White-Label
+                </CardTitle>
+                <CardDescription>
+                  Personalize as cores, logomarca e capa que serão exibidas para seus clientes no cardápio online.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="logo_url">URL da Logomarca</Label>
+                    <Input
+                      id="logo_url"
+                      {...register('logo_url')}
+                      placeholder="https://exemplo.com/logo.png"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="banner_url">URL do Banner / Capa</Label>
+                    <Input
+                      id="banner_url"
+                      {...register('banner_url')}
+                      placeholder="https://exemplo.com/banner.png"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Temas Pré-definidos</Label>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+                    {THEMES.map((t) => (
+                      <button
+                        key={t.name}
+                        type="button"
+                        onClick={() => {
+                          setValue('primaryColor', t.primary)
+                          setValue('secondaryColor', t.secondary)
+                          setValue('backgroundColor', t.bg)
+                        }}
+                        className="flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:scale-105"
+                      >
+                        <div
+                          className="h-8 w-8 rounded-full border-2 border-white shadow-md"
+                          style={{ backgroundColor: t.primary }}
+                        />
+                        <span className="text-xs font-semibold">{t.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="primaryColor">Cor Primária</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        id="primaryColor"
+                        {...register('primaryColor')}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setValue('primaryColor', val)
+                          const auto = generatePremiumPalette(val)
+                          setValue('secondaryColor', auto.secondary)
+                          setValue('backgroundColor', auto.bg)
+                        }}
+                        className="h-10 w-16 cursor-pointer p-1"
+                      />
+                      <Input
+                        value={watch('primaryColor')}
+                        onChange={(e) => setValue('primaryColor', e.target.value)}
+                        className="font-mono text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="secondaryColor">Cor Secundária</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        id="secondaryColor"
+                        {...register('secondaryColor')}
+                        className="h-10 w-16 cursor-pointer p-1"
+                      />
+                      <Input
+                        value={watch('secondaryColor')}
+                        onChange={(e) => setValue('secondaryColor', e.target.value)}
+                        className="font-mono text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="backgroundColor">Cor de Fundo</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        id="backgroundColor"
+                        {...register('backgroundColor')}
+                        className="h-10 w-16 cursor-pointer p-1"
+                      />
+                      <Input
+                        value={watch('backgroundColor')}
+                        onChange={(e) => setValue('backgroundColor', e.target.value)}
+                        className="font-mono text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Pré-visualização do Tema</Label>
+                  <div
+                    className="flex items-center justify-between rounded-xl border p-4 shadow-sm"
+                    style={{ backgroundColor: watch('backgroundColor') }}
+                  >
+                    <span
+                      className="font-bold"
+                      style={{ color: watch('primaryColor') }}
+                    >
+                      Texto Primário
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded-lg px-4 py-2 font-bold text-white shadow"
+                      style={{ backgroundColor: watch('primaryColor') }}
+                    >
+                      Botão de Teste
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 2: REGRAS DE ENTREGA & ZONAS DE BAIRROS */}
+          <TabsContent value="delivery" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Truck className="h-5 w-5 text-primary" />
+                  Regras Gerais de Entrega
+                </CardTitle>
+                <CardDescription>
+                  Defina os parâmetros padrão de frete, valor mínimo do pedido e prazos estimados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryFee">Taxa de Entrega Padrão (R$)</Label>
                   <Input
-                    id="document"
-                    {...register('document')}
-                    placeholder="00.000.000/0001-00"
+                    id="deliveryFee"
+                    type="number"
+                    step="0.50"
+                    {...register('deliveryFee')}
+                    placeholder="0.00"
                   />
+                  <p className="text-[11px] text-muted-foreground">
+                    Aplicada para bairros fora dos setores cadastrados
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="minOrderValue">Valor Mínimo do Pedido (R$)</Label>
+                  <Input
+                    id="minOrderValue"
+                    type="number"
+                    step="1.00"
+                    {...register('minOrderValue')}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tempo Estimado (Minutos)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      {...register('deliveryTimeMin')}
+                      placeholder="30"
+                      className="w-1/2"
+                    />
+                    <span className="text-muted-foreground">-</span>
+                    <Input
+                      type="number"
+                      {...register('deliveryTimeMax')}
+                      placeholder="60"
+                      className="w-1/2"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Ex: 30 a 60 minutos
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-indigo-100 dark:border-indigo-900/40">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg text-indigo-900 dark:text-indigo-300">
+                    <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    Zonas de Entrega & Taxas por Setor
+                  </CardTitle>
+                  <CardDescription>
+                    Agrupe vários bairros em um setor com o mesmo valor de frete para facilitar a gestão.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleSearchCNPJ}
-                    disabled={isSearchingCNPJ}
-                    className="shrink-0 gap-1 text-xs"
-                    title="Consultar CNPJ via BrasilAPI"
+                    size="sm"
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="gap-1.5 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300"
                   >
-                    {isSearchingCNPJ ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4 text-primary" />
-                    )}
-                    Buscar CNPJ
+                    <Download className="h-3.5 w-3.5" />
+                    Importar Bairros (IBGE)
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddSector}
+                    size="sm"
+                    className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
+                  >
+                    <Plus className="h-4 w-4" /> Novo Setor
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Clique para preencher os dados automaticamente
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsappNumber">
-                  WhatsApp (Recebimento de Pedidos) *
-                </Label>
-                <Input
-                  id="whatsappNumber"
-                  {...register('whatsappNumber')}
-                  placeholder="5511999999999"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Formato: 55 + DDD + Número
-                </p>
-              </div>
-            </div>
-
-            <Separator className="my-2" />
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5 font-semibold">
-                <MapPin className="h-4 w-4 text-muted-foreground" /> Endereço
-                Completo
-              </Label>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="zipcode" className="text-xs">
-                    CEP
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="zipcode"
-                      {...register('zipcode')}
-                      placeholder="00000-000"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleSearchCEP}
-                      disabled={isSearchingCEP}
-                      title="Consultar CEP via BrasilAPI"
-                      className="shrink-0"
-                    >
-                      {isSearchingCEP ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Search className="h-4 w-4 text-primary" />
-                      )}
-                    </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(!watch('deliverySectors') || watch('deliverySectors')?.length === 0) ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/30">
+                    <MapPin className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
+                    <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Nenhum setor de bairros configurado
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      A taxa de entrega padrão ({formatCurrency(watch('deliveryFee') || 0)}) será aplicada para todos os pedidos.
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setIsImportModalOpen(true)}
+                        size="sm"
+                        className="gap-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700"
+                      >
+                        <Download className="h-3.5 w-3.5" /> Importar Bairros da Cidade
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleAddSector}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Criar Manualmente
+                      </Button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="street" className="text-xs">
-                    Logradouro / Rua
-                  </Label>
-                  <Input
-                    id="street"
-                    {...register('street')}
-                    placeholder="Av. Principal"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="number" className="text-xs">
-                    Número
-                  </Label>
-                  <Input
-                    id="number"
-                    {...register('number')}
-                    placeholder="123"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 pt-2 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="neighborhood" className="text-xs">
-                    Bairro
-                  </Label>
-                  <Input
-                    id="neighborhood"
-                    {...register('neighborhood')}
-                    placeholder="Centro"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-xs">
-                    Cidade
-                  </Label>
-                  <Input
-                    id="city"
-                    {...register('city')}
-                    placeholder="São Paulo"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state" className="text-xs">
-                    Estado (UF)
-                  </Label>
-                  <Input
-                    id="state"
-                    {...register('state')}
-                    placeholder="SP"
-                    maxLength={2}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: Regras de Pedidos & Entrega (Padrão iFood/Anota AI) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Truck className="h-5 w-5 text-primary" />
-              Regras de Entrega e Pedidos
-            </CardTitle>
-            <CardDescription>
-              Defina os parâmetros de frete, valor mínimo do pedido e prazos
-              estimados de entrega.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="deliveryFee">Taxa de Entrega (R$)</Label>
-              <Input
-                id="deliveryFee"
-                type="number"
-                step="0.50"
-                {...register('deliveryFee')}
-                placeholder="0.00"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Deixe 0 para entrega grátis
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="minOrderValue">Valor Mínimo do Pedido (R$)</Label>
-              <Input
-                id="minOrderValue"
-                type="number"
-                step="1.00"
-                {...register('minOrderValue')}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tempo Estimado (Minutos)</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  {...register('deliveryTimeMin')}
-                  placeholder="30"
-                  className="w-1/2"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input
-                  type="number"
-                  {...register('deliveryTimeMax')}
-                  placeholder="60"
-                  className="w-1/2"
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Ex: 30 a 60 minutos
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Card 2.5: Setores de Entrega & Bairros da Cidade (Zonas de Taxas) */}
-        <Card className="border-indigo-100 dark:border-indigo-900/40">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg text-indigo-900 dark:text-indigo-300">
-                <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                Zonas de Entrega & Taxas por Setor
-              </CardTitle>
-              <CardDescription>
-                Agrupe vários bairros em um setor com o mesmo valor de frete. Facilita o cadastro e garante a cobrança correta no cardápio.
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleImportCityNeighborhoods}
-                disabled={isImportingNeighborhoods}
-                className="gap-1.5 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300"
-              >
-                {isImportingNeighborhoods ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Download className="h-3.5 w-3.5" />
-                )}
-                Importar Bairros da Cidade
-              </Button>
-              <Button
-                type="button"
-                onClick={handleAddSector}
-                size="sm"
-                className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
-              >
-                <Plus className="h-4 w-4" /> Novo Setor
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {(!watch('deliverySectors') || watch('deliverySectors')?.length === 0) ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/30">
-                <MapPin className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
-                <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Nenhum setor de bairros configurado
-                </p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  A taxa de entrega padrão geral ({formatCurrency ? formatCurrency(watch('deliveryFee') || 0) : `R$ ${watch('deliveryFee') || 0}`}) será aplicada para todos os pedidos.
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleAddSector}
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 gap-1 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Criar Primeiro Setor
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {(watch('deliverySectors') || []).map((sector: any, sIndex: number) => (
-                  <div
-                    key={sector.id || sIndex}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Nome do Setor</Label>
-                          <Input
-                            {...register(`deliverySectors.${sIndex}.name`)}
-                            placeholder="Ex: Setor 1 - Centro / Praia"
-                            className="h-9 text-xs font-bold"
-                          />
+                  <div className="grid grid-cols-1 gap-4">
+                    {(watch('deliverySectors') || []).map((sector: any, sIndex: number) => (
+                      <div
+                        key={sector.id || sIndex}
+                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950"
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Nome do Setor</Label>
+                              <Input
+                                {...register(`deliverySectors.${sIndex}.name`)}
+                                placeholder="Ex: Setor 1 - Centro / Praia"
+                                className="h-9 text-xs font-bold"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Taxa de Entrega (R$)</Label>
+                              <Input
+                                type="number"
+                                step="0.50"
+                                {...register(`deliverySectors.${sIndex}.fee`)}
+                                placeholder="6.00"
+                                className="h-9 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tempo Estimado (Min)</Label>
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  type="number"
+                                  {...register(`deliverySectors.${sIndex}.estimatedTimeMin`)}
+                                  placeholder="30"
+                                  className="h-9 text-xs"
+                                />
+                                <span className="text-slate-400">-</span>
+                                <Input
+                                  type="number"
+                                  {...register(`deliverySectors.${sIndex}.estimatedTimeMax`)}
+                                  placeholder="45"
+                                  className="h-9 text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveSector(sector.id)}
+                            className="self-end sm:self-center text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            title="Excluir este setor"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Taxa de Entrega (R$)</Label>
-                          <Input
-                            type="number"
-                            step="0.50"
-                            {...register(`deliverySectors.${sIndex}.fee`)}
-                            placeholder="6.00"
-                            className="h-9 text-xs font-bold text-emerald-600 dark:text-emerald-400"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tempo Estimado (Min)</Label>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              type="number"
-                              {...register(`deliverySectors.${sIndex}.estimatedTimeMin`)}
-                              placeholder="30"
-                              className="h-9 text-xs"
-                            />
-                            <span className="text-slate-400">-</span>
-                            <Input
-                              type="number"
-                              {...register(`deliverySectors.${sIndex}.estimatedTimeMax`)}
-                              placeholder="45"
-                              className="h-9 text-xs"
-                            />
+
+                        {/* Bairros do Setor */}
+                        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+                          <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                            Bairros pertencentes a este setor ({sector.neighborhoods?.length || 0}):
+                          </Label>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {(sector.neighborhoods || []).map((n: string) => (
+                              <span
+                                key={n}
+                                className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50"
+                              >
+                                {n}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveNeighborhoodFromSector(sector.id, n)}
+                                  className="text-indigo-400 hover:text-red-600 ml-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+
+                            <div className="flex items-center gap-1">
+                              <Input
+                                placeholder="Adicionar bairro (Enter ou vírgula)..."
+                                value={newNeighborhoodInputs[sector.id] || ''}
+                                onChange={(e) => setNewNeighborhoodInputs((prev) => ({ ...prev, [sector.id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ',') {
+                                    e.preventDefault()
+                                    handleAddNeighborhoodToSector(sector.id)
+                                  }
+                                }}
+                                className="h-8 w-64 text-xs"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleAddNeighborhoodToSector(sector.id)}
+                                className="h-8 text-xs px-2.5"
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveSector(sector.id)}
-                        className="self-end sm:self-center text-slate-400 hover:text-red-600 hover:bg-red-50"
-                        title="Excluir este setor"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Bairros do Setor */}
-                    <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                      <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                        Bairros pertencentes a este setor ({sector.neighborhoods?.length || 0}):
-                      </Label>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {(sector.neighborhoods || []).map((n: string) => (
-                          <span
-                            key={n}
-                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50"
-                          >
-                            {n}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveNeighborhoodFromSector(sector.id, n)}
-                              className="text-indigo-400 hover:text-red-600 ml-0.5"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-
-                        <div className="flex items-center gap-1">
-                          <Input
-                            placeholder="Adicionar bairro (Enter ou vírgula)..."
-                            value={newNeighborhoodInputs[sector.id] || ''}
-                            onChange={(e) => setNewNeighborhoodInputs(prev => ({ ...prev, [sector.id]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ',') {
-                                e.preventDefault()
-                                handleAddNeighborhoodToSector(sector.id)
-                              }
-                            }}
-                            className="h-8 w-64 text-xs"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleAddNeighborhoodToSector(sector.id)}
-                            className="h-8 text-xs px-2.5"
-                          >
-                            <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Card 3: Horário de Funcionamento (Grade Semanal iFood Shift) */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Clock className="h-5 w-5 text-primary" />
-                Horário de Funcionamento
-              </CardTitle>
-              <CardDescription>
-                Defina o horário de abertura e fechamento para cada dia da
-                semana.
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={copyMondayToWeekdays}
-              className="gap-1.5 text-xs"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Replicar Seg-Sex
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead>Dia da Semana</TableHead>
-                    <TableHead className="w-28 text-center">Status</TableHead>
-                    <TableHead>Horário Abertura</TableHead>
-                    <TableHead>Horário Fechamento</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {DAYS_OF_WEEK.map((dayName, index) => {
-                    const isOpen = watch(`businessHours.${index}.isOpen`)
-                    return (
+          {/* ABA 3: HORÁRIOS DE ATENDIMENTO */}
+          <TabsContent value="hours" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Horários de Funcionamento (Grade Semanal)
+                  </CardTitle>
+                  <CardDescription>
+                    Defina os horários de abertura e fechamento para cada dia da semana.
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyMondayToWeekdays}
+                    className="text-xs"
+                  >
+                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar Seg para Seg-Sex
+                  </Button>
+                  <div className="flex items-center space-x-2 rounded-lg border bg-slate-50 p-2 dark:bg-slate-900">
+                    <Controller
+                      name="isOpenManual"
+                      control={control}
+                      render={({ field }) => (
+                        <Switch
+                          id="isOpenManual"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="isOpenManual" className="cursor-pointer text-xs font-bold">
+                      {watch('isOpenManual') ? '🟢 Loja Aberta (Geral)' : '🔴 Loja Fechada Manualmente'}
+                    </Label>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dia da Semana</TableHead>
+                      <TableHead className="w-[120px]">Status</TableHead>
+                      <TableHead>Horário Abertura</TableHead>
+                      <TableHead>Horário Fechamento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {DAYS_OF_WEEK.map((dayName, index) => (
                       <TableRow key={dayName}>
-                        <TableCell className="font-semibold text-slate-700">
+                        <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
                           {dayName}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell>
                           <Controller
-                            control={control}
                             name={`businessHours.${index}.isOpen`}
+                            control={control}
                             render={({ field }) => (
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                                <span className="text-xs font-semibold text-muted-foreground">
+                                  {field.value ? 'Aberto' : 'Fechado'}
+                                </span>
+                              </div>
                             )}
                           />
                         </TableCell>
                         <TableCell>
                           <Input
                             type="time"
-                            disabled={!isOpen}
+                            disabled={!watch(`businessHours.${index}.isOpen`)}
                             {...register(`businessHours.${index}.openTime`)}
-                            className="w-32"
+                            className="h-9 w-32 text-xs"
                           />
                         </TableCell>
                         <TableCell>
                           <Input
                             type="time"
-                            disabled={!isOpen}
+                            disabled={!watch(`businessHours.${index}.isOpen`)}
                             {...register(`businessHours.${index}.closeTime`)}
-                            className="w-32"
+                            className="h-9 w-32 text-xs"
                           />
                         </TableCell>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Card 4: Interrupção Manual / Pausa da Loja */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Store className="h-5 w-5 text-primary" />
-              Status de Atendimento
-            </CardTitle>
-            <CardDescription>
-              Controle o funcionamento em tempo real do seu cardápio digital.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between rounded-lg border bg-slate-50/50 p-4">
-              <div className="space-y-0.5">
-                <Label className="text-base font-semibold">
-                  Aceitar Pedidos (Loja Aberta)
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Se desativado, o cardápio exibirá "Fechado" e bloqueará novas
-                  compras imediatamente.
-                </p>
-              </div>
-              <Controller
-                control={control}
-                name="isOpenManual"
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+          {/* ABA 4: PIX & INTEGRAÇÕES */}
+          <TabsContent value="integrations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Chave Pix & Integrações Marketplaces
+                </CardTitle>
+                <CardDescription>
+                  Configure a chave Pix para geração automática do QR Code no checkout e tokens de integrações.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pixKey" className="font-bold text-emerald-700 dark:text-emerald-400">
+                    ⚡ Chave Pix do Estabelecimento (Checkout Online)
+                  </Label>
+                  <Input
+                    id="pixKey"
+                    {...register('pixKey')}
+                    placeholder="Chave Pix (CPF, CNPJ, Telefone, E-mail ou Chave Aleatória)"
                   />
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
+                  <p className="text-[11px] text-muted-foreground">
+                    Quando preenchida, o sistema gera o QR Code e o Copia e Cola automaticamente na tela de pagamento do cliente.
+                  </p>
+                </div>
 
-        {/* Card 5: Identidade Visual e Imagens */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Palette className="h-5 w-5 text-primary" />
-              Identidade Visual & Cores
-            </CardTitle>
-            <CardDescription>
-              Personalize o tema e as imagens do seu cardápio whitelabel.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="logo_url">URL da Logo</Label>
-                <Input
-                  id="logo_url"
-                  {...register('logo_url')}
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner_url">URL do Banner</Label>
-                <Input
-                  id="banner_url"
-                  {...register('banner_url')}
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
+                <Separator className="my-2" />
 
-            <Separator />
-
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">
-                Paleta de Cores do Tema:
-              </Label>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {THEMES.map((theme) => (
-                  <button
-                    key={theme.name}
-                    type="button"
-                    onClick={() => {
-                      reset({
-                        ...getValues(),
-                        primaryColor: theme.primary,
-                        secondaryColor: theme.secondary,
-                        backgroundColor: theme.bg,
-                      })
-                    }}
-                    className="flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary"
-                    style={{
-                      borderColor:
-                        watch('primaryColor') === theme.primary
-                          ? theme.primary
-                          : 'transparent',
-                      backgroundColor:
-                        watch('primaryColor') === theme.primary
-                          ? theme.bg
-                          : undefined,
-                    }}
-                  >
-                    <div
-                      className="flex h-7 w-7 items-center justify-center rounded-full shadow-sm"
-                      style={{ backgroundColor: theme.primary }}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ifoodMerchantId">iFood Merchant ID</Label>
+                    <Input
+                      id="ifoodMerchantId"
+                      {...register('ifoodMerchantId')}
+                      placeholder="Identificador da loja no portal do iFood"
                     />
-                    <span className="text-xs font-medium text-slate-700">
-                      {theme.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="anotaAiApiKey">Anota AI API Key</Label>
+                    <Input
+                      id="anotaAiApiKey"
+                      {...register('anotaAiApiKey')}
+                      placeholder="Token de integração Anota AI"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-            <div className="flex items-center gap-4 pt-2">
-              <Input
-                type="color"
-                id="primaryColor"
-                {...register('primaryColor')}
-                onChange={(e) => {
-                  const primary = e.target.value
-                  const { secondary, bg } = generatePremiumPalette(primary)
-                  reset({
-                    ...getValues(),
-                    primaryColor: primary,
-                    secondaryColor: secondary,
-                    backgroundColor: bg,
-                  })
-                }}
-                className="h-12 w-20 cursor-pointer p-1"
-              />
-              <p className="flex-1 text-xs text-muted-foreground">
-                Selecione a cor primária para ajustar automaticamente as cores
-                de fundo.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 6: Integrações Marketplace & Pagamento Pix */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Globe className="h-5 w-5 text-primary" />
-              Integrações & Pagamento Pix
-            </CardTitle>
-            <CardDescription>
-              Configure sua Chave Pix para recebimento de pedidos no checkout e
-              identificadores de marketplaces.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="pixKey" className="font-semibold text-primary">
-                Chave Pix (Recebimento de Pedidos)
-              </Label>
-              <Input
-                id="pixKey"
-                {...register('pixKey')}
-                placeholder="CNPJ, Telefone, E-mail ou Aleatória"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Exibida no checkout para retira no balcão e Pix adiantado
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ifoodMerchantId">
-                ID da Loja iFood (Merchant ID)
-              </Label>
-              <Input
-                id="ifoodMerchantId"
-                {...register('ifoodMerchantId')}
-                placeholder="Ex: uuid-ifood-merchant"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="anotaAiApiKey">Chave API Anota AI</Label>
-              <Input
-                id="anotaAiApiKey"
-                {...register('anotaAiApiKey')}
-                placeholder="Ex: token_anota_ai_secret"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end pt-4">
+        {/* Botão Salvar Geral */}
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-xs text-muted-foreground">
+            As alterações são aplicadas imediatamente ao cardápio digital da sua loja.
+          </p>
           <Button
             type="submit"
-            size="lg"
             disabled={isSubmitting}
-            className="px-8 font-bold"
+            size="lg"
+            className="w-full sm:w-auto font-bold bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/20"
           >
-            {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-            Salvar Configurações da Empresa
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+              </>
+            ) : (
+              'Salvar Configurações'
+            )}
           </Button>
         </div>
       </form>
+
+      {/* Modal de Importação Oficial de Bairros do IBGE */}
+      <ImportNeighborhoodsModal
+        open={isImportModalOpen}
+        onOpenChange={setIsImportModalOpen}
+        initialCity={watch('city') || ''}
+        initialState={watch('state') || ''}
+        existingSectors={watch('deliverySectors') || []}
+        onImport={handleImportModalConfirm}
+      />
     </div>
   )
 }
