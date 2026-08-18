@@ -7,6 +7,7 @@ import {
   CheckSquare,
   Loader2,
   MapPin,
+  Building2,
 } from 'lucide-react'
 import {
   Dialog,
@@ -58,8 +59,7 @@ interface ImportNeighborhoodsModalProps {
   onOpenChange: (open: boolean) => void
   initialCity?: string
   initialState?: string
-  existingSectors: any[]
-  onImport: (selectedNeighborhoods: string[], targetSectorId: string, newSectorName?: string) => void
+  onImport: (selectedNeighborhoods: string[]) => void
 }
 
 export function ImportNeighborhoodsModal({
@@ -67,7 +67,6 @@ export function ImportNeighborhoodsModal({
   onOpenChange,
   initialCity = '',
   initialState = '',
-  existingSectors,
   onImport,
 }: ImportNeighborhoodsModalProps) {
   const [selectedUf, setSelectedUf] = useState(initialState || 'SP')
@@ -79,8 +78,6 @@ export function ImportNeighborhoodsModal({
   const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([])
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<Set<string>>(new Set())
   const [searchFilter, setSearchFilter] = useState('')
-  const [targetSectorOption, setTargetSectorOption] = useState('new')
-  const [newSectorName, setNewSectorName] = useState('')
 
   // 1. Carrega municípios do IBGE ao trocar UF
   useEffect(() => {
@@ -112,19 +109,18 @@ export function ImportNeighborhoodsModal({
     loadCities()
   }, [selectedUf, initialCity])
 
-  // 2. Carrega bairros reais da cidade selecionada via OpenStreetMap / Overpass API (com fallback inteligente)
+  // 2. Carrega bairros da cidade selecionada via OpenStreetMap / Overpass API (com fallback de distritos)
   useEffect(() => {
     if (!selectedCity) return
 
     let isMounted = true
     setIsLoadingNeighborhoods(true)
-    setNewSectorName(`Setor - ${selectedCity}`)
 
     async function fetchNeighborhoods() {
       const cleanCityName = selectedCity.trim()
       let neighborhoodList: string[] = []
 
-      // Tentativa 1: Overpass API (OpenStreetMap) - Base geográfica com mais de 70-120 bairros reais por cidade
+      // Overpass API (OpenStreetMap) - Traz todos os bairros reais da cidade
       try {
         const overpassQuery = `[out:json][timeout:12];
 area["name"="${cleanCityName}"]->.a;
@@ -146,7 +142,7 @@ out tags;`
               .map((e: any) => e.tags?.name)
               .filter(Boolean)
 
-            // Remove o próprio nome da cidade para não aparecer como bairro
+            // Remove o próprio nome da cidade para não figurar como bairro
             const unique = Array.from(
               new Set(
                 rawNames.filter(
@@ -164,7 +160,7 @@ out tags;`
         console.warn('Overpass API indisponível, tentando fallback...', e)
       }
 
-      // Tentativa 2 (Fallback): Distritos IBGE
+      // Fallback: Distritos IBGE
       if (neighborhoodList.length === 0) {
         try {
           const foundCityObj = cities.find(
@@ -193,7 +189,6 @@ out tags;`
         }
       }
 
-      // Se ainda vazio, fornece os bairros básicos da região central
       if (neighborhoodList.length === 0) {
         neighborhoodList = ['Centro', 'Bairro Novo', 'Jardim América', 'São Cristóvão', 'Bela Vista', 'Vila Nova', 'Planalto', 'Santa Cruz', 'Santo Antônio', 'Boa Vista']
       }
@@ -246,20 +241,21 @@ out tags;`
       return
     }
 
-    onImport(list, targetSectorOption, newSectorName || `Setor - ${selectedCity}`)
+    onImport(list)
+    toast.success(`${list.length} bairros de ${selectedCity} importados com sucesso!`)
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6 rounded-3xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-6 rounded-3xl shadow-2xl">
         <DialogHeader className="border-b pb-3">
           <DialogTitle className="flex items-center gap-2 text-lg font-black text-slate-900 dark:text-white">
             <Download className="h-5 w-5 text-indigo-600" />
-            Importar Bairros da Cidade (Malha Oficial)
+            Importar Bairros da Cidade
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            Selecione seu Estado e Cidade para carregar todos os bairros e escolher quais sua loja atende.
+            Carregue todos os bairros oficiais da sua cidade para o catálogo da loja e vincule aos seus setores de entrega.
           </DialogDescription>
         </DialogHeader>
 
@@ -268,12 +264,12 @@ out tags;`
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
             <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                1. Selecione o Estado (UF)
+                1. Estado (UF)
               </Label>
               <select
                 value={selectedUf}
                 onChange={(e) => setSelectedUf(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm"
+                className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm"
               >
                 {BRAZILIAN_UFS.map((uf) => (
                   <option key={uf.sigla} value={uf.sigla}>
@@ -286,7 +282,7 @@ out tags;`
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  2. Selecione a Cidade
+                  2. Cidade
                 </Label>
                 {isLoadingCities && <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />}
               </div>
@@ -294,7 +290,7 @@ out tags;`
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
                 disabled={isLoadingCities || cities.length === 0}
-                className="w-full h-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm disabled:opacity-50"
+                className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm disabled:opacity-50"
               >
                 {cities.map((c) => (
                   <option key={c.id || c.nome} value={c.nome}>
@@ -335,7 +331,7 @@ out tags;`
               </Button>
             </div>
 
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-60">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Filtrar bairro..."
@@ -346,13 +342,13 @@ out tags;`
             </div>
           </div>
 
-          {/* Linha 3: Grid em 3 Colunas dos Bairros com Checkboxes */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 max-h-[40vh] overflow-y-auto">
+          {/* Linha 3: Grid em 3 Colunas dos Bairros */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-3.5 max-h-[46vh] overflow-y-auto">
             {isLoadingNeighborhoods ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
                 <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
                 <span className="text-xs font-semibold">
-                  Carregando bairros reais de {selectedCity}...
+                  Carregando bairros de {selectedCity}...
                 </span>
               </div>
             ) : filteredList.length === 0 ? (
@@ -367,10 +363,10 @@ out tags;`
                     <label
                       key={name}
                       onClick={() => handleToggleNeighborhood(name)}
-                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer select-none text-xs font-semibold ${
+                      className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none text-xs font-semibold ${
                         isChecked
                           ? 'border-indigo-300 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200'
-                          : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                          : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                       }`}
                     >
                       <Checkbox
@@ -384,41 +380,6 @@ out tags;`
                     </label>
                   )
                 })}
-              </div>
-            )}
-          </div>
-
-          {/* Linha 4: Destino dos Bairros Importados */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-indigo-50/50 dark:bg-indigo-950/20 p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-indigo-950 dark:text-indigo-300">
-                Destino: Onde salvar esses bairros?
-              </Label>
-              <select
-                value={targetSectorOption}
-                onChange={(e) => setTargetSectorOption(e.target.value)}
-                className="w-full h-9 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200"
-              >
-                <option value="new">✨ Criar um Novo Setor</option>
-                {existingSectors.map((s, idx) => (
-                  <option key={s.id || idx} value={s.id}>
-                    Adicionar ao: {s.name} (R$ {s.fee?.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {targetSectorOption === 'new' && (
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-indigo-950 dark:text-indigo-300">
-                  Nome do Novo Setor
-                </Label>
-                <Input
-                  value={newSectorName}
-                  onChange={(e) => setNewSectorName(e.target.value)}
-                  placeholder={`Ex: Setor 1 - ${selectedCity}`}
-                  className="h-9 text-xs bg-white dark:bg-slate-950 font-bold"
-                />
               </div>
             )}
           </div>
@@ -442,7 +403,7 @@ out tags;`
             className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-lg shadow-indigo-500/20"
           >
             <Download className="h-4 w-4" />
-            Importar {selectedNeighborhoods.size} Bairros para o Sistema
+            Importar {selectedNeighborhoods.size} Bairros
           </Button>
         </div>
       </DialogContent>

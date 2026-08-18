@@ -6,6 +6,7 @@ import {
   Copy,
   Download,
   Globe,
+  Layers,
   Loader2,
   MapPin,
   Palette,
@@ -17,7 +18,7 @@ import {
   Truck,
   X,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -34,6 +35,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -86,6 +88,7 @@ const profileSchema = z.object({
   ifoodMerchantId: z.string().optional(),
   anotaAiApiKey: z.string().optional(),
   pixKey: z.string().optional(),
+  availableNeighborhoods: z.array(z.string()).optional().default([]),
   deliverySectors: z.array(deliverySectorSchema).optional().default([]),
   businessHours: z.array(businessHourSchema),
 })
@@ -263,6 +266,7 @@ export function MenuSettings() {
       ifoodMerchantId: '',
       anotaAiApiKey: '',
       pixKey: '',
+      availableNeighborhoods: [],
       deliverySectors: [],
       businessHours: DEFAULT_BUSINESS_HOURS,
     },
@@ -308,6 +312,7 @@ export function MenuSettings() {
         ifoodMerchantId: profile.ifoodMerchantId || '',
         anotaAiApiKey: profile.anotaAiApiKey || '',
         pixKey: profile.pixKey || '',
+        availableNeighborhoods: profile.availableNeighborhoods || [],
         deliverySectors: profile.deliverySectors || [],
         businessHours,
       })
@@ -329,6 +334,32 @@ export function MenuSettings() {
   const [isSearchingCEP, setIsSearchingCEP] = useState(false)
   const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [unassignedSearch, setUnassignedSearch] = useState('')
+
+  // Calcula quais bairros estão vinculados e quais estão disponíveis no banco
+  const deliverySectors = watch('deliverySectors') || []
+  const availableNeighborhoods = watch('availableNeighborhoods') || []
+
+  const assignedNeighborhoodsSet = useMemo(() => {
+    const set = new Set<string>()
+    deliverySectors.forEach((s) => {
+      (s.neighborhoods || []).forEach((n) => set.add(n.toLowerCase().trim()))
+    })
+    return set
+  }, [deliverySectors])
+
+  const unassignedNeighborhoods = useMemo(() => {
+    return availableNeighborhoods.filter(
+      (n) => !assignedNeighborhoodsSet.has(n.toLowerCase().trim())
+    )
+  }, [availableNeighborhoods, assignedNeighborhoodsSet])
+
+  const filteredUnassigned = useMemo(() => {
+    if (!unassignedSearch.trim()) return unassignedNeighborhoods
+    return unassignedNeighborhoods.filter((n) =>
+      n.toLowerCase().includes(unassignedSearch.toLowerCase())
+    )
+  }, [unassignedNeighborhoods, unassignedSearch])
 
   const handleSearchCNPJ = async () => {
     const documentVal = getValues('document') || ''
@@ -402,48 +433,20 @@ export function MenuSettings() {
     }
   }
 
-  const handleImportModalConfirm = (
-    selectedNeighborhoods: string[],
-    targetSectorId: string,
-    newSectorName?: string
-  ) => {
-    const current = getValues('deliverySectors') || []
-    const selectedLower = new Set(selectedNeighborhoods.map((n) => n.toLowerCase()))
+  // Importação: apenas adiciona os bairros ao banco de bairros da loja
+  const handleImportModalConfirm = (selectedNeighborhoods: string[]) => {
+    const currentBank = getValues('availableNeighborhoods') || []
+    const bankSet = new Set(currentBank.map((n) => n.toLowerCase().trim()))
 
-    // Regra de Exclusividade: remove os bairros selecionados de qualquer outro setor
-    const cleaned = current.map((s: any) => ({
-      ...s,
-      neighborhoods: (s.neighborhoods || []).filter(
-        (n: string) => !selectedLower.has(n.toLowerCase())
-      ),
-    }))
+    const newToAdd = selectedNeighborhoods.filter(
+      (n) => !bankSet.has(n.toLowerCase().trim())
+    )
 
-    if (targetSectorId === 'new') {
-      const newSector = {
-        id: crypto.randomUUID(),
-        name: newSectorName || `Setor ${current.length + 1}`,
-        fee: 6.0,
-        estimatedTimeMin: 30,
-        estimatedTimeMax: 50,
-        neighborhoods: selectedNeighborhoods,
-      }
-      setValue('deliverySectors', [...cleaned, newSector], { shouldDirty: true })
-      toast.success(`${selectedNeighborhoods.length} bairros importados no ${newSector.name}!`)
-    } else {
-      const updated = cleaned.map((s: any) => {
-        if (s.id === targetSectorId) {
-          return {
-            ...s,
-            neighborhoods: Array.from(
-              new Set([...(s.neighborhoods || []), ...selectedNeighborhoods])
-            ),
-          }
-        }
-        return s
-      })
-      setValue('deliverySectors', updated, { shouldDirty: true })
-      toast.success(`${selectedNeighborhoods.length} bairros adicionados ao setor com sucesso!`)
-    }
+    const updatedBank = [...currentBank, ...newToAdd].sort((a, b) =>
+      a.localeCompare(b)
+    )
+
+    setValue('availableNeighborhoods', updatedBank, { shouldDirty: true })
   }
 
   const handleAddSector = () => {
@@ -466,20 +469,44 @@ export function MenuSettings() {
     toast.info('Setor de entrega removido.')
   }
 
-  const handleAddNeighborhoodToSector = (sectorId: string) => {
+  // Vincula um bairro existente no banco a um setor
+  const handleLinkNeighborhoodToSector = (sectorId: string, neighborhoodName: string) => {
+    if (!neighborhoodName) return
+    const current = getValues('deliverySectors') || []
+    const cleanName = neighborhoodName.trim()
+    const cleanLower = cleanName.toLowerCase()
+
+    // Regra de Exclusividade: remove de qualquer outro setor
+    const updated = current.map((s: any) => {
+      const filtered = (s.neighborhoods || []).filter(
+        (n: string) => n.toLowerCase().trim() !== cleanLower
+      )
+      if (s.id === sectorId) {
+        return { ...s, neighborhoods: [...filtered, cleanName] }
+      }
+      return { ...s, neighborhoods: filtered }
+    })
+
+    setValue('deliverySectors', updated, { shouldDirty: true })
+    toast.success(`Bairro "${cleanName}" vinculado ao setor!`)
+  }
+
+  // Cria e adiciona bairro manualmente ao setor (e ao banco)
+  const handleAddManualNeighborhoodToSector = (sectorId: string) => {
     const raw = (newNeighborhoodInputs[sectorId] || '').trim()
     if (!raw) return
 
     const splitted = raw.split(',').map((s) => s.trim()).filter(Boolean)
     if (splitted.length === 0) return
 
+    const currentSectors = getValues('deliverySectors') || []
+    const currentBank = getValues('availableNeighborhoods') || []
     const splittedLower = new Set(splitted.map((s) => s.toLowerCase()))
-    const current = getValues('deliverySectors') || []
 
-    // REGRA DE EXCLUSIVIDADE: Remove o bairro de qualquer outro setor onde ele possa estar
-    const updated = current.map((s: any) => {
+    // 1. Atualiza os setores com exclusividade
+    const updatedSectors = currentSectors.map((s: any) => {
       const remainingNeighborhoods = (s.neighborhoods || []).filter(
-        (n: string) => !splittedLower.has(n.toLowerCase())
+        (n: string) => !splittedLower.has(n.toLowerCase().trim())
       )
       if (s.id === sectorId) {
         return { ...s, neighborhoods: [...remainingNeighborhoods, ...splitted] }
@@ -487,10 +514,17 @@ export function MenuSettings() {
       return { ...s, neighborhoods: remainingNeighborhoods }
     })
 
-    setValue('deliverySectors', updated, { shouldDirty: true })
+    // 2. Garante que os novos bairros também estejam no banco geral
+    const bankSet = new Set(currentBank.map((n) => n.toLowerCase().trim()))
+    const newToBank = splitted.filter((n) => !bankSet.has(n.toLowerCase().trim()))
+    const updatedBank = [...currentBank, ...newToBank].sort((a, b) => a.localeCompare(b))
+
+    setValue('deliverySectors', updatedSectors, { shouldDirty: true })
+    setValue('availableNeighborhoods', updatedBank, { shouldDirty: true })
     setNewNeighborhoodInputs((prev) => ({ ...prev, [sectorId]: '' }))
   }
 
+  // Remove bairro do setor (ele volta a ficar disponível no banco)
   const handleRemoveNeighborhoodFromSector = (sectorId: string, neighborhood: string) => {
     const current = getValues('deliverySectors') || []
     const updated = current.map((s: any) => {
@@ -503,6 +537,25 @@ export function MenuSettings() {
       return s
     })
     setValue('deliverySectors', updated, { shouldDirty: true })
+  }
+
+  // Exclui bairro do banco geral
+  const handleDeleteNeighborhoodFromBank = (neighborhoodName: string) => {
+    const currentBank = getValues('availableNeighborhoods') || []
+    const currentSectors = getValues('deliverySectors') || []
+    const cleanLower = neighborhoodName.toLowerCase().trim()
+
+    const updatedBank = currentBank.filter((n) => n.toLowerCase().trim() !== cleanLower)
+    const updatedSectors = currentSectors.map((s: any) => ({
+      ...s,
+      neighborhoods: (s.neighborhoods || []).filter(
+        (n: string) => n.toLowerCase().trim() !== cleanLower
+      ),
+    }))
+
+    setValue('availableNeighborhoods', updatedBank, { shouldDirty: true })
+    setValue('deliverySectors', updatedSectors, { shouldDirty: true })
+    toast.info(`Bairro "${neighborhoodName}" removido.`)
   }
 
   const copyMondayToWeekdays = () => {
@@ -552,7 +605,7 @@ export function MenuSettings() {
       <Separator />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="store" className="space-y-6">
+        <Tabs defaultValue="delivery" className="space-y-6">
           <TabsList className="grid grid-cols-2 md:grid-cols-4 h-12 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             <TabsTrigger
               value="store"
@@ -940,82 +993,170 @@ export function MenuSettings() {
               </CardContent>
             </Card>
 
-            <Card className="border-indigo-100 dark:border-indigo-900/40">
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* SEÇÃO 1: BANCO DE BAIRROS CADASTRADOS NA LOJA */}
+            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-lg text-indigo-900 dark:text-indigo-300">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base font-black text-slate-800 dark:text-slate-100">
+                      <Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      Banco de Bairros da Loja
+                    </CardTitle>
+                    <Badge variant="outline" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold text-xs">
+                      {availableNeighborhoods.length} Bairros no Catálogo
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs mt-1">
+                    Bairros que sua loja atende. Você pode importar a cidade toda de uma vez ou cadastrar bairros avulsos.
+                  </CardDescription>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="gap-1.5 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Importar Bairros da Cidade
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {availableNeighborhoods.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-800 dark:bg-slate-900/20">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                      Nenhum bairro importado ainda no banco de bairros.
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Clique em &quot;Importar Bairros da Cidade&quot; para carregar todos os bairros do seu município em 1 clique.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Filtro do banco de bairros */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2">
+                      <span className="text-xs font-semibold text-slate-500">
+                        {unassignedNeighborhoods.length} disponíveis sem setor • {assignedNeighborhoodsSet.size} vinculados a setores
+                      </span>
+                      <div className="relative w-full sm:w-56">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <Input
+                          placeholder="Buscar bairro disponível..."
+                          value={unassignedSearch}
+                          onChange={(e) => setUnassignedSearch(e.target.value)}
+                          className="h-7 pl-7 text-xs bg-white dark:bg-slate-950"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Lista dos bairros disponíveis (sem setor) */}
+                    {unassignedNeighborhoods.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 rounded-xl border bg-slate-50/50 dark:bg-slate-900/30">
+                        {filteredUnassigned.map((name) => (
+                          <div
+                            key={name}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                          >
+                            <span>{name}</span>
+                            {deliverySectors.length > 0 && (
+                              <select
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleLinkNeighborhoodToSector(e.target.value, name)
+                                    e.target.value = ''
+                                  }
+                                }}
+                                defaultValue=""
+                                className="h-5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border-none cursor-pointer px-1 focus:ring-0"
+                                title="Vincular a um setor"
+                              >
+                                <option value="" disabled>+ Setor</option>
+                                {deliverySectors.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name} ({formatCurrency(s.fee)})
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteNeighborhoodFromBank(name)}
+                              className="text-slate-300 hover:text-red-500 ml-0.5"
+                              title="Remover do catálogo"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border bg-emerald-50/50 dark:bg-emerald-950/20 p-3 text-center text-xs font-semibold text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-900/40">
+                        🎉 Todos os {availableNeighborhoods.length} bairros do catálogo já estão distribuídos em seus setores!
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* SEÇÃO 2: SETORES DE ENTREGA & TAXAS */}
+            <Card className="border-indigo-100 dark:border-indigo-900/40 shadow-sm">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base font-black text-indigo-950 dark:text-indigo-200">
                     <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     Zonas de Entrega & Taxas por Setor
                   </CardTitle>
-                  <CardDescription>
-                    Agrupe vários bairros em um setor com o mesmo valor de frete para facilitar a gestão.
+                  <CardDescription className="text-xs mt-1">
+                    Cada setor agrupa bairros com a mesma taxa de frete e tempo de entrega.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="gap-1.5 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Importar Bairros (IBGE)
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleAddSector}
-                    size="sm"
-                    className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
-                  >
-                    <Plus className="h-4 w-4" /> Novo Setor
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  onClick={handleAddSector}
+                  size="sm"
+                  className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20 shrink-0"
+                >
+                  <Plus className="h-4 w-4" /> Novo Setor
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(!watch('deliverySectors') || watch('deliverySectors')?.length === 0) ? (
+                {deliverySectors.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/30">
                     <MapPin className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
                     <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Nenhum setor de bairros configurado
+                      Nenhum setor de entrega configurado
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      A taxa de entrega padrão ({formatCurrency(watch('deliveryFee') || 0)}) será aplicada para todos os pedidos.
+                      Crie setores (ex: &quot;Setor 1 - Centro (R$ 6,00)&quot;) e adicione os bairros correspondentes.
                     </p>
-                    <div className="mt-4 flex items-center justify-center gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => setIsImportModalOpen(true)}
-                        size="sm"
-                        className="gap-1 text-xs bg-indigo-600 text-white hover:bg-indigo-700"
-                      >
-                        <Download className="h-3.5 w-3.5" /> Importar Bairros da Cidade
-                      </Button>
+                    <div className="mt-4 flex justify-center">
                       <Button
                         type="button"
                         onClick={handleAddSector}
-                        variant="outline"
                         size="sm"
-                        className="gap-1 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        className="gap-1.5 text-xs bg-indigo-600 text-white hover:bg-indigo-700 font-bold"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Criar Manualmente
+                        <Plus className="h-4 w-4" /> Criar Primeiro Setor
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {(watch('deliverySectors') || []).map((sector: any, sIndex: number) => (
+                    {deliverySectors.map((sector: any, sIndex: number) => (
                       <div
                         key={sector.id || sIndex}
-                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950"
+                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950"
                       >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        {/* Header do Setor: Nome, Taxa e Prazo */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3.5 dark:border-slate-800">
                           <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <div className="space-y-1">
                               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Nome do Setor</Label>
                               <Input
                                 {...register(`deliverySectors.${sIndex}.name`)}
-                                placeholder="Ex: Setor 1 - Centro / Praia"
+                                placeholder="Ex: Setor 1 - Centro"
                                 className="h-9 text-xs font-bold"
                               />
                             </div>
@@ -1030,7 +1171,7 @@ export function MenuSettings() {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Tempo Estimado (Min)</Label>
+                              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Prazo Estimado (Min)</Label>
                               <div className="flex items-center gap-1.5">
                                 <Input
                                   type="number"
@@ -1061,52 +1202,87 @@ export function MenuSettings() {
                           </Button>
                         </div>
 
-                        {/* Bairros do Setor */}
-                        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                          <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                            Bairros pertencentes a este setor ({sector.neighborhoods?.length || 0}):
-                          </Label>
+                        {/* Corpo do Setor: Bairros Vinculados & Adição Rápida */}
+                        <div className="mt-3 space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              Bairros vinculados a este setor ({sector.neighborhoods?.length || 0}):
+                            </Label>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            {(sector.neighborhoods || []).map((n: string) => (
-                              <span
-                                key={n}
-                                className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50"
-                              >
-                                {n}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveNeighborhoodFromSector(sector.id, n)}
-                                  className="text-indigo-400 hover:text-red-600 ml-0.5"
+                            {/* Dropdown Rápido: Adicionar bairro do banco a este setor */}
+                            {unassignedNeighborhoods.length > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-slate-400">Do banco:</span>
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      handleLinkNeighborhoodToSector(sector.id, e.target.value)
+                                      e.target.value = ''
+                                    }
+                                  }}
+                                  defaultValue=""
+                                  className="h-7 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-2 cursor-pointer"
                                 >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </span>
-                            ))}
+                                  <option value="" disabled>+ Escolher bairro disponível...</option>
+                                  {unassignedNeighborhoods.map((name) => (
+                                    <option key={name} value={name}>
+                                      {name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
 
-                            <div className="flex items-center gap-1">
-                              <Input
-                                placeholder="Adicionar bairro (Enter ou vírgula)..."
-                                value={newNeighborhoodInputs[sector.id] || ''}
-                                onChange={(e) => setNewNeighborhoodInputs((prev) => ({ ...prev, [sector.id]: e.target.value }))}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ',') {
-                                    e.preventDefault()
-                                    handleAddNeighborhoodToSector(sector.id)
-                                  }
-                                }}
-                                className="h-8 w-64 text-xs"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleAddNeighborhoodToSector(sector.id)}
-                                className="h-8 text-xs px-2.5"
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                              </Button>
-                            </div>
+                          {/* Badges de Bairros do Setor */}
+                          <div className="flex flex-wrap items-center gap-1.5 min-h-10 p-2.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+                            {(!sector.neighborhoods || sector.neighborhoods.length === 0) ? (
+                              <span className="text-xs text-slate-400 italic">
+                                Nenhum bairro vinculado. Selecione um bairro acima ou digite abaixo para cadastrar.
+                              </span>
+                            ) : (
+                              (sector.neighborhoods || []).map((n: string) => (
+                                <span
+                                  key={n}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-900/60 shadow-sm"
+                                >
+                                  {n}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveNeighborhoodFromSector(sector.id, n)}
+                                    className="text-indigo-400 hover:text-red-600 transition-colors"
+                                    title="Desvincular do setor"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))
+                            )}
+                          </div>
+
+                          {/* Digitação Manual de Novos Bairros */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <Input
+                              placeholder="Cadastrar novo bairro direto neste setor (Enter ou vírgula)..."
+                              value={newNeighborhoodInputs[sector.id] || ''}
+                              onChange={(e) => setNewNeighborhoodInputs((prev) => ({ ...prev, [sector.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ',') {
+                                  e.preventDefault()
+                                  handleAddManualNeighborhoodToSector(sector.id)
+                                }
+                              }}
+                              className="h-8 text-xs bg-white dark:bg-slate-950"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleAddManualNeighborhoodToSector(sector.id)}
+                              className="h-8 text-xs px-3 font-bold shrink-0"
+                            >
+                              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -1289,13 +1465,12 @@ export function MenuSettings() {
         </div>
       </form>
 
-      {/* Modal de Importação Oficial de Bairros do IBGE */}
+      {/* Modal Limpo de Importação de Bairros */}
       <ImportNeighborhoodsModal
         open={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
         initialCity={watch('city') || ''}
         initialState={watch('state') || ''}
-        existingSectors={watch('deliverySectors') || []}
         onImport={handleImportModalConfirm}
       />
     </div>
