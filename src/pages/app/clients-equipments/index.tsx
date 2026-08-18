@@ -39,6 +39,8 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+import { Dialog } from '@/components/ui/dialog'
+import { TreatmentClient } from '../treatments/treatment-client'
 import { EquipmentDetailsModal } from './components/equipment-details-modal'
 
 export function ClientsEquipments() {
@@ -46,6 +48,7 @@ export function ClientsEquipments() {
 
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [isNewClientOpen, setIsNewClientOpen] = useState(false)
 
   // Queries
   const { data: clients, isLoading: isLoadingClients } = useQuery({
@@ -292,7 +295,7 @@ export function ClientsEquipments() {
                   Visualize e administre a carteira de clientes.
                 </p>
               </div>
-              <Button size="sm" className="bg-indigo-600 font-bold text-white hover:bg-indigo-700">
+              <Button size="sm" onClick={() => setIsNewClientOpen(true)} className="bg-indigo-600 font-bold text-white hover:bg-indigo-700">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Cliente
               </Button>
@@ -552,6 +555,18 @@ export function ClientsEquipments() {
         onOpenChange={setDetailsModalOpen}
         equipment={selectedEquipmentId ? (vinculados.find((eq: any) => eq.id === selectedEquipmentId) || orphans?.find((eq: any) => eq.id === selectedEquipmentId)) : null}
       />
+
+      <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>
+        {isNewClientOpen && (
+          <TreatmentClient
+            onClose={() => {
+              setIsNewClientOpen(false)
+              queryClient.invalidateQueries({ queryKey: ['clients-fleet'] })
+              queryClient.invalidateQueries({ queryKey: ['clients'] })
+            }}
+          />
+        )}
+      </Dialog>
     </>
   )
 }
