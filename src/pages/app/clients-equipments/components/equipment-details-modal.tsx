@@ -43,7 +43,7 @@ export function EquipmentDetailsModal({
 }: EquipmentDetailsModalProps) {
   if (!equipment) return null
 
-  const isOnline = equipment.is_online
+  const isOnline = Boolean(equipment.is_online && equipment.last_seen_at && (new Date().getTime() - new Date(equipment.last_seen_at).getTime()) < 10 * 60 * 1000)
   const telemetry = equipment.last_telemetry || {}
 
   // Extração segura dos dados de telemetria

@@ -167,7 +167,7 @@ export function ClientsEquipments() {
                     </TableRow>
                   ) : vinculados.length > 0 ? (
                     vinculados.map((eq: any) => {
-                      const isOnline = eq.is_online
+                      const isOnline = Boolean(eq.is_online && eq.last_seen_at && (new Date().getTime() - new Date(eq.last_seen_at).getTime()) < 10 * 60 * 1000)
                       const lastSeen = eq.last_seen_at
                         ? format(new Date(eq.last_seen_at), 'dd/MM HH:mm', {
                             locale: ptBR,
@@ -234,7 +234,7 @@ export function ClientsEquipments() {
                 </div>
               ) : vinculados.length > 0 ? (
                 vinculados.map((eq: any) => {
-                  const isOnline = eq.is_online
+                  const isOnline = Boolean(eq.is_online && eq.last_seen_at && (new Date().getTime() - new Date(eq.last_seen_at).getTime()) < 10 * 60 * 1000)
                   const lastSeen = eq.last_seen_at
                     ? format(new Date(eq.last_seen_at), 'dd/MM HH:mm', { locale: ptBR })
                     : 'Nunca'
