@@ -152,7 +152,7 @@ export function ClientsEquipments() {
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead>Identificação / PDV</TableHead>
+                    <TableHead>Identificação do Computador</TableHead>
                     <TableHead>Cliente Dono</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Último Contato</TableHead>
