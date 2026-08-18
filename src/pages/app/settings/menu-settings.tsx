@@ -20,6 +20,8 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -393,6 +395,51 @@ export function MenuSettings() {
   }
 
   const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+
+  const handleImportModalConfirm = (
+    selectedNeighborhoods: string[],
+    targetSectorId: string,
+    newSectorName?: string
+  ) => {
+    const current = getValues('deliverySectors') || []
+    const selectedLower = new Set(selectedNeighborhoods.map((n) => n.toLowerCase()))
+
+    // Regra de Exclusividade: remove os bairros selecionados de qualquer outro setor
+    const cleaned = current.map((s: any) => ({
+      ...s,
+      neighborhoods: (s.neighborhoods || []).filter(
+        (n: string) => !selectedLower.has(n.toLowerCase())
+      ),
+    }))
+
+    if (targetSectorId === 'new') {
+      const newSector = {
+        id: crypto.randomUUID(),
+        name: newSectorName || `Setor ${current.length + 1}`,
+        fee: 6.0,
+        estimatedTimeMin: 30,
+        estimatedTimeMax: 50,
+        neighborhoods: selectedNeighborhoods,
+      }
+      setValue('deliverySectors', [...cleaned, newSector], { shouldDirty: true })
+      toast.success(`${selectedNeighborhoods.length} bairros importados no ${newSector.name}!`)
+    } else {
+      const updated = cleaned.map((s: any) => {
+        if (s.id === targetSectorId) {
+          return {
+            ...s,
+            neighborhoods: Array.from(
+              new Set([...(s.neighborhoods || []), ...selectedNeighborhoods])
+            ),
+          }
+        }
+        return s
+      })
+      setValue('deliverySectors', updated, { shouldDirty: true })
+      toast.success(`${selectedNeighborhoods.length} bairros adicionados ao setor com sucesso!`)
+    }
+  }
   const [isImportingNeighborhoods, setIsImportingNeighborhoods] = useState(false)
 
   // Função para importar bairros da cidade cadastrada via IBGE / BrasilAPI

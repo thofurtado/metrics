@@ -461,7 +461,7 @@ export function ClientsEquipments() {
                           <div className="flex items-center gap-2">
                             <Select
                               disabled={isLinking}
-                              onValueChange={(clientId) => handleLink({ equipmentId: orphan.id, clientId })}
+                              onValueChange={(clientId) => handleLink({ id: orphan.id, client_id: clientId, equipmentId: orphan.id, clientId })}
                             >
                               <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Selecione um cliente..." />
@@ -524,7 +524,7 @@ export function ClientsEquipments() {
                       </label>
                       <Select
                         disabled={isLinking}
-                        onValueChange={(clientId) => handleLink({ equipmentId: orphan.id, clientId })}
+                        onValueChange={(clientId) => handleLink({ id: orphan.id, client_id: clientId, equipmentId: orphan.id, clientId })}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione um cliente..." />
