@@ -1,5 +1,3 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
   Clock,
@@ -8,10 +6,13 @@ import {
   Loader2,
   MapPin,
   Palette,
+  Plus,
   Search,
   Sparkles,
   Store,
+  Trash2,
   Truck,
+  X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Controller, useForm as useReactHookForm } from 'react-hook-form'
@@ -166,6 +167,8 @@ function generatePremiumPalette(hex: string) {
   const premiumBg = hslToHex(h, Math.min(s, 30), 95)
   return { secondary: premiumSecondary, bg: premiumBg }
 }
+
+const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
 
 export function MenuSettings() {
   const queryClient = useQueryClient()
