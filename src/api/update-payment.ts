@@ -5,6 +5,7 @@ export interface UpdatePaymentBody {
   installment_limit?: number
   in_sight?: boolean
   account_id?: string
+  sefaz_tPag?: string | null
   show_in_menu?: boolean
 }
 

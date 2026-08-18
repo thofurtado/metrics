@@ -39,6 +39,7 @@ const createPaymentSchema = z.object({
   installment_limit: z.coerce.number().min(1),
   in_sight: z.boolean().default(false),
   account_id: z.string().optional(),
+  sefaz_tPag: z.string().nullable().optional(),
 })
 
 type CreatePaymentSchema = z.infer<typeof createPaymentSchema>
@@ -100,6 +101,7 @@ export function Payments() {
       installment_limit: data.installment_limit,
       in_sight: data.in_sight,
       account_id: data.account_id === 'none' ? undefined : data.account_id,
+      sefaz_tPag: data.sefaz_tPag === 'none' ? null : data.sefaz_tPag,
     })
   }
 
