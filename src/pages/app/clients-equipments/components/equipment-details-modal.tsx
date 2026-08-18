@@ -58,6 +58,8 @@ export function EquipmentDetailsModal({
   const temp = telemetry.temp?.main || 0
   const fsSize = telemetry.fsSize || []
   const mainDrive = fsSize[0] || {}
+  const windy = telemetry.windy || {}
+  const windyVersion = windy.version || '2.0.0'
   const driveTotalGB = mainDrive.size ? (mainDrive.size / 1024 ** 3).toFixed(1) : 0
   const driveUsedPercent = mainDrive.use ? mainDrive.use.toFixed(0) : 0
   const driveFreeGB = mainDrive.size && mainDrive.use ? ((mainDrive.size - (mainDrive.size * (mainDrive.use / 100))) / 1024 ** 3).toFixed(1) : 0
@@ -121,9 +123,9 @@ export function EquipmentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-none bg-slate-50 p-0 shadow-2xl dark:bg-slate-900 sm:max-w-[700px]">
+      <DialogContent className="max-h-[92vh] overflow-y-auto border-none bg-slate-50 p-0 shadow-2xl dark:bg-slate-900 w-[95vw] sm:max-w-[720px]">
         {/* CABEÇALHO */}
-        <div className="flex items-start justify-between border-b border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col gap-4 border-b border-slate-100 bg-white p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6 dark:border-slate-800 dark:bg-slate-950">
           <div>
             <DialogTitle className="flex items-center gap-3 text-2xl font-black text-slate-800 dark:text-slate-100">
               {osInfo?.hostname || equipment.identification || equipment.type || 'Equipamento'}
@@ -138,9 +140,13 @@ export function EquipmentDetailsModal({
                 </span>
               )}
             </DialogTitle>
-            <DialogDescription className="mt-1 flex items-center gap-2 text-slate-500">
+            <DialogDescription className="mt-1 flex flex-wrap items-center gap-2 text-slate-500">
               <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs dark:bg-slate-800">
                 ID: {equipment.id.split('-')[0]}
+              </span>
+              <span>•</span>
+              <span className="rounded-full bg-cyan-100 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">
+                Windy v{windyVersion}
               </span>
               <span>•</span>
               <span>
@@ -152,7 +158,7 @@ export function EquipmentDetailsModal({
             </DialogDescription>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {rustdeskId ? (
               <Button
                 size="sm"
@@ -169,6 +175,17 @@ export function EquipmentDetailsModal({
               </Button>
             ) : null}
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs text-cyan-700 hover:bg-cyan-50 dark:text-cyan-300 dark:hover:bg-cyan-950/40"
+              disabled={!isOnline || isSendingCommand}
+              onClick={() => handleSimulateCommand('UPDATE_AGENT')}
+              title="Disparar atualização remota e silenciosa do Windy neste terminal"
+            >
+              <DownloadCloud className="h-4 w-4" />
+              Atualizar Windy
+            </Button>
             <Button
               variant="outline"
               size="sm"

@@ -63,7 +63,7 @@ export function Sidebar() {
       access: hasAccess('finance'),
     },
     {
-      name: 'ConferÃªncia Caixa',
+      name: 'Conferência Caixa',
       path: '/cashier',
       icon: Wallet,
       access: hasAccess('cashier'),
@@ -251,7 +251,7 @@ export function Sidebar() {
                 )}
               >
                 <Settings className="h-4 w-4" />
-                {!collapsed && <span>ConfiguraÃ§Ãµes</span>}
+                {!collapsed && <span>Configurações</span>}
               </Link>
             )}
           </div>

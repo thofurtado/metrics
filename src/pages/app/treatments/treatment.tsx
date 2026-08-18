@@ -142,12 +142,12 @@ export function Treatment() {
             className="flex flex-col gap-6"
             onSubmit={form.handleSubmit(onSubmit)}
           >
-            {/* SEÃ‡ÃƒO 1: STATUS E TEMPO */}
+            {/* SEÍ‡ÍƒO 1: STATUS E TEMPO */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <FlagTriangleRight className="h-4 w-4 text-vida-loca-500" />
                 <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
-                  SituaÃ§Ã£o e Agendamento
+                  Situação e Agendamento
                 </h2>
               </div>
 
@@ -191,7 +191,7 @@ export function Treatment() {
                             Em Bancada
                           </SelectItem>
                           <SelectItem value="resolved">
-                            Resolvido (ConcluÃ­do)
+                            Resolvido (Concluído)
                           </SelectItem>
                           <SelectItem value="canceled">Cancelado</SelectItem>
                           <SelectItem value="on_hold">Em espera</SelectItem>
@@ -224,7 +224,7 @@ export function Treatment() {
                               {field.value ? (
                                 format(field.value, 'dd/MM/yy HH:mm')
                               ) : (
-                                <span>Hoje (AutomÃ¡tico)</span>
+                                <span>Hoje (Automático)</span>
                               )}
                             </Button>
                           </PopoverTrigger>
@@ -250,7 +250,7 @@ export function Treatment() {
               </div>
             </div>
 
-            {/* SEÃ‡ÃƒO 2: CLIENTE E EQUIPAMENTO */}
+            {/* SEÍ‡ÍƒO 2: CLIENTE E EQUIPAMENTO */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <Building2 className="h-4 w-4 text-vida-loca-500" />
@@ -376,7 +376,7 @@ export function Treatment() {
                 </div>
               </div>
 
-              {/* Contato EspecÃ­fico para este Atendimento (Toggle Opcional) */}
+              {/* Contato Específico para este Atendimento (Toggle Opcional) */}
               {!showContact ? (
                 <div className="flex justify-end">
                   <Button
@@ -385,7 +385,7 @@ export function Treatment() {
                     onClick={() => setShowContact(true)}
                     className="h-auto p-0 text-xs text-minsk-500 underline"
                   >
-                    + Adicionar responsÃ¡vel pelo acompanhamento (se diferente
+                    + Adicionar responsável pelo acompanhamento (se diferente
                     do cliente)
                   </Button>
                 </div>
@@ -393,7 +393,7 @@ export function Treatment() {
                 <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
                   <div className="flex items-center justify-between">
                     <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
-                      ResponsÃ¡vel pelo Acompanhamento
+                      Responsável pelo Acompanhamento
                     </FormLabel>
                     <Button
                       type="button"
@@ -418,7 +418,7 @@ export function Treatment() {
                             {...field}
                             value={field.value || ''}
                             className="h-10"
-                            placeholder="Nome de quem estÃ¡ acompanhando este chamado"
+                            placeholder="Nome de quem está acompanhando este chamado"
                           />
                         </FormControl>
                       </FormItem>
@@ -428,12 +428,12 @@ export function Treatment() {
               )}
             </div>
 
-            {/* SEÃ‡ÃƒO 3: DETALHES */}
+            {/* SEÍ‡ÍƒO 3: DETALHES */}
             <div className="space-y-4 rounded-xl border border-minsk-200 bg-white p-4 shadow-sm dark:border-minsk-700 dark:bg-minsk-900">
               <div className="flex items-center gap-2 border-b border-minsk-100 pb-2 dark:border-minsk-800">
                 <NotebookText className="h-4 w-4 text-vida-loca-500" />
                 <h2 className="text-sm font-semibold text-minsk-800 dark:text-minsk-100">
-                  Detalhes da SolicitaÃ§Ã£o
+                  Detalhes da Solicitação
                 </h2>
               </div>
 
@@ -449,7 +449,7 @@ export function Treatment() {
                       <Input
                         {...field}
                         className="h-10"
-                        placeholder="Ex: ManutenÃ§Ã£o Preventiva, FormataÃ§Ã£o, Troca de PeÃ§a..."
+                        placeholder="Ex: Manutenção Preventiva, Formatação, Troca de Peça..."
                       />
                     </FormControl>
                   </FormItem>
@@ -462,7 +462,7 @@ export function Treatment() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-medium text-minsk-600 dark:text-minsk-400">
-                      DescriÃ§Ã£o TÃ©cnica / ObservaÃ§Ãµes
+                      Descrição Técnica / Observações
                     </FormLabel>
                     <FormControl>
                       <Textarea
@@ -476,7 +476,7 @@ export function Treatment() {
               />
             </div>
 
-            {/* BOTÃƒO CADASTRAR */}
+            {/* BOTÍƒO CADASTRAR */}
             <div className="sticky bottom-4 z-10 pt-2">
               <Button
                 type="submit"
