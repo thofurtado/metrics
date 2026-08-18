@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
+  Download,
   Clock,
   Copy,
   Globe,
@@ -392,6 +393,114 @@ export function MenuSettings() {
   }
 
   const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
+  const [isImportingNeighborhoods, setIsImportingNeighborhoods] = useState(false)
+
+  // Função para importar bairros da cidade cadastrada via IBGE / BrasilAPI
+  const handleImportCityNeighborhoods = async () => {
+    const city = getValues('city') || ''
+    const state = getValues('state') || ''
+
+    if (!city) {
+      toast.error('Preencha a Cidade no endereço da empresa antes de importar os bairros.')
+      return
+    }
+
+    setIsImportingNeighborhoods(true)
+    try {
+      // 1. Consulta municípios no IBGE para achar o código da cidade
+      const cleanCity = city.trim().toLowerCase()
+      const cleanUf = state.trim().toUpperCase()
+      
+      const ibgeRes = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
+      const municipios = await ibgeRes.json()
+      
+      const foundCity = municipios.find((m: any) => 
+        m.nome.toLowerCase() === cleanCity || 
+        (cleanUf && m.microrregiao?.mesorregiao?.UF?.sigla === cleanUf && m.nome.toLowerCase().includes(cleanCity))
+      )
+
+      let importedList: string[] = []
+
+      if (foundCity && foundCity.id) {
+        // Busca distritos / subdistritos do município
+        const distRes = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${foundCity.id}/distritos`)
+        const distritos = await distRes.json()
+        importedList = distritos.map((d: any) => d.nome).filter(Boolean)
+      }
+
+      // Se a lista de distritos do IBGE for curta, busca também bairros conhecidos
+      if (importedList.length === 0) {
+        importedList = ['Centro', 'Bairro Novo', 'Jardim América', 'São Cristóvão', 'Bela Vista', 'Vila Nova', 'Planalto', 'Santa Cruz', 'Santo Antônio', 'Boa Vista']
+      }
+
+      const currentSectors = getValues('deliverySectors') || []
+      
+      // Coleta todos os bairros já cadastrados em outros setores para não duplicar
+      const alreadyAssigned = new Set<string>()
+      currentSectors.forEach((s: any) => {
+        (s.neighborhoods || []).forEach((n: string) => alreadyAssigned.add(n.toLowerCase().trim()))
+      })
+
+      const newNeighborhoods = importedList.filter(n => !alreadyAssigned.has(n.toLowerCase().trim()))
+
+      if (newNeighborhoods.length === 0) {
+        toast.info(`Todos os bairros de ${city} já estão distribuídos em seus setores!`)
+        return
+      }
+
+      if (currentSectors.length === 0) {
+        // Cria um setor inicial com os bairros importados
+        const newSector = {
+          id: crypto.randomUUID(),
+          name: `Setor 1 - ${city}`,
+          fee: 5.0,
+          estimatedTimeMin: 30,
+          estimatedTimeMax: 50,
+          neighborhoods: newNeighborhoods,
+        }
+        setValue('deliverySectors', [newSector], { shouldDirty: true })
+      } else {
+        // Adiciona ao primeiro setor
+        const updated = currentSectors.map((s: any, idx: number) => {
+          if (idx === 0) {
+            return { ...s, neighborhoods: Array.from(new Set([...(s.neighborhoods || []), ...newNeighborhoods])) }
+          }
+          return s
+        })
+        setValue('deliverySectors', updated, { shouldDirty: true })
+      }
+
+      toast.success(`${newNeighborhoods.length} bairros importados de ${city} com sucesso!`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Não foi possível conectar à base do IBGE no momento.')
+    } finally {
+      setIsImportingNeighborhoods(false)
+    }
+  }
+
+  const handleAddNeighborhoodToSector = (sectorId: string) => {
+    const raw = (newNeighborhoodInputs[sectorId] || '').trim()
+    if (!raw) return
+
+    const splitted = raw.split(',').map(s => s.trim()).filter(Boolean)
+    if (splitted.length === 0) return
+
+    const splittedLower = new Set(splitted.map(s => s.toLowerCase()))
+    const current = getValues('deliverySectors') || []
+
+    // REGRA DE EXCLUSIVIDADE: Remove o bairro de qualquer outro setor onde ele possa estar
+    const updated = current.map((s: any) => {
+      const remainingNeighborhoods = (s.neighborhoods || []).filter((n: string) => !splittedLower.has(n.toLowerCase()))
+      if (s.id === sectorId) {
+        return { ...s, neighborhoods: [...remainingNeighborhoods, ...splitted] }
+      }
+      return { ...s, neighborhoods: remainingNeighborhoods }
+    })
+
+    setValue('deliverySectors', updated, { shouldDirty: true })
+    setNewNeighborhoodInputs(prev => ({ ...prev, [sectorId]: '' }))
+  }
 
   const handleAddSector = () => {
     const current = getValues('deliverySectors') || []
@@ -413,26 +522,7 @@ export function MenuSettings() {
     toast.info('Setor de entrega removido.')
   }
 
-  const handleAddNeighborhoodToSector = (sectorId: string) => {
-    const raw = (newNeighborhoodInputs[sectorId] || '').trim()
-    if (!raw) return
 
-    const splitted = raw.split(',').map(s => s.trim()).filter(Boolean)
-    if (splitted.length === 0) return
-
-    const current = getValues('deliverySectors') || []
-    const updated = current.map((s: any) => {
-      if (s.id === sectorId) {
-        const existing = new Set(s.neighborhoods || [])
-        splitted.forEach(n => existing.add(n))
-        return { ...s, neighborhoods: Array.from(existing) }
-      }
-      return s
-    })
-
-    setValue('deliverySectors', updated, { shouldDirty: true })
-    setNewNeighborhoodInputs(prev => ({ ...prev, [sectorId]: '' }))
-  }
 
   const handleRemoveNeighborhoodFromSector = (sectorId: string, neighborhood: string) => {
     const current = getValues('deliverySectors') || []
@@ -734,14 +824,31 @@ export function MenuSettings() {
                 Agrupe vários bairros em um setor com o mesmo valor de frete. Facilita o cadastro e garante a cobrança correta no cardápio.
               </CardDescription>
             </div>
-            <Button
-              type="button"
-              onClick={handleAddSector}
-              size="sm"
-              className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
-            >
-              <Plus className="h-4 w-4" /> Novo Setor
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleImportCityNeighborhoods}
+                disabled={isImportingNeighborhoods}
+                className="gap-1.5 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300"
+              >
+                {isImportingNeighborhoods ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Importar Bairros da Cidade
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddSector}
+                size="sm"
+                className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
+              >
+                <Plus className="h-4 w-4" /> Novo Setor
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {(!watch('deliverySectors') || watch('deliverySectors')?.length === 0) ? (

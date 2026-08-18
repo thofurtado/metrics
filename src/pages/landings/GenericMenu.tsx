@@ -289,6 +289,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('All')
+  const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<number | null>(null)
+
+  const availableNeighborhoodsList = useMemo(() => {
+    const sectors = profile?.deliverySectors || []
+    const list: { name: string; fee: number; sectorName: string }[] = []
+    sectors.forEach((s: any) => {
+      (s.neighborhoods || []).forEach((n: string) => {
+        list.push({ name: n, fee: s.fee, sectorName: s.name })
+      })
+    })
+    return list.sort((a, b) => a.name.localeCompare(b.name))
+  }, [profile])
   const [isCartModalOpen, setIsCartModalOpen] = useState(false)
   const [isStoreInfoOpen, setIsStoreInfoOpen] = useState(false)
 
