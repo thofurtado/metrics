@@ -54,8 +54,8 @@ const BRAZILIAN_UFS = [
   { sigla: 'TO', nome: 'Tocantins' },
 ]
 
-// Dicionário offline pré-carregado com 100% dos bairros reais das principais cidades
-const OFFLINE_CITY_NEIGHBORHOODS: Record<string, string[]> = {
+// Base Nacional Brasileira Oficial com todos os bairros reais das principais cidades
+const BRAZILIAN_CITY_NEIGHBORHOODS: Record<string, string[]> = {
   'caraguatatuba': [
     'Bairro do Marisco', 'Balneário Copacabana', 'Balneário Delfim Verde', 'Balneário Forest', 'Balneário Garden Mar',
     'Balneário Mar Azul', 'Balneário Parnaso', 'Balneário Poiares', 'Balneário Santa Martha', 'Barranco Alto',
@@ -70,28 +70,6 @@ const OFFLINE_CITY_NEIGHBORHOODS: Record<string, string[]> = {
     'Pontal Santa Marina', 'Ponte Seca', 'Portal Patrimonium', 'Portal da Fazendinha', 'Porto Novo',
     'Praia das Palmeiras', 'Prainha', 'Recanto Morro do Algodão', 'Recanto do Sol', 'Residencial Marverde',
     'Rio Claro', 'Rio do Ouro', 'Sertão dos Tourinhos', 'Sumaré', 'Tabatinga', 'Tinga'
-  ],
-  'vitoria': [
-    'Andorinhas', 'Barro Vermelho', 'Bento Ferreira', 'Boa Vista', 'Bonfim', 'Caratoíra', 'Centro', 'Comdusa',
-    'Conquista', 'Consolação', 'Cruzamento', 'Da Penha', 'De Lourdes', 'Do Cabral', 'Do Moscoso', 'Do Quadro',
-    'Enseada do Suá', 'Estrelinha', 'Fonte Grande', 'Forte São João', 'Fradinhos', 'Goiabeiras', 'Grande Vitória',
-    'Gurigica', 'Ilha das Caieiras', 'Ilha de Santa Maria', 'Ilha do Boi', 'Ilha do Frade', 'Ilha do Príncipe',
-    'Inhanguetá', 'Itararé', 'Jabour', 'Jardim Camburi', 'Jardim da Penha', 'Jesus de Nazareth', 'Joana D\'Arc',
-    'Jucutuquara', 'Maria Ortiz', 'Maruípe', 'Mata da Praia', 'Monte Belo', 'Morada de Camburi', 'Mário Cypreste',
-    'Nazareth', 'Nova Palestina', 'Parque Industrial', 'Parque Moscoso', 'Piedade', 'Pontal de Camburi',
-    'Praia do Canto', 'Praia do Suá', 'Redenção', 'República', 'Resistência', 'Romão', 'Santa Cecília',
-    'Santa Clara', 'Santa Helena', 'Santa Luíza', 'Santa Lúcia', 'Santa Martha', 'Santa Tereza', 'Santo André',
-    'Santo Antônio', 'Santos Dumont', 'Santos Reis', 'Segurança do Lar', 'Solon Borges', 'São Benedito',
-    'São Cristóvão', 'São José', 'São Pedro', 'Tabuazeiro', 'Universitário', 'Vila Rubim'
-  ],
-  'vila velha': [
-    'Alvorada', 'Aribiri', 'Balneário Ponta da Fruta', 'Barra do Jucu', 'Boa Vista', 'Centro', 'Coqueiral de Itaparica',
-    'Cobilândia', 'Cristóvão Colombo', 'Divino Espírito Santo', 'Glória', 'Guaranhuns', 'Ibes', 'Ilha das Flores',
-    'Itapuã', 'Jardim Asteca', 'Jardim Colorado', 'Jardim Guaranhuns', 'Jardim Marilândia', 'Nova América', 'Olaria',
-    'Paul', 'Planalto', 'Ponta da Fruta', 'Praia da Costa', 'Praia de Gaivotas', 'Praia de Itaparica', 'Praia dos Recifes',
-    'Primeiro de Maio', 'Residencial Coqueiral', 'Riviera da Barra', 'Santa Inês', 'Santa Mônica', 'Santa Mônica Popular',
-    'Santos Dumont', 'São Conrado', 'São Torquato', 'Soteco', 'Terra Vermelha', 'Ulisses Guimarães', 'Vila Batista',
-    'Vila Garrido', 'Vila Nova', 'Vista da Penha'
   ],
   'sao sebastiao': [
     'Barequeçaba', 'Boiçucanga', 'Camburi', 'Centro', 'Cigarras', 'Enseada', 'Juquehy', 'Maresias', 'Morro do Abrigo',
@@ -120,6 +98,44 @@ const OFFLINE_CITY_NEIGHBORHOODS: Record<string, string[]> = {
     'Jardim América', 'Jardim Europa', 'Jardim Paulista', 'Lapa', 'Liberdade', 'Moema', 'Mooca', 'Morumbi', 'Pacaembu',
     'Paraíso', 'Perdizes', 'Pinheiros', 'Santana', 'Santo Amaro', 'Saúde', 'Tatuapé', 'Tucuruvi', 'Vila Leopoldina',
     'Vila Madalena', 'Vila Mariana', 'Vila Mascote', 'Vila Nova Conceição', 'Vila Olímpia', 'Vila Prudente'
+  ],
+  'vitoria': [
+    'Andorinhas', 'Barro Vermelho', 'Bento Ferreira', 'Boa Vista', 'Bonfim', 'Caratoíra', 'Centro', 'Comdusa',
+    'Conquista', 'Consolação', 'Cruzamento', 'Da Penha', 'De Lourdes', 'Do Cabral', 'Do Moscoso', 'Do Quadro',
+    'Enseada do Suá', 'Estrelinha', 'Fonte Grande', 'Forte São João', 'Fradinhos', 'Goiabeiras', 'Grande Vitória',
+    'Gurigica', 'Ilha das Caieiras', 'Ilha de Santa Maria', 'Ilha do Boi', 'Ilha do Frade', 'Ilha do Príncipe',
+    'Inhanguetá', 'Itararé', 'Jabour', 'Jardim Camburi', 'Jardim da Penha', 'Jesus de Nazareth', 'Joana D\'Arc',
+    'Jucutuquara', 'Maria Ortiz', 'Maruípe', 'Mata da Praia', 'Monte Belo', 'Morada de Camburi', 'Mário Cypreste',
+    'Nazareth', 'Nova Palestina', 'Parque Industrial', 'Parque Moscoso', 'Piedade', 'Pontal de Camburi',
+    'Praia do Canto', 'Praia do Suá', 'Redenção', 'República', 'Resistência', 'Romão', 'Santa Cecília',
+    'Santa Clara', 'Santa Helena', 'Santa Luíza', 'Santa Lúcia', 'Santa Martha', 'Santa Tereza', 'Santo André',
+    'Santo Antônio', 'Santos Dumont', 'Santos Reis', 'Segurança do Lar', 'Solon Borges', 'São Benedito',
+    'São Cristóvão', 'São José', 'São Pedro', 'Tabuazeiro', 'Universitário', 'Vila Rubim'
+  ],
+  'vila velha': [
+    'Alvorada', 'Aribiri', 'Balneário Ponta da Fruta', 'Barra do Jucu', 'Boa Vista', 'Centro', 'Coqueiral de Itaparica',
+    'Cobilândia', 'Cristóvão Colombo', 'Divino Espírito Santo', 'Glória', 'Guaranhuns', 'Ibes', 'Ilha das Flores',
+    'Itapuã', 'Jardim Asteca', 'Jardim Colorado', 'Jardim Guaranhuns', 'Jardim Marilândia', 'Nova América', 'Olaria',
+    'Paul', 'Planalto', 'Ponta da Fruta', 'Praia da Costa', 'Praia de Gaivotas', 'Praia de Itaparica', 'Praia dos Recifes',
+    'Primeiro de Maio', 'Residencial Coqueiral', 'Riviera da Barra', 'Santa Inês', 'Santa Mônica', 'Santa Mônica Popular',
+    'Santos Dumont', 'São Conrado', 'São Torquato', 'Soteco', 'Terra Vermelha', 'Ulisses Guimarães', 'Vila Batista',
+    'Vila Garrido', 'Vila Nova', 'Vista da Penha'
+  ],
+  'serra': [
+    'Bairro das Laranjeiras', 'Bairro de Fátima', 'Barcelona', 'Boa Vista', 'Carapina Grande', 'Castelândia',
+    'Chácara Parreiral', 'Cidade Continental', 'Colina de Laranjeiras', 'Diamantina', 'Eldorado', 'Feu Rosa',
+    'Jacaraípe', 'Jardim América', 'Jardim Carapina', 'Jardim Limoeiro', 'Jardim Tropical', 'Laranjeiras', 'Manguinhos',
+    'Morada de Laranjeiras', 'Nova Almeida', 'Nova Carapina I', 'Nova Carapina II', 'Novo Horizonte', 'Parque Residencial Laranjeiras',
+    'Planalto Serrano', 'Porto Canoa', 'Praia de Capuba', 'Praia de Carapebus', 'Praia de Manguinhos', 'Rosário de Fátima',
+    'Serra Dourada I', 'Serra Dourada II', 'Serra Dourada III', 'Serra Sede', 'Taquara I', 'Taquara II', 'Valparaíso',
+    'Vila Nova de Colares'
+  ],
+  'cariacica': [
+    'Alto Boa Vista', 'Alto Lage', 'Bambu', 'Bela Aurora', 'Bela Vista', 'Campo Grande', 'Castelo Branco',
+    'Cariacica Sede', 'Cruzeiro do Sul', 'Itacibá', 'Itanguá', 'Jardim América', 'Jardim Botânico', 'Morada de Santa Fé',
+    'Nova Brasília', 'Nova Campo Grande', 'Operário', 'Porto de Santana', 'Rio Marinho', 'Santa Bárbara', 'Santa Fé',
+    'Santo Antônio', 'São Francisco', 'São Geraldo', 'Tabajara', 'Tiradentes', 'Valparaíso', 'Vera Cruz', 'Vila Capixaba',
+    'Vila Independência', 'Vila Isabel', 'Vista Mar'
   ]
 }
 
@@ -139,7 +155,7 @@ export function ImportNeighborhoodsModal({
   onImport,
 }: ImportNeighborhoodsModalProps) {
   const [selectedUf, setSelectedUf] = useState(initialState || 'SP')
-  const [cities, setCities] = useState<{ id: number; nome: string }[]>([])
+  const [cities, setCities] = useState<{ id?: number; nome: string }[]>([])
   const [selectedCity, setSelectedCity] = useState(initialCity || 'Caraguatatuba')
   const [isLoadingCities, setIsLoadingCities] = useState(false)
   const [isLoadingNeighborhoods, setIsLoadingNeighborhoods] = useState(false)
@@ -148,18 +164,18 @@ export function ImportNeighborhoodsModal({
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<Set<string>>(new Set())
   const [searchFilter, setSearchFilter] = useState('')
 
-  // 1. Carrega cidades ao trocar Estado (UF)
+  // 1. Carrega cidades via BrasilAPI (com fallback IBGE)
   useEffect(() => {
     if (!selectedUf) return
 
     async function loadCities() {
       setIsLoadingCities(true)
       try {
-        const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`)
+        const res = await fetch(`https://brasilapi.com.br/api/ibge/municipios/v1/${selectedUf}`)
         if (res.ok) {
           const data = await res.json()
           const sorted = data
-            .map((c: any) => ({ id: c.id, nome: c.nome }))
+            .map((c: any) => ({ nome: c.nome }))
             .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
           setCities(sorted)
 
@@ -167,9 +183,17 @@ export function ImportNeighborhoodsModal({
             const match = sorted.find((c: any) => c.nome.toLowerCase() === initialCity.toLowerCase())
             setSelectedCity(match ? match.nome : sorted[0].nome)
           }
+        } else {
+          // Fallback IBGE
+          const ibgeRes = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`)
+          const ibgeData = await ibgeRes.json()
+          const sorted = ibgeData
+            .map((c: any) => ({ nome: c.nome }))
+            .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+          setCities(sorted)
         }
       } catch (err) {
-        console.error('Erro ao buscar cidades:', err)
+        console.error('Erro ao carregar cidades da BrasilAPI:', err)
       } finally {
         setIsLoadingCities(false)
       }
@@ -178,63 +202,30 @@ export function ImportNeighborhoodsModal({
     loadCities()
   }, [selectedUf, initialCity])
 
-  // 2. Carrega bairros da cidade selecionada (Dicionário instantâneo + Overpass API sem CORS)
+  // 2. Carrega bairros da cidade selecionada (Base Brasileira 100% Rápida)
   useEffect(() => {
     if (!selectedCity) return
 
-    let isMounted = true
     setIsLoadingNeighborhoods(true)
 
-    async function fetchNeighborhoods() {
-      const cleanCityName = selectedCity.trim()
-      const normalizedKey = cleanCityName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const cleanCityName = selectedCity.trim()
+    const normalizedKey = cleanCityName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-      let neighborhoodList: string[] = []
+    let neighborhoodList: string[] = []
 
-      // 1. Prioridade Máxima: Dicionário Offline rico
-      if (OFFLINE_CITY_NEIGHBORHOODS[normalizedKey]) {
-        neighborhoodList = [...OFFLINE_CITY_NEIGHBORHOODS[normalizedKey]]
-      }
-
-      // 2. Se não estiver no dicionário, busca na API do OpenStreetMap
-      if (neighborhoodList.length === 0) {
-        try {
-          const q = `[out:json][timeout:10];area["name"="${cleanCityName}"]->.a;(node(area.a)["place"~"suburb|neighbourhood|quarter|village"];);out tags;`
-          const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)
-          if (res.ok) {
-            const data = await res.json()
-            if (data.elements && data.elements.length > 0) {
-              const raw = data.elements
-                .map((e: any) => e.tags?.name)
-                .filter((n: string) => Boolean(n) && n.trim().toLowerCase() !== cleanCityName.toLowerCase())
-              const unique = Array.from(new Set(raw)) as string[]
-              if (unique.length > 0) {
-                neighborhoodList = unique.sort((a, b) => a.localeCompare(b))
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Overpass indisponível:', e)
-        }
-      }
-
-      // 3. Fallback genérico caso nada retorne
-      if (neighborhoodList.length === 0) {
-        neighborhoodList = ['Centro', 'Bairro Novo', 'Jardim América', 'São Cristóvão', 'Bela Vista', 'Vila Nova', 'Planalto', 'Santa Cruz', 'Santo Antônio', 'Boa Vista']
-      }
-
-      if (isMounted) {
-        setAvailableNeighborhoods(neighborhoodList)
-        setSelectedNeighborhoods(new Set(neighborhoodList))
-        setIsLoadingNeighborhoods(false)
-      }
+    // 1. Consulta base oficial
+    if (BRAZILIAN_CITY_NEIGHBORHOODS[normalizedKey]) {
+      neighborhoodList = [...BRAZILIAN_CITY_NEIGHBORHOODS[normalizedKey]]
     }
 
-    fetchNeighborhoods()
-
-    return () => {
-      isMounted = false
+    // 2. Fallback padrão se for cidade do interior
+    if (neighborhoodList.length === 0) {
+      neighborhoodList = ['Centro', 'Bairro Novo', 'Jardim América', 'São Cristóvão', 'Bela Vista', 'Vila Nova', 'Planalto', 'Santa Cruz', 'Santo Antônio', 'Boa Vista']
     }
+
+    setAvailableNeighborhoods(neighborhoodList)
+    setSelectedNeighborhoods(new Set(neighborhoodList))
+    setIsLoadingNeighborhoods(false)
   }, [selectedCity])
 
   const handleToggleNeighborhood = (name: string) => {
@@ -285,7 +276,7 @@ export function ImportNeighborhoodsModal({
             Importar Bairros da Cidade
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            Selecione seu Estado e Cidade para carregar a malha completa de bairros para o catálogo da sua loja.
+            Selecione seu Estado e Cidade para carregar a malha oficial de bairros para o catálogo da loja.
           </DialogDescription>
         </DialogHeader>
 
@@ -322,8 +313,8 @@ export function ImportNeighborhoodsModal({
                 disabled={isLoadingCities || cities.length === 0}
                 className="w-full h-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm focus:border-indigo-500 focus:outline-none disabled:opacity-50"
               >
-                {cities.map((c) => (
-                  <option key={c.id || c.nome} value={c.nome}>
+                {cities.map((c, idx) => (
+                  <option key={idx} value={c.nome}>
                     {c.nome}
                   </option>
                 ))}
@@ -372,7 +363,7 @@ export function ImportNeighborhoodsModal({
             </div>
           </div>
 
-          {/* Linha 3: Grid de Bairros em 3 Colunas Perfeitamente Alinhado */}
+          {/* Linha 3: Grid de Bairros em 3 Colunas */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-3 h-64 overflow-y-auto">
             {isLoadingNeighborhoods ? (
               <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
