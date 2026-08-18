@@ -180,7 +180,7 @@ export function EquipmentDetailsModal({
               variant="outline"
               size="sm"
               className="gap-1.5 text-xs text-cyan-700 hover:bg-cyan-50 dark:text-cyan-300 dark:hover:bg-cyan-950/40"
-              disabled={!isOnline || isSendingCommand}
+              disabled={isSendingCommand}
               onClick={() => handleSimulateCommand('UPDATE_AGENT')}
               title="Disparar atualização remota e silenciosa do Windy neste terminal"
             >
@@ -191,7 +191,7 @@ export function EquipmentDetailsModal({
               variant="outline"
               size="sm"
               className="gap-2"
-              disabled={!isOnline || isSendingCommand}
+              disabled={isSendingCommand}
               onClick={() => handleSimulateCommand('REFRESH_TELEMETRY')}
             >
               <RefreshCw
