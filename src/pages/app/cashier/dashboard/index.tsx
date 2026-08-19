@@ -753,9 +753,9 @@ export function CashierDashboard() {
                   </div>
                 </div>
 
-                {/* VISUALIZAÇÃO EM GRID DE CARDS (2 a 3 Colunas) */}
+                {/* VISUALIZAÇÃO EM GRID DE CARDS COMPACTA & OTIMIZADA (3 a 4 Colunas, Letras Ampliadas) */}
                 {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {week.sessions.map((s) => {
                       const entries = s.entries || []
                       let totalSangrias = 0
@@ -805,23 +805,21 @@ export function CashierDashboard() {
                         <div
                           key={s.id}
                           onClick={() => navigate(`/cashier/session/${s.id}`)}
-                          className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-blue-500/60"
+                          className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900/95 dark:hover:border-blue-500/60"
                         >
-                          {/* Topo do Card: Data com Dia da Semana & Status */}
                           <div>
-                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800/80">
+                            {/* Topo do Card: Data com Dia da Semana & Status */}
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800/80">
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
-                                    {getWeekdayBRT(s.opened_at)}, {formatDateBRT(s.opened_at)}
-                                  </h4>
-                                </div>
-                                <div className="mt-1 flex items-center gap-2">
-                                  <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                  {getWeekdayBRT(s.opened_at)}, {formatDateBRT(s.opened_at)}
+                                </h4>
+                                <div className="mt-1 flex items-center gap-1.5">
+                                  <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
                                     {getPeriodoBRT(s.opened_at, s.period)}
                                   </span>
                                   {s.operator_name && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300">
                                       <User size={12} className="text-slate-400" />
                                       {s.operator_name}
                                     </span>
@@ -831,45 +829,47 @@ export function CashierDashboard() {
                               {renderStatusBadge(s.status)}
                             </div>
 
-                            {/* Bloco Central: Final em Caixa em Destaque */}
-                            <div className="my-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800/60 dark:bg-slate-950/60">
-                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">
-                                Saldo Final em Caixa
-                              </span>
-                              <p className="font-mono text-xl font-black text-blue-600 dark:text-blue-400">
-                                R$ {valorFinalCaixa.toFixed(2)}
-                              </p>
+                            {/* Bloco Central: Saldo Final e Linhas Financeiras Compactas */}
+                            <div className="my-2.5 rounded-xl border border-slate-100 bg-slate-50/90 p-3 dark:border-slate-800/80 dark:bg-slate-950/80">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                  Saldo Final em Caixa
+                                </span>
+                                <span className="font-mono text-xl font-black text-blue-600 dark:text-blue-400">
+                                  R$ {valorFinalCaixa.toFixed(2)}
+                                </span>
+                              </div>
 
-                              {/* Linhas Financeiras */}
-                              <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-slate-200/60 pt-2 text-[11px] dark:border-slate-800/60">
+                              {/* Linhas de Abertura / Entradas / Sangrias */}
+                              <div className="mt-2 grid grid-cols-3 gap-1.5 border-t border-slate-200/60 pt-2 dark:border-slate-800/60">
                                 <div>
-                                  <span className="block text-[9px] font-bold uppercase text-slate-400">
+                                  <span className="block text-[10px] font-bold uppercase text-slate-400">
                                     Abertura
                                   </span>
-                                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
                                     R$ {valorAbertura.toFixed(2)}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-500">
+                                  <span className="block text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
                                     Entradas
                                   </span>
-                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
                                     +{totalEntradasSemSaida.toFixed(2)}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[9px] font-bold uppercase text-red-500">
+                                  <span className="block text-[10px] font-bold uppercase text-red-500 dark:text-red-400">
                                     Sangrias
                                   </span>
-                                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
+                                  <span className="font-mono text-xs font-black text-red-500 dark:text-red-400">
                                     {totalSangrias > 0 ? `-${totalSangrias.toFixed(2)}` : '0.00'}
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Formas de Pagamento (Pills) */}
+                            {/* Formas de Pagamento (Pills com fonte maior e nítida) */}
                             {activeMethods.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
                                 {activeMethods.map(([method, total]) => {
@@ -877,11 +877,11 @@ export function CashierDashboard() {
                                   return (
                                     <div
                                       key={method}
-                                      className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-extrabold ${badgeStyle.bg}`}
+                                      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-extrabold ${badgeStyle.bg}`}
                                     >
                                       <span>{badgeStyle.icon}</span>
                                       <span>{method}:</span>
-                                      <span className="font-mono">R$ {total.toFixed(2)}</span>
+                                      <span className="font-mono font-black">R$ {total.toFixed(2)}</span>
                                     </div>
                                   )
                                 })}
@@ -889,16 +889,16 @@ export function CashierDashboard() {
                             )}
                           </div>
 
-                          {/* Footer de Ações */}
-                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/80">
-                            <div className="flex items-center gap-2">
+                          {/* Footer de Ações Otimizado */}
+                          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-800/80">
+                            <div className="flex items-center gap-1.5">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleExportarSessaoPDF(s)
                                 }}
                                 title="Exportar PDF deste caixa"
-                                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                               >
                                 <FileText size={13} className="text-red-500" />
                                 <span>PDF</span>
@@ -911,15 +911,15 @@ export function CashierDashboard() {
                                     handleOpenDeleteSessionModal(s.id)
                                   }}
                                   title="Excluir este caixa completo"
-                                  className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[11px] font-bold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
+                                  className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs font-bold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
                                 >
                                   <Trash2 size={13} />
                                 </button>
                               )}
                             </div>
 
-                            <span className="flex items-center gap-1 text-[11px] font-black uppercase text-blue-600 transition-transform group-hover:translate-x-0.5 dark:text-blue-400">
-                              Conferir <ArrowRight size={13} />
+                            <span className="flex items-center gap-1 text-xs font-black uppercase text-blue-600 transition-transform group-hover:translate-x-0.5 dark:text-blue-400">
+                              Conferir <ArrowRight size={14} />
                             </span>
                           </div>
                         </div>
