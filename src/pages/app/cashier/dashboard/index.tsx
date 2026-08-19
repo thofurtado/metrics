@@ -11,6 +11,8 @@ import {
   Clock,
   Eye,
   FileText,
+  Grid as GridIcon,
+  List as ListIcon,
   Plus,
   Printer,
   Trash2,
@@ -60,6 +62,7 @@ export function CashierDashboard() {
   const [anoVisualizacao, setAnoVisualizacao] = useState(
     new Date().getFullYear(),
   )
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   const [divergenceModalSession, setDivergenceModalSession] =
     useState<any>(null)
@@ -175,6 +178,21 @@ export function CashierDashboard() {
   }
 
   // Formatação com fuso horário estrito de Brasília
+
+  const getWeekdayBRT = (dateString: string) => {
+    if (!dateString) return ''
+    try {
+      const d = new Date(dateString)
+      const raw = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'long',
+      }).format(d)
+      return raw.charAt(0).toUpperCase() + raw.slice(1)
+    } catch {
+      return ''
+    }
+  }
+
   const formatDateBRT = (dateString: string) => {
     if (!dateString) return ''
     try {
@@ -236,6 +254,80 @@ export function CashierDashboard() {
           new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime(),
       )
   }, [sessions, mesVisualizacao, anoVisualizacao, profile])
+
+
+  // Agrupamento Semanal Dinâmico
+  const sessionsByWeek = useMemo(() => {
+    const weeks: {
+      weekNumber: number
+      title: string
+      range: string
+      sessions: any[]
+      totalCaixas: number
+      totalFinal: number
+      totalVendas: number
+      totalSangrias: number
+    }[] = []
+
+    const weekDefs = [
+      { num: 1, start: 1, end: 7 },
+      { num: 2, start: 8, end: 14 },
+      { num: 3, start: 15, end: 21 },
+      { num: 4, start: 22, end: 31 },
+    ]
+
+    weekDefs.forEach((def) => {
+      const items = sessionsFiltradas.filter((s: any) => {
+        const d = new Date(s.opened_at)
+        const day = parseInt(
+          new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: 'numeric',
+          }).format(d),
+          10,
+        )
+        return day >= def.start && day <= def.end
+      })
+
+      if (items.length > 0) {
+        let totalFinal = 0
+        let totalVendas = 0
+        let totalSangrias = 0
+
+        items.forEach((s: any) => {
+          const entries = s.entries || []
+          const valorAbertura = Number(s.initial_balance || 0)
+          let sSangrias = 0
+          let sEntradas = 0
+          let sSuprimentos = 0
+
+          entries.forEach((e: any) => {
+            const amt = Number(e.amount || 0)
+            if (e.is_withdrawal) sSangrias += amt
+            else if (e.is_addition) sSuprimentos += amt
+            else sEntradas += amt
+          })
+
+          totalSangrias += sSangrias
+          totalVendas += sEntradas
+          totalFinal += valorAbertura + sEntradas + sSuprimentos - sSangrias
+        })
+
+        weeks.push({
+          weekNumber: def.num,
+          title: 'Semana ' + def.num,
+          range: String(def.start).padStart(2, '0') + ' a ' + String(def.end).padStart(2, '0') + ' de ' + nomesMeses[mesVisualizacao],
+          sessions: items,
+          totalCaixas: items.length,
+          totalFinal,
+          totalVendas,
+          totalSangrias,
+        })
+      }
+    })
+
+    return weeks.reverse()
+  }, [sessionsFiltradas, mesVisualizacao, nomesMeses])
 
   const handleExportarGeralPDF = () => {
     try {
@@ -564,17 +656,18 @@ export function CashierDashboard() {
         )}
       </div>
 
+      
       {/* Seção Principal: Caixas do Mês */}
-      <div className="space-y-3">
-        {/* Barra de Navegação de Mês */}
-        <div className="flex flex-col items-stretch justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:flex-row sm:items-center">
+      <div className="space-y-4">
+        {/* Barra de Navegação de Mês + Toggle Grid/List */}
+        <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
-              <Calendar size={14} className="text-blue-500" /> Caixas do Mês
+            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              <Calendar size={15} className="text-blue-500" /> Caixas de {nomesMeses[mesVisualizacao]}
             </span>
             <button
               onClick={handleExportarGeralPDF}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-black text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
+              className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
               title="Exportar relatório gerencial consolidado do mês em PDF"
             >
               <FileText size={14} />
@@ -582,215 +675,413 @@ export function CashierDashboard() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 dark:border-slate-800 dark:bg-slate-900">
-            <button
-              onClick={() => navegarMes(-1)}
-              className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
-              title="Mês anterior"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="min-w-[110px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-100">
-              {nomesMeses[mesVisualizacao]}{' '}
-              <span className="text-blue-600">{anoVisualizacao}</span>
-            </span>
-            <button
-              onClick={() => navegarMes(1)}
-              className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
-              title="Próximo mês"
-            >
-              <ChevronRight size={16} />
-            </button>
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            {/* Toggle de Visualização (Grade vs Lista) */}
+            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                title="Visualização em Cards"
+              >
+                <GridIcon size={14} />
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-800 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                title="Visualização em Lista"
+              >
+                <ListIcon size={14} />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+            </div>
+
+            {/* Seletor de Mês */}
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950">
+              <button
+                onClick={() => navegarMes(-1)}
+                className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
+                title="Mês anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="min-w-[110px] text-center text-xs font-black uppercase text-slate-800 dark:text-slate-200">
+                {nomesMeses[mesVisualizacao]}{' '}
+                <span className="text-blue-600 dark:text-blue-400">{anoVisualizacao}</span>
+              </span>
+              <button
+                onClick={() => navegarMes(1)}
+                className="rounded p-0.5 text-slate-400 hover:bg-white hover:text-slate-800 dark:hover:bg-slate-800"
+                title="Próximo mês"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Listagem Ultramoderna e Compacta */}
+        {/* Listagem de Caixas Agrupados por Semana */}
         {isLoading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-xs font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-900/60">
             Carregando caixas...
           </div>
-        ) : sessionsFiltradas.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2">
-            {sessionsFiltradas.map((s: any) => {
-              const entries = s.entries || []
-
-              let totalSangrias = 0
-              let totalSuprimentos = 0
-              let totalCaixinhas = 0
-              let totalEntradasSemSaida = 0
-
-              const totalsByMethod: Record<string, number> = {}
-
-              for (const e of entries) {
-                const amt = Number(e.amount || 0)
-                if (e.is_withdrawal) {
-                  totalSangrias += amt
-                } else if (e.is_addition) {
-                  totalSuprimentos += amt
-                } else if (e.is_tip) {
-                  totalCaixinhas += amt
-                  totalEntradasSemSaida += amt
-                } else {
-                  totalEntradasSemSaida += amt
-                }
-
-                if (!e.is_withdrawal) {
-                  const method = e.payment_method || 'Dinheiro'
-                  totalsByMethod[method] = (totalsByMethod[method] || 0) + amt
-                } else if (e.type === 'SANGRIA_DESTINO') {
-                  const dest = e.bank || 'Caixa Central'
-                  totalsByMethod[dest] = (totalsByMethod[dest] || 0) + amt
-                }
-              }
-
-              const valorAbertura = Number(s.initial_balance || 0)
-              const valorFinalCaixa =
-                valorAbertura +
-                totalEntradasSemSaida +
-                totalSuprimentos -
-                totalSangrias
-              const activeMethods = Object.entries(totalsByMethod)
-                .filter(([_, val]) => val > 0)
-                .sort(([a], [b]) => getMethodOrder(a) - getMethodOrder(b))
-
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => navigate(`/cashier/session/${s.id}`)}
-                  className="group flex cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-blue-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
-                >
-                  {/* Linha Principal Unificada */}
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-                    {/* Identificação do Caixa */}
-                    <div className="flex min-w-[200px] flex-wrap items-center gap-2">
-                      <span className="text-sm font-black text-slate-900 dark:text-slate-100">
-                        {formatDateBRT(s.opened_at)}
-                      </span>
-                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
-                        {getPeriodoBRT(s.opened_at, s.period)}
-                      </span>
-                      {s.operator_name && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                          <User size={11} />
-                          {s.operator_name}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Resumo Financeiro Compacto */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-black uppercase text-slate-400">
-                          Abertura:
-                        </span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
-                          R$ {valorAbertura.toFixed(2)}
-                        </span>
-                      </div>
-
-                      {totalSangrias > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-red-500">
-                            Sangrias:
-                          </span>
-                          <span className="font-mono font-bold text-red-600">
-                            R$ -{totalSangrias.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-
-                      {totalSuprimentos > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-emerald-500">
-                            Suprimentos:
-                          </span>
-                          <span className="font-mono font-bold text-emerald-600">
-                            R$ +{totalSuprimentos.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-
-                      {totalCaixinhas > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-black uppercase text-pink-500">
-                            Caixinhas:
-                          </span>
-                          <span className="font-mono font-bold text-pink-600">
-                            R$ {totalCaixinhas.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-black uppercase text-blue-600">
-                          Final em Caixa:
-                        </span>
-                        <span className="font-mono font-black text-blue-700 dark:text-blue-400">
-                          R$ {valorFinalCaixa.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status Badge + Exportar PDF + Deletar Caixa (Admin) */}
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleExportarSessaoPDF(s)
-                        }}
-                        title="Exportar PDF deste caixa"
-                        className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                      >
-                        <FileText size={13} className="text-red-500" />
-                        <span>PDF</span>
-                      </button>
-
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenDeleteSessionModal(s.id)
-                          }}
-                          title="Excluir este caixa completo"
-                          className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-900/60"
-                        >
-                          <Trash2 size={13} />
-                          <span>Excluir</span>
-                        </button>
-                      )}
-
-                      {renderStatusBadge(s.status)}
-                    </div>
+        ) : sessionsByWeek.length > 0 ? (
+          <div className="space-y-6">
+            {sessionsByWeek.map((week) => (
+              <div key={week.weekNumber} className="space-y-3">
+                {/* Header da Semana */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-100/70 px-4 py-2.5 dark:border-slate-800/80 dark:bg-slate-900/60">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-500/20 text-xs font-black text-blue-600 dark:text-blue-400">
+                      {week.weekNumber}
+                    </span>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      {week.title} <span className="font-semibold text-slate-400">({week.range})</span>
+                    </h3>
                   </div>
 
-                  {/* Linha Secundária: Formas de Pagamento */}
-                  {activeMethods.length > 0 && (
-                    <div className="dark:border-slate-850 flex flex-wrap items-center gap-1.5 border-t border-dashed border-slate-100 pt-0.5">
-                      {activeMethods.map(([method, total]) => {
-                        const badgeStyle = getMethodBadgeStyle(method)
-                        return (
-                          <div
-                            key={method}
-                            className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-extrabold ${badgeStyle.bg}`}
-                          >
-                            <span className="text-[11px]">
-                              {badgeStyle.icon}
-                            </span>
-                            <span>{method}:</span>
-                            <span className="font-mono font-black">
-                              R$ {total.toFixed(2)}
+                  <div className="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <span>{week.totalCaixas} {week.totalCaixas === 1 ? 'caixa' : 'caixas'}</span>
+                    <span>•</span>
+                    <span>Vendas: <strong className="text-emerald-600 dark:text-emerald-400">R$ {week.totalVendas.toFixed(2)}</strong></span>
+                    {week.totalSangrias > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>Sangrias: <strong className="text-red-500 dark:text-red-400">-R$ {week.totalSangrias.toFixed(2)}</strong></span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* VISUALIZAÇÃO EM GRID DE CARDS (2 a 3 Colunas) */}
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {week.sessions.map((s) => {
+                      const entries = s.entries || []
+                      let totalSangrias = 0
+                      let totalSuprimentos = 0
+                      let totalCaixinhas = 0
+                      let totalEntradasSemSaida = 0
+
+                      const totalsByMethod = {}
+
+                      for (const e of entries) {
+                        const amt = Number(e.amount || 0)
+                        if (e.is_withdrawal) {
+                          totalSangrias += amt
+                        } else if (e.is_addition) {
+                          totalSuprimentos += amt
+                        } else if (e.is_tip) {
+                          totalCaixinhas += amt
+                          totalEntradasSemSaida += amt
+                        } else {
+                          totalEntradasSemSaida += amt
+                        }
+
+                        if (!e.is_withdrawal) {
+                          const method = e.payment_method || 'Dinheiro'
+                          totalsByMethod[method] =
+                            (totalsByMethod[method] || 0) + amt
+                        } else if (e.type === 'SANGRIA_DESTINO') {
+                          const dest = e.bank || 'Caixa Central'
+                          totalsByMethod[dest] =
+                            (totalsByMethod[dest] || 0) + amt
+                        }
+                      }
+
+                      const valorAbertura = Number(s.initial_balance || 0)
+                      const valorFinalCaixa =
+                        valorAbertura +
+                        totalEntradasSemSaida +
+                        totalSuprimentos -
+                        totalSangrias
+                      const activeMethods = Object.entries(totalsByMethod)
+                        .filter(([_, val]) => val > 0)
+                        .sort(
+                          ([a], [b]) => getMethodOrder(a) - getMethodOrder(b),
+                        )
+
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => navigate(`/cashier/session/${s.id}`)}
+                          className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-blue-500/60"
+                        >
+                          {/* Topo do Card: Data com Dia da Semana & Status */}
+                          <div>
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800/80">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                    {getWeekdayBRT(s.opened_at)}, {formatDateBRT(s.opened_at)}
+                                  </h4>
+                                </div>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                                    {getPeriodoBRT(s.opened_at, s.period)}
+                                  </span>
+                                  {s.operator_name && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                      <User size={12} className="text-slate-400" />
+                                      {s.operator_name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {renderStatusBadge(s.status)}
+                            </div>
+
+                            {/* Bloco Central: Final em Caixa em Destaque */}
+                            <div className="my-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800/60 dark:bg-slate-950/60">
+                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                Saldo Final em Caixa
+                              </span>
+                              <p className="font-mono text-xl font-black text-blue-600 dark:text-blue-400">
+                                R$ {valorFinalCaixa.toFixed(2)}
+                              </p>
+
+                              {/* Linhas Financeiras */}
+                              <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-slate-200/60 pt-2 text-[11px] dark:border-slate-800/60">
+                                <div>
+                                  <span className="block text-[9px] font-bold uppercase text-slate-400">
+                                    Abertura
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                                    R$ {valorAbertura.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-500">
+                                    Entradas
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                    +{totalEntradasSemSaida.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="block text-[9px] font-bold uppercase text-red-500">
+                                    Sangrias
+                                  </span>
+                                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
+                                    {totalSangrias > 0 ? `-${totalSangrias.toFixed(2)}` : '0.00'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Formas de Pagamento (Pills) */}
+                            {activeMethods.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {activeMethods.map(([method, total]) => {
+                                  const badgeStyle = getMethodBadgeStyle(method)
+                                  return (
+                                    <div
+                                      key={method}
+                                      className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-extrabold ${badgeStyle.bg}`}
+                                    >
+                                      <span>{badgeStyle.icon}</span>
+                                      <span>{method}:</span>
+                                      <span className="font-mono">R$ {total.toFixed(2)}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Footer de Ações */}
+                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/80">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleExportarSessaoPDF(s)
+                                }}
+                                title="Exportar PDF deste caixa"
+                                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              >
+                                <FileText size={13} className="text-red-500" />
+                                <span>PDF</span>
+                              </button>
+
+                              {isAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleOpenDeleteSessionModal(s.id)
+                                  }}
+                                  title="Excluir este caixa completo"
+                                  className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[11px] font-bold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+
+                            <span className="flex items-center gap-1 text-[11px] font-black uppercase text-blue-600 transition-transform group-hover:translate-x-0.5 dark:text-blue-400">
+                              Conferir <ArrowRight size={13} />
                             </span>
                           </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  /* VISUALIZAÇÃO EM LISTA DETALHADA */
+                  <div className="grid grid-cols-1 gap-2">
+                    {week.sessions.map((s) => {
+                      const entries = s.entries || []
+                      let totalSangrias = 0
+                      let totalSuprimentos = 0
+                      let totalCaixinhas = 0
+                      let totalEntradasSemSaida = 0
+
+                      const totalsByMethod = {}
+
+                      for (const e of entries) {
+                        const amt = Number(e.amount || 0)
+                        if (e.is_withdrawal) totalSangrias += amt
+                        else if (e.is_addition) totalSuprimentos += amt
+                        else if (e.is_tip) {
+                          totalCaixinhas += amt
+                          totalEntradasSemSaida += amt
+                        } else totalEntradasSemSaida += amt
+
+                        if (!e.is_withdrawal) {
+                          const method = e.payment_method || 'Dinheiro'
+                          totalsByMethod[method] =
+                            (totalsByMethod[method] || 0) + amt
+                        } else if (e.type === 'SANGRIA_DESTINO') {
+                          const dest = e.bank || 'Caixa Central'
+                          totalsByMethod[dest] =
+                            (totalsByMethod[dest] || 0) + amt
+                        }
+                      }
+
+                      const valorAbertura = Number(s.initial_balance || 0)
+                      const valorFinalCaixa =
+                        valorAbertura +
+                        totalEntradasSemSaida +
+                        totalSuprimentos -
+                        totalSangrias
+                      const activeMethods = Object.entries(totalsByMethod)
+                        .filter(([_, val]) => val > 0)
+                        .sort(
+                          ([a], [b]) => getMethodOrder(a) - getMethodOrder(b),
                         )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => navigate(`/cashier/session/${s.id}`)}
+                          className="group flex cursor-pointer flex-col gap-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition-all hover:border-blue-400 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <div className="flex min-w-[240px] flex-wrap items-center gap-2">
+                              <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                {getWeekdayBRT(s.opened_at)}, {formatDateBRT(s.opened_at)}
+                              </span>
+                              <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                                {getPeriodoBRT(s.opened_at, s.period)}
+                              </span>
+                              {s.operator_name && (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                  <User size={11} />
+                                  {s.operator_name}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-black uppercase text-slate-400">
+                                  Abertura:
+                                </span>
+                                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                                  R$ {valorAbertura.toFixed(2)}
+                                </span>
+                              </div>
+
+                              {totalSangrias > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-black uppercase text-red-500">
+                                    Sangrias:
+                                  </span>
+                                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
+                                    -R$ {totalSangrias.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-black uppercase text-blue-600 dark:text-blue-400">
+                                  Final em Caixa:
+                                </span>
+                                <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
+                                  R$ {valorFinalCaixa.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleExportarSessaoPDF(s)
+                                }}
+                                title="Exportar PDF deste caixa"
+                                className="flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                              >
+                                <FileText size={13} className="text-red-500" />
+                                <span>PDF</span>
+                              </button>
+
+                              {isAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleOpenDeleteSessionModal(s.id)
+                                  }}
+                                  title="Excluir este caixa completo"
+                                  className="flex cursor-pointer items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-500/20 dark:text-red-400"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+
+                              {renderStatusBadge(s.status)}
+                            </div>
+                          </div>
+
+                          {activeMethods.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 border-t border-dashed border-slate-100 pt-1 dark:border-slate-800">
+                              {activeMethods.map(([method, total]) => {
+                                const badgeStyle = getMethodBadgeStyle(method)
+                                return (
+                                  <div
+                                    key={method}
+                                    className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-extrabold ${badgeStyle.bg}`}
+                                  >
+                                    <span>{badgeStyle.icon}</span>
+                                    <span>{method}:</span>
+                                    <span className="font-mono font-black">
+                                      R$ {total.toFixed(2)}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900/60">
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">
               Nenhum caixa registrado em {nomesMeses[mesVisualizacao]} de{' '}
               {anoVisualizacao}

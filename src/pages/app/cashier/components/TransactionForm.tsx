@@ -610,8 +610,8 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
   const formConfig = {
     venda: {
       title: 'Lançar Venda',
-      cardStyle: 'bg-white border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800',
-      btnStyle: 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200',
+      cardStyle: 'bg-white border-slate-200 dark:bg-slate-900/90 dark:border-slate-800 dark:shadow-xl',
+      btnStyle: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25',
       btnLabel: 'Adicionar',
       icon: <Plus size={18} />,
     },
@@ -665,7 +665,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setTipo('venda')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'venda' ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'venda' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
         >
           <Plus size={14} /> Venda Normal
         </button>
@@ -677,7 +677,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setBanco('CAIXA')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-md shadow-red-600/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
         >
           <TrendingDown size={14} /> Sangria (Retirada)
         </button>
@@ -689,7 +689,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setBanco('CAIXA')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
         >
           <Plus size={14} /> Suprimento (Entrada)
         </button>
@@ -723,7 +723,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 }
               }}
               placeholder="0,00"
-              className="w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
             />
           </div>
 
@@ -779,7 +779,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                           ? 'Nº Balcão'
                           : 'Nº Delivery'
                     }
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                   />
                 </div>
               </div>
@@ -801,7 +801,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     advanceFromForma(e.target.value)
                   }}
                   onKeyDown={handleFormaKeyDown}
-                  className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
+                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 >
                   {FORMAS_PAGAMENTO.map((f) => (
                     <option key={f.key} value={f.name}>
@@ -1056,7 +1056,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                   value={descricaoRetirada}
                   onChange={(e) => setDescricaoRetirada(e.target.value)}
                   placeholder="Ex: Depósito banco, Troco inicial, Vale..."
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 />
               </div>
 

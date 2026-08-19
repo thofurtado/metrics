@@ -296,12 +296,12 @@ export function DetalheLote({
   }
 
   return (
-    <div className="min-h-screen space-y-4 bg-zinc-50 p-3 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 md:space-y-6 md:p-8">
+    <div className="min-h-screen space-y-4 bg-slate-50 p-3 text-slate-900 dark:bg-slate-950 dark:text-slate-100 md:space-y-6 md:p-8">
       <header className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div className="flex items-center gap-2 md:gap-4">
           <button
             onClick={onVoltar}
-            className="rounded-xl border border-zinc-200 bg-white p-3 text-zinc-400 shadow-sm transition-colors hover:text-zinc-700 active:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 dark:active:bg-zinc-800"
+            className="rounded-xl border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:text-slate-800 active:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:active:bg-slate-800"
           >
             <ArrowLeft size={20} />
           </button>
@@ -386,7 +386,7 @@ export function DetalheLote({
                 loteAtivo.status === 'OPEN' ? (
                   <button
                     onClick={onEnviarParaConferencia}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-amber-500 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-amber-600 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/15 p-3 text-[10px] font-black uppercase text-amber-600 shadow-md transition-all hover:bg-amber-500/25 active:scale-95 dark:text-amber-400 md:rounded-2xl md:px-5 md:py-3"
                   >
                     <Clock size={18} />
                     <span>Enviar para Conferência</span>
@@ -417,7 +417,7 @@ export function DetalheLote({
                   {onConferirECaixaConferido && (
                     <button
                       onClick={onConferirECaixaConferido}
-                      className="flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform hover:bg-indigo-700 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+                      className="flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 p-3 text-[10px] font-black uppercase text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-blue-500 active:scale-95 md:rounded-2xl md:px-5 md:py-3"
                     >
                       <CheckCircle2 size={18} />
                       <span>Marcar como Conferido</span>
@@ -438,7 +438,7 @@ export function DetalheLote({
                 toast.error('Erro ao gerar relatório PDF.')
               }
             }}
-            className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-800 dark:hover:bg-zinc-700 md:rounded-2xl md:px-5 md:py-3"
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-[10px] font-black uppercase text-slate-700 shadow-sm transition-all hover:bg-slate-100 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 md:rounded-2xl md:px-5 md:py-3"
           >
             <Printer size={18} />
             <span className="hidden md:inline">Exportar PDF</span>
@@ -449,7 +449,7 @@ export function DetalheLote({
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
         <button
           onClick={() => setExibirSumario(!exibirSumario)}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200/80 bg-zinc-100/80 py-3 text-xs font-medium uppercase tracking-wider text-zinc-600 transition-colors hover:bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           {exibirSumario ? (
             <>
@@ -566,10 +566,10 @@ export function DetalheLote({
             </div>
           )}
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 md:rounded-3xl">
+          <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/90 md:rounded-3xl">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="border-b border-zinc-200 bg-zinc-50 text-[9px] font-black uppercase text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400">
+                <thead className="border-b border-slate-200 bg-slate-50 text-[9px] font-black uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-400">
                   <tr>
                     <th className="w-12 p-4 text-center">
                       <Check size={14} className="inline-block" />
@@ -581,12 +581,12 @@ export function DetalheLote({
                     <th className="w-24 p-4"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
                   {vendasFiltradas.length > 0 ? (
                     vendasFiltradas.map((l: any) => (
                       <tr
                         key={l.id}
-                        className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50"
+                        className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
                       >
                         {editandoId === l.id ? (
                           <>
@@ -758,7 +758,7 @@ export function DetalheLote({
                   )}
                 </tbody>
                 {vendasFiltradas.length > 0 && (
-                  <tfoot className="border-t border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80">
+                  <tfoot className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/80">
                     <tr>
                       <td
                         colSpan={4}
