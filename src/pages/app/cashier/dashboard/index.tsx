@@ -841,20 +841,44 @@ export function CashierDashboard() {
                               {renderStatusBadge(s.status)}
                             </div>
 
-                            {/* Bloco Central: Total Bruto + Liquidez Imediata (Gaveta + PIX) + Equação */}
+                            {/* Bloco Central: Equação no Topo -> Linha -> Saldo Total -> Liquidez Imediata */}
                             <div className="my-2.5 space-y-2 rounded-xl border border-slate-100 bg-slate-50/90 p-3 dark:border-slate-800/80 dark:bg-slate-950/80">
-                              {/* Total do Turno */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                  Total do Turno
+                              {/* 1. Linha Superior: Abertura + Entradas - Sangrias */}
+                              <div className="flex items-center justify-between text-center text-[10px]">
+                                <div>
+                                  <span className="block font-black uppercase text-slate-400">Abertura</span>
+                                  <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                                    {valorAbertura.toFixed(2)}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-black text-emerald-500">➕</span>
+                                <div>
+                                  <span className="block font-black uppercase text-emerald-600 dark:text-emerald-400">Entradas</span>
+                                  <span className="font-mono text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                    +{totalEntradasSemSaida.toFixed(2)}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-black text-red-500">➖</span>
+                                <div>
+                                  <span className="block font-black uppercase text-red-500 dark:text-red-400">Sangrias</span>
+                                  <span className="font-mono text-xs sm:text-sm font-black text-red-500 dark:text-red-400">
+                                    -{totalSangrias.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* 2. Traço / Linha Divisória com o Saldo Total Resultante */}
+                              <div className="flex items-center justify-between border-t border-slate-200/80 pt-2 dark:border-slate-800/80">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                  Saldo Total
                                 </span>
                                 <span className="font-mono text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">
                                   R$ {valorFinalCaixa.toFixed(2)}
                                 </span>
                               </div>
 
-                              {/* Linha de Liquidez Imediata (Gaveta + PIX) */}
-                              <div className="grid grid-cols-2 gap-1.5 border-t border-slate-200/60 pt-2 dark:border-slate-800/60">
+                              {/* 3. Indicadores de Liquidez Imediata (Gaveta + PIX) */}
+                              <div className="grid grid-cols-2 gap-1.5 border-t border-dashed border-slate-200/60 pt-2 dark:border-slate-800/60">
                                 <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1">
                                   <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">
                                     <span>💵</span> Gaveta
@@ -870,37 +894,6 @@ export function CashierDashboard() {
                                   </span>
                                   <span className="font-mono text-xs sm:text-sm font-black text-teal-700 dark:text-teal-300">
                                     R$ {totalPix.toFixed(2)}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Equação Visual do Caixa (Abertura + Entradas - Sangrias = Total) */}
-                              <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5 text-center text-[10px] dark:border-slate-800/60">
-                                <div>
-                                  <span className="block font-bold text-slate-400">Abertura</span>
-                                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                                    {valorAbertura.toFixed(2)}
-                                  </span>
-                                </div>
-                                <span className="font-black text-emerald-500 text-xs">+</span>
-                                <div>
-                                  <span className="block font-bold text-emerald-600 dark:text-emerald-400">Entradas</span>
-                                  <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                    +{totalEntradasSemSaida.toFixed(2)}
-                                  </span>
-                                </div>
-                                <span className="font-black text-red-500 text-xs">-</span>
-                                <div>
-                                  <span className="block font-bold text-red-500 dark:text-red-400">Sangrias</span>
-                                  <span className="font-mono text-xs font-bold text-red-500 dark:text-red-400">
-                                    {totalSangrias.toFixed(2)}
-                                  </span>
-                                </div>
-                                <span className="font-black text-blue-500 text-xs">=</span>
-                                <div>
-                                  <span className="block font-bold text-blue-600 dark:text-blue-400">Total</span>
-                                  <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
-                                    {valorFinalCaixa.toFixed(2)}
                                   </span>
                                 </div>
                               </div>
