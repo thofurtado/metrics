@@ -72,7 +72,7 @@ export function Sidebar() {
       name: 'Clientes & Equipamentos',
       path: '/clients-equipments',
       icon: Users,
-      access: hasAccess('service') || hasAccess('finance'),
+      access: hasAccess('service'),
     },
     {
       name: 'Recursos Humanos',
