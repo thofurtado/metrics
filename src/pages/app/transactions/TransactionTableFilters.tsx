@@ -250,7 +250,7 @@ export function TransactionTableFilters({
                 <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Todos
                   </SelectItem>
@@ -290,7 +290,7 @@ export function TransactionTableFilters({
                 <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Setores" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Todos
                   </SelectItem>
@@ -329,7 +329,7 @@ export function TransactionTableFilters({
                     placeholder={isLoadingAccounts ? '...' : 'Contas'}
                   />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Todas
                   </SelectItem>
@@ -337,7 +337,7 @@ export function TransactionTableFilters({
                     <SelectItem
                       key={account.id}
                       value={account.id}
-                      className="text-sm font-bold text-slate-700"
+                      className="text-sm font-bold text-slate-700 dark:text-slate-200"
                     >
                       {account.name}
                     </SelectItem>
@@ -366,7 +366,7 @@ export function TransactionTableFilters({
                 <SelectTrigger className="h-8 min-w-0 flex-1 truncate border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Fornecedores" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Todos
                   </SelectItem>
@@ -405,7 +405,7 @@ export function TransactionTableFilters({
                 <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Auditoria" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Todos
                   </SelectItem>
@@ -445,7 +445,7 @@ export function TransactionTableFilters({
                 <SelectTrigger className="h-8 min-w-0 flex-1 border-none bg-transparent px-2 text-sm font-semibold shadow-none focus:ring-0">
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
+                <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                   <SelectItem value="all" className="text-sm font-bold">
                     Padrão
                   </SelectItem>

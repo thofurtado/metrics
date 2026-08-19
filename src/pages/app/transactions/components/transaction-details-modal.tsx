@@ -220,7 +220,7 @@ export function TransactionDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-auto max-h-[95vh] w-full flex-col overflow-hidden rounded-2xl border-none p-0 shadow-2xl sm:max-w-[600px]">
+      <DialogContent className="flex h-auto max-h-[95vh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:max-w-[600px]">
         <div
           className={cn(
             'flex items-center justify-between border-b px-6 py-5',

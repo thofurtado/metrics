@@ -37,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-// Importa o calendário
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { cn } from '@/lib/utils'
 
@@ -45,8 +44,9 @@ import { cn } from '@/lib/utils'
 
 const paymentSchema = z.object({
   accountId: z.string().min(1, 'Conta é obrigatória'),
-  additions: z.string().optional(), // Juros/Multa
-  discounts: z.string().optional(), // Descontos
+  interest: z.string().optional(), // Juros (R$)
+  fine: z.string().optional(),     // Multa (R$)
+  discounts: z.string().optional(), // Descontos (R$)
   paidAmount: z
     .string()
     .min(1, 'Valor é obrigatório')
@@ -76,6 +76,7 @@ interface Transaction {
   accounts: { name: string }
   attachment_url?: string
   suggestedInterest?: number
+  suggestedFine?: number
   suggestedDiscount?: number
 }
 
@@ -86,6 +87,9 @@ interface PaymentModalProps {
   onConfirm: (data: {
     id: string
     amount: number
+    interest?: number
+    fine?: number
+    discount?: number
     data_vencimento: Date
     data_emissao?: Date
     remainingDate?: Date
@@ -109,44 +113,45 @@ export function PaymentModal({
   const { data: accountsData } = useQuery({
     queryKey: ['accounts'],
     queryFn: getAccounts,
-    enabled: open, // Fetch only when modal is open
+    enabled: open,
   })
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       accountId: transaction.accountId,
-      additions: transaction.suggestedInterest?.toFixed(2) || '',
-      discounts: transaction.suggestedDiscount?.toFixed(2) || '',
+      interest: transaction.suggestedInterest ? transaction.suggestedInterest.toFixed(2) : '',
+      fine: transaction.suggestedFine ? transaction.suggestedFine.toFixed(2) : '',
+      discounts: transaction.suggestedDiscount ? transaction.suggestedDiscount.toFixed(2) : '',
       paidAmount: transaction.amount.toFixed(2),
       paymentDate: new Date(),
       remainingDueDate: undefined,
     },
   })
 
-  const watchAdditions = form.watch('additions')
+  const watchInterest = form.watch('interest')
+  const watchFine = form.watch('fine')
   const watchDiscounts = form.watch('discounts')
   const watchPaidAmount = form.watch('paidAmount')
 
   const transactionAmount = transaction.amount
 
   // Parse values
-  const additionsNum = parseFloat(watchAdditions?.replace(',', '.') || '0')
+  const interestNum = parseFloat(watchInterest?.replace(',', '.') || '0')
+  const fineNum = parseFloat(watchFine?.replace(',', '.') || '0')
   const discountsNum = parseFloat(watchDiscounts?.replace(',', '.') || '0')
   const paidAmountNum = parseFloat(watchPaidAmount?.replace(',', '.') || '0')
 
-  // Calculated Final Total (Base + Additions - Discounts)
+  // Calculated Final Total (Base + Interest + Fine - Discounts)
   const calculatedTotal = Math.max(
     0,
-    transactionAmount + additionsNum - discountsNum,
+    transactionAmount + interestNum + fineNum - discountsNum,
   )
 
   // Remaining calculation: Calculated Total - Paid Amount
   const remainingAmount = Math.max(0, calculatedTotal - paidAmountNum)
-
   const isPartialActive = remainingAmount > 0.01
 
-  // --- LÓGICA DE VALIDAÇÃO E EFEITOS ---
   useEffect(() => {
     if (!isPartialActive) {
       form.setValue('remainingDueDate', undefined)
@@ -154,40 +159,11 @@ export function PaymentModal({
   }, [isPartialActive, form])
 
   // Sincronização Reativa: Atualiza o Valor Pago quando o Total Calculado muda
-  // O usuário ainda pode editar manualmente depois, mas o default segue o total.
   useEffect(() => {
     form.setValue('paidAmount', calculatedTotal.toFixed(2))
   }, [calculatedTotal, form])
 
-  // Auto-update Paid Amount when default Adjustments change (optional behavior, but helpful)
-  // Actually, usually adjustments directly affect what NEEDS to be paid.
-  // So if I add interest, the "Paid Amount" should probably default to the NEW total?
-  // Let's NOT auto-change input user might be typing, but we could initialize or suggest.
-  // Better: If paidAmount == calculatedTotal (previous), update it? Complex.
-  // Let's stick to: User enters additions/discounts -> Calculated Total shows up.
-  // User sees "Total a Pagar: R$ X". User inputs "Valor Pago: R$ Y".
-  // If user wants to pay FULL, they match X and Y.
-  // We can add a button "Pay Full" or just let them type.
-  // OR: bind paidAmount to calculatedTotal unless manually changed?
-  // Let's keep it manual to avoid interrupting user.
-
-  // Wait, simpler UX: "Valor Pago" vs "Valor Original".
-  // If I add Interest, the "Valor Pago" effectively increases.
-  // Let's update `paidAmount` automatically ONLY IF it was matching the previous total.
-  // Implementation: simple Effect.
-  /*
-    useEffect(() => {
-         const currentTotal = transactionAmount + additionsNum - discountsNum
-         if (Math.abs(paidAmountNum - (currentTotal - additionsNum + discountsNum)) < 0.01) {
-             // If previously matching, keep matching
-             // form.setValue('paidAmount', currentTotal.toFixed(2))
-         }
-    }, [additionsNum, discountsNum]) 
-    */
-  // Too risky for UX glitches. User can type.
-
   const onSubmit = async (data: PaymentFormData) => {
-    // Validações
     if (paidAmountNum <= 0.01) {
       form.setError('paidAmount', {
         message: 'O valor deve ser maior que zero.',
@@ -215,17 +191,15 @@ export function PaymentModal({
     try {
       const confirmationPayload = {
         id: transaction.id,
-        amount: paidAmountNum, // Valor líquido pago
-        interest: additionsNum, // Juros/Multa enviados separadamente
-        discount: discountsNum, // Descontos enviados separadamente
+        amount: paidAmountNum,
+        interest: interestNum,
+        fine: fineNum,
+        discount: discountsNum,
         data_vencimento: data.paymentDate,
         remainingDate: isPartialActive ? data.remainingDueDate : undefined,
         accountId: data.accountId,
       }
 
-      console.log({ 'Payload: ': confirmationPayload })
-
-      // Upload do comprovante se um arquivo foi selecionado ANTES de confirmar o pagamento
       if (receiptFile) {
         setIsUploading(true)
         try {
@@ -242,7 +216,6 @@ export function PaymentModal({
 
       await onConfirm(confirmationPayload)
 
-      // Sucesso
       form.reset()
       onOpenChange(false)
     } catch (error: any) {
@@ -255,19 +228,18 @@ export function PaymentModal({
     }
   }
 
-  // Desabilita dias futuros
   const disableFutureDays = (date: Date) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     return date.getTime() > today.getTime()
   }
 
-  // Reset loop
   useEffect(() => {
     if (open) {
       form.reset({
-        accountId: transaction.accountId, // Fixed: Use accountId directly
-        additions: '',
+        accountId: transaction.accountId,
+        interest: '',
+        fine: '',
         discounts: '',
         paidAmount: transaction.amount.toFixed(2),
         paymentDate: new Date(),
@@ -280,45 +252,45 @@ export function PaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-auto max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
-        {/* HEADLINE / HEADER */}
+      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden border-border/80 bg-background p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:rounded-2xl">
+        {/* HEADER */}
         <div
           className={cn(
-            'flex items-center justify-between border-b px-6 py-5',
+            'flex items-center justify-between border-b p-6 transition-colors dark:border-slate-800',
             transaction.operation === 'income'
-              ? 'bg-green-50/50'
-              : 'bg-red-50/50',
+              ? 'bg-emerald-500/10 dark:bg-emerald-950/20'
+              : 'bg-red-500/10 dark:bg-red-950/20',
           )}
         >
           <div className="flex items-center gap-4">
             <div
               className={cn(
-                'rounded-full p-3 shadow-sm',
+                'rounded-2xl p-3 shadow-sm',
                 transaction.operation === 'income'
-                  ? 'bg-green-100 text-green-600'
-                  : 'bg-red-100 text-red-600',
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-red-500/20 text-red-600 dark:text-red-400',
               )}
             >
               <DollarSign className="h-6 w-6" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-slate-800">
+              <DialogTitle className="text-xl font-black text-slate-900 dark:text-slate-100">
                 {transaction.operation === 'income'
                   ? 'Confirmar Recebimento'
                   : 'Confirmar Pagamento'}
               </DialogTitle>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Finalize a transação financeira abaixo
+              <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Baixa e liquidação financeira autoexplicativa
               </p>
             </div>
           </div>
           <Badge
             variant="outline"
             className={cn(
-              'border-0 px-3 py-1 text-sm font-semibold',
+              'border px-3 py-1 text-xs font-black uppercase tracking-wider',
               transaction.operation === 'income'
-                ? 'bg-green-200 text-green-800'
-                : 'bg-red-200 text-red-800',
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                : 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300',
             )}
           >
             {transaction.operation === 'income' ? 'Receita' : 'Despesa'}
@@ -331,46 +303,46 @@ export function PaymentModal({
             className="flex flex-1 flex-col overflow-hidden"
           >
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid h-full grid-cols-1 gap-8 lg:grid-cols-12">
-                {/* COLUNA ESQUERDA: RESUMO VISUAL */}
-                <div className="space-y-6 lg:col-span-4">
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 shadow-inner">
-                    <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-                      Resumo da Conta
+              <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* COLUNA ESQUERDA: RESUMO CONTÁBIL (AUTOEXPLICATIVO) */}
+                <div className="space-y-4 lg:col-span-5">
+                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+                    <h3 className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      Resumo do Título
                     </h3>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
-                        <label className="text-xs font-medium text-slate-400">
+                        <label className="text-[11px] font-semibold text-slate-400">
                           Descrição
                         </label>
-                        <p className="text-lg font-semibold leading-tight text-slate-800">
+                        <p className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">
                           {transaction.description || 'Sem descrição'}
                         </p>
                       </div>
 
                       <div>
-                        <label className="text-xs font-medium text-slate-400">
+                        <label className="text-[11px] font-semibold text-slate-400">
                           Vencimento Original
                         </label>
-                        <div className="flex items-center gap-2 font-medium text-slate-700">
-                          <Calendar className="h-4 w-4 text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
                           {new Date(
                             transaction.data_vencimento,
                           ).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-200/60 pt-4">
-                        <label className="text-xs font-medium text-slate-400">
-                          Valor Original
+                      <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+                        <label className="text-[11px] font-semibold text-slate-400">
+                          Valor Base
                         </label>
                         <p
                           className={cn(
-                            'text-3xl font-bold tracking-tight',
+                            'font-mono text-2xl font-black tracking-tight',
                             transaction.operation === 'income'
-                              ? 'text-green-600'
-                              : 'text-red-600',
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-600 dark:text-red-400',
                           )}
                         >
                           R$ {transactionAmount.toFixed(2)}
@@ -379,62 +351,70 @@ export function PaymentModal({
                     </div>
                   </div>
 
-                  {/* Calculated Final Display */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm text-slate-500">
-                        Juros / Multa
-                      </span>
-                      <span className="text-sm font-medium text-red-500">
-                        + R$ {additionsNum.toFixed(2)}
-                      </span>
+                  {/* Demonstração Matemática Autoexplicativa */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                    <div className="space-y-1.5 text-xs font-semibold">
+                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                        <span>Valor Base:</span>
+                        <span className="font-mono text-slate-900 dark:text-slate-100">
+                          R$ {transactionAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-amber-600 dark:text-amber-400">
+                        <span>(+) Juros:</span>
+                        <span className="font-mono font-bold">+ R$ {interestNum.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-red-600 dark:text-red-400">
+                        <span>(+) Multa:</span>
+                        <span className="font-mono font-bold">+ R$ {fineNum.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
+                        <span>(-) Descontos:</span>
+                        <span className="font-mono font-bold">- R$ {discountsNum.toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-sm text-slate-500">Descontos</span>
-                      <span className="text-sm font-medium text-green-500">
-                        - R$ {discountsNum.toFixed(2)}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                        Total Calculado:
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between border-t pt-3">
-                      <span className="font-semibold text-slate-700">
-                        Total Calculado
-                      </span>
-                      <span className="text-xl font-bold text-slate-900">
+                      <span className="font-mono text-xl font-black text-slate-900 dark:text-slate-100">
                         R$ {calculatedTotal.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
                   {apiError && (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                      <AlertTriangle className="mr-2 inline h-4 w-4" />
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-bold text-red-600 dark:text-red-400">
+                      <AlertTriangle className="mr-1.5 inline h-4 w-4" />
                       {apiError}
                     </div>
                   )}
                 </div>
 
-                {/* COLUNA DIREITA: AÇÕES DE PAGAMENTO */}
-                <div className="flex flex-col gap-6 lg:col-span-8">
+                {/* COLUNA DIREITA: FORMULÁRIO DE BAIXA */}
+                <div className="flex flex-col gap-4 lg:col-span-7">
                   {/* ROW 1: Conta e Data */}
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="accountId"
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between">
-                            <FormLabel>Conta / Caixa</FormLabel>
+                            <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                              Conta / Caixa
+                            </FormLabel>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-6 px-2 text-xs text-primary hover:text-primary/80"
+                              className="h-5 px-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400"
                               onClick={(e) => {
-                                e.preventDefault() // Prevent submit
+                                e.preventDefault()
                                 setOpenNewAccountModal(true)
                               }}
                             >
-                              <Plus className="mr-1 h-3 w-3" />
+                              <Plus className="mr-0.5 h-3 w-3" />
                               Nova
                             </Button>
                           </div>
@@ -444,19 +424,18 @@ export function PaymentModal({
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-11">
+                              <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
                                 <SelectValue placeholder="Selecione a conta" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className="border-slate-200 dark:border-slate-800 dark:bg-slate-900">
                               {accountsData?.accounts.map((acc) => (
                                 <SelectItem
                                   key={acc.id}
                                   value={acc.id}
-                                  className="flex items-center justify-between"
+                                  className="font-medium text-slate-900 dark:text-slate-100"
                                 >
-                                  <span>{acc.name}</span>
-                                  {/* <span className="text-xs text-muted-foreground ml-2">R$ {acc.balance.toFixed(2)}</span> */}
+                                  {acc.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -471,7 +450,9 @@ export function PaymentModal({
                       name="paymentDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Data do Pagamento</FormLabel>
+                          <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                            Data do Pagamento
+                          </FormLabel>
                           <FormControl>
                             <SimpleCalendar
                               selected={field.value}
@@ -485,78 +466,87 @@ export function PaymentModal({
                     />
                   </div>
 
-                  {/* ROW 2: Ajustes */}
-                  <div className="grid grid-cols-2 gap-5 rounded-lg border border-slate-100 bg-slate-50/50 p-4">
+                  {/* ROW 2: Acréscimos e Descontos (JUROS, MULTA E DESCONTOS INDEPENDENTES) */}
+                  <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-3">
+                    {/* Juros */}
                     <FormField
                       control={form.control}
-                      name="additions"
+                      name="interest"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex items-center gap-1 text-slate-600">
-                            Juros / Multa
-                            <span className="text-xs font-normal text-muted-foreground">
-                              (R$)
-                            </span>
+                          <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                            Juros (R$)
                           </FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <ArrowRight className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rotate-[-45deg] text-red-400" />
-                              <Input
-                                {...field}
-                                className="border-slate-200 bg-white pl-9 focus:border-red-300 focus:ring-red-100"
-                                placeholder="0,00"
-                              />
-                            </div>
+                            <Input
+                              {...field}
+                              placeholder="0,00"
+                              className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                            />
                           </FormControl>
                         </FormItem>
                       )}
                     />
+
+                    {/* Multa */}
+                    <FormField
+                      control={form.control}
+                      name="fine"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                            Multa (R$)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="0,00"
+                              className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Descontos */}
                     <FormField
                       control={form.control}
                       name="discounts"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex items-center gap-1 text-slate-600">
-                            Descontos
-                            <span className="text-xs font-normal text-muted-foreground">
-                              (R$)
-                            </span>
+                          <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                            Descontos (R$)
                           </FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <ArrowRight className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rotate-[45deg] text-green-400" />
-                              <Input
-                                {...field}
-                                className="border-slate-200 bg-white pl-9 focus:border-green-300 focus:ring-green-100"
-                                placeholder="0,00"
-                              />
-                            </div>
+                            <Input
+                              {...field}
+                              placeholder="0,00"
+                              className="h-10 rounded-xl border-slate-200 bg-white font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                            />
                           </FormControl>
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <hr className="border-slate-100" />
-
-                  {/* ROW 3: Pagamento e Restante */}
-                  <div className="space-y-4">
+                  {/* ROW 3: Valor Efetivamente Pago */}
+                  <div className="space-y-3">
                     <FormField
                       control={form.control}
                       name="paidAmount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-lg font-bold text-slate-800">
+                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
                             Valor Pago (Efetivo)
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-medium text-slate-400">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-slate-400">
                                 R$
                               </span>
                               <Input
                                 {...field}
-                                className="h-14 border-slate-300 pl-12 text-2xl font-bold shadow-sm focus:border-slate-500"
+                                className="h-13 rounded-2xl border-slate-300 bg-white pl-12 font-mono text-2xl font-black text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                               />
                             </div>
                           </FormControl>
@@ -565,20 +555,18 @@ export function PaymentModal({
                       )}
                     />
 
-                    {/* Partial Warning */}
+                    {/* Alerta de Pagamento Parcial */}
                     {isPartialActive && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 dark:border-amber-900/40">
                         <div className="flex items-start gap-3">
-                          <Clock className="mt-0.5 h-5 w-5 text-amber-600" />
-                          <div className="flex-1 space-y-3">
+                          <Clock className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
+                          <div className="flex-1 space-y-2">
                             <div>
-                              <h4 className="font-medium text-amber-900">
+                              <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-300">
                                 Pagamento Parcial Detectado
                               </h4>
-                              <p className="text-sm text-amber-700">
-                                Restará{' '}
-                                <strong>R$ {remainingAmount.toFixed(2)}</strong>{' '}
-                                pendente.
+                              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">
+                                Restará <strong className="font-mono">R$ {remainingAmount.toFixed(2)}</strong> pendente em nova parcela.
                               </p>
                             </div>
 
@@ -587,7 +575,7 @@ export function PaymentModal({
                               name="remainingDueDate"
                               render={({ field }) => (
                                 <FormItem className="max-w-[240px]">
-                                  <FormLabel className="text-xs font-bold uppercase text-amber-800">
+                                  <FormLabel className="text-[10px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-300">
                                     Vencimento do Restante
                                   </FormLabel>
                                   <FormControl>
@@ -610,14 +598,14 @@ export function PaymentModal({
             </div>
 
             {/* SEÇÃO COMPROVANTE */}
-            <div className="px-2 pt-2">
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Paperclip className="h-3.5 w-3.5 text-slate-400" />
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                    Comprovante (opcional)
-                  </label>
-                </div>
+            <div className="border-t border-slate-100 px-6 py-3 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Comprovante Anexo (Opcional)
+                </label>
+              </div>
+              <div className="mt-1.5">
                 <FileUpload
                   onFileSelect={setReceiptFile}
                   currentFileUrl={transaction.attachment_url}
@@ -626,12 +614,12 @@ export function PaymentModal({
             </div>
 
             {/* FOOTER */}
-            <div className="pointer-events-auto relative z-50 flex justify-end gap-3 border-t bg-slate-50 p-6">
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/90">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="h-12 px-6"
+                className="h-11 rounded-xl border-slate-200 px-5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
                 disabled={isLoading || isUploading}
               >
                 Cancelar
@@ -640,10 +628,10 @@ export function PaymentModal({
                 type="submit"
                 disabled={isLoading || isUploading}
                 className={cn(
-                  'h-12 px-8 text-base font-bold shadow-md transition-all hover:scale-[1.02]',
+                  'h-11 rounded-xl px-6 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-95',
                   transaction.operation === 'income'
-                    ? 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:to-green-400'
-                    : 'bg-gradient-to-r from-red-600 to-red-500 text-white hover:to-red-400',
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25'
+                    : 'bg-red-600 hover:bg-red-700 shadow-red-600/25',
                 )}
               >
                 {isLoading || isUploading
@@ -658,7 +646,6 @@ export function PaymentModal({
           open={openNewAccountModal}
           onOpenChange={setOpenNewAccountModal}
           onSuccess={(newAccount: any) => {
-            // Seleciona a nova conta automaticamente
             if (newAccount?.id) {
               form.setValue('accountId', newAccount.id)
             }

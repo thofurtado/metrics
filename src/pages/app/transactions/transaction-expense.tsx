@@ -202,6 +202,9 @@ export function TransactionExpense({
         localStorage.getItem('metrics-default-payment-method') || 'BOLETO',
       installments_count: '',
       interval_frequency: 'MONTHLY',
+      interest: '',
+      fine: '',
+      discount: '',
     },
   })
 
@@ -467,6 +470,8 @@ export function TransactionExpense({
         custom_installments: cleanInstallments,
         credit_card_id: data.credit_card_id || null,
         interest: data.interest ? Number(data.interest) : undefined,
+        fine: data.fine ? Number(data.fine) : undefined,
+        discount: data.discount ? Number(data.discount) : undefined,
       })
 
       const transactionId = response.data?.transaction?.id || response.data?.id
