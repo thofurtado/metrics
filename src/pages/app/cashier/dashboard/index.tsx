@@ -20,6 +20,8 @@ import {
   Printer,
   Trash2,
   User,
+  Wallet,
+  Zap,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -79,6 +81,7 @@ export function CashierDashboard() {
   const [divergenceModalSession, setDivergenceModalSession] =
     useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
+  const [isCreateSessionModalOpen, setIsCreateSessionModalOpen] = useState(false)
 
   const token = localStorage.getItem('token')
 
@@ -518,167 +521,276 @@ export function CashierDashboard() {
     totalCaixasMes: 0,
   }
 
+
+  // KPIs Gerenciais Consolidados do Mês
+  const kpisMes = useMemo(() => {
+    let faturamentoTotal = 0
+    let totalDinheiro = 0
+    let totalSangrias = 0
+    let caixasAbertos = 0
+    let caixasFechados = 0
+
+    sessionsFiltradas.forEach((s: any) => {
+      if (s.status === 'OPEN') caixasAbertos++
+      else caixasFechados++
+
+      const entries = s.entries || []
+      entries.forEach((e: any) => {
+        const amt = Number(e.amount || 0)
+        if (e.is_withdrawal) {
+          totalSangrias += amt
+        } else {
+          faturamentoTotal += amt
+          const m = (e.payment_method || '').toLowerCase()
+          if (m.includes('dinheiro')) totalDinheiro += amt
+        }
+      })
+    })
+
+    const totalEletronico = Math.max(0, faturamentoTotal - totalDinheiro)
+    const saldoEspecie = summary.saldoFisicoAtualMes || (summary.totalAberturaInicial + totalDinheiro - totalSangrias)
+
+    return {
+      faturamentoTotal,
+      totalDinheiro,
+      totalEletronico,
+      saldoEspecie,
+      totalCaixas: sessionsFiltradas.length,
+      caixasAbertos,
+      caixasFechados,
+    }
+  }, [sessionsFiltradas, summary])
+
   const auditSessionsList = monthlyAudit?.sessions || []
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 pb-8 text-slate-900 dark:text-slate-100">
-      {/* Topo Padrão Metrics */}
-      <PageHeader
-        title="Conferência de Caixa"
-        description="Gerencie a abertura, fechamento e conferência de lotes de caixa."
-      />
+      {/* Topo com Ações Rápidas (Padrão "Don't Make Me Think") */}
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            Conferência de Caixa
+          </h1>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            Gerencie a abertura, fechamento e auditoria mensal dos lotes de caixa.
+          </p>
+        </div>
 
-      {/* PAINEL DE CONTROLE SUPERIOR (1/3 ESQUERDA + 1/3 RESPIRO + 1/3 DIREITA) */}
-      <div
-        className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3"
-      >
-        {/* Card 1 (1/3 da tela): Formulário para Abrir Caixa */}
-        <div
-          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/95"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 font-bold text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                <Plus size={13} />
-              </div>
-              <span>Abrir Novo Caixa</span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleExportarGeralPDF}
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"
+            title="Exportar relatório gerencial consolidado do mês em PDF"
+          >
+            <FileText size={14} />
+            <span>Relatório em PDF</span>
+          </button>
+
+          <button
+            onClick={() => setIsCreateSessionModalOpen(true)}
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95"
+          >
+            <Plus size={15} />
+            <span>Abrir Novo Caixa</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Régua de 4 Cards Gerenciais do Mês (KPIs) */}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* KPI 1: Faturamento Total */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Faturamento ({nomesMeses[mesVisualizacao]})
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+              <Wallet size={15} />
             </div>
           </div>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            R$ {kpisMes.faturamentoTotal.toFixed(2)}
+          </p>
+          <span className="mt-1 block text-[11px] font-semibold text-slate-400">
+            Total bruto faturado
+          </span>
+        </div>
 
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            {isAdmin && (
-              <div className="sm:col-span-3">
-                <select
-                  value={selectedUser}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                >
-                  <option value="" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-                    Selecione o Operador (Você mesmo)
-                  </option>
-                  {possibleUsers.map((u: any) => (
-                    <option key={u.id} value={u.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
+        {/* KPI 2: Dinheiro Físico / Saldo Espécie (com clique para auditoria) */}
+        <div
+          onClick={() => setModalAuditOpen(true)}
+          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-50/60 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-emerald-900/50 dark:bg-slate-900/90 dark:hover:border-emerald-500/60"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              Dinheiro Físico em Caixa
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+              <Banknote size={15} />
+            </div>
+          </div>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-300">
+            R$ {kpisMes.saldoEspecie.toFixed(2)}
+          </p>
+          <span className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-700 transition-transform group-hover:translate-x-0.5 dark:text-emerald-400">
+            <Eye size={12} /> Auditar dinheiro físico ➔
+          </span>
+        </div>
+
+        {/* KPI 3: Vendas Digitais (PIX e Cartões) */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Vendas Digitais (Bancos)
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
+              <Zap size={15} />
+            </div>
+          </div>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            R$ {kpisMes.totalEletronico.toFixed(2)}
+          </p>
+          <span className="mt-1 block text-[11px] font-semibold text-slate-400">
+            PIX, Cartões e Vouchers
+          </span>
+        </div>
+
+        {/* KPI 4: Status Operacional do Mês */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Fechamentos do Mês
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+              <CheckCircle2 size={15} />
+            </div>
+          </div>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            {kpisMes.totalCaixas} <span className="text-sm font-bold text-slate-400">caixas</span>
+          </p>
+          <span className="mt-1 block text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <strong className="text-emerald-600 dark:text-emerald-400">{kpisMes.caixasFechados}</strong> conferidos • <strong className="text-blue-600 dark:text-blue-400">{kpisMes.caixasAbertos}</strong> abertos
+          </span>
+        </div>
+      </div>
+
+      {/* MODAL / DIALOG LIMPO PARA ABRIR NOVO CAIXA */}
+      {isCreateSessionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-in fade-in-50">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                  <Plus size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                    Abrir Novo Caixa
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Inicie o expediente e configure o fundo de troco
+                  </p>
+                </div>
               </div>
-            )}
-
-            <div className="col-span-1">
-              <input
-                type="date"
-                value={dataAbertura}
-                onChange={(e) => setDataAbertura(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-              />
-            </div>
-
-            <div className="col-span-1">
-              <select
-                value={periodo}
-                onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-              >
-                <option value="Almoço" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Almoço</option>
-                <option value="Jantar" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Jantar</option>
-                <option value="Dia Todo" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Dia Todo</option>
-              </select>
-            </div>
-
-            <div className="col-span-1">
-              <input
-                type="number"
-                step="0.01"
-                value={saldoAbertura}
-                onChange={(e) => setSaldoAbertura(e.target.value)}
-                placeholder="Abertura R$ 0.00"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
-              />
-            </div>
-
-            <div className="mt-1 sm:col-span-3">
               <button
-                onClick={handleCriar}
-                className="flex h-[38px] w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95"
+                onClick={() => setIsCreateSessionModalOpen(false)}
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               >
-                <Plus size={14} /> Iniciar Expediente
+                <X size={18} />
               </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {isAdmin && (
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+                    Operador Responsável
+                  </label>
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  >
+                    <option value="" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+                      Selecione o Operador (Você mesmo)
+                    </option>
+                    {possibleUsers.map((u: any) => (
+                      <option key={u.id} value={u.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+                    Data de Abertura
+                  </label>
+                  <input
+                    type="date"
+                    value={dataAbertura}
+                    onChange={(e) => setDataAbertura(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+                    Período / Turno
+                  </label>
+                  <select
+                    value={periodo}
+                    onChange={(e) => setPeriodo(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  >
+                    <option value="Almoço" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Almoço</option>
+                    <option value="Jantar" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Jantar</option>
+                    <option value="Dia Todo" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Dia Todo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+                  Saldo Inicial / Fundo de Troco (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={saldoAbertura}
+                  onChange={(e) => setSaldoAbertura(e.target.value)}
+                  placeholder="Ex: 100.00"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-sm font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateSessionModalOpen(false)}
+                  className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCriar()
+                    setIsCreateSessionModalOpen(false)
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95"
+                >
+                  <Plus size={15} />
+                  <span>Iniciar Expediente</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Espaço Central de 1/3 (Respiro e Alinhamento) */}
-        <div className="hidden lg:block lg:col-span-1" />
-
-        {/* Card 2 (1/3 da tela na direita): Auditoria do Dinheiro em Espécie */}
-        {isAdmin && (
-          <div
-            onClick={() => setModalAuditOpen(true)}
-            className="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-50/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-lg dark:border-emerald-900/60 dark:bg-slate-900/95 dark:hover:border-emerald-500/60 lg:col-span-1"
-          >
-            <Banknote
-              size={80}
-              className="pointer-events-none absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110 dark:text-emerald-400"
-            />
-
-            {/* Cabeçalho */}
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black uppercase text-white shadow-xs">
-                  <Banknote size={11} /> Saldo Espécie
-                </span>
-                <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-300">
-                  {summary.totalCaixasMes} caixas no mês
-                </span>
-              </div>
-
-              {/* Valor Principal com Letras Maiores */}
-              <div className="my-2.5">
-                <span className="block text-[10px] font-black uppercase tracking-wider text-emerald-800/80 dark:text-emerald-400/80">
-                  Dinheiro Físico em Caixa
-                </span>
-                <p className="font-mono text-3xl font-black tracking-tight text-emerald-950 dark:text-emerald-200">
-                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
-                </p>
-                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                  <Eye size={12} /> Clique para auditoria comparativa
-                </p>
-              </div>
-            </div>
-
-            {/* Linhas Financeiras da Auditoria (Abertura, Vendas, Sangrias) */}
-            <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-emerald-200/80 bg-white/80 p-2.5 text-center shadow-xs dark:border-emerald-900/50 dark:bg-slate-950/70">
-              <div>
-                <span className="block text-[9px] font-black uppercase text-slate-500 dark:text-slate-400">
-                  Abertura
-                </span>
-                <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                  R$ {summary.totalAberturaInicial.toFixed(2)}
-                </span>
-              </div>
-              <div className="border-x border-emerald-200/60 dark:border-slate-800/80 px-1">
-                <span className="block text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-400">
-                  + Vendas
-                </span>
-                <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
-                  +{summary.totalVendasDinheiroMes.toFixed(2)}
-                </span>
-              </div>
-              <div>
-                <span className="block text-[9px] font-black uppercase text-red-500 dark:text-red-400">
-                  - Sangrias
-                </span>
-                <span className="font-mono text-xs font-black text-red-500 dark:text-red-400">
-                  -{summary.totalSangriasMes.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Seção Principal: Caixas do Mês */}
+      )}
+{/* Seção Principal: Caixas do Mês */}
       <div className="space-y-4">
         {/* Barra de Navegação de Mês + Toggle Grid/List */}
         <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 sm:flex-row sm:items-center">
