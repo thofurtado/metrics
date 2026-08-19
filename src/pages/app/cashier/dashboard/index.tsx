@@ -528,34 +528,36 @@ export function CashierDashboard() {
         description="Gerencie a abertura, fechamento e conferência de lotes de caixa."
       />
 
-      {/* PAINEL DE CONTROLE SUPERIOR (LADO A LADO) */}
+      {/* PAINEL DE CONTROLE SUPERIOR (1/3 ESQUERDA + 1/3 RESPIRO + 1/3 DIREITA) */}
       <div
-        className={`grid grid-cols-1 gap-6 ${isAdmin ? 'lg:grid-cols-12' : 'w-full'}`}
+        className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3"
       >
-        {/* Formulário Horizontal Compacto para Abrir Caixa */}
+        {/* Card 1 (1/3 da tela): Formulário para Abrir Caixa */}
         <div
-          className={`flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${isAdmin ? 'lg:col-span-5' : 'w-full'}`}
+          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/95"
         >
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-50 font-bold text-blue-600">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 font-bold text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
                 <Plus size={13} />
               </div>
               <span>Abrir Novo Caixa</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             {isAdmin && (
               <div className="sm:col-span-3">
                 <select
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
                 >
-                  <option value="">Selecione o Operador (Você mesmo)</option>
+                  <option value="" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+                    Selecione o Operador (Você mesmo)
+                  </option>
                   {possibleUsers.map((u: any) => (
-                    <option key={u.id} value={u.id}>
+                    <option key={u.id} value={u.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                       {u.name}
                     </option>
                   ))}
@@ -568,7 +570,7 @@ export function CashierDashboard() {
                 type="date"
                 value={dataAbertura}
                 onChange={(e) => setDataAbertura(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
               />
             </div>
 
@@ -576,11 +578,11 @@ export function CashierDashboard() {
               <select
                 value={periodo}
                 onChange={(e) => setPeriodo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-700 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
               >
-                <option value="Almoço">Período: Almoço</option>
-                <option value="Jantar">Período: Jantar</option>
-                <option value="Dia Todo">Período: Dia Todo</option>
+                <option value="Almoço" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Almoço</option>
+                <option value="Jantar" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Jantar</option>
+                <option value="Dia Todo" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Período: Dia Todo</option>
               </select>
             </div>
 
@@ -591,14 +593,14 @@ export function CashierDashboard() {
                 value={saldoAbertura}
                 onChange={(e) => setSaldoAbertura(e.target.value)}
                 placeholder="Abertura R$ 0.00"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-xs font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
               />
             </div>
 
             <div className="mt-1 sm:col-span-3">
               <button
                 onClick={handleCriar}
-                className="flex h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95"
+                className="flex h-[38px] w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95"
               >
                 <Plus size={14} /> Iniciar Expediente
               </button>
@@ -606,69 +608,76 @@ export function CashierDashboard() {
           </div>
         </div>
 
-        {/* CARD DE AUDITORIA DO DINHEIRO EM ESPÉCIE DO MÊS (EXCLUSIVO ADMIN) */}
+        {/* Espaço Central de 1/3 (Respiro e Alinhamento) */}
+        <div className="hidden lg:block lg:col-span-1" />
+
+        {/* Card 2 (1/3 da tela na direita): Auditoria do Dinheiro em Espécie */}
         {isAdmin && (
           <div
             onClick={() => setModalAuditOpen(true)}
-            className="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-100/40 p-4 shadow-sm transition-all hover:border-emerald-400 hover:shadow-md dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-teal-950/20 lg:col-span-6 lg:col-start-7"
+            className="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-50/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-lg dark:border-emerald-900/60 dark:bg-slate-900/95 dark:hover:border-emerald-500/60 lg:col-span-1"
           >
             <Banknote
-              size={70}
-              className="absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110"
+              size={80}
+              className="pointer-events-none absolute -right-3 -top-3 rotate-12 text-emerald-600 opacity-10 transition-transform group-hover:scale-110 dark:text-emerald-400"
             />
 
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
-                    <Banknote size={10} /> Saldo Espécie
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                    ({summary.totalCaixasMes} caixas)
-                  </span>
-                </div>
-                <p className="text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-100">
-                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
-                </p>
-                <p className="flex items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                  <Eye size={11} /> Clique para auditoria comparativa
-                </p>
+            {/* Cabeçalho */}
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black uppercase text-white shadow-xs">
+                  <Banknote size={11} /> Saldo Espécie
+                </span>
+                <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-300">
+                  {summary.totalCaixasMes} caixas no mês
+                </span>
               </div>
 
-              <div className="flex items-center gap-5 rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-4 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/30">
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                    Abertura
-                  </span>
-                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                    R$ {summary.totalAberturaInicial.toFixed(2)}
-                  </span>
-                </div>
-                <div className="h-6 w-px bg-emerald-200/70 dark:bg-emerald-800/50" />
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-emerald-700/70 dark:text-emerald-400/70">
-                    + Vendas
-                  </span>
-                  <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                    R$ {summary.totalVendasDinheiroMes.toFixed(2)}
-                  </span>
-                </div>
-                <div className="h-6 w-px bg-emerald-200/70 dark:bg-emerald-800/50" />
-                <div>
-                  <span className="block text-[8px] font-black uppercase text-red-500/80">
-                    - Sangrias
-                  </span>
-                  <span className="font-mono text-xs font-bold text-red-600">
-                    R$ {summary.totalSangriasMes.toFixed(2)}
-                  </span>
-                </div>
+              {/* Valor Principal com Letras Maiores */}
+              <div className="my-2.5">
+                <span className="block text-[10px] font-black uppercase tracking-wider text-emerald-800/80 dark:text-emerald-400/80">
+                  Dinheiro Físico em Caixa
+                </span>
+                <p className="font-mono text-3xl font-black tracking-tight text-emerald-950 dark:text-emerald-200">
+                  R$ {summary.saldoFisicoAtualMes.toFixed(2)}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                  <Eye size={12} /> Clique para auditoria comparativa
+                </p>
+              </div>
+            </div>
+
+            {/* Linhas Financeiras da Auditoria (Abertura, Vendas, Sangrias) */}
+            <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-emerald-200/80 bg-white/80 p-2.5 text-center shadow-xs dark:border-emerald-900/50 dark:bg-slate-950/70">
+              <div>
+                <span className="block text-[9px] font-black uppercase text-slate-500 dark:text-slate-400">
+                  Abertura
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                  R$ {summary.totalAberturaInicial.toFixed(2)}
+                </span>
+              </div>
+              <div className="border-x border-emerald-200/60 dark:border-slate-800/80 px-1">
+                <span className="block text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-400">
+                  + Vendas
+                </span>
+                <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  +{summary.totalVendasDinheiroMes.toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[9px] font-black uppercase text-red-500 dark:text-red-400">
+                  - Sangrias
+                </span>
+                <span className="font-mono text-xs font-black text-red-500 dark:text-red-400">
+                  -{summary.totalSangriasMes.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      
       {/* Seção Principal: Caixas do Mês */}
       <div className="space-y-4">
         {/* Barra de Navegação de Mês + Toggle Grid/List */}
