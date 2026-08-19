@@ -699,7 +699,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         <div className="grid grid-cols-2 items-end gap-3 md:flex md:flex-wrap">
           {/* VALOR DA OPERAÇÃO */}
           <div className="col-span-1 md:w-36">
-            <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+            <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
               Valor (R$)
             </label>
             <input
@@ -732,7 +732,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
               {/* ORIGEM (MESA, BALCÃO, DELIVERY) */}
               <div className="col-span-1 md:w-44">
                 <div className="mb-1 ml-1 flex items-center justify-between">
-                  <label className="text-[9px] font-black uppercase text-zinc-400">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                     Origem
                   </label>
                   <div className="flex items-center gap-1 text-[8px]">
@@ -786,7 +786,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
               {/* FORMA DE PAGAMENTO */}
               <div className="col-span-2 md:w-56">
-                <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+                <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                   Forma de Pagamento
                 </label>
                 <select
@@ -804,7 +804,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                   className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 >
                   {FORMAS_PAGAMENTO.map((f) => (
-                    <option key={f.key} value={f.name}>
+                    <option key={f.key} value={f.name} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                       {f.display}
                     </option>
                   ))}
@@ -1012,7 +1012,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
               {/* BANCO / DESTINO */}
               {!isContaCasa && (
                 <div className="col-span-2 md:w-48">
-                  <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+                  <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                     Banco / Operadora
                   </label>
                   <select
@@ -1026,13 +1026,13 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     }}
                     onChange={(e) => advanceFromBanco(e.target.value)}
                     onKeyDown={handleBancoKeyDown}
-                    className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 md:p-3 md:text-sm"
+                    className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:border-slate-200/60 disabled:bg-slate-200/40 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:disabled:border-slate-800/60 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-600 md:p-3 md:text-sm"
                   >
                     {forma === 'Dinheiro' ? (
-                      <option value="CAIXA">CAIXA</option>
+                      <option value="CAIXA" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">CAIXA</option>
                     ) : (
                       BANCOS_NUMERADOS.map((b) => (
-                        <option key={b.key} value={b.name}>
+                        <option key={b.key} value={b.name} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                           {b.display}
                         </option>
                       ))
@@ -1047,7 +1047,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             <>
               {/* MOTIVO / DESCRIÇÃO */}
               <div className="col-span-2 md:flex-1">
-                <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+                <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                   Motivo / Descrição
                 </label>
                 <input
@@ -1062,7 +1062,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
               {tipo === 'sangria' && (
                 <div className="col-span-2 md:w-56">
-                  <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+                  <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                     Funcionário (Vale RH - Opcional)
                   </label>
                   <select
@@ -1073,7 +1073,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                       setFuncionarioRetiradaId(val)
                       if (val) setSectorId(null)
                     }}
-                    className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 md:p-3 md:text-sm"
+                    className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                   >
                     <option value="">Não vincular (Sangria Comum)</option>
                     {employeesList.map((emp: any) => (
@@ -1086,7 +1086,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
               )}
 
               <div className="col-span-2 md:w-48">
-                <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
+                <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
                   Setor / Categoria (Opcional)
                 </label>
                 <select
@@ -1097,7 +1097,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     setSectorId(val)
                     if (val) setFuncionarioRetiradaId(null)
                   }}
-                  className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 md:p-3 md:text-sm"
+                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 >
                   <option value="">Nenhum Setor</option>
                   {sectorsList.map((sec: any) => (
@@ -1129,7 +1129,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     }
                   }}
                   placeholder="Ex: João, Cozinha, Garçons..."
-                  className="w-full rounded-xl border border-purple-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-purple-500 md:p-3 md:text-sm"
+                  className="w-full rounded-xl border border-purple-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 dark:border-purple-900/50 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 />
               </div>
               <div className="col-span-2 md:w-48">
@@ -1140,7 +1140,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                   ref={formaSelectRef}
                   value={forma}
                   onChange={(e) => setForma(e.target.value)}
-                  className="w-full cursor-pointer rounded-xl border border-purple-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-purple-500 md:p-3 md:text-sm"
+                  className="w-full cursor-pointer rounded-xl border border-purple-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-purple-500 dark:border-purple-900/50 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 >
                   <option value="Dinheiro">Dinheiro</option>
                   <option value="PIX">PIX</option>
