@@ -90,7 +90,7 @@ export function ClientsEquipments() {
       <div className="flex flex-col gap-4 px-2 pb-10 md:px-0">
         <PageHeader
           title="Central de Clientes & Equipamentos"
-          description="GestÃ£o completa de clientes e monitoramento de equipamentos em tempo real."
+          description="Gestão completa de clientes e monitoramento de equipamentos em tempo real."
         >
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -124,7 +124,7 @@ export function ClientsEquipments() {
               Clientes
             </TabsTrigger>
             <TabsTrigger value="orphans" className="flex-1 rounded-lg py-2.5 sm:flex-none">
-              Aguardando VÃ­nculo
+              Aguardando Vínculo
               {orphans && orphans.length > 0 && (
                 <span className="ml-2 animate-pulse rounded-full bg-indigo-500 px-2 py-0.5 text-xs text-white">
                   {orphans.length}
@@ -141,7 +141,7 @@ export function ClientsEquipments() {
                   Equipamentos Vinculados
                 </h3>
                 <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-400/80 sm:text-sm">
-                  Toque em um equipamento para abrir telemetria, diagnÃ³stico e acesso remoto.
+                  Toque em um equipamento para abrir telemetria, diagnóstico e acesso remoto.
                 </p>
               </div>
             </div>
@@ -152,10 +152,10 @@ export function ClientsEquipments() {
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead>IdentificaÃ§Ã£o do Computador</TableHead>
+                    <TableHead>Identificação do Computador</TableHead>
                     <TableHead>Cliente Dono</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Ãšltimo Contato</TableHead>
+                    <TableHead className="text-right">Último Contato</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,7 +307,7 @@ export function ClientsEquipments() {
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
                     <TableHead>Nome Fantasia</TableHead>
-                    <TableHead>IdentificaÃ§Ã£o</TableHead>
+                    <TableHead>Identificação</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead className="text-center">Equipamentos</TableHead>
                     <TableHead className="text-center">Contrato Ativo</TableHead>
@@ -347,7 +347,7 @@ export function ClientsEquipments() {
                             </span>
                           ) : (
                             <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-500 dark:bg-slate-800">
-                              NÃ£o
+                              Não
                             </span>
                           )}
                         </TableCell>
@@ -407,10 +407,10 @@ export function ClientsEquipments() {
             <div className="mb-4 flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/30">
               <div>
                 <h3 className="font-bold text-indigo-900 dark:text-indigo-300">
-                  Equipamentos Ã“rfÃ£os
+                  Equipamentos Órfãos
                 </h3>
                 <p className="mt-1 text-xs text-indigo-700/80 dark:text-indigo-400/80 sm:text-sm">
-                  MÃ¡quinas que se comunicaram com a API mas ainda nÃ£o possuem um cliente associado.
+                  Máquinas que se comunicaram com a API mas ainda não possuem um cliente associado.
                 </p>
               </div>
             </div>
@@ -420,7 +420,7 @@ export function ClientsEquipments() {
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
-                    <TableHead>IdentificaÃ§Ã£o / Detalhes</TableHead>
+                    <TableHead>Identificação / Detalhes</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Entrada no Sistema</TableHead>
                     <TableHead className="w-[300px]">Vincular Cliente</TableHead>
@@ -430,7 +430,7 @@ export function ClientsEquipments() {
                   {isLoadingOrphans ? (
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center">
-                        Buscando Ã³rfÃ£os...
+                        Buscando órfãos...
                       </TableCell>
                     </TableRow>
                   ) : orphans && orphans.length > 0 ? (
@@ -481,7 +481,7 @@ export function ClientsEquipments() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                        Nenhum equipamento aguardando vÃ­nculo.
+                        Nenhum equipamento aguardando vínculo.
                       </TableCell>
                     </TableRow>
                   )}
@@ -493,7 +493,7 @@ export function ClientsEquipments() {
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {isLoadingOrphans ? (
                 <div className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground dark:bg-slate-950">
-                  Buscando Ã³rfÃ£os...
+                  Buscando órfãos...
                 </div>
               ) : orphans && orphans.length > 0 ? (
                 orphans.map((orphan: any) => (
@@ -510,7 +510,7 @@ export function ClientsEquipments() {
                           {orphan.last_telemetry?.osInfo?.hostname || orphan.identification || orphan.type || 'Equipamento'}
                         </h4>
                         <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                          Ã“rfÃ£o
+                          Órfão
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -542,7 +542,7 @@ export function ClientsEquipments() {
                 ))
               ) : (
                 <div className="rounded-xl border bg-white p-6 text-center text-sm text-muted-foreground dark:bg-slate-950">
-                  Nenhum equipamento aguardando vÃ­nculo.
+                  Nenhum equipamento aguardando vínculo.
                 </div>
               )}
             </div>

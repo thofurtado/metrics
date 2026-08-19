@@ -610,28 +610,28 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
   const formConfig = {
     venda: {
       title: 'Lançar Venda',
-      cardStyle: 'bg-white border-zinc-200',
-      btnStyle: 'bg-zinc-900 hover:bg-zinc-800',
+      cardStyle: 'bg-white border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800',
+      btnStyle: 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200',
       btnLabel: 'Adicionar',
       icon: <Plus size={18} />,
     },
     sangria: {
       title: 'Lançar Sangria',
-      cardStyle: 'bg-red-50/40 border-red-200',
+      cardStyle: 'bg-red-50/40 border-red-200 dark:bg-red-950/20 dark:border-red-950/50',
       btnStyle: 'bg-red-600 hover:bg-red-700',
       btnLabel: 'Lançar Sangria',
       icon: <TrendingDown size={18} />,
     },
     suprimento: {
       title: 'Lançar Suprimento',
-      cardStyle: 'bg-emerald-50/40 border-emerald-200',
+      cardStyle: 'bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-950/50',
       btnStyle: 'bg-emerald-600 hover:bg-emerald-700',
       btnLabel: 'Lançar Suprimento',
       icon: <Plus size={18} />,
     },
     caixinha: {
       title: 'Lançar Caixinha',
-      cardStyle: 'bg-purple-50/40 border-purple-200',
+      cardStyle: 'bg-purple-50/40 border-purple-200 dark:bg-purple-950/20 dark:border-purple-950/50',
       btnStyle: 'bg-purple-600 hover:bg-purple-700',
       btnLabel: 'Lançar Caixinha',
       icon: <Plus size={18} />,
@@ -658,14 +658,14 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
       />
 
       {/* SELETOR DE MODOS DE OPERAÇÃO (SUB-ABAS DE OPERAÇÃO) */}
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto border-b border-zinc-100 pb-3">
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto border-b border-zinc-100 pb-3 dark:border-zinc-800">
         <button
           type="button"
           onClick={() => {
             setTipo('venda')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'venda' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'venda' ? 'bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
         >
           <Plus size={14} /> Venda Normal
         </button>
@@ -677,7 +677,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setBanco('CAIXA')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'sangria' ? 'bg-red-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
         >
           <TrendingDown size={14} /> Sangria (Retirada)
         </button>
@@ -689,7 +689,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
             setBanco('CAIXA')
             setTimeout(() => valorInputRef.current?.focus(), 50)
           }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black uppercase transition-all ${tipo === 'suprimento' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}
         >
           <Plus size={14} /> Suprimento (Entrada)
         </button>
@@ -723,7 +723,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 }
               }}
               placeholder="0,00"
-              className="w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
+              className="w-full rounded-xl border border-zinc-200 bg-white p-4 font-mono text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
             />
           </div>
 
@@ -779,7 +779,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                           ? 'Nº Balcão'
                           : 'Nº Delivery'
                     }
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
                   />
                 </div>
               </div>
@@ -801,7 +801,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                     advanceFromForma(e.target.value)
                   }}
                   onKeyDown={handleFormaKeyDown}
-                  className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
+                  className="w-full cursor-pointer rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
                 >
                   {FORMAS_PAGAMENTO.map((f) => (
                     <option key={f.key} value={f.name}>
@@ -891,7 +891,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                             ? 'Digite para buscar o funcionário (RH)...'
                             : 'Digite para buscar o cliente...'
                         }
-                        className="w-full rounded-xl border-2 border-orange-200 bg-orange-50/30 py-3 pl-9 pr-8 text-xs font-bold text-orange-950 outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full rounded-xl border-2 border-orange-200 bg-orange-50/30 py-3 pl-9 pr-8 text-xs font-bold text-orange-950 outline-none focus:ring-2 focus:ring-orange-500 dark:border-orange-950/60 dark:bg-orange-950/20 dark:text-orange-100"
                       />
                       <ChevronDown
                         size={14}
@@ -1056,7 +1056,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                   value={descricaoRetirada}
                   onChange={(e) => setDescricaoRetirada(e.target.value)}
                   placeholder="Ex: Depósito banco, Troco inicial, Vale..."
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 md:p-3 md:text-sm"
+                  className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 md:p-3 md:text-sm"
                 />
               </div>
 

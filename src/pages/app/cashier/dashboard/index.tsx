@@ -371,35 +371,35 @@ export function CashierDashboard() {
     const m = (method || '').toLowerCase()
     if (m.includes('dinheiro'))
       return {
-        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40',
         icon: '💵',
       }
     if (m.includes('pix'))
-      return { bg: 'bg-teal-50 text-teal-700 border-teal-200', icon: '⚡' }
+      return { bg: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-900/40', icon: '⚡' }
     if (m.includes('débito') || m.includes('debito'))
-      return { bg: 'bg-blue-50 text-blue-700 border-blue-200', icon: '💳' }
+      return { bg: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/40', icon: '💳' }
     if (m.includes('crédito') || m.includes('credito'))
       return {
-        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        bg: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/40',
         icon: '💳',
       }
     if (m.includes('voucher'))
       return {
-        bg: 'bg-purple-50 text-purple-700 border-purple-200',
+        bg: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/40',
         icon: '🎟️',
       }
     if (m.includes('funcionário') || m.includes('funcionario'))
       return {
-        bg: 'bg-orange-50 text-orange-700 border-orange-200',
+        bg: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900/40',
         icon: '👤',
       }
     if (m.includes('pró-labore') || m.includes('pro-labore'))
-      return { bg: 'bg-rose-50 text-rose-700 border-rose-200', icon: '💼' }
+      return { bg: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/40', icon: '💼' }
     if (m.includes('cortesia'))
-      return { bg: 'bg-pink-50 text-pink-700 border-pink-200', icon: '🎁' }
+      return { bg: 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900/40', icon: '🎁' }
     if (m.includes('permuta'))
-      return { bg: 'bg-amber-50 text-amber-700 border-amber-200', icon: '🔄' }
-    return { bg: 'bg-slate-50 text-slate-700 border-slate-200', icon: '💰' }
+      return { bg: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/40', icon: '🔄' }
+    return { bg: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800', icon: '💰' }
   }
 
   if ((!token || !profile) && !isLoadingProfile) {

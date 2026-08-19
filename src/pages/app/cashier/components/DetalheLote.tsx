@@ -296,12 +296,12 @@ export function DetalheLote({
   }
 
   return (
-    <div className="min-h-screen space-y-4 bg-zinc-50 p-3 text-zinc-900 md:space-y-6 md:p-8">
+    <div className="min-h-screen space-y-4 bg-zinc-50 p-3 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 md:space-y-6 md:p-8">
       <header className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div className="flex items-center gap-2 md:gap-4">
           <button
             onClick={onVoltar}
-            className="rounded-xl border bg-white p-3 text-zinc-400 shadow-sm active:bg-zinc-100"
+            className="rounded-xl border border-zinc-200 bg-white p-3 text-zinc-400 shadow-sm transition-colors hover:text-zinc-700 active:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 dark:active:bg-zinc-800"
           >
             <ArrowLeft size={20} />
           </button>
@@ -335,7 +335,7 @@ export function DetalheLote({
                     step="0.01"
                     value={valorAberturaTemp}
                     onChange={(e) => setValorAberturaTemp(e.target.value)}
-                    className="w-24 rounded border border-green-300 bg-white px-2 py-1 text-[9px] font-bold"
+                    className="w-24 rounded border border-green-300 bg-white px-2 py-1 text-[9px] font-bold dark:border-green-800 dark:bg-zinc-900 dark:text-zinc-100"
                     autoFocus
                   />
                   <button
@@ -438,7 +438,7 @@ export function DetalheLote({
                 toast.error('Erro ao gerar relatório PDF.')
               }
             }}
-            className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-transform active:scale-95 md:rounded-2xl md:px-5 md:py-3"
+            className="flex cursor-pointer items-center gap-2 rounded-xl bg-zinc-900 p-3 text-[10px] font-black uppercase text-white shadow-lg transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-800 dark:hover:bg-zinc-700 md:rounded-2xl md:px-5 md:py-3"
           >
             <Printer size={18} />
             <span className="hidden md:inline">Exportar PDF</span>
@@ -449,7 +449,7 @@ export function DetalheLote({
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
         <button
           onClick={() => setExibirSumario(!exibirSumario)}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-100/80 py-3 text-xs font-medium uppercase tracking-wider text-zinc-600 transition-colors hover:bg-zinc-200"
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200/80 bg-zinc-100/80 py-3 text-xs font-medium uppercase tracking-wider text-zinc-600 transition-colors hover:bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {exibirSumario ? (
             <>
@@ -497,7 +497,7 @@ export function DetalheLote({
           </div>
 
           {/* Tabs Navigation */}
-          <div className="mb-4 flex flex-wrap gap-2 overflow-x-auto border-b border-zinc-200 pb-1">
+          <div className="mb-4 flex flex-wrap gap-2 overflow-x-auto border-b border-zinc-200 pb-1 dark:border-zinc-800">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -506,7 +506,7 @@ export function DetalheLote({
                                     ${
                                       activeTab === tab.id
                                         ? 'border-b-2 border-blue-600 text-blue-600'
-                                        : 'text-zinc-400 hover:text-zinc-600'
+                                        : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'
                                     }`}
               >
                 {tab.label}
@@ -515,7 +515,7 @@ export function DetalheLote({
           </div>
 
           {mostrarFiltros && (
-            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-950/40 dark:bg-blue-950/20 md:grid-cols-3">
               <div>
                 <label className="mb-1 ml-1 block text-[9px] font-black uppercase text-zinc-400">
                   Mesa
@@ -527,7 +527,7 @@ export function DetalheLote({
                     setFiltro({ ...filtro, mesa: e.target.value })
                   }
                   placeholder="Filtrar por mesa..."
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
                 />
               </div>
               <div>
@@ -539,7 +539,7 @@ export function DetalheLote({
                   onChange={(e) =>
                     setFiltro({ ...filtro, banco: e.target.value })
                   }
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Todos os Bancos</option>
                   {bancosUnicos.map((b: string) => (
@@ -560,16 +560,16 @@ export function DetalheLote({
                     setFiltro({ ...filtro, forma: e.target.value })
                   }
                   placeholder="Filtrar por forma..."
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-zinc-200 bg-white p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
                 />
               </div>
             </div>
           )}
 
-          <div className="overflow-hidden rounded-[1.5rem] border bg-white shadow-sm md:rounded-3xl">
+          <div className="overflow-hidden rounded-[1.5rem] border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 md:rounded-3xl">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="border-b bg-zinc-50 text-[9px] font-black uppercase text-zinc-400">
+                <thead className="border-b border-zinc-200 bg-zinc-50 text-[9px] font-black uppercase text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400">
                   <tr>
                     <th className="w-12 p-4 text-center">
                       <Check size={14} className="inline-block" />
@@ -581,12 +581,12 @@ export function DetalheLote({
                     <th className="w-24 p-4"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/80">
                   {vendasFiltradas.length > 0 ? (
                     vendasFiltradas.map((l: any) => (
                       <tr
                         key={l.id}
-                        className="transition-colors hover:bg-zinc-50"
+                        className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50"
                       >
                         {editandoId === l.id ? (
                           <>
@@ -613,7 +613,7 @@ export function DetalheLote({
                                     mesa: e.target.value,
                                   })
                                 }
-                                className="w-full rounded border border-blue-300 px-2 py-1 text-sm font-bold"
+                                className="w-full rounded border border-blue-300 bg-white px-2 py-1 text-zinc-900 dark:border-blue-700 dark:bg-zinc-900 dark:text-zinc-100 text-sm font-bold"
                               />
                             </td>
                             <td className="p-2">
@@ -625,7 +625,7 @@ export function DetalheLote({
                                     banco: e.target.value,
                                   })
                                 }
-                                className="w-full rounded border border-blue-300 px-2 py-1 text-[9px] font-bold"
+                                className="w-full rounded border border-blue-300 bg-white px-2 py-1 text-zinc-900 dark:border-blue-700 dark:bg-zinc-900 dark:text-zinc-100 text-[9px] font-bold"
                               >
                                 <option value="CAIXA">CAIXA</option>
                                 <option value="SAFRA">SAFRA</option>
@@ -646,7 +646,7 @@ export function DetalheLote({
                                     formaPagamento: e.target.value,
                                   })
                                 }
-                                className="w-full rounded border border-blue-300 px-2 py-1 text-[9px] font-bold"
+                                className="w-full rounded border border-blue-300 bg-white px-2 py-1 text-zinc-900 dark:border-blue-700 dark:bg-zinc-900 dark:text-zinc-100 text-[9px] font-bold"
                               >
                                 <option value="Dinheiro">Dinheiro</option>
                                 <option value="PIX">PIX</option>
@@ -666,7 +666,7 @@ export function DetalheLote({
                                     valor: parseFloat(e.target.value),
                                   })
                                 }
-                                className="w-full rounded border border-blue-300 px-2 py-1 text-right text-sm font-bold"
+                                className="w-full rounded border border-blue-300 bg-white px-2 py-1 text-zinc-900 dark:border-blue-700 dark:bg-zinc-900 dark:text-zinc-100 text-right text-sm font-bold"
                               />
                             </td>
                             <td className="p-2">
@@ -709,7 +709,7 @@ export function DetalheLote({
                                 </span>
                               </div>
                             </td>
-                            <td className="p-4 text-[10px] font-black uppercase text-zinc-700">
+                            <td className="p-4 text-[10px] font-black uppercase text-zinc-700 dark:text-zinc-300">
                               {renderBancoConsumidor(l)}
                             </td>
                             <td className="p-4 text-[9px] font-bold uppercase text-zinc-500">
@@ -723,7 +723,7 @@ export function DetalheLote({
                                 </span>
                               )}
                             </td>
-                            <td className="p-4 text-right font-mono font-black text-zinc-900">
+                            <td className="p-4 text-right font-mono font-black text-zinc-900 dark:text-zinc-100">
                               R$ {l.valor.toFixed(2)}
                             </td>
                             <td className="p-4">
@@ -758,7 +758,7 @@ export function DetalheLote({
                   )}
                 </tbody>
                 {vendasFiltradas.length > 0 && (
-                  <tfoot className="border-t bg-zinc-50">
+                  <tfoot className="border-t border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80">
                     <tr>
                       <td
                         colSpan={4}
@@ -785,9 +785,9 @@ export function DetalheLote({
           <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase text-red-400">
             <Wallet2 size={14} /> Sangrias
           </div>
-          <div className="overflow-hidden rounded-[1.5rem] border border-red-100 bg-red-50/30 shadow-sm">
+          <div className="overflow-hidden rounded-[1.5rem] border border-red-100 bg-red-50/30 shadow-sm dark:border-red-950/40 dark:bg-red-950/20">
             <table className="w-full text-left text-sm">
-              <tbody className="divide-y divide-red-100">
+              <tbody className="divide-y divide-red-100 dark:divide-red-950/40">
                 {sangrias.length === 0 ? (
                   <tr>
                     <td className="p-8 text-center text-xs font-medium italic text-zinc-400">
@@ -797,7 +797,7 @@ export function DetalheLote({
                 ) : (
                   sangrias.map((l: any) => (
                     <tr key={l.id}>
-                      <td className="p-4 text-xs font-bold italic text-red-900">
+                      <td className="p-4 text-xs font-bold italic text-red-900 dark:text-red-300">
                         {l.identificacao}
                       </td>
                       <td className="p-4 text-right font-mono font-black text-red-600">
