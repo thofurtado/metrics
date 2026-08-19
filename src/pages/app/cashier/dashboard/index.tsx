@@ -832,56 +832,58 @@ export function CashierDashboard() {
                             {/* Bloco Central: Saldo Final e Linhas Financeiras Compactas */}
                             <div className="my-2.5 rounded-xl border border-slate-100 bg-slate-50/90 p-3 dark:border-slate-800/80 dark:bg-slate-950/80">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                  Saldo Final em Caixa
+                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                  Saldo Final
                                 </span>
-                                <span className="font-mono text-xl font-black text-blue-600 dark:text-blue-400">
+                                <span className="font-mono text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">
                                   R$ {valorFinalCaixa.toFixed(2)}
                                 </span>
                               </div>
 
-                              {/* Linhas de Abertura / Entradas / Sangrias */}
+                              {/* Linhas de Abertura / Entradas / Sangrias com Números Maiores */}
                               <div className="mt-2 grid grid-cols-3 gap-1.5 border-t border-slate-200/60 pt-2 dark:border-slate-800/60">
                                 <div>
-                                  <span className="block text-[10px] font-bold uppercase text-slate-400">
+                                  <span className="block text-[10px] font-black uppercase text-slate-400">
                                     Abertura
                                   </span>
-                                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">
                                     R$ {valorAbertura.toFixed(2)}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                                  <span className="block text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
                                     Entradas
                                   </span>
-                                  <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
+                                  <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
                                     +{totalEntradasSemSaida.toFixed(2)}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="block text-[10px] font-bold uppercase text-red-500 dark:text-red-400">
+                                  <span className="block text-[10px] font-black uppercase text-red-500 dark:text-red-400">
                                     Sangrias
                                   </span>
-                                  <span className="font-mono text-xs font-black text-red-500 dark:text-red-400">
+                                  <span className="font-mono text-sm font-black text-red-500 dark:text-red-400">
                                     {totalSangrias > 0 ? `-${totalSangrias.toFixed(2)}` : '0.00'}
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Formas de Pagamento (Pills com fonte maior e nítida) */}
+                            {/* Formas de Pagamento em 2 Colunas Compactas (Ícone + Valor Grande, sem nome longo) */}
                             {activeMethods.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
                                 {activeMethods.map(([method, total]) => {
                                   const badgeStyle = getMethodBadgeStyle(method)
                                   return (
                                     <div
                                       key={method}
-                                      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-extrabold ${badgeStyle.bg}`}
+                                      title={`${method}: R$ ${total.toFixed(2)}`}
+                                      className={`flex items-center justify-between gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-black shadow-xs transition-colors ${badgeStyle.bg}`}
                                     >
-                                      <span>{badgeStyle.icon}</span>
-                                      <span>{method}:</span>
-                                      <span className="font-mono font-black">R$ {total.toFixed(2)}</span>
+                                      <span className="text-sm shrink-0">{badgeStyle.icon}</span>
+                                      <span className="font-mono text-xs sm:text-sm font-black tracking-tight">
+                                        R$ {total.toFixed(2)}
+                                      </span>
                                     </div>
                                   )
                                 })}
