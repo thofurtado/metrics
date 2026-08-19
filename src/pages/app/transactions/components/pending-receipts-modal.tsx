@@ -177,10 +177,10 @@ export function PendingReceiptsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-3xl p-6">
+      <DialogContent className="max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="text-2xl font-black text-slate-800">
+            <DialogTitle className="text-2xl font-black text-slate-900 dark:text-slate-100">
               Comprovantes Rápidos
             </DialogTitle>
             {receiptsData?.receipts?.length > 0 && (
@@ -203,7 +203,7 @@ export function PendingReceiptsModal({
           )}
 
           {!isLoading && receiptsData?.receipts?.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-slate-500">
+            <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-12 text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
               <FileText className="mb-4 h-12 w-12 text-slate-300" />
               <p className="font-semibold">Nenhum comprovante pendente</p>
               <p className="text-xs">
@@ -216,10 +216,10 @@ export function PendingReceiptsModal({
             receiptsData?.receipts?.map((receipt: any, index: number) => (
               <div
                 key={receipt.filename}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
               >
                 <div
-                  className="relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden bg-slate-100 transition-opacity hover:opacity-90"
+                  className="relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden bg-slate-100 transition-opacity hover:opacity-90 dark:bg-slate-950"
                   onClick={() => setActiveReceiptIndex(index)}
                 >
                   {receipt.url.endsWith('.pdf') ? (
@@ -257,7 +257,7 @@ export function PendingReceiptsModal({
                     {new Date(receipt.date).toLocaleString('pt-BR')}
                   </p>
                   <p
-                    className="mb-2 line-clamp-2 flex-1 text-sm font-bold text-slate-800"
+                    className="mb-2 line-clamp-2 flex-1 text-sm font-bold text-slate-800 dark:text-slate-100"
                     title={receipt.description}
                   >
                     {receipt.description}
@@ -275,7 +275,7 @@ export function PendingReceiptsModal({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 border-slate-200 px-0 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                      className="flex-1 border-slate-200 px-0 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
                       onClick={() => {
                         onOpenChange(false)
                         onLinkToExisting(receipt)
@@ -286,7 +286,7 @@ export function PendingReceiptsModal({
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 bg-slate-900 px-0 text-xs font-bold text-white hover:bg-slate-800"
+                      className="flex-1 bg-slate-900 px-0 text-xs font-bold text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700"
                       onClick={() => {
                         onOpenChange(false)
                         onCreateNew(receipt)

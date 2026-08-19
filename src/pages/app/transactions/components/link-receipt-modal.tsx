@@ -158,7 +158,7 @@ export function LinkReceiptModal({
         open={open && !selectedTransactionForPayment}
         onOpenChange={onOpenChange}
       >
-        <DialogContent className="max-w-md rounded-3xl p-6">
+        <DialogContent className="max-w-md rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <DialogHeader>
             <DialogTitle>Vincular a Despesa</DialogTitle>
             <DialogDescription>
@@ -208,10 +208,10 @@ export function LinkReceiptModal({
             {availableTransactions.map((t: any) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300"
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
               >
                 <div>
-                  <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
                     {t.description}
                     {t.confirmed ? (
                       <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
@@ -223,7 +223,7 @@ export function LinkReceiptModal({
                       </span>
                     )}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {new Date(t.data_vencimento).toLocaleDateString()} -{' '}
                     {t.amount.toLocaleString('pt-BR', {
                       style: 'currency',

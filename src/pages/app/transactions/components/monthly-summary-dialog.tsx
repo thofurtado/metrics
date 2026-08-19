@@ -174,13 +174,13 @@ export function MonthlySummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl border-0 bg-slate-50 p-0 shadow-2xl">
-        <DialogHeader className="m-0 flex flex-row items-center justify-between border-b border-slate-100 bg-white p-6">
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+        <DialogHeader className="m-0 flex flex-row items-center justify-between border-b border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <div>
-            <DialogTitle className="text-2xl font-black tracking-tight text-slate-800">
+            <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
               Consolidação Financeira
             </DialogTitle>
-            <p className="mt-1 text-sm font-medium text-slate-500">
+            <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
               {monthName}
             </p>
           </div>
@@ -263,7 +263,7 @@ export function MonthlySummaryDialog({
                 <div>
                   <div className="mb-4 flex items-center gap-3 text-slate-500">
                     <div className="rounded-lg bg-slate-100 p-2">
-                      <Receipt className="h-5 w-5 text-slate-600" />
+                      <Receipt className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                     </div>
                     <h3 className="text-sm font-semibold uppercase tracking-wide">
                       Balanço do Mês
@@ -306,7 +306,7 @@ export function MonthlySummaryDialog({
                     <PieChart className="h-5 w-5 text-rose-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-800">
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
                       Impacto de Despesas por Setor
                     </h3>
                     <p className="text-xs font-medium text-slate-500">
@@ -348,10 +348,10 @@ export function MonthlySummaryDialog({
                               {item.category}
                             </span>
                             <div className="flex items-baseline gap-2 text-right">
-                              <span className="text-lg font-black text-slate-800">
+                              <span className="text-lg font-black text-slate-800 dark:text-slate-100">
                                 {formatCurrency(item.amount)}
                               </span>
-                              <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                              <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300">
                                 {percentage}%
                               </span>
                             </div>
