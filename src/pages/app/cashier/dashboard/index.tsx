@@ -877,22 +877,22 @@ export function CashierDashboard() {
                                 </span>
                               </div>
 
-                              {/* 3. Indicadores de Liquidez Imediata (Gaveta + PIX) */}
+                              {/* 3. Indicadores de Liquidez Imediata (Gaveta + PIX): Rótulo no topo, Cifrão + Valor embaixo, sem ícones */}
                               <div className="grid grid-cols-2 gap-1.5 border-t border-dashed border-slate-200/60 pt-2 dark:border-slate-800/60">
-                                <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1">
-                                  <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">
-                                    <span>💵</span> Gaveta
+                                <div className="flex flex-col items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-2 py-1.5 text-center">
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                                    Gaveta
                                   </span>
-                                  <span className="font-mono text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-300">
+                                  <span className="font-mono text-xs sm:text-sm font-black tracking-tight text-emerald-700 dark:text-emerald-300">
                                     R$ {saldoGaveta.toFixed(2)}
                                   </span>
                                 </div>
 
-                                <div className="flex items-center justify-between rounded-lg border border-teal-500/25 bg-teal-500/10 px-2 py-1">
-                                  <span className="flex items-center gap-1 text-[10px] font-black uppercase text-teal-700 dark:text-teal-300">
-                                    <span>⚡</span> PIX
+                                <div className="flex flex-col items-center justify-center rounded-xl border border-teal-500/25 bg-teal-500/10 px-2 py-1.5 text-center">
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+                                    PIX
                                   </span>
-                                  <span className="font-mono text-xs sm:text-sm font-black text-teal-700 dark:text-teal-300">
+                                  <span className="font-mono text-xs sm:text-sm font-black tracking-tight text-teal-700 dark:text-teal-300">
                                     R$ {totalPix.toFixed(2)}
                                   </span>
                                 </div>
@@ -1039,7 +1039,7 @@ export function CashierDashboard() {
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                               <div className="flex items-center gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5">
                                 <span className="text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-300">
-                                  💵 Gaveta:
+                                  Gaveta:
                                 </span>
                                 <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
                                   R$ {saldoGaveta.toFixed(2)}
@@ -1049,7 +1049,7 @@ export function CashierDashboard() {
                               {totalPix > 0 && (
                                 <div className="flex items-center gap-1 rounded-lg border border-teal-500/25 bg-teal-500/10 px-2 py-0.5">
                                   <span className="text-[9px] font-black uppercase text-teal-700 dark:text-teal-300">
-                                    ⚡ PIX:
+                                    PIX:
                                   </span>
                                   <span className="font-mono font-bold text-teal-700 dark:text-teal-300">
                                     R$ {totalPix.toFixed(2)}
