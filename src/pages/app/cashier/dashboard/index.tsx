@@ -6,6 +6,9 @@ import {
   Banknote,
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -63,6 +66,15 @@ export function CashierDashboard() {
     new Date().getFullYear(),
   )
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [expandedSessionIds, setExpandedSessionIds] = useState<Record<string, boolean>>({})
+
+  const toggleExpandSession = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setExpandedSessionIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
 
   const [divergenceModalSession, setDivergenceModalSession] =
     useState<any>(null)
@@ -899,24 +911,46 @@ export function CashierDashboard() {
                               </div>
                             </div>
 
-                            {/* Formas de Pagamento em 2 Colunas */}
+                            {/* Formas de Pagamento Colapsáveis (Accordion/Dropdown de Detalhes) */}
                             {activeMethods.length > 0 && (
-                              <div className="grid grid-cols-2 gap-1.5">
-                                {activeMethods.map(([method, total]) => {
-                                  const badgeStyle = getMethodBadgeStyle(method)
-                                  return (
-                                    <div
-                                      key={method}
-                                      title={`${method}: R$ ${total.toFixed(2)}`}
-                                      className={`flex items-center justify-between gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-black shadow-xs transition-colors ${badgeStyle.bg}`}
-                                    >
-                                      <span className="text-sm shrink-0">{badgeStyle.icon}</span>
-                                      <span className="font-mono text-xs sm:text-sm font-black tracking-tight">
-                                        R$ {total.toFixed(2)}
-                                      </span>
-                                    </div>
-                                  )
-                                })}
+                              <div className="mt-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => toggleExpandSession(s.id, e)}
+                                  className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1 text-[11px] font-bold text-slate-600 transition-all hover:border-blue-400 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800/80 dark:bg-slate-950/60 dark:text-slate-400 dark:hover:border-blue-500/50 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
+                                >
+                                  <span className="flex items-center gap-1.5">
+                                    <CreditCard size={12} className="text-blue-500" />
+                                    <span>{activeMethods.length} {activeMethods.length === 1 ? 'Forma de Pagamento' : 'Formas de Pagamento'}</span>
+                                  </span>
+                                  <span className="flex items-center gap-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+                                    {expandedSessionIds[s.id] ? (
+                                      <>Ocultar <ChevronUp size={13} /></>
+                                    ) : (
+                                      <>Ver Detalhes <ChevronDown size={13} /></>
+                                    )}
+                                  </span>
+                                </button>
+
+                                {expandedSessionIds[s.id] && (
+                                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 animate-in fade-in-50 slide-in-from-top-1">
+                                    {activeMethods.map(([method, total]) => {
+                                      const badgeStyle = getMethodBadgeStyle(method)
+                                      return (
+                                        <div
+                                          key={method}
+                                          title={`${method}: R$ ${total.toFixed(2)}`}
+                                          className={`flex items-center justify-between gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-black shadow-xs transition-colors ${badgeStyle.bg}`}
+                                        >
+                                          <span className="text-sm shrink-0">{badgeStyle.icon}</span>
+                                          <span className="font-mono text-xs sm:text-sm font-black tracking-tight">
+                                            R$ {total.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
