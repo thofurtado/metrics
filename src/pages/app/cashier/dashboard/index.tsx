@@ -522,7 +522,7 @@ export function CashierDashboard() {
   }
 
 
-  // KPIs Gerenciais Consolidados do Mês
+  // KPIs Gerenciais Consolidados do Mês com Decomposição Contábil Autoexplicativa
   const kpisMes = useMemo(() => {
     let faturamentoTotal = 0
     let totalDinheiro = 0
@@ -549,12 +549,17 @@ export function CashierDashboard() {
 
     const totalEletronico = Math.max(0, faturamentoTotal - totalDinheiro)
     const saldoEspecie = summary.saldoFisicoAtualMes || (summary.totalAberturaInicial + totalDinheiro - totalSangrias)
+    const pctEletronico = faturamentoTotal > 0 ? ((totalEletronico / faturamentoTotal) * 100).toFixed(1) : '0'
+    const pctDinheiro = faturamentoTotal > 0 ? ((totalDinheiro / faturamentoTotal) * 100).toFixed(1) : '0'
 
     return {
       faturamentoTotal,
       totalDinheiro,
       totalEletronico,
+      totalSangrias,
       saldoEspecie,
+      pctEletronico,
+      pctDinheiro,
       totalCaixas: sessionsFiltradas.length,
       caixasAbertos,
       caixasFechados,
@@ -596,13 +601,13 @@ export function CashierDashboard() {
         </div>
       </div>
 
-      {/* Régua de 4 Cards Gerenciais do Mês (KPIs) */}
+      {/* Régua de 4 Cards Gerenciais Autoexplicativos (Decomposição Contábil: Total = Digital + Dinheiro -> Saldo Gaveta) */}
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* KPI 1: Faturamento Total */}
+        {/* Card 1: Faturamento Bruto Total (100%) */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Faturamento ({nomesMeses[mesVisualizacao]})
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              1. Faturamento Total ({nomesMeses[mesVisualizacao]})
             </span>
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
               <Wallet size={15} />
@@ -611,65 +616,68 @@ export function CashierDashboard() {
           <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
             R$ {kpisMes.faturamentoTotal.toFixed(2)}
           </p>
-          <span className="mt-1 block text-[11px] font-semibold text-slate-400">
-            Total bruto faturado
-          </span>
-        </div>
-
-        {/* KPI 2: Dinheiro Físico / Saldo Espécie (com clique para auditoria) */}
-        <div
-          onClick={() => setModalAuditOpen(true)}
-          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-50/60 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-emerald-900/50 dark:bg-slate-900/90 dark:hover:border-emerald-500/60"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-              Dinheiro Físico em Caixa
-            </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-              <Banknote size={15} />
-            </div>
+          <div className="mt-1 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-1 dark:border-slate-800">
+            <span>⚡ {kpisMes.pctEletronico}% Digital</span>
+            <span>•</span>
+            <span>💵 {kpisMes.pctDinheiro}% Dinheiro</span>
           </div>
-          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-300">
-            R$ {kpisMes.saldoEspecie.toFixed(2)}
-          </p>
-          <span className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-700 transition-transform group-hover:translate-x-0.5 dark:text-emerald-400">
-            <Eye size={12} /> Auditar dinheiro físico ➔
-          </span>
         </div>
 
-        {/* KPI 3: Vendas Digitais (PIX e Cartões) */}
+        {/* Card 2: Vendas Digitais (Bancos / Maquininhas) */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Vendas Digitais (Bancos)
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              2. Vendas Digitais (Bancos)
             </span>
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
               <Zap size={15} />
             </div>
           </div>
-          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-teal-600 dark:text-teal-400">
             R$ {kpisMes.totalEletronico.toFixed(2)}
           </p>
-          <span className="mt-1 block text-[11px] font-semibold text-slate-400">
-            PIX, Cartões e Vouchers
+          <span className="mt-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-1 dark:border-slate-800">
+            PIX, Débito, Crédito e Vouchers
           </span>
         </div>
 
-        {/* KPI 4: Status Operacional do Mês */}
+        {/* Card 3: Vendas em Dinheiro Vivo (Recebido em Espécie) */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Fechamentos do Mês
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              3. Vendas em Dinheiro Vivo
             </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+              <Banknote size={15} />
+            </div>
+          </div>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+            R$ {kpisMes.totalDinheiro.toFixed(2)}
+          </p>
+          <span className="mt-1 block text-[11px] font-semibold text-red-500 dark:text-red-400 border-t border-slate-100 pt-1 dark:border-slate-800">
+            -R$ {kpisMes.totalSangrias.toFixed(2)} sangrias realizadas
+          </span>
+        </div>
+
+        {/* Card 4: Saldo Físico Atual em Caixa (Após Sangrias) */}
+        <div
+          onClick={() => setModalAuditOpen(true)}
+          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-50/70 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-emerald-900/50 dark:bg-slate-900/90 dark:hover:border-emerald-500/60"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              4. Saldo Físico na Gaveta
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={15} />
             </div>
           </div>
-          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-            {kpisMes.totalCaixas} <span className="text-sm font-bold text-slate-400">caixas</span>
+          <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-300">
+            R$ {kpisMes.saldoEspecie.toFixed(2)}
           </p>
-          <span className="mt-1 block text-[11px] font-bold text-slate-500 dark:text-slate-400">
-            <strong className="text-emerald-600 dark:text-emerald-400">{kpisMes.caixasFechados}</strong> conferidos • <strong className="text-blue-600 dark:text-blue-400">{kpisMes.caixasAbertos}</strong> abertos
+          <span className="mt-1 flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border-t border-emerald-200/60 pt-1 dark:border-slate-800">
+            <span>(Abertura + Vendas - Sangrias)</span>
+            <span className="flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform"><Eye size={12} /> Auditar ➔</span>
           </span>
         </div>
       </div>
