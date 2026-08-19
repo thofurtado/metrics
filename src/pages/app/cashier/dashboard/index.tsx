@@ -753,7 +753,7 @@ export function CashierDashboard() {
                   </div>
                 </div>
 
-                {/* VISUALIZAÇÃO EM GRID DE CARDS COMPACTA & OTIMIZADA (3 a 4 Colunas, Letras Ampliadas) */}
+                {/* VISUALIZAÇÃO EM GRID DE CARDS COM EQUAÇÃO E LIQUIDEZ (GAVETA + PIX) */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {week.sessions.map((s) => {
@@ -762,6 +762,8 @@ export function CashierDashboard() {
                       let totalSuprimentos = 0
                       let totalCaixinhas = 0
                       let totalEntradasSemSaida = 0
+                      let totalDinheiro = 0
+                      let totalPix = 0
 
                       const totalsByMethod = {}
 
@@ -782,6 +784,10 @@ export function CashierDashboard() {
                           const method = e.payment_method || 'Dinheiro'
                           totalsByMethod[method] =
                             (totalsByMethod[method] || 0) + amt
+
+                          const mNorm = method.toLowerCase()
+                          if (mNorm.includes('dinheiro')) totalDinheiro += amt
+                          else if (mNorm.includes('pix')) totalPix += amt
                         } else if (e.type === 'SANGRIA_DESTINO') {
                           const dest = e.bank || 'Caixa Central'
                           totalsByMethod[dest] =
@@ -795,6 +801,12 @@ export function CashierDashboard() {
                         totalEntradasSemSaida +
                         totalSuprimentos -
                         totalSangrias
+                      const saldoGaveta =
+                        valorAbertura +
+                        totalDinheiro +
+                        totalSuprimentos -
+                        totalSangrias
+
                       const activeMethods = Object.entries(totalsByMethod)
                         .filter(([_, val]) => val > 0)
                         .sort(
@@ -829,47 +841,72 @@ export function CashierDashboard() {
                               {renderStatusBadge(s.status)}
                             </div>
 
-                            {/* Bloco Central: Saldo Final e Linhas Financeiras Compactas */}
-                            <div className="my-2.5 rounded-xl border border-slate-100 bg-slate-50/90 p-3 dark:border-slate-800/80 dark:bg-slate-950/80">
+                            {/* Bloco Central: Total Bruto + Liquidez Imediata (Gaveta + PIX) + Equação */}
+                            <div className="my-2.5 space-y-2 rounded-xl border border-slate-100 bg-slate-50/90 p-3 dark:border-slate-800/80 dark:bg-slate-950/80">
+                              {/* Total do Turno */}
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                  Saldo Final
+                                  Total do Turno
                                 </span>
                                 <span className="font-mono text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">
                                   R$ {valorFinalCaixa.toFixed(2)}
                                 </span>
                               </div>
 
-                              {/* Linhas de Abertura / Entradas / Sangrias com Números Maiores */}
-                              <div className="mt-2 grid grid-cols-3 gap-1.5 border-t border-slate-200/60 pt-2 dark:border-slate-800/60">
-                                <div>
-                                  <span className="block text-[10px] font-black uppercase text-slate-400">
-                                    Abertura
+                              {/* Linha de Liquidez Imediata (Gaveta + PIX) */}
+                              <div className="grid grid-cols-2 gap-1.5 border-t border-slate-200/60 pt-2 dark:border-slate-800/60">
+                                <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1">
+                                  <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">
+                                    <span>💵</span> Gaveta
                                   </span>
-                                  <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">
-                                    R$ {valorAbertura.toFixed(2)}
+                                  <span className="font-mono text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-300">
+                                    R$ {saldoGaveta.toFixed(2)}
                                   </span>
                                 </div>
-                                <div>
-                                  <span className="block text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
-                                    Entradas
+
+                                <div className="flex items-center justify-between rounded-lg border border-teal-500/25 bg-teal-500/10 px-2 py-1">
+                                  <span className="flex items-center gap-1 text-[10px] font-black uppercase text-teal-700 dark:text-teal-300">
+                                    <span>⚡</span> PIX
                                   </span>
-                                  <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                  <span className="font-mono text-xs sm:text-sm font-black text-teal-700 dark:text-teal-300">
+                                    R$ {totalPix.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Equação Visual do Caixa (Abertura + Entradas - Sangrias = Total) */}
+                              <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5 text-center text-[10px] dark:border-slate-800/60">
+                                <div>
+                                  <span className="block font-bold text-slate-400">Abertura</span>
+                                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    {valorAbertura.toFixed(2)}
+                                  </span>
+                                </div>
+                                <span className="font-black text-emerald-500 text-xs">+</span>
+                                <div>
+                                  <span className="block font-bold text-emerald-600 dark:text-emerald-400">Entradas</span>
+                                  <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                     +{totalEntradasSemSaida.toFixed(2)}
                                   </span>
                                 </div>
+                                <span className="font-black text-red-500 text-xs">-</span>
                                 <div>
-                                  <span className="block text-[10px] font-black uppercase text-red-500 dark:text-red-400">
-                                    Sangrias
+                                  <span className="block font-bold text-red-500 dark:text-red-400">Sangrias</span>
+                                  <span className="font-mono text-xs font-bold text-red-500 dark:text-red-400">
+                                    {totalSangrias.toFixed(2)}
                                   </span>
-                                  <span className="font-mono text-sm font-black text-red-500 dark:text-red-400">
-                                    {totalSangrias > 0 ? `-${totalSangrias.toFixed(2)}` : '0.00'}
+                                </div>
+                                <span className="font-black text-blue-500 text-xs">=</span>
+                                <div>
+                                  <span className="block font-bold text-blue-600 dark:text-blue-400">Total</span>
+                                  <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
+                                    {valorFinalCaixa.toFixed(2)}
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Formas de Pagamento em 2 Colunas Compactas (Ícone + Valor Grande, sem nome longo) */}
+                            {/* Formas de Pagamento em 2 Colunas */}
                             {activeMethods.length > 0 && (
                               <div className="grid grid-cols-2 gap-1.5">
                                 {activeMethods.map(([method, total]) => {
@@ -937,6 +974,8 @@ export function CashierDashboard() {
                       let totalSuprimentos = 0
                       let totalCaixinhas = 0
                       let totalEntradasSemSaida = 0
+                      let totalDinheiro = 0
+                      let totalPix = 0
 
                       const totalsByMethod = {}
 
@@ -953,6 +992,10 @@ export function CashierDashboard() {
                           const method = e.payment_method || 'Dinheiro'
                           totalsByMethod[method] =
                             (totalsByMethod[method] || 0) + amt
+
+                          const mNorm = method.toLowerCase()
+                          if (mNorm.includes('dinheiro')) totalDinheiro += amt
+                          else if (mNorm.includes('pix')) totalPix += amt
                         } else if (e.type === 'SANGRIA_DESTINO') {
                           const dest = e.bank || 'Caixa Central'
                           totalsByMethod[dest] =
@@ -966,6 +1009,12 @@ export function CashierDashboard() {
                         totalEntradasSemSaida +
                         totalSuprimentos -
                         totalSangrias
+                      const saldoGaveta =
+                        valorAbertura +
+                        totalDinheiro +
+                        totalSuprimentos -
+                        totalSangrias
+
                       const activeMethods = Object.entries(totalsByMethod)
                         .filter(([_, val]) => val > 0)
                         .sort(
@@ -995,29 +1044,29 @@ export function CashierDashboard() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-black uppercase text-slate-400">
-                                  Abertura:
+                              <div className="flex items-center gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5">
+                                <span className="text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-300">
+                                  💵 Gaveta:
                                 </span>
-                                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                                  R$ {valorAbertura.toFixed(2)}
+                                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                                  R$ {saldoGaveta.toFixed(2)}
                                 </span>
                               </div>
 
-                              {totalSangrias > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[9px] font-black uppercase text-red-500">
-                                    Sangrias:
+                              {totalPix > 0 && (
+                                <div className="flex items-center gap-1 rounded-lg border border-teal-500/25 bg-teal-500/10 px-2 py-0.5">
+                                  <span className="text-[9px] font-black uppercase text-teal-700 dark:text-teal-300">
+                                    ⚡ PIX:
                                   </span>
-                                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
-                                    -R$ {totalSangrias.toFixed(2)}
+                                  <span className="font-mono font-bold text-teal-700 dark:text-teal-300">
+                                    R$ {totalPix.toFixed(2)}
                                   </span>
                                 </div>
                               )}
 
                               <div className="flex items-center gap-1">
                                 <span className="text-[9px] font-black uppercase text-blue-600 dark:text-blue-400">
-                                  Final em Caixa:
+                                  Total:
                                 </span>
                                 <span className="font-mono text-sm font-black text-blue-600 dark:text-blue-400">
                                   R$ {valorFinalCaixa.toFixed(2)}
