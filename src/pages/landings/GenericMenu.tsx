@@ -66,8 +66,19 @@ const DAYS_OF_WEEK = [
 ]
 
 async function fetchMenu() {
-  const response = await api.get<{ products: Product[] }>('/public/menu')
-  return response.data.products
+  try {
+    const response = await api.get<any>('/public/menu')
+    if (Array.isArray(response.data)) {
+      return response.data
+    }
+    if (response.data && Array.isArray(response.data.products)) {
+      return response.data.products
+    }
+    return []
+  } catch (error) {
+    console.error('Erro ao buscar cardápio público:', error)
+    return []
+  }
 }
 
 const formatCurrency = (value: number) => {
@@ -515,11 +526,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const storeStatus = useMemo(() => checkIsOpen(profile), [profile])
 
-  const categories = useMemo(() => {
-    if (!products) return []
-    const cats = Array.from(new Set(products.map((p) => p.category || 'Geral')))
-    return ['All', ...cats]
+  const rawProducts = useMemo(() => {
+    return Array.isArray(products) ? products : []
   }, [products])
+
+  const categories = useMemo(() => {
+    if (!rawProducts.length) return ['All']
+    const cats = Array.from(new Set(rawProducts.map((p) => p.category || 'Geral')))
+    return ['All', ...cats]
+  }, [rawProducts])
 
   useEffect(() => {
     if (categories.length > 1 && activeCategory === 'All') {
@@ -528,14 +543,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }, [categories, activeCategory])
 
   const filteredProducts = useMemo(() => {
-    if (!products) return []
-    let filtered = products
+    let filtered = rawProducts
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
+          (p.name && p.name.toLowerCase().includes(q)) ||
           (p.description && p.description.toLowerCase().includes(q)),
       )
     } else if (activeCategory !== 'All') {
@@ -544,7 +558,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       )
     }
     return filtered
-  }, [products, searchQuery, activeCategory])
+  }, [rawProducts, searchQuery, activeCategory])
 
   const groupedProducts = useMemo(() => {
     return filteredProducts.reduce(

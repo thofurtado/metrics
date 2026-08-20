@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 
 import { api } from '@/lib/axios'
@@ -16,8 +16,24 @@ interface TenantInfo {
   landingPageSlug: string | null
 }
 
+interface CompanyProfile {
+  tradeName: string
+  primaryColor: string
+  secondaryColor: string
+  backgroundColor: string
+  logo_url: string | null
+  banner_url: string | null
+  isOpenManual: boolean
+  businessHours: any[]
+}
+
 async function fetchTenantInfo() {
   const response = await api.get<TenantInfo>('/public/tenant-info')
+  return response.data
+}
+
+async function fetchCompanyProfile() {
+  const response = await api.get<CompanyProfile>('/public/profile')
   return response.data
 }
 
@@ -28,16 +44,33 @@ export function LandingInterceptor() {
 
   const {
     data: tenant,
-    isLoading,
+    isLoading: isLoadingTenant,
     error,
   } = useQuery({
     queryKey: ['tenant-landing-info'],
     queryFn: fetchTenantInfo,
     retry: false,
-    staleTime: Infinity, // Cache the landing configuration
+    staleTime: Infinity,
   })
 
-  if (isLoading) {
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['company-profile'],
+    queryFn: fetchCompanyProfile,
+    retry: false,
+    staleTime: Infinity,
+  })
+
+  useEffect(() => {
+    const primary = profile?.primaryColor || '#475569'
+    const secondary = profile?.secondaryColor || '#ffffff'
+    const background = profile?.backgroundColor || '#f8fafc'
+
+    document.documentElement.style.setProperty('--primary-color', primary)
+    document.documentElement.style.setProperty('--secondary-color', secondary)
+    document.documentElement.style.setProperty('--background-color', background)
+  }, [profile])
+
+  if (isLoadingTenant || isLoadingProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <span className="animate-pulse text-sm text-muted-foreground">
@@ -61,7 +94,7 @@ export function LandingInterceptor() {
           </div>
         }
       >
-        <GenericMenu tenantName={tenant.name} />
+        <GenericMenu tenantName={tenant.name} profile={profile} />
       </Suspense>
     )
   }
