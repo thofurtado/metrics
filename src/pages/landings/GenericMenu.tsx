@@ -32,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
+import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
 
 interface GenericMenuProps {
   tenantName: string
@@ -288,6 +289,8 @@ const DynamicHero = ({ profile }: { profile: any }) => {
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
+  const [customizingProduct, setCustomizingProduct] = useState<ProductItem | null>(null)
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<number | null>(null)
 
@@ -601,7 +604,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + (item.unitPrice || item.product.price) * item.quantity,
     0,
   )
   const deliveryFee =
@@ -1093,7 +1096,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                     {cart[product.id].quantity}
                                   </span>
                                   <button
-                                    onClick={() => handleAddToCart(product)}
+                                    onClick={() => handleProductClick(product)}
                                     className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
                                     style={{
                                       backgroundColor: 'var(--primary-color)',
@@ -1198,6 +1201,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           </>
         )}
       </AnimatePresence>
+
+      <ItemCustomizerDialog
+        open={isCustomizerOpen}
+        onOpenChange={setIsCustomizerOpen}
+        product={customizingProduct}
+        allProducts={products || []}
+        onConfirm={handleConfirmCustomizedItem}
+        primaryColor="var(--primary-color, #10B981)"
+      />
 
       {/* Modal de Informações da Loja */}
       <Dialog open={isStoreInfoOpen} onOpenChange={setIsStoreInfoOpen}>
