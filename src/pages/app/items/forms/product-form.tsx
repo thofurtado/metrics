@@ -1,26 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Hammer, Plus, ScanBarcode, Trash } from 'lucide-react'
+import { Layers, Plus, ScanBarcode, Sliders, Trash, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { checkProductCode } from '@/api/check-product-code'
+import { getComplementGroups, syncProductComplementGroups } from '@/api/complements'
 import { createCategory } from '@/api/create-category'
 import { createProduct } from '@/api/create-product'
-import { getSubcategories } from '@/api/subcategories'
-import { getComplementGroups, syncProductComplementGroups } from '@/api/complements'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Zap, Sliders, Layers } from 'lucide-react'
 import { getCategories } from '@/api/get-categories'
 import { getNextProductId } from '@/api/get-next-product-id'
-import { getSupplies } from '@/api/get-supplies'
+import { getSubcategories } from '@/api/subcategories'
 import { updateItem } from '@/api/update-item'
 import { uploadFileProduct } from '@/api/upload-file'
 import { FileUpload } from '@/components/file-upload'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -55,7 +53,6 @@ const productSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   subcategory_id: z.string().optional(),
-  is_priority: z.boolean().default(false),
 
   // Financial
   cost: z.coerce.number().min(0).optional().default(0),
@@ -70,6 +67,7 @@ const productSchema = z.object({
   ncm: z.string().regex(/^\d*$/, 'Apenas números').optional(),
 
   active: z.boolean().default(true),
+  is_priority: z.boolean().default(false),
 
   display_id: z.preprocess((val) => {
     if (!val || val === '' || val === 'Auto') return undefined
@@ -77,17 +75,7 @@ const productSchema = z.object({
     return isNaN(parsed) ? undefined : parsed
   }, z.number().optional()),
 
-  // Composition
-  is_composite: z.boolean().default(false),
   measureUnit: z.enum(['UNITARY', 'FRACTIONAL']).default('UNITARY'),
-  compositions: z
-    .array(
-      z.object({
-        supply_id: z.string().min(1, 'Selecione um insumo'),
-        quantity: z.coerce.number().min(0.0001, 'Qtd deve ser maior que 0'),
-      }),
-    )
-    .optional(),
 })
 
 type ProductSchema = z.infer<typeof productSchema>
@@ -109,12 +97,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     initialData?.complementGroups?.map((cg: any) => cg.group_id || cg.group?.id) || []
   )
 
-  const selectedCategory = form.watch('category')
-
-  const { data: subcategoriesData } = useQuery({
-    queryKey: ['subcategories', selectedCategory],
-    queryFn: () => getSubcategories(selectedCategory || undefined),
-    enabled: !!selectedCategory,
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
   })
 
   const { data: complementGroupsData } = useQuery({
@@ -122,9 +107,35 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     queryFn: getComplementGroups,
   })
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: getCategories,
+  const form = useForm<ProductSchema>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: initialData?.name ?? '',
+      description: initialData?.description ?? '',
+      category:
+        initialData?.category?.id ??
+        initialData?.category_id ??
+        (typeof initialData?.category === 'string' ? initialData.category : ''),
+      subcategory_id: initialData?.subcategory_id ?? initialData?.subcategory?.id ?? '',
+      cost: initialData?.cost ?? 0,
+      price: initialData?.price ?? 0,
+      stock: initialData?.stock ?? 0,
+      min_stock: initialData?.min_stock ?? 0,
+      barcode: initialData?.barcode ?? '',
+      ncm: initialData?.ncm ?? '',
+      active: initialData?.active ?? true,
+      is_priority: initialData?.is_priority ?? false,
+      display_id: initialData?.display_id ?? undefined,
+      measureUnit: initialData?.measureUnit ?? 'UNITARY',
+    },
+  })
+
+  const selectedCategory = form.watch('category')
+
+  const { data: subcategoriesData } = useQuery({
+    queryKey: ['subcategories', selectedCategory],
+    queryFn: () => getSubcategories(selectedCategory || undefined),
+    enabled: !!selectedCategory,
   })
 
   const { mutateAsync: createCategoryFn } = useMutation({
@@ -136,81 +147,17 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       toast.success('Categoria criada!')
       if (data?.category?.id) {
         form.setValue('category', data.category.id)
-      } else if (data?.category?.name) {
-        form.setValue('category', data.category.name)
       } else if (data?.id) {
         form.setValue('category', data.id)
       }
     },
-    onError: () => {
-      toast.error('Erro ao criar categoria.')
-    },
-  })
-
-  async function handleCreateCategory() {
-    if (!newCategoryName.trim()) return
-    await createCategoryFn({ name: newCategoryName })
-  }
-
-  const form = useForm<ProductSchema>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: initialData?.name ?? '',
-      description: initialData?.description ?? '',
-      category:
-        initialData?.category?.id ??
-        initialData?.category_id ??
-        (typeof initialData?.category === 'string' ? initialData.category : ''),
-
-      cost:
-        initialData?.product && typeof initialData.product.cost === 'number'
-          ? initialData.product.cost
-          : 0,
-      price: initialData?.product?.price ?? 0,
-      stock: initialData?.product?.stock ?? 0,
-      min_stock: initialData?.product?.min_stock ?? 0,
-
-      barcode: initialData?.product?.barcode ?? '',
-      ncm: initialData?.product?.ncm ?? '',
-
-      display_id: initialData?.product?.display_id ?? undefined,
-      active: initialData?.active ?? true,
-      measureUnit: initialData?.product?.measureUnit ?? 'UNITARY',
-
-      is_composite: Boolean(initialData?.product?.is_composite),
-      compositions:
-        initialData?.product?.compositions?.map((c: any) => ({
-          supply_id: c.supply.id,
-          quantity: c.quantity,
-        })) ?? [],
-    },
-  })
-
-  const isComposite = form.watch('is_composite')
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'compositions',
-  })
-
-  const { data: suppliesData } = useQuery({
-    queryKey: ['supplies-list'],
-    queryFn: ({ signal }) => getSupplies({ signal, perPage: 100 }),
-    enabled: isComposite, // Only fetch if composite tab is needed/active
+    onError: () => toast.error('Erro ao criar categoria.'),
   })
 
   const { mutateAsync: createProductFn } = useMutation({
     mutationFn: createProduct,
-    onSuccess: async (res) => {
-      if (productImage && res?.data?.id) {
-        try {
-          await uploadFileProduct(res.data.id, productImage)
-        } catch (e) {
-          toast.error('Produto criado, mas erro ao salvar imagem.')
-        }
-      }
-      form.reset()
-      setProductImage(null)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['items'] })
       onSuccess?.()
     },
@@ -218,115 +165,40 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
   const { mutateAsync: updateItemFn } = useMutation({
     mutationFn: updateItem,
-    onSuccess: async () => {
-      if (productImage && initialData?.id) {
-        try {
-          await uploadFileProduct(initialData.id, productImage)
-        } catch (e) {
-          toast.error('Produto atualizado, mas erro ao salvar imagem.')
-        }
-      }
-      form.reset()
-      setProductImage(null)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['items'] })
       onSuccess?.()
     },
   })
 
-  // Reset form when initialData changes to ensure fresh state for edit/new toggles
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        name: initialData.name,
-        description: initialData.description ?? '',
-        category:
-          initialData.category?.id ??
-          initialData.category_id ??
-          (typeof initialData.category === 'string'
-            ? initialData.category
-            : ''),
-        cost: initialData.product?.cost ?? 0,
-        price: initialData.product?.price ?? 0,
-        stock: initialData.product?.stock ?? 0,
-        min_stock: initialData.product?.min_stock ?? 0,
-        barcode: initialData.product?.barcode ?? '',
-        ncm: initialData.product?.ncm ?? '',
-        display_id: initialData.product?.display_id,
-        active: initialData.active ?? true,
-        measureUnit: initialData.product?.measureUnit ?? 'UNITARY',
-        is_composite: Boolean(initialData.product?.is_composite),
-        compositions:
-          initialData.product?.compositions?.map((c: any) => ({
-            supply_id: c.supply.id,
-            quantity: c.quantity,
-          })) ?? [],
-      })
+    const cost = form.getValues('cost') || 0
+    const price = form.getValues('price') || 0
+    const calculatedProfit = price - cost
+    setProfit(calculatedProfit)
+    setMargin(cost > 0 ? (calculatedProfit / cost) * 100 : 0)
+  }, [form])
 
-      // Calc initial profit/margin
-      const cost = initialData.product?.cost ?? 0
-      const price = initialData.product?.price ?? 0
-      const profit = price - cost
-      setProfit(profit)
-      setMargin(cost > 0 ? (profit / cost) * 100 : 0)
-    } else {
-      form.reset({
-        name: '',
-        description: '',
-        category: '',
-        cost: 0,
-        price: 0,
-        stock: 0,
-        min_stock: 0,
-        barcode: '',
-        ncm: '',
-        display_id: undefined,
-        active: true,
-        measureUnit: 'UNITARY',
-        is_composite: false,
-        compositions: [],
-      })
-      setProfit(0)
-      setMargin(0)
-    }
-    setProductImage(null)
-  }, [initialData, form])
-
-  // Fetch next ID only in Create mode
-  const { data: nextIdData } = useQuery({
-    queryKey: ['next-product-id'],
-    queryFn: getNextProductId,
-    enabled: !isEdit,
-  })
-
-  // Set next ID if available and field is empty
-  useEffect(() => {
-    if (!isEdit && nextIdData?.nextId && !form.getValues('display_id')) {
-      form.setValue('display_id', nextIdData.nextId)
-    }
-  }, [nextIdData, isEdit, form])
+  async function handleCreateCategory() {
+    if (!newCategoryName.trim()) return
+    await createCategoryFn({ name: newCategoryName })
+  }
 
   async function onSubmit(data: ProductSchema) {
-    if (
-      data.is_composite &&
-      (!data.compositions || data.compositions.length === 0)
-    ) {
-      toast.error('Produtos compostos devem ter pelo menos um insumo.')
-      return
-    }
-
-    const finalCost = data.is_composite ? calculatedCost : data.cost
-
     try {
+      let savedProductId = initialData?.id
       if (isEdit) {
         await updateItemFn({
           id: initialData.id,
           type: 'PRODUCT',
           ...data,
-          cost: finalCost,
+          subcategory_id: data.subcategory_id || null,
+          is_priority: data.is_priority,
         } as any)
         toast.success('Produto atualizado!')
       } else {
-        await createProductFn({
+        const createRes = await createProductFn({
           name: data.name,
           description: data.description,
           price: data.price || 0,
@@ -335,33 +207,28 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           barcode: data.barcode,
           ncm: data.ncm,
           category: data.category,
+          subcategory_id: data.subcategory_id || null,
+          is_priority: data.is_priority,
           active: data.active,
           display_id: data.display_id,
           measureUnit: data.measureUnit,
-          is_composite: data.is_composite,
-          compositions:
-            data.is_composite && data.compositions
-              ? data.compositions
-              : undefined,
-          cost: finalCost,
+          cost: data.cost || 0,
         })
+        savedProductId = createRes?.data?.product?.id
         toast.success('Produto cadastrado!')
       }
-    } catch (err) {
+
+      if (savedProductId && selectedComplementGroupIds) {
+        try {
+          await syncProductComplementGroups(savedProductId, selectedComplementGroupIds)
+        } catch (syncErr) {
+          console.error('Erro ao sincronizar adicionais:', syncErr)
+        }
+      }
+    } catch {
       toast.error('Erro ao salvar produto.')
     }
   }
-
-  // Calculate dynamic cost
-  const calculatedCost = (form.watch('compositions') || []).reduce(
-    (acc, curr) => {
-      const supply = suppliesData?.data.supplies.find(
-        (s) => s.id === curr.supply_id,
-      )
-      return acc + (supply?.cost ?? 0) * (curr.quantity ?? 0)
-    },
-    0,
-  )
 
   return (
     <>
@@ -371,12 +238,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           onSubmit={form.handleSubmit(onSubmit)}
           className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden text-left"
         >
-          {/* SCROLLABLE CONTENT */}
-          <div className="flex-1 space-y-8 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8">
-            {/* --- HEADER: Basic Info --- */}
+          <div className="flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8">
+            {/* Header: Nome, Prioridade KDS e Status */}
             <div className="grid grid-cols-12 gap-6">
-              {/* Name Field - Hero */}
-              <div className="col-span-12 space-y-2 sm:col-span-8">
+              <div className="col-span-12 space-y-2 sm:col-span-7">
                 <FormField
                   control={form.control}
                   name="name"
@@ -387,7 +252,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Ex: Torneira Esfera 1/2"
+                          placeholder="Ex: Coca-Cola Lata 350ml, Cerveja Heineken..."
                           {...field}
                           className="h-12 text-lg font-medium"
                           autoFocus
@@ -399,31 +264,49 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 />
               </div>
 
-              {/* Active Switch - Only on Edit */}
-              {isEdit && (
-                <div className="col-span-12 flex items-end pb-1 sm:col-span-4">
+              {/* Switches de KDS e Ativo */}
+              <div className="col-span-12 flex flex-wrap items-center gap-3 sm:col-span-5">
+                <FormField
+                  control={form.control}
+                  name="is_priority"
+                  render={({ field }) => (
+                    <FormItem className="flex h-12 flex-1 items-center space-x-2.5 space-y-0 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 dark:border-amber-900/30">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="cursor-pointer text-xs font-bold text-amber-700 dark:text-amber-300">
+                        ⚡ Prioridade KDS
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                {isEdit && (
                   <FormField
                     control={form.control}
                     name="active"
                     render={({ field }) => (
-                      <FormItem className="flex h-12 w-full items-center space-x-3 space-y-0 rounded-xl border bg-muted/20 p-3">
+                      <FormItem className="flex h-12 flex-1 items-center space-x-2.5 space-y-0 rounded-xl border bg-muted/20 p-3">
                         <FormControl>
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormLabel className="cursor-pointer text-sm font-medium">
-                          Produto Ativo
+                        <FormLabel className="cursor-pointer text-xs font-medium">
+                          Ativo
                         </FormLabel>
                       </FormItem>
                     )}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* --- DETAILS: Category, Unit, Barcode, ID --- */}
+            {/* Categoria, Subcategoria e Unidade */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sm:col-span-1">
                 <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -436,32 +319,23 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     render={({ field }) => (
                       <FormItem className="flex-1 space-y-0">
                         <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          onOpenChange={(isOpen) => {
-                            if (isOpen)
-                              requestAnimationFrame(() =>
-                                (document.activeElement as HTMLElement)?.blur(),
-                              )
+                          onValueChange={(val) => {
+                            field.onChange(val)
+                            form.setValue('subcategory_id', '')
                           }}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger className="h-10">
                               <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent
-                            withPortal={false}
-                            onCloseAutoFocus={(e) => e.preventDefault()}
-                            onPointerDownOutside={(e) => e.stopPropagation()}
-                          >
-                            {(categoriesData?.categories || []).map(
-                              (cat: any) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ),
-                            )}
+                          <SelectContent withPortal={false}>
+                            {(categoriesData?.categories || []).map((cat: any) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -481,260 +355,80 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="measureUnit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      Unidade de Medida
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 border-amber-500/30 focus:ring-amber-500/20">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="UNITARY">Unitário</SelectItem>
-                        <SelectItem value="FRACTIONAL">
-                          Fracionado (ex: kg, meia-pizza)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="barcode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      <ScanBarcode className="h-3 w-3" /> Código de Barras
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="EAN / GTIN"
-                        {...field}
-                        className="h-10 font-mono text-sm"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="display_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      ID Interno
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder={
-                          isEdit
-                            ? 'ID'
-                            : nextIdData?.nextId?.toString() ?? 'Automático'
-                        }
-                        {...field}
-                        value={field.value ?? ''}
-                        className="h-10 bg-muted/50 font-mono text-sm"
-                        onBlur={async (e) => {
-                          field.onBlur()
-                          const val = parseInt(e.target.value)
-                          if (val && val !== initialData?.product?.display_id) {
-                            const check = await checkProductCode({ code: val })
-                            if (!check.available) {
-                              form.setError('display_id', {
-                                message: 'ID já em uso',
-                              })
-                            } else {
-                              form.clearErrors('display_id')
-                            }
-                          }
-                        }}
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* --- GROUP: PRICING (HERO SECTION) --- */}
-            <div className="space-y-6 rounded-2xl border bg-muted/10 p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="h-6 w-1 rounded-full bg-primary"></div>
-                <h4 className="text-lg font-bold tracking-tight">
-                  Formação de Preço
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-                {/* Cost - Hero Input */}
+              <div className="sm:col-span-1">
+                <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  Subcategoria
+                </FormLabel>
                 <FormField
                   control={form.control}
-                  name="cost"
+                  name="subcategory_id"
                   render={({ field }) => (
-                    <FormItem className="sm:col-span-1">
-                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                        Custo Unitário
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">
-                            R$
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            inputMode="decimal"
-                            {...field}
-                            value={
-                              isComposite
-                                ? calculatedCost.toFixed(2)
-                                : field.value
-                            }
-                            disabled={isComposite}
-                            className={cn(
-                              'h-12 pl-10 text-lg font-bold tabular-nums',
-                              isComposite && 'bg-muted text-muted-foreground',
-                            )}
-                            onChange={(e) => {
-                              field.onChange(e)
-                              const newCost = parseFloat(e.target.value) || 0
-                              const currentPrice = form.getValues('price') || 0
-                              const profit = currentPrice - newCost
-                              const margin =
-                                newCost > 0 ? (profit / newCost) * 100 : 0
-                              setProfit(profit)
-                              setMargin(margin)
-                            }}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </div>
-                      </FormControl>
-                      {isComposite && (
-                        <FormMessage className="text-[10px]">
-                          Calculado via composição
-                        </FormMessage>
-                      )}
+                    <FormItem className="space-y-0">
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedCategory || (subcategoriesData?.subcategories || []).length === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder={!selectedCategory ? "Escolha a categoria" : "Selecione subcategoria..."} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent withPortal={false}>
+                          {(subcategoriesData?.subcategories || []).map((sub: any) => (
+                            <SelectItem key={sub.id} value={sub.id}>
+                              {sub.name} {sub.accepts_fractions ? `(Até ${sub.max_fractions} Sabores)` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                {/* Profit & Margin Indicators */}
-                <div className="flex gap-4 sm:col-span-2">
-                  <div className="flex-1 space-y-2">
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide text-emerald-600/70">
-                      Lucro Estimado
-                    </FormLabel>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-emerald-600">
-                        R$
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={profit.toFixed(2)}
-                        className="h-12 border-emerald-100 bg-emerald-50/50 pl-10 text-lg font-semibold text-emerald-700"
-                        onChange={(e) => {
-                          const newProfit = parseFloat(e.target.value) || 0
-                          setProfit(newProfit)
-                          const currentCost = isComposite
-                            ? calculatedCost
-                            : form.getValues('cost') || 0
-                          const newPrice = currentCost + newProfit
-                          form.setValue(
-                            'price',
-                            parseFloat(newPrice.toFixed(2)),
-                          )
-                          const newMargin =
-                            currentCost > 0
-                              ? (newProfit / currentCost) * 100
-                              : 0
-                          setMargin(newMargin)
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide text-blue-600/70">
-                      Margem %
-                    </FormLabel>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={margin.toFixed(2)}
-                        className="h-12 border-blue-100 bg-blue-50/50 pr-8 text-right text-lg font-semibold text-blue-700"
-                        onChange={(e) => {
-                          const newMargin = parseFloat(e.target.value) || 0
-                          setMargin(newMargin)
-                          const currentCost = isComposite
-                            ? calculatedCost
-                            : form.getValues('cost') || 0
-                          const newProfit = currentCost * (newMargin / 100)
-                          setProfit(newProfit)
-                          const newPrice = currentCost + newProfit
-                          form.setValue(
-                            'price',
-                            parseFloat(newPrice.toFixed(2)),
-                          )
-                        }}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-blue-600">
-                        %
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sale Price - MAIN HERO */}
+              <div className="sm:col-span-1">
                 <FormField
                   control={form.control}
-                  name="price"
+                  name="measureUnit"
                   render={({ field }) => (
-                    <FormItem className="sm:col-span-1">
-                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-primary">
-                        Preço de Venda
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        Unidade de Medida
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent withPortal={false}>
+                          <SelectItem value="UNITARY">Unidade (UN)</SelectItem>
+                          <SelectItem value="FRACTIONAL">Fracionado (KG/L/M)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="sm:col-span-1">
+                <FormField
+                  control={form.control}
+                  name="barcode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        Código de Barras
                       </FormLabel>
                       <FormControl>
-                        <div className="relative rounded-md shadow-sm">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-primary">
-                            R$
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            inputMode="decimal"
-                            {...field}
-                            className="h-12 border-primary/30 bg-primary/5 pl-10 text-xl font-bold tabular-nums text-primary shadow-sm focus-visible:border-primary focus-visible:ring-primary"
-                            onChange={(e) => {
-                              field.onChange(e)
-                              const newPrice = parseFloat(e.target.value) || 0
-                              const currentCost = isComposite
-                                ? calculatedCost
-                                : form.getValues('cost') || 0
-                              const newProfit = newPrice - currentCost
-                              setProfit(newProfit)
-                              const newMargin =
-                                currentCost > 0
-                                  ? (newProfit / currentCost) * 100
-                                  : 0
-                              setMargin(newMargin)
-                            }}
-                            onFocus={(e) => e.target.select()}
-                          />
-                        </div>
+                        <Input
+                          placeholder="EAN / GTIN"
+                          {...field}
+                          className="h-10 font-mono"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -743,7 +437,98 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
-            {/* --- STOCK & LOGISTICS --- */}
+            {/* Valores Comerciais: Custo, Preço, Lucro e Margem */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        Custo de Compra
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">
+                            R$
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            className="h-12 pl-8 font-mono text-base font-bold"
+                            onChange={(e) => {
+                              field.onChange(e)
+                              const newCost = parseFloat(e.target.value) || 0
+                              const price = form.getValues('price') || 0
+                              const newProfit = price - newCost
+                              setProfit(newProfit)
+                              setMargin(newCost > 0 ? (newProfit / newCost) * 100 : 0)
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-black uppercase tracking-wide text-primary">
+                        Preço de Venda
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-primary">
+                            R$
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            className="h-12 border-primary/30 bg-primary/5 pl-9 text-lg font-black text-primary"
+                            onChange={(e) => {
+                              field.onChange(e)
+                              const newPrice = parseFloat(e.target.value) || 0
+                              const cost = form.getValues('cost') || 0
+                              const newProfit = newPrice - cost
+                              setProfit(newProfit)
+                              setMargin(cost > 0 ? (newProfit / cost) * 100 : 0)
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                    Lucro Bruto (R$)
+                  </span>
+                  <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400">
+                    R$ {profit.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                    Margem (%)
+                  </span>
+                  <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400">
+                    +{margin.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Estoque e NCM */}
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
               <FormField
                 control={form.control}
@@ -757,19 +542,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       <Input
                         type="number"
                         {...field}
-                        disabled={isComposite}
-                        className={cn(
-                          'h-10 font-mono',
-                          isComposite && 'bg-muted',
-                        )}
-                        onFocus={(e) => e.target.select()}
+                        className="h-10 font-mono"
                       />
                     </FormControl>
-                    {isComposite && (
-                      <span className="text-[10px] text-muted-foreground">
-                        Gerenciado pelos insumos
-                      </span>
-                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -787,12 +562,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       <Input
                         type="number"
                         {...field}
-                        disabled={isComposite}
-                        className={cn(
-                          'h-10 font-mono',
-                          isComposite && 'bg-muted',
-                        )}
-                        onFocus={(e) => e.target.select()}
+                        className="h-10 font-mono"
                       />
                     </FormControl>
                     <FormMessage />
@@ -814,7 +584,6 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           placeholder="0000.00.00"
                           {...field}
                           className="h-10 font-mono"
-                          onFocus={(e) => e.target.select()}
                         />
                       </FormControl>
                       <FormMessage />
@@ -824,28 +593,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
-            {/* --- DESCRIPTION --- */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Descrição / Observações
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Informações adicionais..."
-                      className="min-h-[80px] resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* --- GRUPOS DE ADICIONAIS & COMPLEMENTOS --- */}
+            {/* Grupos de Complementos & Adicionais Vinculados */}
             <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -872,9 +620,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       key={group.id}
                       onClick={() => {
                         if (isChecked) {
-                          setSelectedComplementGroupIds(selectedComplementGroupIds.filter((id) => id !== group.id))
+                          setSelectedComplementGroupIds(
+                            selectedComplementGroupIds.filter((id) => id !== group.id)
+                          )
                         } else {
-                          setSelectedComplementGroupIds([...selectedComplementGroupIds, group.id])
+                          setSelectedComplementGroupIds([
+                            ...selectedComplementGroupIds,
+                            group.id,
+                          ])
                         }
                       }}
                       className={cn(
@@ -904,232 +657,84 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
-            {/* --- COMPOSITION SWITCH --- */}
-            <div className="border-t pt-4">
-              <FormField
-                control={form.control}
-                name="is_composite"
-                render={({ field }) => (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Produto Composto / Kit
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Este produto é formado por outros insumos (ex: Burger
-                          = Pão + Carne).
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={(val) => {
-                            field.onChange(val)
-                            if (val && fields.length === 0)
-                              append({ supply_id: '', quantity: 1 })
-                          }}
-                        />
-                      </FormControl>
-                    </div>
-
-                    {isComposite && (
-                      <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <h4 className="flex items-center gap-2 text-sm font-semibold">
-                            <Hammer className="h-4 w-4" /> Lista de Insumos
-                          </h4>
-                          <span className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
-                            Custo Total:{' '}
-                            {calculatedCost.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
-                          </span>
-                        </div>
-
-                        <div className="space-y-3">
-                          {(fields || []).map((field, index) => (
-                            <div
-                              key={field.id}
-                              className="grid grid-cols-12 items-center gap-2 rounded-lg border bg-background p-2 shadow-sm"
-                            >
-                              <div className="col-span-8 sm:col-span-7">
-                                <FormField
-                                  control={form.control}
-                                  name={`compositions.${index}.supply_id`}
-                                  render={({ field }) => (
-                                    <FormItem className="space-y-0">
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                        onOpenChange={(isOpen) => {
-                                          if (isOpen)
-                                            requestAnimationFrame(() =>
-                                              (
-                                                document.activeElement as HTMLElement
-                                              )?.blur(),
-                                            )
-                                        }}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger className="h-9 text-sm">
-                                            <SelectValue placeholder="Selecione..." />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent
-                                          withPortal={false}
-                                          onCloseAutoFocus={(e) =>
-                                            e.preventDefault()
-                                          }
-                                          onPointerDownOutside={(e) =>
-                                            e.stopPropagation()
-                                          }
-                                        >
-                                          {(
-                                            suppliesData?.data.supplies || []
-                                          ).map((s) => (
-                                            <SelectItem key={s.id} value={s.id}>
-                                              <span className="flex w-full justify-between gap-4">
-                                                <span>{s.name}</span>
-                                                <span className="font-mono text-muted-foreground">
-                                                  R$ {s.cost.toFixed(2)}
-                                                </span>
-                                              </span>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              <div className="relative col-span-3 sm:col-span-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`compositions.${index}.quantity`}
-                                  render={({ field }) => (
-                                    <FormItem className="space-y-0">
-                                      <FormControl>
-                                        <Input
-                                          type="number"
-                                          step="0.0001"
-                                          {...field}
-                                          className="h-9 pl-8 text-center"
-                                        />
-                                      </FormControl>
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-                                        Qtd
-                                      </span>
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              <div className="col-span-1 flex items-center justify-end">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => remove(index)}
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => append({ supply_id: '', quantity: 1 })}
-                          className="mt-2 w-full border-dashed"
-                        >
-                          <Plus className="mr-2 h-3 w-3" /> Adicionar Insumo
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-
-            {/* --- FILE UPLOAD --- */}
-            <div className="border-t pt-4">
-              <FormLabel className="mb-2 block text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                Foto do Produto
-              </FormLabel>
-              <FileUpload
-                onFileSelect={setProductImage}
-                accept="image/*"
-                maxSizeMB={5}
-                currentFileUrl={initialData?.product?.image_url}
-              />
-            </div>
+            {/* Descrição */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Descrição / Observações
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Informações adicionais..."
+                      className="min-h-[80px] resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
-          {/* --- FIXED FOOTER --- */}
-          <div className="z-10 flex shrink-0 justify-end gap-3 border-t bg-background p-6 sm:p-8">
+          <ResponsiveDialogFooter className="border-t bg-muted/40 px-6 py-4">
             <ResponsiveDialogClose asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-12 w-full font-medium sm:w-auto"
-              >
+              <Button type="button" variant="outline">
                 Cancelar
               </Button>
             </ResponsiveDialogClose>
             <Button
-              form="product-form"
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="text-md h-12 w-full bg-primary px-8 font-bold shadow-lg hover:bg-primary/90 sm:w-auto"
+              className="bg-primary hover:bg-primary/90"
             >
-              {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Produto'}
+              {form.formState.isSubmitting
+                ? 'Salvando...'
+                : isEdit
+                  ? 'Salvar Alterações'
+                  : 'Criar Produto'}
             </Button>
-          </div>
+          </ResponsiveDialogFooter>
         </form>
       </Form>
 
+      {/* Dialog para Nova Categoria */}
       <ResponsiveDialog
         open={isNewCategoryOpen}
         onOpenChange={setIsNewCategoryOpen}
       >
-        <ResponsiveDialogContent className="sm:max-w-md">
+        <ResponsiveDialogContent className="max-w-md">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>Nova Categoria</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
-              Adicione uma nova categoria para organizar seus produtos.
+              Crie uma categoria para organizar seus produtos.
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-bold uppercase text-muted-foreground">
-                Nome da Categoria
-              </label>
-              <Input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Ex: Hidráulica"
-                className="h-11"
-              />
-            </div>
+            <Input
+              placeholder="Nome da categoria"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleCreateCategory()
+                }
+              }}
+            />
           </div>
           <ResponsiveDialogFooter>
-            <ResponsiveDialogClose asChild>
-              <Button variant="ghost" type="button">
-                Cancelar
-              </Button>
-            </ResponsiveDialogClose>
             <Button
-              onClick={handleCreateCategory}
-              disabled={!newCategoryName.trim()}
+              type="button"
+              variant="outline"
+              onClick={() => setIsNewCategoryOpen(false)}
             >
-              Salvar Categoria
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleCreateCategory}>
+              Criar Categoria
             </Button>
           </ResponsiveDialogFooter>
         </ResponsiveDialogContent>
