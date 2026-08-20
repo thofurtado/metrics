@@ -9,6 +9,11 @@ import { z } from 'zod'
 import { checkProductCode } from '@/api/check-product-code'
 import { createCategory } from '@/api/create-category'
 import { createProduct } from '@/api/create-product'
+import { getSubcategories } from '@/api/subcategories'
+import { getComplementGroups, syncProductComplementGroups } from '@/api/complements'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Zap, Sliders, Layers } from 'lucide-react'
 import { getCategories } from '@/api/get-categories'
 import { getNextProductId } from '@/api/get-next-product-id'
 import { getSupplies } from '@/api/get-supplies'
@@ -49,6 +54,8 @@ const productSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
   category: z.string().optional(),
+  subcategory_id: z.string().optional(),
+  is_priority: z.boolean().default(false),
 
   // Financial
   cost: z.coerce.number().min(0).optional().default(0),
@@ -98,6 +105,22 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const [profit, setProfit] = useState(0)
   const [margin, setMargin] = useState(0)
   const [productImage, setProductImage] = useState<File | null>(null)
+  const [selectedComplementGroupIds, setSelectedComplementGroupIds] = useState<string[]>(
+    initialData?.complementGroups?.map((cg: any) => cg.group_id || cg.group?.id) || []
+  )
+
+  const selectedCategory = form.watch('category')
+
+  const { data: subcategoriesData } = useQuery({
+    queryKey: ['subcategories', selectedCategory],
+    queryFn: () => getSubcategories(selectedCategory || undefined),
+    enabled: !!selectedCategory,
+  })
+
+  const { data: complementGroupsData } = useQuery({
+    queryKey: ['complement-groups'],
+    queryFn: getComplementGroups,
+  })
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -821,6 +844,65 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </FormItem>
               )}
             />
+
+            {/* --- GRUPOS DE ADICIONAIS & COMPLEMENTOS --- */}
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Sliders className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                      Grupos de Adicionais & Opcionais
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Marque quais grupos de complementos se aplicam a este produto
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="border-slate-200 text-xs font-bold dark:border-slate-800">
+                  {selectedComplementGroupIds.length} grupos selecionados
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {(complementGroupsData?.groups || []).map((group: any) => {
+                  const isChecked = selectedComplementGroupIds.includes(group.id)
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setSelectedComplementGroupIds(selectedComplementGroupIds.filter((id) => id !== group.id))
+                        } else {
+                          setSelectedComplementGroupIds([...selectedComplementGroupIds, group.id])
+                        }
+                      }}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all',
+                        isChecked
+                          ? 'border-orange-500/50 bg-orange-50/50 shadow-sm dark:border-orange-500/40 dark:bg-orange-950/20'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700'
+                      )}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => {}}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 space-y-0.5">
+                        <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          {group.name}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {group.options?.length || 0} opções • {group.min_quantity > 0 ? 'Obrigatório' : 'Opcional'}
+                          {group.free_quantity > 0 ? ` • ${group.free_quantity} Grátis` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* --- COMPOSITION SWITCH --- */}
             <div className="border-t pt-4">

@@ -404,16 +404,16 @@ export function PaymentModal({
                 {/* COLUNA DIREITA: FORMULÁRIO DE BAIXA HIERARQUIZADO COM RESPIRO */}
                 {/* ═════════════════════════════════════════════════════════════ */}
                 <div className="flex flex-col justify-between gap-4 lg:col-span-7">
-                  {/* LINHA 1: CONTA E DATA DO PAGAMENTO */}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* LINHA 1: CONTA E DATA DO PAGAMENTO COM ALINHAMENTO MILIMÉTRICO */}
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                     {/* Conta */}
                     <FormField
                       control={form.control}
                       name="accountId"
                       render={({ field }) => (
                         <FormItem className="space-y-1.5">
-                          <div className="flex items-center justify-between px-0.5">
-                            <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                          <div className="flex h-5 items-center justify-between px-0.5">
+                            <FormLabel className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
                               Conta / Caixa
                             </FormLabel>
                             <button
@@ -433,7 +433,7 @@ export function PaymentModal({
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                              <SelectTrigger className="h-11 rounded-xl border border-slate-200 bg-white px-3.5 font-semibold text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
                                 <SelectValue placeholder="Selecione a conta" />
                               </SelectTrigger>
                             </FormControl>
@@ -460,14 +460,17 @@ export function PaymentModal({
                       name="paymentDate"
                       render={({ field }) => (
                         <FormItem className="space-y-1.5">
-                          <FormLabel className="px-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                            Data da Operação
-                          </FormLabel>
+                          <div className="flex h-5 items-center justify-between px-0.5">
+                            <FormLabel className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                              Data da Operação
+                            </FormLabel>
+                          </div>
                           <FormControl>
                             <SimpleCalendar
                               selected={field.value}
                               onSelect={field.onChange}
                               disabledDays={disableFutureDays}
+                              className="h-11 rounded-xl border border-slate-200 bg-white px-3.5 font-semibold text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                             />
                           </FormControl>
                           <FormMessage />

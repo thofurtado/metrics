@@ -28,6 +28,9 @@ import {
 import { ItemsTableFilters } from './item-table-filters'
 import { ItemTableRow } from './item-table-row'
 import { PrintDepartmentsDialog } from './print-departments-dialog'
+import { ComplementsDialog } from './complements-dialog'
+import { SubcategoriesDialog } from './subcategories-dialog'
+import { Sliders, Layers } from 'lucide-react'
 import { ProductItemDialog } from './product-item-dialog'
 
 // Define the possible item types for tabs
@@ -53,6 +56,8 @@ export function Items() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createDialogType, setCreateDialogType] = useState<ItemType>('PRODUCT')
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false)
+  const [isComplementsOpen, setIsComplementsOpen] = useState(false)
+  const [isSubcategoriesOpen, setIsSubcategoriesOpen] = useState(false)
 
   const {
     data: result = {
