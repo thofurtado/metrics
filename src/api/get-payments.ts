@@ -9,7 +9,18 @@ export interface Payment {
   show_in_menu?: boolean
 }
 
-export async function getPayments() {
-  const response = await api.get<Payment[]>('/payments')
-  return response.data
+export async function getPayments(): Promise<Payment[]> {
+  try {
+    const response = await api.get<any>('/payments')
+    if (Array.isArray(response.data)) {
+      return response.data
+    }
+    if (response.data && Array.isArray(response.data.payments)) {
+      return response.data.payments
+    }
+    return []
+  } catch (error) {
+    console.error('Erro ao buscar pagamentos:', error)
+    return []
+  }
 }

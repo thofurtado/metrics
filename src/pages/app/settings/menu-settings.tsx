@@ -358,27 +358,38 @@ export function MenuSettings() {
   const [unassignedSearch, setUnassignedSearch] = useState('')
 
   // Calcula quais bairros estão vinculados e quais estão disponíveis no banco
-  const deliverySectors = watch('deliverySectors') || []
-  const availableNeighborhoods = watch('availableNeighborhoods') || []
+  const rawDeliverySectors = watch('deliverySectors')
+  const deliverySectors = useMemo(() => {
+    return Array.isArray(rawDeliverySectors) ? rawDeliverySectors : []
+  }, [rawDeliverySectors])
+
+  const rawAvailableNeighborhoods = watch('availableNeighborhoods')
+  const availableNeighborhoods = useMemo(() => {
+    return Array.isArray(rawAvailableNeighborhoods) ? rawAvailableNeighborhoods : []
+  }, [rawAvailableNeighborhoods])
 
   const assignedNeighborhoodsSet = useMemo(() => {
     const set = new Set<string>()
-    deliverySectors.forEach((s) => {
-      (s.neighborhoods || []).forEach((n) => set.add(n.toLowerCase().trim()))
+    deliverySectors.forEach((s: any) => {
+      const hoods = Array.isArray(s?.neighborhoods) ? s.neighborhoods : []
+      hoods.forEach((n: string) => {
+        if (n) set.add(String(n).toLowerCase().trim())
+      })
     })
     return set
   }, [deliverySectors])
 
   const unassignedNeighborhoods = useMemo(() => {
     return availableNeighborhoods.filter(
-      (n) => !assignedNeighborhoodsSet.has(n.toLowerCase().trim())
+      (n: string) => n && !assignedNeighborhoodsSet.has(String(n).toLowerCase().trim())
     )
   }, [availableNeighborhoods, assignedNeighborhoodsSet])
 
   const filteredUnassigned = useMemo(() => {
     if (!unassignedSearch.trim()) return unassignedNeighborhoods
-    return unassignedNeighborhoods.filter((n) =>
-      n.toLowerCase().includes(unassignedSearch.toLowerCase())
+    const q = unassignedSearch.toLowerCase()
+    return unassignedNeighborhoods.filter((n: string) =>
+      String(n).toLowerCase().includes(q)
     )
   }, [unassignedNeighborhoods, unassignedSearch])
 
@@ -456,7 +467,8 @@ export function MenuSettings() {
 
   // Importação: apenas adiciona os bairros ao banco de bairros da loja
   const handleImportModalConfirm = (selectedNeighborhoods: string[]) => {
-    const currentBank = getValues('availableNeighborhoods') || []
+    const rawBank = getValues('availableNeighborhoods')
+    const currentBank = Array.isArray(rawBank) ? rawBank : []
     const bankSet = new Set(currentBank.map((n) => n.toLowerCase().trim()))
 
     const newToAdd = selectedNeighborhoods.filter(
@@ -471,7 +483,8 @@ export function MenuSettings() {
   }
 
   const handleAddSector = () => {
-    const current = getValues('deliverySectors') || []
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
     const newSector = {
       id: crypto.randomUUID(),
       name: `Setor ${current.length + 1}`,
@@ -485,7 +498,8 @@ export function MenuSettings() {
   }
 
   const handleRemoveSector = (id: string) => {
-    const current = getValues('deliverySectors') || []
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
     setValue('deliverySectors', current.filter((s: any) => s.id !== id), { shouldDirty: true })
     toast.info('Setor de entrega removido.')
   }
@@ -493,7 +507,8 @@ export function MenuSettings() {
   // Vincula um bairro existente no banco a um setor
   const handleLinkNeighborhoodToSector = (sectorId: string, neighborhoodName: string) => {
     if (!neighborhoodName) return
-    const current = getValues('deliverySectors') || []
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
     const cleanName = neighborhoodName.trim()
     const cleanLower = cleanName.toLowerCase()
 
@@ -520,8 +535,10 @@ export function MenuSettings() {
     const splitted = raw.split(',').map((s) => s.trim()).filter(Boolean)
     if (splitted.length === 0) return
 
-    const currentSectors = getValues('deliverySectors') || []
-    const currentBank = getValues('availableNeighborhoods') || []
+    const rawCurrentSectors = getValues('deliverySectors')
+    const currentSectors = Array.isArray(rawCurrentSectors) ? rawCurrentSectors : []
+    const rawBank = getValues('availableNeighborhoods')
+    const currentBank = Array.isArray(rawBank) ? rawBank : []
     const splittedLower = new Set(splitted.map((s) => s.toLowerCase()))
 
     // 1. Atualiza os setores com exclusividade
@@ -547,7 +564,8 @@ export function MenuSettings() {
 
   // Remove bairro do setor (ele volta a ficar disponível no banco)
   const handleRemoveNeighborhoodFromSector = (sectorId: string, neighborhood: string) => {
-    const current = getValues('deliverySectors') || []
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
     const updated = current.map((s: any) => {
       if (s.id === sectorId) {
         return {
@@ -562,8 +580,10 @@ export function MenuSettings() {
 
   // Exclui bairro do banco geral
   const handleDeleteNeighborhoodFromBank = (neighborhoodName: string) => {
-    const currentBank = getValues('availableNeighborhoods') || []
-    const currentSectors = getValues('deliverySectors') || []
+    const rawBank = getValues('availableNeighborhoods')
+    const currentBank = Array.isArray(rawBank) ? rawBank : []
+    const rawCurrentSectors = getValues('deliverySectors')
+    const currentSectors = Array.isArray(rawCurrentSectors) ? rawCurrentSectors : []
     const cleanLower = neighborhoodName.toLowerCase().trim()
 
     const updatedBank = currentBank.filter((n) => n.toLowerCase().trim() !== cleanLower)
@@ -1331,7 +1351,7 @@ export function MenuSettings() {
                       Formas de Pagamento Aceitas no Cardápio
                     </CardTitle>
                     <Badge variant="outline" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold text-xs">
-                      {paymentsList?.filter((p) => p.show_in_menu !== false).length || 0} de {paymentsList?.length || 0} Ativas no Delivery
+                      {(Array.isArray(paymentsList) ? paymentsList : []).filter((p) => p.show_in_menu !== false).length} de {(Array.isArray(paymentsList) ? paymentsList : []).length} Ativas no Delivery
                     </Badge>
                   </div>
                   <CardDescription className="text-xs mt-1">
@@ -1356,7 +1376,7 @@ export function MenuSettings() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {paymentsList.map((payment) => {
+                    {(Array.isArray(paymentsList) ? paymentsList : []).map((payment) => {
                       const isEnabled = payment.show_in_menu !== false
                       const isCash = payment.name.toLowerCase().includes('dinheiro')
                       const isPix = payment.name.toLowerCase().includes('pix')
