@@ -100,9 +100,10 @@ export function ItemCustomizerDialog({
 
   // Lista de produtos irmãos da mesma categoria para montagem de sabores
   const siblingProducts = useMemo(() => {
-    return allProducts
-      .filter((p) => p.category === product.category && (p.subcategory?.accepts_fractions ?? true))
-      .sort((a, b) => a.name.localeCompare(b.name))
+    const list = Array.isArray(allProducts) ? allProducts : []
+    return list
+      .filter((p) => p && p.category === product.category && (p.subcategory?.accepts_fractions ?? true))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }, [allProducts, product])
 
   // Troca a quantidade de frações (1, 2, 3, 4 sabores)

@@ -76,7 +76,7 @@ function CardapioContent() {
     },
   )
 
-  const products = data?.products || []
+  const products = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : [])
 
   const groupedProducts = products.reduce(
     (acc, product) => {
