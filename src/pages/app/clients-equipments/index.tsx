@@ -43,6 +43,14 @@ import { Dialog } from '@/components/ui/dialog'
 import { TreatmentClient } from '../treatments/treatment-client'
 import { EquipmentDetailsModal } from './components/equipment-details-modal'
 
+export function checkIsOnline(equipment: any, maxInactiveMinutes = 3): boolean {
+  if (!equipment || !equipment.last_seen_at) return false
+  const lastSeenDate = new Date(equipment.last_seen_at)
+  if (isNaN(lastSeenDate.getTime())) return false
+  const diffMs = Date.now() - lastSeenDate.getTime()
+  return Boolean(equipment.is_online) && diffMs >= 0 && diffMs < maxInactiveMinutes * 60 * 1000
+}
+
 export function ClientsEquipments() {
   const queryClient = useQueryClient()
 
@@ -167,7 +175,7 @@ export function ClientsEquipments() {
                     </TableRow>
                   ) : vinculados.length > 0 ? (
                     vinculados.map((eq: any) => {
-                      const isOnline = Boolean(eq.is_online)
+                      const isOnline = checkIsOnline(eq)
                       const lastSeen = eq.last_seen_at
                         ? format(new Date(eq.last_seen_at), 'dd/MM HH:mm', {
                             locale: ptBR,
@@ -234,7 +242,7 @@ export function ClientsEquipments() {
                 </div>
               ) : vinculados.length > 0 ? (
                 vinculados.map((eq: any) => {
-                  const isOnline = Boolean(eq.is_online)
+                  const isOnline = checkIsOnline(eq)
                   const lastSeen = eq.last_seen_at
                     ? format(new Date(eq.last_seen_at), 'dd/MM HH:mm', { locale: ptBR })
                     : 'Nunca'
