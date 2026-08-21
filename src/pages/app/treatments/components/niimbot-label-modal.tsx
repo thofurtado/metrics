@@ -5,15 +5,24 @@ import {
   Bluetooth, 
   Download, 
   CheckCircle2, 
-  Sparkles, 
   AlertCircle, 
-  Layers,
-  Info
+  Settings2,
+  Terminal,
+  Copy,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Sliders,
+  Play
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { NiimbotBluetooth } from '@/lib/niimbot-ble'
 
 interface NiimbotLabelModalProps {
@@ -30,15 +39,37 @@ interface NiimbotLabelModalProps {
 
 export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabelModalProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const terminalBottomRef = useRef<HTMLDivElement | null>(null)
+
   const [isPrinting, setIsPrinting] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  const [printProgress, setPrintProgress] = useState(0)
+
+  // Configurações avançadas da impressora
+  const [showSettings, setShowSettings] = useState(false)
+  const [showTerminal, setShowTerminal] = useState(true)
+  const [density, setDensity] = useState(3) // 1 a 5
+  const [labelType, setLabelType] = useState(1) // 1 = Gap, 2 = Contínuo, 3 = BlackMark
+  const [packetDelay, setPacketDelay] = useState(8) // ms
+
+  // Terminal de Logs
+  const [logs, setLogs] = useState<string[]>([])
+
+  const addLog = useCallback((msg: string) => {
+    setLogs((prev) => [...prev.slice(-40), msg])
+  }, [])
+
+  useEffect(() => {
+    if (terminalBottomRef.current) {
+      terminalBottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [logs])
 
   const equipmentId = equipment?.id || ''
   const shortId = equipmentId.slice(0, 8)
   const identification = equipment?.identification || 'Computador'
   const clientName = equipment?.clientName || 'Cliente'
 
-  // URL curta e ultra-leve para gerar QR Code de baixa densidade (Version 2, módulos 4x4px grossos)
   const targetUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
@@ -55,7 +86,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // 2. Textos no lado direito (alta nitidez)
+    // 2. Textos no lado direito
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
@@ -84,17 +115,13 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
 
     // Data de Emissão
     ctx.font = '10px sans-serif'
-    ctx.fillText(
-      `Data: ${new Date().toLocaleDateString('pt-BR')}`,
-      114,
-      74,
-    )
+    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 114, 74)
 
     // Chamada para Ação
     ctx.font = 'italic 10px sans-serif'
     ctx.fillText('Consulte o Laudo ↗', 114, 94)
 
-    // 3. Gerar QR Code de baixa densidade (Version 2 / Low error correction = módulos grossos e nítidos)
+    // 3. Gerar QR Code de baixa densidade (Version 2 / Low error correction)
     QRCode.toDataURL(targetUrl, {
       width: 108,
       margin: 1,
@@ -107,10 +134,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
       .then((qrDataUrl) => {
         const img = new Image()
         img.onload = () => {
-          // Limpar área do QR Code
           ctx.fillStyle = '#FFFFFF'
           ctx.fillRect(0, 0, 112, 120)
-          // Desenhar QR Code ocupando toda a altura
           ctx.drawImage(img, 4, 6, 108, 108)
         }
         img.src = qrDataUrl
@@ -118,7 +143,6 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
       .catch((err) => console.error('Erro ao gerar QR Code:', err))
   }, [targetUrl, identification, clientName])
 
-  // Callback ref para pintar imediatamente
   const handleCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
     canvasRef.current = node
     if (node) {
@@ -132,23 +156,73 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     }
   }, [open, renderLabel])
 
-  // Impressão nativa via Bluetooth com o motor do niim.blue (@mmote/niimbluelib)
-  const handlePrintBluetooth = async () => {
-    if (!canvasRef.current) return
+  // Testar conexão / Handshake (sem gastar papel)
+  const handleTestHandshake = async () => {
     setIsPrinting(true)
-    setStatusMessage('Conectando à Niimbot D110 via Bluetooth...')
+    addLog('--- Teste de Conexão Niimbot D110 ---')
 
     try {
       const printer = new NiimbotBluetooth()
+      printer.onLog = addLog
+      const deviceName = await printer.connect()
+      await printer.testHandshake()
+      await printer.disconnect()
+
+      toast.success(`Conexão com ${deviceName} validada com sucesso!`)
+    } catch (err: any) {
+      if (err.name !== 'NotFoundError') {
+        toast.error(err.message || 'Falha no teste de conexão.')
+      }
+    } finally {
+      setIsPrinting(false)
+    }
+  }
+
+  // Avançar papel (Feed)
+  const handleFeedPaper = async () => {
+    setIsPrinting(true)
+    try {
+      const printer = new NiimbotBluetooth()
+      printer.onLog = addLog
+      await printer.connect()
+      await printer.feedPaper()
+      await printer.disconnect()
+      toast.success('Avanço de papel executado!')
+    } catch (err: any) {
+      if (err.name !== 'NotFoundError') {
+        toast.error(err.message || 'Falha ao avançar papel.')
+      }
+    } finally {
+      setIsPrinting(false)
+    }
+  }
+
+  // Impressão nativa via Bluetooth
+  const handlePrintBluetooth = async () => {
+    if (!canvasRef.current) return
+    setIsPrinting(true)
+    setPrintProgress(0)
+    setStatusMessage('Conectando à Niimbot D110...')
+    addLog('--- Iniciando Impressão de Etiqueta ---')
+
+    try {
+      const printer = new NiimbotBluetooth()
+      printer.onLog = addLog
+
       const deviceName = await printer.connect()
       setStatusMessage(`Conectado a ${deviceName}! Imprimindo...`)
 
-      await printer.printCanvas(canvasRef.current, 3, 1)
+      await printer.printCanvas(canvasRef.current, {
+        density,
+        labelType,
+        packetDelayMs: packetDelay,
+        onProgress: (p) => setPrintProgress(p),
+      })
+
       await printer.disconnect()
 
-      toast.success('Etiqueta impressa com sucesso na Niimbot D110!')
-      setStatusMessage('✓ Impressão concluída!')
-      setTimeout(() => onOpenChange(false), 2000)
+      toast.success('Etiqueta impressa com sucesso!')
+      setStatusMessage('✓ Impressão concluída com sucesso!')
     } catch (err: any) {
       console.error('Erro Bluetooth:', err)
       setStatusMessage('')
@@ -162,7 +236,17 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     }
   }
 
-  // Impressão nativa do Windows (Popup de Impressão)
+  // Copiar Logs do Terminal
+  const handleCopyLogs = () => {
+    if (logs.length === 0) {
+      toast.info('Nenhum log gravado ainda.')
+      return
+    }
+    navigator.clipboard.writeText(logs.join('\n'))
+    toast.success('Logs copiados para a área de transferência!')
+  }
+
+  // Impressão padrão do Windows
   const handlePrintWindow = () => {
     if (!canvasRef.current) return
     const dataUrl = canvasRef.current.toDataURL('image/png')
@@ -201,40 +285,180 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] border-slate-800 bg-slate-950 text-slate-100">
+      <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-950 text-slate-100 p-5 rounded-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
             <Printer className="h-5 w-5 text-indigo-400" />
-            Imprimir Etiqueta Inteligente (Niimbot D110)
+            Central de Impressão Niimbot D110
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-400">
-            Formato oficial <span className="font-mono font-bold text-slate-200">T15*30mm</span> com QR Code de alta leitura para o prontuário.
+            Formato oficial <span className="font-mono font-bold text-slate-200">30 × 15 mm</span> com console de diagnóstico BLE em tempo real.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* PRÉ-VISUALIZAÇÃO DA ETIQUETA REALISTA */}
-          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="p-2 rounded-xl bg-white shadow-2xl border border-slate-300 transform hover:scale-105 transition-transform">
+          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+            <div className="p-1.5 rounded-xl bg-white shadow-2xl border border-slate-300 transform hover:scale-105 transition-transform">
               <canvas
                 ref={handleCanvasRef}
                 style={{ width: '240px', height: '120px' }}
                 className="rounded block"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-3 font-medium">
+            <p className="text-[11px] text-slate-400 mt-2 font-medium">
               Dimensões: 30mm × 15mm • QR Code de Alta Leitura
             </p>
           </div>
 
-          {statusMessage && (
-            <div className="p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-500/30 text-xs text-indigo-300 font-medium text-center animate-pulse">
-              {statusMessage}
+          {/* BARRA DE PROGRESSO / STATUS */}
+          {isPrinting && (
+            <div className="space-y-1.5 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30">
+              <div className="flex justify-between text-xs text-indigo-300 font-bold">
+                <span>{statusMessage}</span>
+                <span>{printProgress}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 transition-all duration-150"
+                  style={{ width: `${printProgress}%` }}
+                />
+              </div>
             </div>
           )}
+
+          {/* TOGGLES: CONFIGURAÇÕES & TERMINAL */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="text-xs text-slate-300 hover:text-white hover:bg-slate-900 gap-1.5 font-bold h-8"
+            >
+              <Sliders className="h-3.5 w-3.5 text-indigo-400" />
+              Ajustes de Impressão (Densidade/Papel)
+              {showSettings ? <ChevronUp className="h-3.5 w-3.5 ml-1" /> : <ChevronDown className="h-3.5 w-3.5 ml-1" />}
+            </Button>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleTestHandshake}
+                disabled={isPrinting}
+                title="Testa conexão BLE sem gastar papel"
+                className="text-xs text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/50 font-bold h-8 gap-1"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Testar Conexão
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleFeedPaper}
+                disabled={isPrinting}
+                title="Avança 1 etiqueta"
+                className="text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900 font-bold h-8"
+              >
+                Avançar
+              </Button>
+            </div>
+          </div>
+
+          {/* PAINEL DE CONFIGURAÇÕES AVANÇADAS */}
+          {showSettings && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-300">Densidade Térmica</Label>
+                <select
+                  value={density}
+                  onChange={(e) => setDensity(Number(e.target.value))}
+                  className="w-full h-8 rounded-lg bg-slate-950 border border-slate-800 text-xs px-2 text-white font-bold"
+                >
+                  <option value={1}>1 - Muito Clara</option>
+                  <option value={2}>2 - Clara</option>
+                  <option value={3}>3 - Média (Padrão)</option>
+                  <option value={4}>4 - Escura</option>
+                  <option value={5}>5 - Muito Escura</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-300">Tipo de Etiqueta</Label>
+                <select
+                  value={labelType}
+                  onChange={(e) => setLabelType(Number(e.target.value))}
+                  className="w-full h-8 rounded-lg bg-slate-950 border border-slate-800 text-xs px-2 text-white font-bold"
+                >
+                  <option value={1}>1 - Com Espaço / Gap (Padrão)</option>
+                  <option value={2}>2 - Rolo Contínuo</option>
+                  <option value={3}>3 - Marca Preta (BlackMark)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-300">Delay BLE (ms)</Label>
+                <select
+                  value={packetDelay}
+                  onChange={(e) => setPacketDelay(Number(e.target.value))}
+                  className="w-full h-8 rounded-lg bg-slate-950 border border-slate-800 text-xs px-2 text-white font-bold"
+                >
+                  <option value={6}>6 ms (Mais Rápido)</option>
+                  <option value={8}>8 ms (Padrão Estável)</option>
+                  <option value={12}>12 ms (Alta Confiabilidade)</option>
+                  <option value={20}>20 ms (Lento / Seguro)</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* TERMINAL DE LOGS AO VIVO (SAÍDA DE ERROS E HANDSHAKE) */}
+          <div className="rounded-2xl border border-slate-800 bg-black/90 p-3 font-mono text-[11px] text-slate-300 space-y-2">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                <Terminal className="h-3.5 w-3.5" />
+                <span>Console de Diagnóstico BLE</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyLogs}
+                  className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white font-sans bg-slate-900 px-2 py-0.5 rounded border border-slate-800"
+                >
+                  <Copy className="h-3 w-3" /> Copiar Logs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogs([])}
+                  className="text-slate-500 hover:text-rose-400"
+                  title="Limpar logs"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+
+            <div className="h-28 overflow-y-auto space-y-1 text-slate-300 pr-1 select-text scrollbar-thin scrollbar-thumb-slate-800">
+              {logs.length === 0 ? (
+                <span className="text-slate-600 italic">
+                  Aguardando ação. Clique em &quot;Testar Conexão&quot; ou &quot;Imprimir&quot; para iniciar o handshake...
+                </span>
+              ) : (
+                logs.map((log, idx) => (
+                  <div key={idx} className="leading-tight">
+                    {log}
+                  </div>
+                ))
+              )}
+              <div ref={terminalBottomRef} />
+            </div>
+          </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-800">
           <Button
             type="button"
             variant="outline"
@@ -260,7 +484,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
             className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-white shadow-lg shadow-blue-600/20 hover:from-blue-500 hover:to-indigo-500"
           >
             <Bluetooth className="h-4 w-4" />
-            {isPrinting ? 'Imprimindo...' : 'Imprimir via Bluetooth (D110)'}
+            {isPrinting ? 'Processando...' : 'Imprimir via Bluetooth (D110)'}
           </Button>
         </DialogFooter>
       </DialogContent>
