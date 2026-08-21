@@ -1,9 +1,9 @@
 /**
- * Driver Web Bluetooth para Impressoras Térmicas Niimbot (D11 / D110 / D101 / B21)
- * Compatível com Chrome / Edge no Windows, macOS e Android.
+ * Driver Web Bluetooth para Impressoras Térmicas Niimbot (D110 / D11 / D101 / B21)
+ * Compatível com Google Chrome e Microsoft Edge no Windows, macOS e Android.
  */
 
-// UUIDs de serviços BLE comumente usados pela Niimbot
+// UUIDs de serviços BLE padrão Niimbot
 const NIIMBOT_SERVICES = [
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
   '0000fee7-0000-1000-8000-00805f9b34fb',
@@ -14,6 +14,7 @@ const NIIMBOT_CHARACTERISTICS = [
   'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
   '0000fee8-0000-1000-8000-00805f9b34fb',
   '0000ff01-0000-1000-8000-00805f9b34fb',
+  '0000ff02-0000-1000-8000-00805f9b34fb',
 ]
 
 export class NiimbotBluetooth {
@@ -21,7 +22,7 @@ export class NiimbotBluetooth {
   private characteristic: any = null
 
   /**
-   * Conecta à impressora Niimbot via Web Bluetooth
+   * Conecta à impressora Niimbot via Web Bluetooth BLE
    */
   async connect(): Promise<string> {
     if (!navigator || !(navigator as any).bluetooth) {
@@ -36,17 +37,17 @@ export class NiimbotBluetooth {
           { namePrefix: 'D110' },
           { namePrefix: 'D11' },
           { namePrefix: 'Niimbot' },
+          { namePrefix: 'd110' },
+          { namePrefix: 'd11' },
           { namePrefix: 'D101' },
           { namePrefix: 'B21' },
           { namePrefix: 'JC' },
-          { namePrefix: 'd110' },
-          { namePrefix: 'd11' },
         ],
         optionalServices: NIIMBOT_SERVICES,
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') throw e
-      // Fallback: show all nearby BLE devices
+      // Fallback abrangente
       this.device = await navBle.requestDevice({
         acceptAllDevices: true,
         optionalServices: NIIMBOT_SERVICES,
@@ -54,8 +55,8 @@ export class NiimbotBluetooth {
     }
 
     const server = await this.device.gatt.connect()
-    
-    // Tentar encontrar o serviço compatível
+
+    // Tentar obter o serviço principal
     let service: any = null
     for (const sUuid of NIIMBOT_SERVICES) {
       try {
@@ -65,7 +66,14 @@ export class NiimbotBluetooth {
     }
 
     if (!service) {
-      throw new Error('Não foi possível obter o serviço Bluetooth da Niimbot.')
+      const services = await server.getPrimaryServices()
+      if (services && services.length > 0) {
+        service = services[0]
+      }
+    }
+
+    if (!service) {
+      throw new Error('Não foi possível estabelecer conexão de serviço com a Niimbot.')
     }
 
     // Obter característica de escrita
@@ -78,14 +86,20 @@ export class NiimbotBluetooth {
 
     if (!this.characteristic) {
       const chars = await service.getCharacteristics()
-      this.characteristic = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse)
+      this.characteristic = chars.find(
+        (c: any) => c.properties.write || c.properties.writeWithoutResponse,
+      )
+    }
+
+    if (!this.characteristic) {
+      throw new Error('Canal de comunicação de impressão não encontrado.')
     }
 
     return this.device.name || 'Niimbot D110'
   }
 
   /**
-   * Envia um pacote bruto para a Niimbot com delimitadores 0x55 0x55
+   * Envia um pacote bruto para a Niimbot com delimitação [0x55, 0x55, TYPE, LEN, DATA, CHECKSUM, 0xAA, 0xAA]
    */
   private async sendPacket(type: number, data: number[] = []) {
     if (!this.characteristic) throw new Error('Impressora não conectada.')
@@ -98,7 +112,7 @@ export class NiimbotBluetooth {
 
     const packet = new Uint8Array([0x55, 0x55, type, len, ...data, checksum, 0xaa, 0xaa])
 
-    // Enviar em blocos de até 20 bytes (padrão MTU BLE)
+    // Enviar em blocos de até 20 bytes (MTU padrão BLE)
     const chunkSize = 20
     for (let i = 0; i < packet.length; i += chunkSize) {
       const slice = packet.slice(i, i + chunkSize)
@@ -107,7 +121,7 @@ export class NiimbotBluetooth {
       } else {
         await this.characteristic.writeValue(slice)
       }
-      await new Promise((r) => setTimeout(r, 10))
+      await new Promise((r) => setTimeout(r, 8))
     }
   }
 
@@ -118,37 +132,41 @@ export class NiimbotBluetooth {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Erro ao obter contexto do canvas.')
 
-    const width = canvas.width
-    const height = canvas.height
+    const width = canvas.width // 240
+    const height = canvas.height // 120
     const imgData = ctx.getImageData(0, 0, width, height)
     const pixels = imgData.data
 
     // 1. Início de Trabalho de Impressão (Start Print Job)
     await this.sendPacket(0x01, [0x00, 0x01])
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise((r) => setTimeout(r, 80))
 
     // 2. Definir Quantidade e Densidade
     await this.sendPacket(0x02, [0x00, quantity])
+    await new Promise((r) => setTimeout(r, 40))
+
+    // Densidade de impressão (1-5)
     await this.sendPacket(0x05, [density])
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise((r) => setTimeout(r, 40))
 
     // 3. Início de Página
     await this.sendPacket(0x03, [0x00, 0x01])
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise((r) => setTimeout(r, 80))
 
-    // 4. Enviar linhas de bitmap (1 bit por pixel, invertido: 1 = preto, 0 = branco)
-    const bytesPerRow = Math.ceil(width / 8)
+    // 4. Enviar linhas de bitmap (240 dots = 30 bytes por linha)
+    const bytesPerRow = Math.ceil(width / 8) // 30 bytes
 
     for (let y = 0; y < height; y++) {
       const rowBytes = new Array(bytesPerRow).fill(0)
       for (let x = 0; x < width; x++) {
         const offset = (y * width + x) * 4
-        // Calcular luminância
         const r = pixels[offset]
         const g = pixels[offset + 1]
         const b = pixels[offset + 2]
         const a = pixels[offset + 3]
-        const isBlack = a > 128 && (r * 0.299 + g * 0.587 + b * 0.114 < 128)
+
+        // Pixel escuro / preto
+        const isBlack = a > 128 && (r * 0.299 + g * 0.587 + b * 0.114 < 160)
 
         if (isBlack) {
           const byteIdx = Math.floor(x / 8)
@@ -157,23 +175,31 @@ export class NiimbotBluetooth {
         }
       }
 
-      // Pacote de Linha de Impressão (0x85)
-      // Formato: [y_high, y_low, ...rowBytes]
-      const lineData = [(y >> 8) & 0xff, y & 0xff, ...rowBytes]
+      // Pacote de Linha de Impressão D110 (0x85)
+      // Formato: [y_high, y_low, repeat_count_high, repeat_count_low, ...rowBytes]
+      const lineData = [(y >> 8) & 0xff, y & 0xff, 0x00, 0x01, ...rowBytes]
       await this.sendPacket(0x85, lineData)
     }
 
-    // 5. Fim de Página e Avanço
-    await this.sendPacket(0xf3, [0x00, 0x01])
-    await new Promise((r) => setTimeout(r, 100))
+    // 5. Fim de Página (Page End)
+    await this.sendPacket(0xe3, [0x00, 0x01])
+    await new Promise((r) => setTimeout(r, 200))
 
-    // 6. Fim do Trabalho de Impressão
-    await this.sendPacket(0xf4, [0x00, 0x01])
+    // 6. Fim do Trabalho de Impressão (Print End / Feed)
+    await this.sendPacket(0xf3, [0x00, 0x01])
+    
+    // Aguardar o motor térmico avançar e cortar/posicionar
+    await new Promise((r) => setTimeout(r, 1200))
   }
 
+  /**
+   * Desconecta do GATT com segurança
+   */
   disconnect() {
-    if (this.device && this.device.gatt.connected) {
-      this.device.gatt.disconnect()
-    }
+    try {
+      if (this.device && this.device.gatt && this.device.gatt.connected) {
+        this.device.gatt.disconnect()
+      }
+    } catch {}
   }
 }
