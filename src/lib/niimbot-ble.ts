@@ -1,5 +1,5 @@
 import { NiimbotBluetoothClient } from './niimblue/client/bluetooth_impl'
-import { ImageEncoder, CanvasImageSource } from './niimblue/image_encoder'
+import { ImageEncoder } from './niimblue/image_encoder'
 import { D110PrintTask } from './niimblue/print_tasks/D110PrintTask'
 import { LabelType } from './niimblue/packets/payloads'
 import { PacketGenerator } from './niimblue/packets/packet_generator'
@@ -113,11 +113,10 @@ export class NiimbotBluetooth {
 
     this.log(`🖨️ Codificando imagem via ImageEncoder (Rotação: 90°, Densidade: ${density}, Papel: ${labelType})...`)
 
-    // Criar fonte de imagem do Canvas e codificar em formato otimizado para Niimbot D110
-    const source = new CanvasImageSource(canvas)
-    const encoded = ImageEncoder.encode(source, 'left')
+    // Usar encodeCanvas oficial do niim.blue
+    const encoded = ImageEncoder.encodeCanvas(canvas, 'left')
 
-    this.log(`✓ Imagem codificada: ${encoded.rows} linhas, ${encoded.rowsData.length} blocos compactados por RLE`)
+    this.log(`✓ Imagem codificada: ${encoded.rows} linhas térmicas x ${encoded.cols} colunas (${encoded.rowsData.length} blocos RLE)`)
 
     // Instanciar a tarefa oficial da D110
     const printTask = new D110PrintTask(this.client.abstraction, {
