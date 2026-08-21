@@ -16,6 +16,8 @@ import {
   Terminal,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Printer } from 'lucide-react'
+import { NiimbotLabelModal } from '../../treatments/components/niimbot-label-modal'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -73,6 +75,7 @@ export function EquipmentDetailsModal({
   const isRustDeskInstalled = !!rustdesk.isInstalled || !!rustdeskId
   const rustdeskPassword = rustdesk.password || 'T0p1nf0r!!!'
   const [showPassword, setShowPassword] = useState(false)
+  const [labelModalOpen, setLabelModalOpen] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -185,6 +188,26 @@ export function EquipmentDetailsModal({
                 </Button>
               )}
 
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                onClick={() => setLabelModalOpen(true)}
+                title="Imprimir Etiqueta Niimbot D110"
+              >
+                <Printer className="h-4 w-4" />
+                Etiqueta D110
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                onClick={() => window.open('/equipamento/' + equipment.id, '_blank')}
+                title="Abrir Laudo Técnico Público"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Laudo Público
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -522,6 +545,16 @@ export function EquipmentDetailsModal({
           </div>
         </Tabs>
       </DialogContent>
+      <NiimbotLabelModal
+        open={labelModalOpen}
+        onOpenChange={setLabelModalOpen}
+        equipment={{
+          id: equipment.id,
+          identification: osInfo?.hostname || equipment.identification || equipment.type,
+          clientName: equipment.client?.name || 'Cliente',
+          type: equipment.type,
+        }}
+      />
     </Dialog>
   )
 }

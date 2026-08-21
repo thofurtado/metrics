@@ -221,6 +221,36 @@ export function ClientsEquipments() {
                           <TableCell className="text-right text-sm font-medium text-slate-500">
                             {lastSeen}
                           </TableCell>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                                onClick={() => {
+                                  setSelectedLabelEquipment({
+                                    id: eq.id,
+                                    identification: eq.last_telemetry?.osInfo?.hostname || eq.identification || eq.type,
+                                    clientName: eq.client?.name,
+                                    type: eq.type,
+                                  })
+                                  setLabelModalOpen(true)
+                                }}
+                                title="Imprimir Etiqueta Niimbot D110"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                                onClick={() => window.open('/equipamento/' + eq.id, '_blank')}
+                                title="Visualizar Prontuário Público"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       )
                     })

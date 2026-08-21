@@ -26,16 +26,17 @@ import { Button } from '@/components/ui/button'
 import { MetricsIcon } from '@/components/MetricsIcon'
 
 export function EquipmentHistoryPage() {
-  const { id } = useParams<{ id: string }>()
+  const { id, equipmentId } = useParams<{ id?: string; equipmentId?: string }>()
+  const targetId = id || equipmentId
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['public-equipment-history', id],
+    queryKey: ['public-equipment-history', targetId],
     queryFn: async () => {
       const baseUrl = import.meta.env.VITE_API_URL || 'https://api.metrics.dev.br'
-      const res = await axios.get(`${baseUrl}/public/equipments/${id}/history`)
+      const res = await axios.get(`${baseUrl}/public/equipments/${targetId}/history`)
       return res.data.equipment
     },
-    enabled: Boolean(id),
+    enabled: Boolean(targetId),
   })
 
   if (isLoading) {
