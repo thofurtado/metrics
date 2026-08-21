@@ -11,6 +11,13 @@ import {
   ShoppingCart,
   Trash2,
   Wrench,
+  X,
+  Sparkles,
+  Layers,
+  CheckCircle2,
+  FileText,
+  DollarSign,
+  Percent,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -102,9 +109,10 @@ type FormSchemaType = z.infer<typeof formSchema>
 export interface TreatmentItemsProps {
   treatmentId: string
   open: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
+export function TreatmentItems({ treatmentId, open, onOpenChange }: TreatmentItemsProps) {
   const { isModuleActive } = useModules()
   const isFinanceActive = isModuleActive('financial')
   const isStockActive = isModuleActive('merchandise')
@@ -117,13 +125,12 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [showPayment, setShowPayment] = useState(false)
   const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products')
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'PRODUCT' | 'SERVICE'>('ALL')
   const [discountInputDisplay, setDiscountInputDisplay] = useState('0')
   const [isContractMode, setIsContractMode] = useState(false)
 
   const [isCreateItemOpen, setIsCreateItemOpen] = useState(false)
-  const [createItemType, setCreateItemType] = useState<'PRODUCT' | 'SERVICE'>(
-    'PRODUCT',
-  )
+  const [createItemType, setCreateItemType] = useState<'PRODUCT' | 'SERVICE'>('PRODUCT')
 
   function handleOpenCreateItem(type: 'PRODUCT' | 'SERVICE') {
     setCreateItemType(type)
@@ -136,7 +143,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     toast.success('Item cadastrado com sucesso!')
   }
 
-  // Ref for scrolling to form on item select (mobile primarily)
   const formRef = useRef<HTMLFormElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -166,7 +172,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
       setSearchTerm('')
       setDiscountInputDisplay('0')
       setEditingItemId(null)
-      // Return focus to search input
       setTimeout(() => {
         searchInputRef.current?.focus()
       }, 100)
@@ -191,14 +196,13 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-    }, 500)
+    }, 400)
 
     return () => {
       clearTimeout(handler)
     }
   }, [searchTerm])
 
-  // New Combined Query
   const { data: items = [], isLoading: isItemsLoading } = useQuery({
     queryKey: ['items-sales', debouncedSearchTerm, isStockActive],
     queryFn: async () => {
@@ -216,7 +220,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           promises.push(Promise.resolve({ data: { products: [] } }))
         }
 
-        // Services always fetched (core)
         promises.push(
           getServices({
             query: debouncedSearchTerm,
@@ -228,18 +231,18 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
         const [productsRes, servicesRes] = await Promise.all(promises)
 
         const products =
-          productsRes.data?.products?.map((p) => ({
+          productsRes.data?.products?.map((p: any) => ({
             ...p,
             type: 'PRODUCT',
             isItem: true,
             hasStock:
               !p.is_composite ||
-              (p.compositions?.every((c) => c.supply.stock >= c.quantity) ??
+              (p.compositions?.every((c: any) => c.supply.stock >= c.quantity) ??
                 true),
           })) || []
 
         const services =
-          servicesRes.data?.services?.map((s) => ({
+          servicesRes.data?.services?.map((s: any) => ({
             ...s,
             type: 'SERVICE',
             isItem: false,
@@ -257,31 +260,31 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     mutationFn: createTreatmentItem,
   })
 
-  const { mutateAsync: UpdateTreatmentItem } = useMutation({
-    mutationFn: updateTreatmentItem,
-  })
-
   const { mutateAsync: DeleteTreatmentItem } = useMutation({
     mutationFn: deleteTreatmentItem,
   })
 
-  const filteredItems =
-    items?.filter((item: any) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) || []
+  const filteredItems = items
+    ?.filter((item: any) => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      if (!matchesSearch) return false
+      if (categoryFilter === 'PRODUCT') return item.isItem
+      if (categoryFilter === 'SERVICE') return !item.isItem
+      return true
+    }) || []
 
   let subtotal = 0
+  let totalGross = 0
+  let totalDiscount = 0
   if (treatment) {
-    subtotal = (treatment.items || []).reduce(
-      (accumulator: number, item: any) => {
-        const quantity = item.quantity || 0
-        const value = item.salesValue || 0
-        const discount = item.discount || 0
-        const currentSubtotal = quantity * value - discount
-        return accumulator + currentSubtotal
-      },
-      0,
-    )
+    (treatment.items || []).forEach((item: any) => {
+      const quantity = item.quantity || 0
+      const value = item.salesValue || 0
+      const discount = item.discount || 0
+      totalGross += quantity * value
+      totalDiscount += discount
+      subtotal += quantity * value - discount
+    })
   }
 
   function calculateFinalValue(
@@ -309,15 +312,13 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
           discountValue = salesValue * quantity
         } else {
           unitSalesValue = salesValue
-          const totalGross = salesValue * quantity
-          discountValue = totalGross - finalSalesValue
+          const gross = salesValue * quantity
+          discountValue = gross - finalSalesValue
           if (discountValue < 0) discountValue = 0
         }
       }
 
       if (editingItemId) {
-        // Since backend doesn't have a PATCH route for treatment items,
-        // we simulate the edit by deleting the old item and creating a new one.
         await DeleteTreatmentItem({ treatmentItemId: editingItemId })
 
         const response = await treatmentItem({
@@ -341,7 +342,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                   if (i.id === editingItemId) {
                     return {
                       ...i,
-                      id: updatedItem.id, // Update to the new treatment item ID
+                      id: updatedItem.id,
                       quantity,
                       salesValue: unitSalesValue,
                       discount: discountValue,
@@ -399,7 +400,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
         await itemRefetch()
         toast.success('Item adicionado com sucesso')
-        // Switch to cart on mobile after add to show feedback
         if (window.innerWidth < 768) {
           setActiveTab('cart')
         }
@@ -424,8 +424,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     form.setValue('discount', '0')
 
     if (treatment && treatment.clients?.contract) {
-      // Logic for auto-selecting contract mode based on item type could go here
-      // limiting to just Services for now as standard practice
       if (!item.isItem) {
         setIsContractMode(true)
       } else {
@@ -435,11 +433,8 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
 
     const finalPrice = calculateFinalValue(newSalesValue, 1, 0)
     setFinalSalesValue(finalPrice)
-    setSearchTerm('')
 
-    // Smooth scroll to form area
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    // Focus quantity input for quick editing
     setTimeout(() => {
       document.getElementById('quantity-input')?.focus()
     }, 100)
@@ -448,55 +443,46 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   function onCartItemSelect(cartItem: any) {
     setEditingItemId(cartItem.id)
 
-    // Make sure 'item' is set to something so the form is valid and button is enabled
-    const productId =
-      cartItem.product_id ||
-      cartItem.service_id ||
-      cartItem.supply_id ||
-      cartItem.item_id ||
-      cartItem.itemId ||
-      cartItem.id
-    form.setValue('item', productId)
-
-    // Fallback if salesValue doesn't exist on the cart item
-    const newSalesValue = cartItem.salesValue || 0
-    setSalesValue(newSalesValue)
+    form.setValue('item', cartItem.item_id)
+    const currentSalesValue = cartItem.salesValue || 0
+    setSalesValue(currentSalesValue)
 
     const qty = cartItem.quantity || 1
     setItemQuantity(qty)
-    form.setValue('quantity', String(qty))
+    form.setValue('quantity', qty.toString())
 
-    const obs = cartItem.observations || ''
-    form.setValue('observations', obs)
+    form.setValue('observations', cartItem.observations || '')
 
-    const disc = cartItem.discount || 0
-    setItemDiscount(disc)
-    setDiscountInputDisplay(String(disc))
-    form.setValue('discount', String(disc))
-
-    if (treatment && treatment.clients?.contract) {
-      if (!cartItem.items.isItem) {
-        setIsContractMode(true)
-      } else {
-        setIsContractMode(false)
-      }
+    const discountVal = cartItem.discount || 0
+    const totalGrossItem = currentSalesValue * qty
+    let discPercent = 0
+    if (totalGrossItem > 0) {
+      discPercent = (discountVal / totalGrossItem) * 100
     }
+    setItemDiscount(discPercent)
+    setDiscountInputDisplay(discPercent.toFixed(0))
+    form.setValue('discount', discPercent.toFixed(0))
 
-    const finalPrice = calculateFinalValue(newSalesValue, qty, disc)
+    const finalPrice = totalGrossItem - discountVal
     setFinalSalesValue(finalPrice)
 
-    // Scroll to form and focus quantity
-    if (window.innerWidth < 768) {
-      setActiveTab('products') // ensure form is visible on mobile
+    if (treatment && treatment.clients?.contract && currentSalesValue === 0) {
+      setIsContractMode(true)
+    } else {
+      setIsContractMode(false)
     }
+
+    if (window.innerWidth < 768) {
+      setActiveTab('products')
+    }
+
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      document.getElementById('quantity-input')?.focus()
-    }, 150)
+    }, 100)
   }
 
   function onQuantityChange(newQuantityString: string | undefined) {
-    const newQuantity = parseFloat(newQuantityString || '') || 0
+    const newQuantity = parseFloat(newQuantityString || '')
     if (newQuantity > 0) {
       setItemQuantity(newQuantity)
       const finalPrice = calculateFinalValue(
@@ -524,27 +510,6 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
     setFinalSalesValue(finalPrice)
   }
 
-  function handleDiscountFocus(fieldValue: string | null | undefined) {
-    if (fieldValue === '0' || fieldValue === undefined || fieldValue === null) {
-      setDiscountInputDisplay('')
-    } else {
-      setDiscountInputDisplay(fieldValue)
-    }
-  }
-
-  function handleDiscountBlur(fieldValue: string | null | undefined) {
-    const trimmedValue = (fieldValue ?? '').trim()
-    if (trimmedValue === '' || Number.isNaN(Number(trimmedValue))) {
-      setDiscountInputDisplay('0')
-      setItemDiscount(0)
-      form.setValue('discount', '0', { shouldValidate: true })
-      const finalPrice = calculateFinalValue(salesValue, itemQuantity, 0)
-      setFinalSalesValue(finalPrice)
-    } else {
-      setDiscountInputDisplay(trimmedValue)
-    }
-  }
-
   function adjustQuantity(amount: number) {
     const newQuantity = Math.max(1, itemQuantity + amount)
     setItemQuantity(newQuantity)
@@ -568,118 +533,174 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
   return (
     <ErrorBoundary>
       <DialogContent
-        className="flex h-[100dvh] max-w-[100vw] flex-col overflow-hidden bg-slate-50 p-0 dark:bg-slate-950 sm:h-[95vh] sm:max-w-[95vw] md:max-w-5xl lg:max-w-7xl"
+        className="fixed inset-0 z-50 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-none bg-slate-950 p-0 text-slate-100 shadow-2xl focus:outline-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="hidden">
-          <DialogTitle>PDV</DialogTitle>
+          <DialogTitle>PDV do Atendimento</DialogTitle>
+          <DialogDescription>Gestão de peças, serviços e finalização de venda</DialogDescription>
         </DialogHeader>
 
-        {/* HEADER */}
-        <div className="z-20 flex-none border-b bg-white p-4 shadow-sm dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <h2 className="flex items-center gap-2 text-xl font-bold text-minsk-900 dark:text-minsk-100">
-                <Package className="h-6 w-6 text-minsk-600" />
-                PDV do Atendimento
-              </h2>
-              <p className="text-sm font-medium text-minsk-500">
-                Protocolo: # {treatmentId.slice(0, 8)}
+        {/* TOP FULLSCREEN BAR */}
+        <header className="z-30 flex flex-none items-center justify-between border-b border-slate-800 bg-slate-900/90 px-6 py-3.5 backdrop-blur-xl">
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-lg shadow-indigo-500/30">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-lg font-black tracking-tight text-white">
+                  PDV & Peças do Atendimento
+                </h2>
+                <Badge variant="outline" className="border-indigo-500/40 bg-indigo-500/10 font-mono text-xs text-indigo-300">
+                  #{treatmentId.slice(0, 8)}
+                </Badge>
+                {treatment.clients?.contract && (
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
+                    Cliente Mensalista
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Cliente: <span className="font-semibold text-slate-200">{treatment.clients?.name || 'Cliente'}</span>
               </p>
             </div>
-            {/* Total Badge visible on Desktop Header */}
+          </div>
+
+          <div className="flex items-center gap-4">
             {isFinanceActive && (
-              <div className="hidden flex-col items-end md:flex">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Total
+              <div className="hidden flex-col items-end sm:flex">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Total Geral
                 </span>
-                <span className="text-2xl font-bold text-vida-loca-600">
+                <span className="font-mono text-2xl font-black text-emerald-400">
                   R$ {subtotal.toFixed(2)}
                 </span>
               </div>
             )}
           </div>
-        </div>
+        </header>
 
-        {/* MOBILE TABS */}
-        <div className="sticky top-0 z-10 flex border-b bg-white dark:bg-slate-900 md:hidden">
+        {/* MOBILE NAVIGATION TABS */}
+        <div className="flex border-b border-slate-800 bg-slate-900 md:hidden">
           <button
             onClick={() => setActiveTab('products')}
             className={cn(
-              'flex-1 border-b-2 py-3 text-sm font-semibold transition-all duration-200',
+              'flex-1 border-b-2 py-3 text-sm font-bold transition-all',
               activeTab === 'products'
-                ? 'border-minsk-500 bg-minsk-50/50 text-minsk-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700',
+                ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200',
             )}
           >
-            Produtos & Serviços
+            Catálogo ({items.length})
           </button>
           <button
             onClick={() => setActiveTab('cart')}
             className={cn(
-              'flex-1 border-b-2 py-3 text-sm font-semibold transition-all duration-200',
+              'flex-1 border-b-2 py-3 text-sm font-bold transition-all',
               activeTab === 'cart'
-                ? 'border-vida-loca-500 bg-vida-loca-50/50 text-vida-loca-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700',
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200',
             )}
           >
-            Carrinho ({treatment.items?.length || 0})
+            Carrinho ({treatment.items?.length || 0}) • R$ {subtotal.toFixed(2)}
           </button>
         </div>
 
-        {/* MAIN CONTENT AREA */}
-        <div className="flex flex-1 flex-col overflow-hidden bg-slate-50/50 md:flex-row">
-          {/* LEFT COLUMN: PRODUCTS & SERVICES */}
+        {/* FULLSCREEN BODY (2-COLUMN MODERN LAYOUT) */}
+        <div className="flex flex-1 overflow-hidden bg-slate-950">
+          
+          {/* LEFT COLUMN: CATALOG & DOCKED ADD FORM */}
           <div
             className={cn(
-              'h-full w-full flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 md:w-[60%] lg:w-[65%] xl:w-[70%]',
+              'flex h-full w-full flex-col overflow-hidden md:w-[65%] lg:w-[70%] xl:w-[74%]',
               activeTab === 'products' ? 'flex' : 'hidden md:flex',
             )}
           >
-            {/* Search Bar & Add Button */}
-            <div className="sticky top-0 z-10 flex flex-none items-center gap-3 border-b bg-white p-4 dark:bg-slate-900">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            {/* Catalog Toolbar */}
+            <div className="z-10 flex flex-none flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-900/60 p-4 backdrop-blur-md">
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   ref={searchInputRef}
-                  placeholder="Buscar produtos ou serviços..."
+                  placeholder="Buscar peças, produtos ou serviços..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-12 w-full rounded-xl border-slate-200 bg-slate-50 pl-10 text-base shadow-sm transition-all focus:bg-white"
+                  className="h-11 w-full rounded-xl border-slate-800 bg-slate-950/80 pl-10 text-sm text-slate-100 placeholder:text-slate-500 shadow-inner focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
+
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCategoryFilter('ALL')}
+                  className={cn(
+                    'h-8 rounded-lg px-3 text-xs font-bold',
+                    categoryFilter === 'ALL'
+                      ? 'bg-slate-800 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200',
+                  )}
+                >
+                  Todos
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCategoryFilter('PRODUCT')}
+                  className={cn(
+                    'h-8 rounded-lg px-3 text-xs font-bold',
+                    categoryFilter === 'PRODUCT'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200',
+                  )}
+                >
+                  Produtos
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCategoryFilter('SERVICE')}
+                  className={cn(
+                    'h-8 rounded-lg px-3 text-xs font-bold',
+                    categoryFilter === 'SERVICE'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200',
+                  )}
+                >
+                  Serviços
+                </Button>
+              </div>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
-                    className="flex h-12 flex-shrink-0 items-center gap-2 rounded-xl border-minsk-200 bg-minsk-50/50 px-4 text-minsk-700 hover:bg-minsk-50"
+                    className="h-11 gap-2 rounded-xl bg-indigo-600 font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500"
                   >
-                    <Plus className="h-5 w-5" />
-                    <span className="hidden font-semibold sm:inline">
-                      Novo Item
-                    </span>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Cadastrar Item</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="z-[10100] w-48">
+                <DropdownMenuContent align="end" className="w-48 border-slate-800 bg-slate-900 text-slate-100">
                   <DropdownMenuItem
                     onClick={() => handleOpenCreateItem('PRODUCT')}
-                    className="cursor-pointer"
+                    className="cursor-pointer hover:bg-slate-800"
                   >
+                    <Box className="mr-2 h-4 w-4 text-blue-400" />
                     Novo Produto
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleOpenCreateItem('SERVICE')}
-                    className="cursor-pointer"
+                    className="cursor-pointer hover:bg-slate-800"
                   >
+                    <Wrench className="mr-2 h-4 w-4 text-amber-400" />
                     Novo Serviço
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Dialog
-                open={isCreateItemOpen}
-                onOpenChange={setIsCreateItemOpen}
-              >
+              <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
                 <ProductItemDialog
                   initialType={createItemType}
                   onSuccess={handleCreateItemSuccess}
@@ -687,12 +708,12 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
               </Dialog>
             </div>
 
-            {/* Grid */}
-            <ScrollArea className="flex-1 p-2 sm:p-4">
-              <div className="grid grid-cols-2 gap-3 pb-24 sm:grid-cols-3 md:pb-0 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Catalog Grid Scroll Area */}
+            <ScrollArea className="flex-1 p-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {isItemsLoading ? (
-                  Array.from({ length: 12 }).map((_, i) => (
-                    <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                  Array.from({ length: 15 }).map((_, i) => (
+                    <Skeleton key={i} className="h-32 w-full rounded-2xl bg-slate-900" />
                   ))
                 ) : (
                   <>
@@ -705,42 +726,33 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                           key={item.id}
                           onClick={() => onItemSelect(item)}
                           className={cn(
-                            'group relative cursor-pointer overflow-hidden rounded-xl border-slate-200 shadow-sm transition-all hover:border-minsk-300 hover:shadow-md',
-                            isSelected &&
-                              'border-minsk-500 bg-minsk-50/10 ring-2 ring-minsk-500',
-                            !hasStock &&
-                              'bg-slate-100 opacity-70 grayscale-[0.5]',
+                            'group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/60 transition-all duration-200 hover:border-indigo-500/60 hover:bg-slate-900 hover:shadow-lg hover:shadow-indigo-500/10 active:scale-[0.98]',
+                            isSelected && 'border-indigo-500 bg-indigo-950/30 ring-2 ring-indigo-500/60',
+                            !hasStock && 'opacity-60 grayscale-[0.6]',
                           )}
                         >
-                          <CardContent className="flex h-full flex-col justify-between gap-2 p-3">
+                          <CardContent className="flex h-full flex-col justify-between p-3.5">
                             <div>
-                              <div className="mb-1 flex items-start justify-between gap-1">
+                              <div className="mb-2 flex items-center justify-between">
                                 <Badge
                                   variant="outline"
                                   className={cn(
-                                    'h-5 border-0 px-1.5 py-0 text-[10px] font-bold',
+                                    'h-5 border-0 px-2 py-0 text-[10px] font-black uppercase tracking-wider',
                                     item.isItem
-                                      ? 'bg-blue-100 text-blue-700'
-                                      : 'bg-amber-100 text-amber-700',
+                                      ? 'bg-blue-500/15 text-blue-400'
+                                      : 'bg-amber-500/15 text-amber-400',
                                   )}
                                 >
-                                  {item.isItem
-                                    ? isStockActive
-                                      ? 'PROD'
-                                      : 'ITEM'
-                                    : 'SERV'}
+                                  {item.isItem ? 'Produto' : 'Serviço'}
                                 </Badge>
                                 {!hasStock && isStockActive && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="h-5 px-1 text-[10px]"
-                                  >
+                                  <span className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold text-rose-400">
                                     Sem Estoque
-                                  </Badge>
+                                  </span>
                                 )}
                               </div>
                               <h3
-                                className="line-clamp-2 text-sm font-semibold leading-tight text-slate-800 dark:text-slate-100"
+                                className="line-clamp-2 text-sm font-bold text-slate-100 group-hover:text-white"
                                 title={item.name}
                               >
                                 {item.name}
@@ -748,12 +760,12 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                             </div>
 
                             {isFinanceActive && (
-                              <div className="mt-auto border-t border-slate-100 pt-2 dark:border-slate-800">
-                                <p className="text-xs font-medium text-slate-400">
-                                  Valor Unit.
-                                </p>
-                                <p className="text-base font-bold text-slate-900 dark:text-white">
-                                  R$ {item.price.toFixed(2)}
+                              <div className="mt-3 border-t border-slate-800/80 pt-2">
+                                <span className="text-[10px] font-medium uppercase text-slate-500">
+                                  Valor Unitário
+                                </span>
+                                <p className="font-mono text-base font-black text-emerald-400">
+                                  R$ {Number(item.price || 0).toFixed(2)}
                                 </p>
                               </div>
                             )}
@@ -761,10 +773,11 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                         </Card>
                       )
                     })}
+
                     {filteredItems.length === 0 && (
-                      <div className="col-span-full flex flex-col items-center justify-center py-10 text-slate-400">
-                        <Search className="mb-3 h-12 w-12 opacity-20" />
-                        <p>Nenhum item encontrado.</p>
+                      <div className="col-span-full flex flex-col items-center justify-center py-16 text-slate-500">
+                        <Search className="mb-3 h-10 w-10 opacity-30" />
+                        <p className="text-sm font-medium">Nenhum item encontrado.</p>
                       </div>
                     )}
                   </>
@@ -772,153 +785,151 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
               </div>
             </ScrollArea>
 
-            {/* Add Item Form Area (Fixed at bottom on desktop, scrollable on mobile) */}
-            <div className="z-20 flex-none border-t bg-white p-4 shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.05)] dark:bg-slate-900">
+            {/* DOCKED BOTTOM FORM BAR */}
+            <div className="z-20 flex-none border-t border-slate-800 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
               <Form {...form}>
                 <form
                   ref={formRef}
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className="mx-auto max-w-4xl space-y-4"
+                  className="mx-auto flex flex-col gap-3"
                 >
-                  {/* Selected Item Display */}
-                  <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <Box className="h-5 w-5 shrink-0 text-slate-400" />
-                    <span className="flex-1 truncate text-sm font-medium text-slate-700">
-                      {editingItemId
-                        ? `Editando o item: ${treatment?.items?.find((i) => i.id === editingItemId)?.items?.name || ''}`
-                        : items?.find((i: any) => i.id === form.watch('item'))
-                            ?.name || 'Selecione um item acima'}
-                    </span>
+                  {/* Selected Item Notification Banner */}
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2.5">
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+                        <Box className="h-4 w-4" />
+                      </div>
+                      <span className="truncate text-sm font-bold text-slate-200">
+                        {editingItemId
+                          ? 'Editando Item: ' + (treatment?.items?.find((i) => i.id === editingItemId)?.items?.name || '')
+                          : (items?.find((i: any) => i.id === form.watch('item'))?.name || 'Selecione um produto ou serviço acima para adicionar')}
+                      </span>
+                    </div>
+
+                    {form.watch('item') && (
+                      <span className="shrink-0 font-mono text-xs font-bold text-slate-400">
+                        Unit: R$ {salesValue.toFixed(2)}
+                      </span>
+                    )}
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="observations"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase text-slate-500">
-                          Observações (Opcional)
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ex: Posição do cabo, destino da mercadoria..."
-                            className="rounded-xl border-slate-200 bg-white shadow-sm focus-visible:ring-minsk-500"
-                            {...field}
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 items-end gap-4 md:grid-cols-4">
-                    {/* QTD */}
-                    <FormField
-                      control={form.control}
-                      name="quantity"
-                      render={({ field }) => (
-                        <FormItem className="col-span-1">
-                          <FormLabel className="text-xs font-bold uppercase text-slate-500">
-                            Qtd.
-                          </FormLabel>
-                          <div className="flex h-12 items-center overflow-hidden rounded-xl border bg-white ring-minsk-500/20 transition-all focus-within:ring-2 active:scale-[0.99]">
-                            <button
-                              type="button"
-                              onClick={() => adjustQuantity(-1)}
-                              className="h-full px-3 text-slate-500 hover:bg-slate-50"
-                            >
-                              <Minus className="h-4 w-4" />
-                            </button>
-                            <Input
-                              id="quantity-input"
-                              {...field}
-                              type="number"
-                              className="h-full border-none p-0 text-center text-lg font-bold shadow-none focus-visible:ring-0"
-                              onChange={(e) => {
-                                field.onChange(e)
-                                onQuantityChange(e.target.value)
-                              }}
-                              value={field.value ?? 1}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => adjustQuantity(1)}
-                              className="h-full px-3 text-slate-500 hover:bg-slate-50"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Discount */}
-                    {isFinanceActive && (
+                  {/* Form Inputs Grid */}
+                  <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-12">
+                    {/* Observations */}
+                    <div className="col-span-2 sm:col-span-4">
                       <FormField
                         control={form.control}
-                        name="discount"
+                        name="observations"
                         render={({ field }) => (
-                          <FormItem className="col-span-1">
-                            <FormLabel className="text-xs font-bold uppercase text-slate-500">
-                              Desc. (%)
+                          <FormItem>
+                            <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              Observações / Detalhes
                             </FormLabel>
                             <FormControl>
                               <Input
-                                className="h-12 rounded-xl border-slate-200 text-center text-lg font-bold text-red-500 shadow-sm"
-                                type="number"
+                                placeholder="Ex: Substituição na garantia, n° série..."
+                                className="h-11 rounded-xl border-slate-800 bg-slate-950 text-sm text-slate-100 focus:border-indigo-500"
                                 {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  onDiscountChange(e.target.value)
-                                }}
-                                value={discountInputDisplay}
-                                onFocus={() => handleDiscountFocus(field.value)}
-                                onBlur={() => handleDiscountBlur(field.value)}
+                                value={field.value || ''}
                               />
                             </FormControl>
                           </FormItem>
                         )}
                       />
-                    )}
+                    </div>
 
-                    {/* Contract Toggle */}
-                    {isContractMode && isFinanceActive && (
-                      <div className="col-span-2 flex h-12 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-2 md:col-span-1 lg:px-4">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id="contract-mode"
-                            checked={isContractMode}
-                            onCheckedChange={setIsContractMode}
-                            className="data-[state=checked]:bg-blue-600"
-                          />
-                          <Label
-                            htmlFor="contract-mode"
-                            className="cursor-pointer whitespace-nowrap text-xs font-bold text-blue-700"
-                          >
-                            CONTRATO
-                          </Label>
-                        </div>
+                    {/* Quantity Stepper */}
+                    <div className="col-span-1 sm:col-span-3">
+                      <FormField
+                        control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              Quantidade
+                            </FormLabel>
+                            <div className="flex h-11 items-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                              <button
+                                type="button"
+                                onClick={() => adjustQuantity(-1)}
+                                className="flex h-full w-10 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <Input
+                                id="quantity-input"
+                                {...field}
+                                type="number"
+                                className="h-full border-none bg-transparent p-0 text-center font-mono text-base font-bold text-white focus-visible:ring-0"
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  onQuantityChange(e.target.value)
+                                }}
+                                value={field.value ?? 1}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => adjustQuantity(1)}
+                                className="flex h-full w-10 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Discount % */}
+                    {isFinanceActive && (
+                      <div className="col-span-1 sm:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="discount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                Desconto (%)
+                              </FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input
+                                    className="h-11 rounded-xl border-slate-800 bg-slate-950 pr-8 text-center font-mono text-base font-bold text-rose-400 focus:border-rose-500"
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e)
+                                      onDiscountChange(e.target.value)
+                                    }}
+                                    value={discountInputDisplay}
+                                  />
+                                  <Percent className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                                </div>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     )}
 
                     {/* Add/Save Button */}
-                    <div className="col-span-2 flex gap-2 md:col-span-1">
+                    <div className="col-span-2 sm:col-span-3 flex gap-2">
                       <Button
                         type="submit"
                         disabled={!form.watch('item')}
                         className={cn(
-                          'h-12 w-full rounded-xl text-base font-bold text-white shadow-lg transition-all active:scale-95',
+                          'h-11 flex-1 rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-[0.98]',
                           editingItemId
-                            ? 'bg-amber-500 shadow-amber-200 hover:bg-amber-600'
-                            : 'bg-minsk-600 shadow-minsk-200 hover:bg-minsk-700',
+                            ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
+                            : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20',
                         )}
                       >
                         {editingItemId ? (
-                          <>SALVAR</>
+                          'SALVAR ALTERAÇÃO'
                         ) : (
                           <>
-                            <Plus className="mr-2 h-5 w-5" />
-                            ADICIONAR
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            ADICIONAR ITEM
                           </>
                         )}
                       </Button>
@@ -926,6 +937,7 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       {editingItemId && (
                         <Button
                           type="button"
+                          variant="outline"
                           onClick={() => {
                             setEditingItemId(null)
                             form.reset({
@@ -942,10 +954,10 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                             setDiscountInputDisplay('0')
                             searchInputRef.current?.focus()
                           }}
-                          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300"
+                          className="h-11 border-slate-800 bg-slate-900 px-3 text-slate-400 hover:text-white"
                           title="Cancelar edição"
                         >
-                          <Minus className="h-5 w-5" />
+                          <X className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -955,95 +967,84 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: CART (STICKY ON DESKTOP) */}
+          {/* RIGHT COLUMN: CART & SALE SUMMARY */}
           <div
             className={cn(
-              'z-30 h-full w-full flex-col border-l border-slate-200 bg-white shadow-xl dark:bg-slate-900 md:w-[40%] lg:w-[35%] xl:w-[30%]',
+              'z-20 flex h-full w-full flex-col border-l border-slate-800 bg-slate-900 shadow-2xl md:w-[35%] lg:w-[30%] xl:w-[26%]',
               activeTab === 'cart' ? 'flex' : 'hidden md:flex',
             )}
           >
-            {/* Header for Cart Desktop */}
-            <div className="hidden items-center justify-between border-b bg-slate-50/50 p-4 md:flex">
-              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                <ShoppingCart className="h-5 w-5 text-vida-loca-600" />
-                Carrinho
-              </h3>
-              <Badge
-                variant="secondary"
-                className="border-slate-200 bg-white text-slate-600"
-              >
-                {treatment.items?.length || 0} itens
+            {/* Cart Header */}
+            <div className="flex flex-none items-center justify-between border-b border-slate-800 bg-slate-950/60 p-4">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">Carrinho da O.S.</h3>
+              </div>
+              <Badge variant="secondary" className="border-slate-800 bg-slate-800 font-mono text-xs text-slate-300">
+                {treatment.items?.length || 0} {treatment.items?.length === 1 ? 'item' : 'itens'}
               </Badge>
             </div>
 
-            {/* Cart List */}
-            <ScrollArea className="flex-1 bg-slate-50/30">
-              <div className="space-y-3 p-4">
+            {/* Cart Items List */}
+            <ScrollArea className="flex-1 p-3">
+              <div className="space-y-2.5">
                 {(treatment.items || []).map((item) => (
                   <div
                     key={item.id}
                     onClick={() => onCartItemSelect(item)}
                     className={cn(
-                      'group relative cursor-pointer rounded-xl border bg-white p-3 shadow-sm transition-all',
+                      'group relative cursor-pointer rounded-xl border p-3 transition-all duration-200',
                       editingItemId === item.id
-                        ? 'border-amber-400 bg-amber-50/10 ring-1 ring-amber-400'
-                        : 'border-slate-100 hover:border-slate-300 hover:shadow-md',
+                        ? 'border-amber-500/80 bg-amber-950/20 ring-1 ring-amber-500'
+                        : 'border-slate-800 bg-slate-950/70 hover:border-slate-700 hover:bg-slate-950',
                     )}
                   >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="flex max-w-[85%] items-center gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5 truncate">
                         <div
                           className={cn(
-                            'rounded-lg p-1.5',
+                            'mt-0.5 rounded-lg p-1.5 text-xs',
                             item.items.isItem
-                              ? 'bg-blue-50 text-blue-600'
-                              : 'bg-amber-50 text-amber-600',
+                              ? 'bg-blue-500/15 text-blue-400'
+                              : 'bg-amber-500/15 text-amber-400',
                           )}
                         >
-                          {item.items.isItem ? (
-                            <Box className="h-4 w-4" />
-                          ) : (
-                            <Wrench className="h-4 w-4" />
-                          )}
+                          {item.items.isItem ? <Box className="h-3.5 w-3.5" /> : <Wrench className="h-3.5 w-3.5" />}
                         </div>
-                        <div className="flex flex-col">
-                          <span
-                            className="line-clamp-1 text-sm font-semibold text-slate-800"
-                            title={item.items.name}
-                          >
+                        <div className="flex flex-col truncate">
+                          <span className="truncate text-sm font-bold text-slate-100" title={item.items.name}>
                             {item.items.name}
                           </span>
                           {item.observations && (
-                            <span
-                              className="mt-0.5 line-clamp-2 text-xs text-slate-500"
-                              title={item.observations}
-                            >
+                            <span className="truncate text-xs text-slate-500" title={item.observations}>
                               Obs: {item.observations}
                             </span>
                           )}
                         </div>
                       </div>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button
                             onClick={(e) => e.stopPropagation()}
-                            className="p-1 text-slate-300 transition-colors hover:text-red-500"
+                            className="p-1 text-slate-500 transition-colors hover:text-rose-400"
+                            title="Remover item"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="border-slate-800 bg-slate-900 text-slate-100">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Remover Item?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Deseja remover este item do atendimento?
+                            <AlertDialogTitle>Remover Item do Atendimento?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-400">
+                              Deseja excluir "{item.items.name}" desta ordem de serviço?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel className="border-slate-700 bg-slate-800 hover:bg-slate-700">Cancelar</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => onItemDelete(item.id)}
-                              className="bg-red-500"
+                              className="bg-rose-600 hover:bg-rose-500 text-white"
                             >
                               Remover
                             </AlertDialogAction>
@@ -1052,66 +1053,67 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
                       </AlertDialog>
                     </div>
 
-                    <div className="flex items-end justify-between">
-                      <div className="text-xs font-medium text-slate-500">
-                        {item.quantity} x{' '}
-                        {isFinanceActive
-                          ? `R$ ${(item.salesValue || 0).toFixed(2)}`
-                          : 'Item'}
-                        {isFinanceActive && (item.discount || 0) > 0 && (
-                          <span className="block font-semibold text-red-500">
-                            Desc: -R$ {(item.discount || 0).toFixed(2)}
+                    <div className="mt-2.5 flex items-end justify-between border-t border-slate-900 pt-2">
+                      <div className="text-xs text-slate-400 font-mono">
+                        {item.quantity}x R$ {Number(item.salesValue || 0).toFixed(2)}
+                        {Number(item.discount || 0) > 0 && (
+                          <span className="block text-[11px] font-semibold text-rose-400">
+                            Desc: -R$ {Number(item.discount || 0).toFixed(2)}
                           </span>
                         )}
                       </div>
-                      {isFinanceActive && (
-                        <div className="text-right">
-                          <Badge
-                            className={cn(
-                              'pointer-events-none px-2 py-0.5 text-sm font-bold',
-                              item.salesValue === 0
-                                ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                                : 'bg-slate-900 text-white hover:bg-slate-800',
-                            )}
-                          >
-                            {item.salesValue === 0
-                              ? 'GRÁTIS'
-                              : `R$ ${(item.quantity * (item.salesValue || 0) - (item.discount || 0)).toFixed(2)}`}
-                          </Badge>
-                        </div>
-                      )}
+
+                      <div className="font-mono text-sm font-black text-emerald-400">
+                        {Number(item.salesValue || 0) === 0 ? (
+                          <span className="text-xs text-blue-400 font-bold">CONTRATO</span>
+                        ) : (
+                          'R$ ' + (Number(item.quantity || 1) * Number(item.salesValue || 0) - Number(item.discount || 0)).toFixed(2)
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
+
                 {treatment.items?.length === 0 && (
-                  <div className="flex h-full flex-col items-center justify-center py-10 text-slate-400 opacity-60">
-                    <ShoppingCart className="mb-2 h-12 w-12" />
-                    <p className="text-sm">Carrinho vazio</p>
+                  <div className="flex h-48 flex-col items-center justify-center text-center text-slate-500">
+                    <ShoppingCart className="mb-2 h-10 w-10 opacity-30" />
+                    <p className="text-sm font-medium">Carrinho vazio</p>
+                    <p className="text-xs text-slate-600">Selecione itens no catálogo ao lado.</p>
                   </div>
                 )}
               </div>
             </ScrollArea>
 
-            {/* Sticky Footer Cart Actions */}
-            <div className="flex-none space-y-3 border-t bg-white p-4 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+            {/* Cart Sticky Breakdown & Checkout */}
+            <div className="flex-none space-y-3 border-t border-slate-800 bg-slate-950 p-4 shadow-2xl">
               {isFinanceActive && (
-                <div className="flex items-end justify-between">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    Total a Pagar
-                  </span>
-                  <span className="text-3xl font-bold leading-none text-vida-loca-600">
-                    R$ {subtotal.toFixed(2)}
-                  </span>
+                <div className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 text-xs">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Subtotal Bruto:</span>
+                    <span className="font-mono">R$ {totalGross.toFixed(2)}</span>
+                  </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex items-center justify-between text-rose-400 font-medium">
+                      <span>Descontos Aplicados:</span>
+                      <span className="font-mono">-R$ {totalDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-slate-800 pt-1.5 flex items-center justify-between text-sm font-black text-white">
+                    <span>Total a Pagar:</span>
+                    <span className="font-mono text-lg text-emerald-400">
+                      R$ {subtotal.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               )}
 
               <Button
                 onClick={() => setShowPayment(true)}
                 disabled={treatment.items.length === 0}
-                className="h-14 w-full rounded-xl bg-emerald-500 text-lg font-bold text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600 active:scale-[0.98]"
+                className="h-14 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-xl shadow-emerald-600/25 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98]"
               >
                 <CreditCard className="mr-2 h-5 w-5" />
-                {isFinanceActive ? 'FINALIZAR VENDA' : 'CONCLUIR ATENDIMENTO'}
+                {isFinanceActive ? 'FINALIZAR VENDA (PAGAMENTO)' : 'CONCLUIR ATENDIMENTO'}
               </Button>
             </div>
           </div>
@@ -1126,6 +1128,9 @@ export function TreatmentItems({ treatmentId, open }: TreatmentItemsProps) {
             onSuccess={() => {
               itemRefetch()
               setShowPayment(false)
+              if (onOpenChange) {
+                onOpenChange(false)
+              }
             }}
           />
         )}
