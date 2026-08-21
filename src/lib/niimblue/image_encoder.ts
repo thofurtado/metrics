@@ -46,7 +46,13 @@ export class CanvasImageSource implements ImageSource {
     }
 
     idx *= 4;
-    return this.iData.data[idx] !== 255 || this.iData.data[idx + 1] !== 255 || this.iData.data[idx + 2] !== 255;
+    const r = this.iData.data[idx];
+    const g = this.iData.data[idx + 1];
+    const b = this.iData.data[idx + 2];
+    const a = this.iData.data[idx + 3] !== undefined ? this.iData.data[idx + 3] : 255;
+    if (a < 128) return false;
+    const lum = r * 0.299 + g * 0.587 + b * 0.114;
+    return lum < 160;
   }
 }
 

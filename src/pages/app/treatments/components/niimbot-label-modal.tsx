@@ -74,7 +74,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
 
-  // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI)
+    // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com margens seguras e alta nitidez
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -86,45 +86,45 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // 2. Textos no lado direito
+    // 2. Textos no lado direito com fontes nítidas e posicionamento dentro da margem térmica
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
-    // Cabeçalho
-    ctx.font = '900 16px sans-serif'
-    ctx.fillText('METRICS TI', 114, 10)
+    // Cabeçalho / Branding
+    ctx.font = '900 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('METRICS TI', 118, 14)
 
-    // Linha divisória preta sólida
-    ctx.fillRect(114, 30, 120, 2)
+    // Linha divisória preta sólida de 2px
+    ctx.fillRect(118, 30, 106, 2)
 
-    // Identificação do Equipamento
-    ctx.font = 'bold 13px sans-serif'
+    // Identificação do Equipamento (Bold destacado)
+    ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedId =
-      identification.length > 15
-        ? identification.substring(0, 15) + '..'
+      identification.length > 14
+        ? identification.substring(0, 14) + '..'
         : identification
-    ctx.fillText(truncatedId, 114, 36)
+    ctx.fillText(truncatedId, 118, 36)
 
     // Nome do Cliente
-    ctx.font = '11px sans-serif'
+    ctx.font = '600 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedClient =
-      clientName.length > 18
-        ? clientName.substring(0, 18) + '..'
+      clientName.length > 16
+        ? clientName.substring(0, 16) + '..'
         : clientName
-    ctx.fillText(truncatedClient, 114, 55)
+    ctx.fillText(truncatedClient, 118, 54)
 
     // Data de Emissão
-    ctx.font = '10px sans-serif'
-    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 114, 74)
+    ctx.font = '500 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 118, 70)
 
-    // Chamada para Ação
-    ctx.font = 'italic 10px sans-serif'
-    ctx.fillText('Consulte o Laudo ↗', 114, 94)
+    // Chamada para Ação (Prontuário)
+    ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('Prontuário ↗', 118, 88)
 
-    // 3. Gerar QR Code de baixa densidade (Version 2 / Low error correction)
+    // 3. Gerar QR Code perfeitamente enquadrado com margem de segurança (x=16, y=14, 92x92px)
     QRCode.toDataURL(targetUrl, {
-      width: 108,
-      margin: 1,
+      width: 92,
+      margin: 0,
       errorCorrectionLevel: 'L',
       color: {
         dark: '#000000',
@@ -135,8 +135,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
         const img = new Image()
         img.onload = () => {
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, 112, 120)
-          ctx.drawImage(img, 4, 6, 108, 108)
+          ctx.fillRect(14, 12, 96, 96)
+          ctx.drawImage(img, 16, 14, 92, 92)
         }
         img.src = qrDataUrl
       })
