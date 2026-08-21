@@ -47,19 +47,21 @@ export class NiimbotBluetooth {
     this.client.on('packetsent', (e: any) => {
       if (e.packet) {
         const raw = e.packet.toBytes ? e.packet.toBytes() : new Uint8Array([])
-        this.log(`📤 Enviado: ${e.packet.commandName || ('0x' + e.packet.command.toString(16))} [${hexString(raw)}]`)
+        const cmdName = e.packet.commandName || ('0x' + Number(e.packet.command).toString(16).toUpperCase())
+        this.log(`📤 Enviado: ${cmdName} [${hexString(raw)}]`)
       }
     })
 
     this.client.on('packetreceived', (e: any) => {
       if (e.packet) {
         const raw = e.packet.toBytes ? e.packet.toBytes() : new Uint8Array([])
-        this.log(`📥 Resposta: ${e.packet.commandName || ('0x' + e.packet.command.toString(16))} [${hexString(raw)}]`)
+        const cmdName = e.packet.commandName || ('0x' + Number(e.packet.command).toString(16).toUpperCase())
+        this.log(`📥 Resposta: ${cmdName} [${hexString(raw)}]`)
       }
     })
 
     this.client.on('connect', () => {
-      this.log('✓ Conexão GATT estabelecida.')
+      this.log('✓ Conexão GATT estabelecida com a D110.')
     })
 
     this.client.on('disconnect', () => {
@@ -67,11 +69,7 @@ export class NiimbotBluetooth {
     })
 
     await this.client.connect()
-
-    // Handshake inicial
-    this.log('🤝 Executando handshake oficial...')
-    await this.client.abstraction.sendPacket(PacketGenerator.connect())
-    this.log('✓ Handshake aceito com sucesso!')
+    this.log('✓ Handshake e Heartbeat ativos em segundo plano!')
 
     return 'Niimbot D110'
   }
@@ -85,10 +83,10 @@ export class NiimbotBluetooth {
     this.log('🩺 Lendo status e bateria da impressora...')
     try {
       const status = await this.client.abstraction.getPrinterStatusData()
-      this.log(`✓ Status da D110: Bateria ${status.batteryLevel ?? 'OK'}, Papel: ${status.paperState ?? 'OK'}`)
+      this.log(`✓ Status D110: Bateria ${status.batteryLevel ?? 'OK'}, Papel: ${status.paperState ?? 'OK'}`)
     } catch {
       // Fallback
-      await this.client.abstraction.sendPacket(PacketGenerator.getPrinterStatusData())
+      await this.client.abstraction.send(PacketGenerator.getPrinterStatusData())
       this.log('✓ Pacote de status transmitido com sucesso.')
     }
   }
@@ -99,13 +97,13 @@ export class NiimbotBluetooth {
   async feedPaper(): Promise<void> {
     if (!this.client) throw new Error('Impressora não conectada.')
     this.log('📄 Solicitando avanço de papel...')
-    await this.client.abstraction.sendPacket(PacketGenerator.mapped(RequestCommandId.PageFeed, [0x01]))
+    await this.client.abstraction.send(PacketGenerator.mapped(RequestCommandId.PageFeed, [0x01]))
     await new Promise((r) => setTimeout(r, 500))
     this.log('✓ Avanço de papel concluído.')
   }
 
   /**
-   * Imprime o Canvas usando o D110PrintTask oficial
+   * Imprime o Canvas usando o D110PrintTask oficial do niim.blue
    */
   async printCanvas(canvas: HTMLCanvasElement, options: PrintOptions = {}): Promise<void> {
     if (!this.client) throw new Error('Impressora não conectada.')
@@ -119,7 +117,7 @@ export class NiimbotBluetooth {
     const source = new CanvasImageSource(canvas)
     const encoded = ImageEncoder.encode(source, 'left')
 
-    this.log(`✓ Imagem codificada: ${encoded.rows} linhas, ${encoded.rowsData.length} blocos comprimidos por RLE`)
+    this.log(`✓ Imagem codificada: ${encoded.rows} linhas, ${encoded.rowsData.length} blocos compactados por RLE`)
 
     // Instanciar a tarefa oficial da D110
     const printTask = new D110PrintTask(this.client.abstraction, {
@@ -129,16 +127,17 @@ export class NiimbotBluetooth {
       pageTimeoutMs: 15000,
     })
 
-    this.log('🚀 Inicializando tarefa de impressão (D110PrintTask.printInit)...')
+    this.log('🚀 Inicializando impressão (D110PrintTask.printInit)...')
+    if (options.onProgress) options.onProgress(20)
     await printTask.printInit()
 
     this.log('📤 Transmitindo blocos de imagem (D110PrintTask.printPage)...')
-    if (options.onProgress) options.onProgress(30)
+    if (options.onProgress) options.onProgress(50)
 
     await printTask.printPage(encoded, 1)
-    if (options.onProgress) options.onProgress(80)
+    if (options.onProgress) options.onProgress(85)
 
-    this.log('⏳ Aguardando confirmação do motor térmico (waitForPageFinished)...')
+    this.log('⏳ Aguardando conclusão física do motor térmico...')
     try {
       await printTask.waitForPageFinished()
     } catch {
