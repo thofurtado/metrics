@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { NiimbotBluetooth } from '@/lib/niimbot-ble'
 
 interface NiimbotLabelModalProps {
@@ -35,13 +34,16 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
   const [statusMessage, setStatusMessage] = useState('')
 
   const equipmentId = equipment?.id || ''
+  const shortId = equipmentId.slice(0, 8)
   const identification = equipment?.identification || 'Computador'
   const clientName = equipment?.clientName || 'Cliente'
-  const targetUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/equipamento/${equipmentId}`
-    : `https://app.metrics.dev.br/equipamento/${equipmentId}`
 
-  // Função dedicada de desenho garantido no Canvas (240x120px @ 203 DPI)
+  // URL curta e ultra-leve para gerar QR Code de baixa densidade (Version 2, módulos 4x4px grossos)
+  const targetUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/e/${shortId}`
+    : `https://app.metrics.dev.br/e/${shortId}`
+
+  // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI)
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -49,54 +51,54 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     canvas.width = 240
     canvas.height = 120
 
-    // Fundo branco inicial
+    // 1. Fundo branco puro
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Textos informativos no lado direito
+    // 2. Textos no lado direito (alta nitidez)
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
-    // 1. Título METRICS TI
-    ctx.font = 'bold 15px sans-serif'
-    ctx.fillText('METRICS TI', 118, 12)
+    // Cabeçalho
+    ctx.font = '900 16px sans-serif'
+    ctx.fillText('METRICS TI', 114, 10)
 
-    // 2. Linha divisória
-    ctx.fillRect(118, 30, 114, 1.5)
+    // Linha divisória preta sólida
+    ctx.fillRect(114, 30, 120, 2)
 
-    // 3. Identificação do Equipamento
-    ctx.font = 'bold 12px sans-serif'
+    // Identificação do Equipamento
+    ctx.font = 'bold 13px sans-serif'
     const truncatedId =
-      identification.length > 14
-        ? identification.substring(0, 14) + '..'
+      identification.length > 15
+        ? identification.substring(0, 15) + '..'
         : identification
-    ctx.fillText(truncatedId, 118, 36)
+    ctx.fillText(truncatedId, 114, 36)
 
-    // 4. Nome do Cliente
-    ctx.font = '10px sans-serif'
+    // Nome do Cliente
+    ctx.font = '11px sans-serif'
     const truncatedClient =
       clientName.length > 18
         ? clientName.substring(0, 18) + '..'
         : clientName
-    ctx.fillText(truncatedClient, 118, 54)
+    ctx.fillText(truncatedClient, 114, 55)
 
-    // 5. Data de Emissão
-    ctx.font = '9px sans-serif'
+    // Data de Emissão
+    ctx.font = '10px sans-serif'
     ctx.fillText(
       `Data: ${new Date().toLocaleDateString('pt-BR')}`,
-      118,
-      72,
+      114,
+      74,
     )
 
-    // 6. Chamada para Ação
-    ctx.font = 'italic 9px sans-serif'
-    ctx.fillText('Consulte o Laudo ↗', 118, 92)
+    // Chamada para Ação
+    ctx.font = 'italic 10px sans-serif'
+    ctx.fillText('Consulte o Laudo ↗', 114, 94)
 
-    // Gerar e estampar o QR Code de 106x106px no lado esquerdo
+    // 3. Gerar QR Code de baixa densidade (Version 2 / Low error correction = módulos grossos e nítidos)
     QRCode.toDataURL(targetUrl, {
-      width: 106,
+      width: 108,
       margin: 1,
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: 'L',
       color: {
         dark: '#000000',
         light: '#FFFFFF',
@@ -105,16 +107,18 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
       .then((qrDataUrl) => {
         const img = new Image()
         img.onload = () => {
+          // Limpar área do QR Code
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, 116, 120)
-          ctx.drawImage(img, 7, 7, 106, 106)
+          ctx.fillRect(0, 0, 112, 120)
+          // Desenhar QR Code ocupando toda a altura
+          ctx.drawImage(img, 4, 6, 108, 108)
         }
         img.src = qrDataUrl
       })
-      .catch((err) => console.error('Erro QR Code:', err))
+      .catch((err) => console.error('Erro ao gerar QR Code:', err))
   }, [targetUrl, identification, clientName])
 
-  // Callback ref para renderizar assim que o elemento Canvas montar no DOM
+  // Callback ref para pintar imediatamente
   const handleCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
     canvasRef.current = node
     if (node) {
@@ -122,37 +126,36 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     }
   }, [renderLabel])
 
-  // Reforço via useEffect quando open mudar
   useEffect(() => {
     if (open && canvasRef.current) {
       renderLabel(canvasRef.current)
     }
   }, [open, renderLabel])
 
-  // Impressão via Web Bluetooth
+  // Impressão nativa via Bluetooth com o motor do niim.blue (@mmote/niimbluelib)
   const handlePrintBluetooth = async () => {
     if (!canvasRef.current) return
     setIsPrinting(true)
-    setStatusMessage('Procurando Niimbot D110 via Bluetooth...')
+    setStatusMessage('Conectando à Niimbot D110 via Bluetooth...')
 
     try {
       const printer = new NiimbotBluetooth()
       const deviceName = await printer.connect()
-      setStatusMessage(`Conectado a ${deviceName}! Imprimindo etiqueta...`)
+      setStatusMessage(`Conectado a ${deviceName}! Imprimindo...`)
 
       await printer.printCanvas(canvasRef.current, 3, 1)
-      printer.disconnect()
+      await printer.disconnect()
 
       toast.success('Etiqueta impressa com sucesso na Niimbot D110!')
-      setStatusMessage('✓ Impressão concluída com sucesso!')
+      setStatusMessage('✓ Impressão concluída!')
       setTimeout(() => onOpenChange(false), 2000)
     } catch (err: any) {
       console.error('Erro Bluetooth:', err)
       setStatusMessage('')
       if (err.name === 'NotFoundError') {
-        toast.info('Seleção cancelada.')
+        toast.info('Seleção de Bluetooth cancelada.')
       } else {
-        toast.error(err.message || 'Falha ao comunicar com a impressora Bluetooth.')
+        toast.error(err.message || 'Falha na comunicação Bluetooth.')
       }
     } finally {
       setIsPrinting(false)
@@ -184,7 +187,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     }
   }
 
-  // Download do arquivo PNG da etiqueta
+  // Download do PNG da etiqueta
   const handleDownloadImage = () => {
     if (!canvasRef.current) return
     const dataUrl = canvasRef.current.toDataURL('image/png')
@@ -205,7 +208,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
             Imprimir Etiqueta Inteligente (Niimbot D110)
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-400">
-            Formato padrão <span className="font-mono font-bold text-slate-200">T15*30mm</span> com QR Code para consulta vitalícia do prontuário técnico da máquina.
+            Formato oficial <span className="font-mono font-bold text-slate-200">T15*30mm</span> com QR Code de alta leitura para o prontuário.
           </DialogDescription>
         </DialogHeader>
 
@@ -220,24 +223,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
               />
             </div>
             <p className="text-[11px] text-slate-400 mt-3 font-medium">
-              Tamanho: 30mm × 15mm • QR Code aponta para o Prontuário Web
+              Dimensões: 30mm × 15mm • QR Code de Alta Leitura
             </p>
-          </div>
-
-          {/* DICA TÉCNICA SOBRE BLUETOOTH NO WINDOWS */}
-          <div className="rounded-xl border border-blue-900/40 bg-blue-950/30 p-3 text-xs text-blue-300">
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 shrink-0 text-blue-400 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold text-blue-200">
-                  Dica de Conexão Bluetooth:
-                </p>
-                <p className="text-[11px] text-blue-300/80 leading-relaxed">
-                  No Windows, o painel exibe <em>"Driver indisponível"</em> porque a Niimbot usa conexão BLE direta (sem spooler). 
-                  Basta ligar a impressora, clicar no botão azul abaixo e selecioná-la na janela do navegador!
-                </p>
-              </div>
-            </div>
           </div>
 
           {statusMessage && (
@@ -273,7 +260,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
             className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-white shadow-lg shadow-blue-600/20 hover:from-blue-500 hover:to-indigo-500"
           >
             <Bluetooth className="h-4 w-4" />
-            {isPrinting ? 'Conectando...' : 'Imprimir via Bluetooth (D110)'}
+            {isPrinting ? 'Imprimindo...' : 'Imprimir via Bluetooth (D110)'}
           </Button>
         </DialogFooter>
       </DialogContent>
