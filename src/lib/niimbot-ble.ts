@@ -30,17 +30,28 @@ export class NiimbotBluetooth {
 
     const navBle = (navigator as any).bluetooth
 
-    this.device = await navBle.requestDevice({
-      filters: [
-        { namePrefix: 'D110' },
-        { namePrefix: 'D11' },
-        { namePrefix: 'Niimbot' },
-        { namePrefix: 'D101' },
-        { namePrefix: 'B21' },
-        { namePrefix: 'JC' },
-      ],
-      optionalServices: NIIMBOT_SERVICES,
-    })
+    try {
+      this.device = await navBle.requestDevice({
+        filters: [
+          { namePrefix: 'D110' },
+          { namePrefix: 'D11' },
+          { namePrefix: 'Niimbot' },
+          { namePrefix: 'D101' },
+          { namePrefix: 'B21' },
+          { namePrefix: 'JC' },
+          { namePrefix: 'd110' },
+          { namePrefix: 'd11' },
+        ],
+        optionalServices: NIIMBOT_SERVICES,
+      })
+    } catch (e: any) {
+      if (e.name === 'NotFoundError') throw e
+      // Fallback: show all nearby BLE devices
+      this.device = await navBle.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: NIIMBOT_SERVICES,
+      })
+    }
 
     const server = await this.device.gatt.connect()
     
