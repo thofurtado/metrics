@@ -5,10 +5,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  ExternalLink,
   Link2,
   MonitorSmartphone,
   MonitorPlay,
   Plus,
+  Printer,
   RefreshCw,
   Users,
 } from 'lucide-react'
