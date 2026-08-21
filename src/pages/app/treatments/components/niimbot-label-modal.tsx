@@ -74,7 +74,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
 
-      // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com Quiet Zone para leitura nativa
+        // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com tipografia grande e aproveitamento total
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -86,45 +86,45 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // 2. Textos no lado direito com fontes nítidas e posicionamento dentro da margem térmica
+    // 2. Textos no lado direito com fontes GRANDES, nítidas e preenchimento vertical total
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
     // Cabeçalho / Branding
-    ctx.font = '900 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('METRICS TI', 118, 14)
+    ctx.font = '900 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('METRICS TI', 110, 10)
 
     // Linha divisória preta sólida de 2px
-    ctx.fillRect(118, 30, 106, 2)
+    ctx.fillRect(110, 27, 122, 2)
 
-    // Identificação do Equipamento (Bold destacado)
-    ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    // Identificação do Equipamento (Destaque Principal - Grande)
+    ctx.font = 'bold 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedId =
-      identification.length > 14
-        ? identification.substring(0, 14) + '..'
+      identification.length > 15
+        ? identification.substring(0, 15) + '..'
         : identification
-    ctx.fillText(truncatedId, 118, 36)
+    ctx.fillText(truncatedId, 110, 33)
 
-    // Nome do Cliente
-    ctx.font = '600 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    // Nome do Cliente (Médio / Negrito)
+    ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedClient =
-      clientName.length > 16
-        ? clientName.substring(0, 16) + '..'
+      clientName.length > 17
+        ? clientName.substring(0, 17) + '..'
         : clientName
-    ctx.fillText(truncatedClient, 118, 54)
+    ctx.fillText(truncatedClient, 110, 52)
 
     // Data de Emissão
-    ctx.font = '500 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 118, 70)
+    ctx.font = 'bold 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 110, 70)
 
     // Chamada para Ação (Prontuário)
-    ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('Prontuário ↗', 118, 88)
+    ctx.font = '900 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('Prontuário ↗', 110, 88)
 
-    // 3. Gerar QR Code com Quiet Zone (margem branca 2 módulos) e correção 'M' para leitura instantânea na câmera normal
+    // 3. Gerar QR Code (98x98px) com Quiet Zone e correção 'M' para leitura instantânea por câmera
     QRCode.toDataURL(targetUrl, {
-      width: 96,
-      margin: 2,
+      width: 98,
+      margin: 1,
       errorCorrectionLevel: 'M',
       color: {
         dark: '#000000',
@@ -135,8 +135,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
         const img = new Image()
         img.onload = () => {
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(12, 10, 100, 100)
-          ctx.drawImage(img, 14, 12, 96, 96)
+          ctx.fillRect(6, 8, 102, 104)
+          ctx.drawImage(img, 8, 10, 98, 98)
         }
         img.src = qrDataUrl
       })
