@@ -1,6 +1,6 @@
 /**
  * Driver Web Bluetooth para Impressoras Térmicas Niimbot (D110 / D11 / D101 / B21)
- * Compatível com Google Chrome e Microsoft Edge no Windows, macOS e Android.
+ * Baseado no protocolo padrão oficial NIIMBOT (niim.blue / niimprint).
  */
 
 const NIIMBOT_SERVICES = [
@@ -46,7 +46,7 @@ export class NiimbotBluetooth {
       })
     } catch (e: any) {
       if (e.name === 'NotFoundError') throw e
-      // Fallback abrangente
+      // Fallback: listar todos os dispositivos BLE
       this.device = await navBle.requestDevice({
         acceptAllDevices: true,
         optionalServices: NIIMBOT_SERVICES,
@@ -120,55 +120,55 @@ export class NiimbotBluetooth {
       } else {
         await this.characteristic.writeValue(slice)
       }
-      await new Promise((r) => setTimeout(r, 6))
+      await new Promise((r) => setTimeout(r, 8))
     }
   }
 
   /**
    * Imprime um Canvas (etiqueta 15x30mm) na Niimbot D110
-   * Realiza a rotação física para a cabeça térmica de 120 dots (15mm) e avanço de 240 linhas (30mm).
    */
   async printCanvas(canvas: HTMLCanvasElement, density = 3, quantity = 1): Promise<void> {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Erro ao obter contexto do canvas.')
 
-    const srcW = canvas.width // 240px (largura visual no monitor)
-    const srcH = canvas.height // 120px (altura visual no monitor)
+    const srcW = canvas.width // 240px (largura visual)
+    const srcH = canvas.height // 120px (altura visual)
     const imgData = ctx.getImageData(0, 0, srcW, srcH)
     const pixels = imgData.data
 
-    // A cabeça de impressão física da D110 tem 120 dots de largura (15 bytes por linha)
-    // E o rolo de papel avança 240 dots (30mm) de comprimento
+    // Cabeça térmica física D110: 120 dots de largura (15 bytes por linha)
+    // Avanço do rolo: 240 dots (30mm)
     const printWidth = srcH // 120 dots
     const printHeight = srcW // 240 dots
     const bytesPerRow = Math.ceil(printWidth / 8) // 15 bytes
 
-    // 1. Início de Trabalho de Impressão (Start Print Job)
-    await this.sendPacket(0x01, [0x00, 0x01])
+    // 1. Handshake de Conexão (Connect 0xD3)
+    try {
+      await this.sendPacket(0xd3, [0x01])
+      await new Promise((r) => setTimeout(r, 80))
+    } catch {}
+
+    // 2. Definir Densidade de Impressão (0x21: SetDensity 1-5)
+    await this.sendPacket(0x21, [density])
+    await new Promise((r) => setTimeout(r, 50))
+
+    // 3. Definir Tipo de Papel (0x23: SetLabelType 1 = With Gaps)
+    await this.sendPacket(0x23, [0x01])
+    await new Promise((r) => setTimeout(r, 50))
+
+    // 4. Início de Trabalho de Impressão (0x01: PrintStart [totalPages_hi, totalPages_lo])
+    await this.sendPacket(0x01, [0x00, quantity])
     await new Promise((r) => setTimeout(r, 80))
 
-    // 2. Definir Quantidade e Densidade
-    await this.sendPacket(0x02, [0x00, quantity])
-    await new Promise((r) => setTimeout(r, 40))
-
-    // 3. Densidade (1-5, padrão 3)
-    await this.sendPacket(0x05, [density])
-    await new Promise((r) => setTimeout(r, 40))
-
-    // 4. Tipo de Papel (1 = Etiqueta com corte/gap)
-    await this.sendPacket(0x06, [0x01])
-    await new Promise((r) => setTimeout(r, 40))
-
-    // 5. Início de Página (Start Page)
+    // 5. Início de Página (0x03: PageStart [pageIndex_hi, pageIndex_lo])
     await this.sendPacket(0x03, [0x00, 0x01])
     await new Promise((r) => setTimeout(r, 80))
 
-    // 6. Enviar as 240 linhas rotacionadas 90°
+    // 6. Enviar as 240 linhas rotacionadas 90° (0x85: PrintBitmapRow)
     for (let py = 0; py < printHeight; py++) {
       const rowBytes = new Array(bytesPerRow).fill(0)
 
       for (let px = 0; px < printWidth; px++) {
-        // Mapear coordenadas da tela para a rotação 90°
         const screenX = py
         const screenY = (printWidth - 1) - px
 
@@ -178,7 +178,7 @@ export class NiimbotBluetooth {
         const b = pixels[offset + 2]
         const a = pixels[offset + 3]
 
-        // Identificar se o pixel é preto
+        // Identificar pixel preto
         const isBlack = a > 128 && (r * 0.299 + g * 0.587 + b * 0.114 < 160)
 
         if (isBlack) {
@@ -188,20 +188,20 @@ export class NiimbotBluetooth {
         }
       }
 
-      // Linha D110: [y_high, y_low, repeat_high, repeat_low, ...15_bytes]
+      // Linha D110: [y_high, y_low, 0x00, 0x01, ...15_bytes]
       const lineData = [(py >> 8) & 0xff, py & 0xff, 0x00, 0x01, ...rowBytes]
       await this.sendPacket(0x85, lineData)
     }
 
-    // 7. Fim de Página (Page End)
+    // 7. Fim de Página (0xE3: PageEnd)
     await this.sendPacket(0xe3, [0x00, 0x01])
     await new Promise((r) => setTimeout(r, 200))
 
-    // 8. Fim do Trabalho de Impressão (Print End / Avanço e corte)
+    // 8. Fim do Trabalho de Impressão / Avanço (0xF3: PrintEnd)
     await this.sendPacket(0xf3, [0x00, 0x01])
 
-    // Aguardar o motor térmico concluir o avanço do papel antes de desconectar
-    await new Promise((r) => setTimeout(r, 2000))
+    // Aguardar 3 segundos para a impressora finalizar o avanço do papel antes de desconectar
+    await new Promise((r) => setTimeout(r, 3000))
   }
 
   /**

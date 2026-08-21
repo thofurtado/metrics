@@ -97,6 +97,18 @@ export const router = createBrowserRouter([
         element: <ReceiptPage />,
       },
       {
+        path: 'equipamento/:id',
+        element: <EquipmentHistoryPage />,
+      },
+      {
+        path: 'equipment/:id',
+        element: <EquipmentHistoryPage />,
+      },
+      {
+        path: 'equipment-history/:id',
+        element: <EquipmentHistoryPage />,
+      },
+      {
         path: 'downloads',
         element: <DownloadsPage />,
       },
