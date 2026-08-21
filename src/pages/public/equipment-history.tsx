@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   FileText,
   MessageSquare,
-  HelpCircle
+  HelpCircle,
+  Info
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -122,6 +123,77 @@ const formatDateTime = (dateStr?: string | null) => {
   }
 }
 
+function parseHardwareSpecs(equipment: EquipmentData) {
+  const tel = equipment.telemetry || {}
+  const details = (equipment.details || '').trim()
+
+  // 1. Processador
+  let cpu: string | null = null
+  if (tel.cpu) {
+    if (typeof tel.cpu === 'object') {
+      cpu = tel.cpu.brand || tel.cpu.name || tel.cpu.model || null
+    } else if (typeof tel.cpu === 'string' && tel.cpu !== '[object Object]' && tel.cpu.trim() !== '') {
+      cpu = tel.cpu
+    }
+  } else if (tel.processor) {
+    if (typeof tel.processor === 'object') {
+      cpu = tel.processor.brand || tel.processor.name || null
+    } else if (typeof tel.processor === 'string' && tel.processor !== '[object Object]') {
+      cpu = tel.processor
+    }
+  }
+
+  // 2. Memória RAM
+  let ram: string | null = null
+  if (tel.mem) {
+    if (typeof tel.mem === 'object' && typeof tel.mem.total === 'number') {
+      const gb = Math.round(tel.mem.total / (1024 * 1024 * 1024))
+      if (gb > 0) ram = `${gb} GB RAM`
+    } else if (typeof tel.mem === 'string' && tel.mem !== '[object Object]') {
+      ram = tel.mem
+    }
+  } else if (tel.ram && typeof tel.ram === 'string') {
+    ram = tel.ram
+  }
+
+  // 3. Armazenamento
+  let disk: string | null = null
+  if (Array.isArray(tel.fsSize) && tel.fsSize.length > 0) {
+    const primary = tel.fsSize[0]
+    const size = Math.round(primary.totalSizeGB || primary.size || 0)
+    if (size > 0) {
+      disk = `${size} GB SSD / HD`
+    }
+  } else if (tel.disk) {
+    if (typeof tel.disk === 'object') {
+      disk = tel.disk.size ? `${tel.disk.size} GB` : tel.disk.name || null
+    } else if (typeof tel.disk === 'string' && tel.disk !== '[object Object]') {
+      disk = tel.disk
+    }
+  }
+
+  // 4. Sistema Operacional
+  let os: string | null = null
+  if (tel.os) {
+    if (typeof tel.os === 'object') {
+      os = tel.os.distro || tel.os.name || tel.os.release || null
+    } else if (typeof tel.os === 'string' && tel.os !== '[object Object]') {
+      os = tel.os
+    }
+  } else if (tel.system?.os) {
+    os = String(tel.system.os)
+  }
+
+  return {
+    cpu,
+    ram,
+    disk,
+    os,
+    hasAnySpec: Boolean(cpu || ram || disk || os),
+    manualDetails: details || null,
+  }
+}
+
 export function EquipmentHistoryPage() {
   const { id } = useParams<{ id: string }>()
   const [expandedTreatments, setExpandedTreatments] = useState<Record<string, boolean>>({})
@@ -180,11 +252,7 @@ export function EquipmentHistoryPage() {
     )
   }
 
-  const tel = equipment.telemetry || {}
-  const cpu = tel.cpu || tel.processor || 'Processador Standard'
-  const ram = tel.memory || tel.ram || '8 GB RAM'
-  const disk = tel.disk || tel.storage || 'SSD Integrado'
-  const os = tel.os || tel.operating_system || 'Sistema Operacional'
+  const specs = parseHardwareSpecs(equipment)
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white pb-16">
@@ -257,40 +325,61 @@ export function EquipmentHistoryPage() {
             </div>
           </div>
 
-          {/* TELEMETRIA DE HARDWARE */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
-              <Cpu className="h-4 w-4 text-indigo-400 shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-[10px] uppercase font-bold text-slate-400">Processador</p>
-                <p className="font-semibold text-slate-200 truncate" title={String(cpu)}>{String(cpu)}</p>
-              </div>
-            </div>
+          {/* TELEMETRIA DE HARDWARE INTELIGENTE (EXIBE APENAS CARDS COM DADOS REAIS) */}
+          {specs.hasAnySpec && (
+            <div className="mt-6 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              {specs.cpu && (
+                <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
+                  <Cpu className="h-4 w-4 text-indigo-400 shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Processador</p>
+                    <p className="font-semibold text-slate-200 truncate" title={specs.cpu}>{specs.cpu}</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
-              <Activity className="h-4 w-4 text-blue-400 shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-[10px] uppercase font-bold text-slate-400">Memória</p>
-                <p className="font-semibold text-slate-200 truncate" title={String(ram)}>{String(ram)}</p>
-              </div>
-            </div>
+              {specs.ram && (
+                <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
+                  <Activity className="h-4 w-4 text-blue-400 shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Memória</p>
+                    <p className="font-semibold text-slate-200 truncate" title={specs.ram}>{specs.ram}</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
-              <HardDrive className="h-4 w-4 text-amber-400 shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-[10px] uppercase font-bold text-slate-400">Armazenamento</p>
-                <p className="font-semibold text-slate-200 truncate" title={String(disk)}>{String(disk)}</p>
-              </div>
-            </div>
+              {specs.disk && (
+                <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
+                  <HardDrive className="h-4 w-4 text-amber-400 shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Armazenamento</p>
+                    <p className="font-semibold text-slate-200 truncate" title={specs.disk}>{specs.disk}</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
-              <Monitor className="h-4 w-4 text-emerald-400 shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-[10px] uppercase font-bold text-slate-400">Sistema</p>
-                <p className="font-semibold text-slate-200 truncate" title={String(os)}>{String(os)}</p>
+              {specs.os && (
+                <div className="bg-slate-950/60 border border-slate-800/60 p-3 rounded-xl flex items-center gap-2.5">
+                  <Monitor className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Sistema</p>
+                    <p className="font-semibold text-slate-200 truncate" title={specs.os}>{specs.os}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DETALHES OU OBSERVAÇÕES MANUAIS CADASTRADAS */}
+          {specs.manualDetails && (
+            <div className="mt-4 p-3 rounded-xl bg-slate-950/40 border border-slate-800/50 flex items-start gap-2.5 text-xs text-slate-300">
+              <Info className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-slate-200">Especificações / Detalhes: </span>
+                <span>{specs.manualDetails}</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* TÍTULO DA SEÇÃO DE HISTÓRICO */}
@@ -301,12 +390,12 @@ export function EquipmentHistoryPage() {
               Histórico Técnico Completo
             </h2>
             <p className="text-xs text-slate-400">
-              Linha do tempo de intervenções, manutenções, peças e laudos emitidos
+              Linha do tempo de intervenções, manutenções, peças e encerramentos
             </p>
           </div>
         </div>
 
-        {/* LISTA DE ORDENS DE SERVIÇO COM STORYTELLING UX */}
+        {/* LISTA DE ORDENS DE SERVIÇO */}
         {equipment.treatments.length === 0 ? (
           <Card className="border-slate-800 bg-slate-900/40 text-center py-12 rounded-3xl">
             <CardContent className="space-y-2">
@@ -335,6 +424,12 @@ export function EquipmentHistoryPage() {
               const iconBadgeColor = isFinished
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+
+              // Obter a última interação se houver
+              const allInteractions = treatment.interactions || []
+              const hasInteractions = allInteractions.length > 0
+              const lastInteraction = hasInteractions ? allInteractions[allInteractions.length - 1] : null
+              const middleInteractions = isFinished && hasInteractions ? allInteractions.slice(0, -1) : allInteractions
 
               return (
                 <div
@@ -383,7 +478,7 @@ export function EquipmentHistoryPage() {
                     </div>
                   </button>
 
-                  {/* CONTEÚDO EXPANDIDO COM STORYTELLING UX */}
+                  {/* CONTEÚDO EXPANDIDO */}
                   {isExpanded && (
                     <div className="p-5 sm:p-6 space-y-6 border-t border-slate-800/80 bg-slate-950/40">
                       
@@ -391,23 +486,23 @@ export function EquipmentHistoryPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-400">
                           <HelpCircle className="h-4 w-4" />
-                          <span>Motivo do Chamado / Relato do Cliente</span>
+                          <span>Motivo do Chamado</span>
                         </div>
                         <div className="rounded-2xl border border-indigo-500/20 bg-indigo-950/20 p-4 text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
                           {treatment.request}
                         </div>
                       </div>
 
-                      {/* 2. LINHA DO TEMPO DA HISTÓRIA TÉCNICA (INTERAÇÕES + LAUDO FINAL) */}
+                      {/* 2. LINHA DO TEMPO DA HISTÓRIA TÉCNICA (INTERAÇÕES + ENCERRAMENTO) */}
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                           <MessageSquare className="h-4 w-4 text-blue-400" />
-                          <span>História do Atendimento & Evolução Técnica</span>
+                          <span>História do Atendimento</span>
                         </div>
 
                         <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
                           {/* Interações técnicas intermediárias */}
-                          {treatment.interactions.map((inter, iIdx) => (
+                          {middleInteractions.map((inter, iIdx) => (
                             <div key={inter.id || iIdx} className="relative group">
                               <div className="absolute -left-6 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 border-2 border-slate-950 text-indigo-400">
                                 <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
@@ -424,8 +519,8 @@ export function EquipmentHistoryPage() {
                             </div>
                           ))}
 
-                          {/* Se a O.S. estiver finalizada e houver laudo, o Laudo é o marco final da história */}
-                          {treatment.observations && (
+                          {/* Se a O.S. estiver finalizada: Encerramento com a última interação */}
+                          {isFinished && (
                             <div className="relative group">
                               <div className="absolute -left-6 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 border-2 border-slate-950 text-white shadow-md shadow-emerald-500/20">
                                 <CheckCircle2 className="h-3 w-3" />
@@ -433,13 +528,18 @@ export function EquipmentHistoryPage() {
                               <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-1.5">
                                 <div className="flex items-center justify-between text-[11px]">
                                   <span className="font-black text-emerald-400 uppercase tracking-wide">
-                                    ✓ Laudo Técnico Definitivo & Encerramento
+                                    ✓ Encerramento
                                   </span>
-                                  <span className="text-emerald-400/80">{formatDateTime(treatment.endingDate || treatment.openingDate)}</span>
+                                  <span className="text-emerald-400/80">{formatDateTime(treatment.endingDate || treatment.paidAt || treatment.openingDate)}</span>
                                 </div>
                                 <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed">
-                                  {treatment.observations}
+                                  {lastInteraction?.description || treatment.observations || 'Atendimento concluído com sucesso.'}
                                 </p>
+                                {lastInteraction?.authorName && (
+                                  <p className="text-[10px] text-emerald-400/70 pt-0.5">
+                                    Finalizado por: {lastInteraction.authorName}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           )}
