@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
-    "@mmote/niimbluelib": "^0.0.1-alpha.43-node",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.1.15",
