@@ -37,7 +37,9 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
   const equipmentId = equipment?.id || ''
   const identification = equipment?.identification || 'Computador'
   const clientName = equipment?.clientName || 'Cliente'
-  const targetUrl = `https://app.metrics.dev.br/equipamento/${equipmentId}`
+  const targetUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/equipamento/${equipmentId}`
+    : `https://app.metrics.dev.br/equipamento/${equipmentId}`
 
   // Função dedicada de desenho garantido no Canvas (240x120px @ 203 DPI)
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {

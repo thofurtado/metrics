@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import { api } from '@/lib/axios'
 import { Helmet } from 'react-helmet-async'
 import { 
   Monitor, 
@@ -48,8 +48,7 @@ export function EquipmentHistoryPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['public-equipment-history', targetId],
     queryFn: async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.metrics.dev.br'
-      const res = await axios.get(`${baseUrl}/public/equipments/${targetId}/history`)
+      const res = await api.get(`/public/equipments/${targetId}/history`)
       return res.data.equipment
     },
     enabled: Boolean(targetId),

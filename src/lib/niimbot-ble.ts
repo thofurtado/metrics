@@ -3,7 +3,6 @@
  * Compatível com Google Chrome e Microsoft Edge no Windows, macOS e Android.
  */
 
-// UUIDs de serviços BLE padrão Niimbot
 const NIIMBOT_SERVICES = [
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
   '0000fee7-0000-1000-8000-00805f9b34fb',
@@ -121,21 +120,28 @@ export class NiimbotBluetooth {
       } else {
         await this.characteristic.writeValue(slice)
       }
-      await new Promise((r) => setTimeout(r, 8))
+      await new Promise((r) => setTimeout(r, 6))
     }
   }
 
   /**
    * Imprime um Canvas (etiqueta 15x30mm) na Niimbot D110
+   * Realiza a rotação física para a cabeça térmica de 120 dots (15mm) e avanço de 240 linhas (30mm).
    */
   async printCanvas(canvas: HTMLCanvasElement, density = 3, quantity = 1): Promise<void> {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Erro ao obter contexto do canvas.')
 
-    const width = canvas.width // 240
-    const height = canvas.height // 120
-    const imgData = ctx.getImageData(0, 0, width, height)
+    const srcW = canvas.width // 240px (largura visual no monitor)
+    const srcH = canvas.height // 120px (altura visual no monitor)
+    const imgData = ctx.getImageData(0, 0, srcW, srcH)
     const pixels = imgData.data
+
+    // A cabeça de impressão física da D110 tem 120 dots de largura (15 bytes por linha)
+    // E o rolo de papel avança 240 dots (30mm) de comprimento
+    const printWidth = srcH // 120 dots
+    const printHeight = srcW // 240 dots
+    const bytesPerRow = Math.ceil(printWidth / 8) // 15 bytes
 
     // 1. Início de Trabalho de Impressão (Start Print Job)
     await this.sendPacket(0x01, [0x00, 0x01])
@@ -145,51 +151,57 @@ export class NiimbotBluetooth {
     await this.sendPacket(0x02, [0x00, quantity])
     await new Promise((r) => setTimeout(r, 40))
 
-    // Densidade de impressão (1-5)
+    // 3. Densidade (1-5, padrão 3)
     await this.sendPacket(0x05, [density])
     await new Promise((r) => setTimeout(r, 40))
 
-    // 3. Início de Página
+    // 4. Tipo de Papel (1 = Etiqueta com corte/gap)
+    await this.sendPacket(0x06, [0x01])
+    await new Promise((r) => setTimeout(r, 40))
+
+    // 5. Início de Página (Start Page)
     await this.sendPacket(0x03, [0x00, 0x01])
     await new Promise((r) => setTimeout(r, 80))
 
-    // 4. Enviar linhas de bitmap (240 dots = 30 bytes por linha)
-    const bytesPerRow = Math.ceil(width / 8) // 30 bytes
-
-    for (let y = 0; y < height; y++) {
+    // 6. Enviar as 240 linhas rotacionadas 90°
+    for (let py = 0; py < printHeight; py++) {
       const rowBytes = new Array(bytesPerRow).fill(0)
-      for (let x = 0; x < width; x++) {
-        const offset = (y * width + x) * 4
+
+      for (let px = 0; px < printWidth; px++) {
+        // Mapear coordenadas da tela para a rotação 90°
+        const screenX = py
+        const screenY = (printWidth - 1) - px
+
+        const offset = (screenY * srcW + screenX) * 4
         const r = pixels[offset]
         const g = pixels[offset + 1]
         const b = pixels[offset + 2]
         const a = pixels[offset + 3]
 
-        // Pixel escuro / preto
+        // Identificar se o pixel é preto
         const isBlack = a > 128 && (r * 0.299 + g * 0.587 + b * 0.114 < 160)
 
         if (isBlack) {
-          const byteIdx = Math.floor(x / 8)
-          const bitIdx = 7 - (x % 8)
+          const byteIdx = Math.floor(px / 8)
+          const bitIdx = 7 - (px % 8)
           rowBytes[byteIdx] |= 1 << bitIdx
         }
       }
 
-      // Pacote de Linha de Impressão D110 (0x85)
-      // Formato: [y_high, y_low, repeat_count_high, repeat_count_low, ...rowBytes]
-      const lineData = [(y >> 8) & 0xff, y & 0xff, 0x00, 0x01, ...rowBytes]
+      // Linha D110: [y_high, y_low, repeat_high, repeat_low, ...15_bytes]
+      const lineData = [(py >> 8) & 0xff, py & 0xff, 0x00, 0x01, ...rowBytes]
       await this.sendPacket(0x85, lineData)
     }
 
-    // 5. Fim de Página (Page End)
+    // 7. Fim de Página (Page End)
     await this.sendPacket(0xe3, [0x00, 0x01])
     await new Promise((r) => setTimeout(r, 200))
 
-    // 6. Fim do Trabalho de Impressão (Print End / Feed)
+    // 8. Fim do Trabalho de Impressão (Print End / Avanço e corte)
     await this.sendPacket(0xf3, [0x00, 0x01])
-    
-    // Aguardar o motor térmico avançar e cortar/posicionar
-    await new Promise((r) => setTimeout(r, 1200))
+
+    // Aguardar o motor térmico concluir o avanço do papel antes de desconectar
+    await new Promise((r) => setTimeout(r, 2000))
   }
 
   /**
