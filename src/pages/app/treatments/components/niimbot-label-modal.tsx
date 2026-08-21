@@ -74,7 +74,7 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
 
-    // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com margens seguras e alta nitidez
+      // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com Quiet Zone para leitura nativa
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -121,11 +121,11 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     ctx.fillText('Prontuário ↗', 118, 88)
 
-    // 3. Gerar QR Code perfeitamente enquadrado com margem de segurança (x=16, y=14, 92x92px)
+    // 3. Gerar QR Code com Quiet Zone (margem branca 2 módulos) e correção 'M' para leitura instantânea na câmera normal
     QRCode.toDataURL(targetUrl, {
-      width: 92,
-      margin: 0,
-      errorCorrectionLevel: 'L',
+      width: 96,
+      margin: 2,
+      errorCorrectionLevel: 'M',
       color: {
         dark: '#000000',
         light: '#FFFFFF',
@@ -135,8 +135,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
         const img = new Image()
         img.onload = () => {
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(14, 12, 96, 96)
-          ctx.drawImage(img, 16, 14, 92, 92)
+          ctx.fillRect(12, 10, 100, 100)
+          ctx.drawImage(img, 14, 12, 96, 96)
         }
         img.src = qrDataUrl
       })
