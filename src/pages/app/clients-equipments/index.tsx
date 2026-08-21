@@ -42,6 +42,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog } from '@/components/ui/dialog'
 import { TreatmentClient } from '../treatments/treatment-client'
 import { EquipmentDetailsModal } from './components/equipment-details-modal'
+import { NiimbotLabelModal } from '../treatments/components/niimbot-label-modal'
+import { Printer } from 'lucide-react'
 
 export function checkIsOnline(equipment: any, maxInactiveMinutes = 3): boolean {
   if (!equipment || !equipment.last_seen_at) return false
@@ -57,6 +59,8 @@ export function ClientsEquipments() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [isNewClientOpen, setIsNewClientOpen] = useState(false)
+  const [labelModalOpen, setLabelModalOpen] = useState(false)
+  const [selectedLabelEquipment, setSelectedLabelEquipment] = useState<any>(null)
 
   // Queries
   const { data: clients, isLoading: isLoadingClients } = useQuery({
@@ -558,6 +562,11 @@ export function ClientsEquipments() {
         </Tabs>
       </div>
 
+      <NiimbotLabelModal
+        open={labelModalOpen}
+        onOpenChange={setLabelModalOpen}
+        equipment={selectedLabelEquipment}
+      />
       <EquipmentDetailsModal
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}

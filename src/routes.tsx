@@ -38,6 +38,7 @@ import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
 import { LandingInterceptor } from './pages/landings/LandingInterceptor'
 import { MenuResolver } from './pages/landings/MenuResolver'
 import { ReceiptPage } from './pages/public/receipt-page'
+import { EquipmentHistoryPage } from './pages/public/equipment-history'
 
 const EurecaLanding = lazy(() => import('./pages/landings/Eureca'))
 const MarujoLanding = lazy(() => import('./pages/landings/Marujo'))
