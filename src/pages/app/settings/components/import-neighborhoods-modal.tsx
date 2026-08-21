@@ -71,9 +71,12 @@ const BRAZILIAN_CITY_NEIGHBORHOODS: Record<string, string[]> = {
     'Praia das Palmeiras', 'Prainha', 'Recanto Morro do Algodão', 'Recanto do Sol', 'Residencial Marverde',
     'Rio Claro', 'Rio do Ouro', 'Sertão dos Tourinhos', 'Sumaré', 'Tabatinga', 'Tinga'
   ],
-  'sao sebastiao': [
-    'Barequeçaba', 'Boiçucanga', 'Camburi', 'Centro', 'Cigarras', 'Enseada', 'Juquehy', 'Maresias', 'Morro do Abrigo',
-    'Paúba', 'Pontal da Cruz', 'Porto Grande', 'Praia Grande', 'São Francisco', 'Topolândia', 'Varadouro'
+    'sao sebastiao': [
+    'Arrastão', 'Baleia', 'Barequeçaba', 'Barra do Sahy', 'Barra do Una', 'Boiçucanga', 'Boracéia', 'Camburi',
+    'Camburizinho', 'Canto do Mar', 'Centro', 'Cigarras', 'Enseada', 'Guaecá', 'Itatinga', 'Jaraguá', 'Juquehy',
+    'Juréia', 'Maresias', 'Morro do Abrigo', 'Olaria', 'Paúba', 'Pitangueiras', 'Pontal da Cruz', 'Portal da Olaria',
+    'Porto Grande', 'Praia Deserta', 'Praia Grande', 'Reserva Du Moulin', 'Santiago', 'São Francisco', 'Toque-Toque Grande',
+    'Toque-Toque Pequeno', 'Topolândia', 'Varadouro', 'Vila Amélia'
   ],
   'ubatuba': [
     'Centro', 'Enseada', 'Estufa I', 'Estufa II', 'Grande', 'Itaguá', 'Iperoig', 'Lazaro', 'Maranduba', 'Perequê-Açu',
