@@ -68,12 +68,7 @@ export function Sidebar() {
       icon: Wallet,
       access: hasAccess('cashier'),
     },
-    {
-      name: 'Clientes & Equipamentos',
-      path: '/clients-equipments',
-      icon: Users,
-      access: hasAccess('service'),
-    },
+
     {
       name: 'Recursos Humanos',
       path: '/hr',
