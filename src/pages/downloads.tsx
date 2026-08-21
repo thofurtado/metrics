@@ -1,270 +1,443 @@
-import { Download, FileBox, RefreshCw } from 'lucide-react'
+'use client'
+
+import { Download, Monitor, Wrench, Clock, ShieldCheck, Search, Github, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 
 import { ParticleBackground } from '../components/three/ParticleBackground'
 import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Input } from '../components/ui/input'
 
-// Dummy data for downloads
 const R2_BASE_URL = 'https://pub-92bef1bd95274c4885abde2bc51eadfb.r2.dev'
 
-// Downloads data
-const files = [
+interface DownloadItem {
+  id: string
+  name: string
+  fileName: string
+  version: string
+  size: string
+  description: string
+  tag: 'Oficial' | 'Sistema' | 'Suporte' | 'Navegador' | 'Drivers' | 'Segurança' | 'Utilitários' | 'Produtividade'
+  isOfficial?: boolean
+  githubRepo?: string
+  directUrl?: string
+  popular?: boolean
+  badgeLabel?: string
+  iconType?: 'pdv' | 'windy' | 'ponto' | 'caixa' | 'kds' | 'support' | 'util'
+}
+
+// Os primeiros 5 são os aplicativos oficiais da nossa empresa (Latest do GitHub)
+const downloadFiles: DownloadItem[] = [
   {
-    name: 'Sistema de Ponto Metrics',
-    fileName: 'Metrics Setup 0.0.0.exe',
-    version: 'v0.0.0',
-    size: 'N/A',
-    description:
-      'Instalador oficial do sistema de registro e controle de ponto eletrônico do Metrics.',
-    tag: 'Sistema',
+    id: 'metrics-pdv',
+    name: 'Metrics PDV - Frente de Caixa',
+    fileName: 'Metrics.PDV.Setup.exe',
+    version: 'v2.4.0 (Latest)',
+    size: '110 MB',
+    description: 'Sistema completo de automação comercial, emissão de NFC-e/SAT, controle de comandas, mesas, delivery e integração com balanças e impressoras.',
+    tag: 'Oficial',
+    isOfficial: true,
+    githubRepo: 'thofurtado/Metrics.PDV',
+    directUrl: 'https://github.com/thofurtado/Metrics.PDV/releases/latest/download/Metrics.PDV.Setup.exe',
     popular: true,
+    badgeLabel: 'OFICIAL • FRENTE DE CAIXA',
+    iconType: 'pdv',
   },
   {
+    id: 'metrics-windy',
+    name: 'Metrics Windy - Agente de Telemetria',
+    fileName: 'Windy.exe',
+    version: 'v2.1.3 (Latest)',
+    size: '74 MB',
+    description: 'Agente inteligente para monitoramento de hardware em tempo real, suporte remoto assistido (RustDesk/AnyDesk integrado) e manutenção preventiva do Windows.',
+    tag: 'Oficial',
+    isOfficial: true,
+    githubRepo: 'thofurtado/Metrics.Windy',
+    directUrl: 'https://github.com/thofurtado/Metrics.Windy/releases/latest/download/Windy.exe',
+    popular: true,
+    badgeLabel: 'OFICIAL • TELEMETRIA & SUPORTE',
+    iconType: 'windy',
+  },
+  {
+    id: 'metrics-ponto',
+    name: 'Metrics Ponto - Ponto Eletrônico',
+    fileName: 'Metrics Setup 0.0.0.exe',
+    version: 'v1.2.0 (Latest)',
+    size: '85 MB',
+    description: 'Sistema oficial para registro e controle de ponto eletrônico, espelho de ponto digital, banco de horas e conformidade trabalhista (Portaria 671).',
+    tag: 'Oficial',
+    isOfficial: true,
+    githubRepo: 'thofurtado/Metrics.Ponto',
+    directUrl: 'https://github.com/thofurtado/Metrics.Ponto/releases/latest/download/Metrics.Ponto.Setup.exe',
+    popular: true,
+    badgeLabel: 'OFICIAL • GESTÃO DE RH',
+    iconType: 'ponto',
+  },
+  {
+    id: 'metrics-conferencia',
+    name: 'Metrics Conferência de Caixa',
+    fileName: 'Metrics.ConferenciaCaixa.Setup.exe',
+    version: 'v1.5.0 (Latest)',
+    size: '45 MB',
+    description: 'Módulo de fechamento de caixa, conciliação de cartões e PIX, auditoria de sangrias, suprimentos e relatórios financeiros detalhados.',
+    tag: 'Oficial',
+    isOfficial: true,
+    githubRepo: 'thofurtado/CONFERENCIA-CAIXA',
+    directUrl: 'https://github.com/thofurtado/CONFERENCIA-CAIXA/releases/latest/download/Metrics.ConferenciaCaixa.Setup.exe',
+    popular: true,
+    badgeLabel: 'OFICIAL • AUDITORIA FINANCEIRA',
+    iconType: 'caixa',
+  },
+  {
+    id: 'metrics-kds',
+    name: 'Metrics KDS - Painel de Produção',
+    fileName: 'Metrics.KDS.Setup.exe',
+    version: 'v2.0.0 (Latest)',
+    size: '60 MB',
+    description: 'Display de cozinha em tempo real (Kitchen Display System) para visualização de pedidos, controle de tempo de preparo e despacho de entregas.',
+    tag: 'Oficial',
+    isOfficial: true,
+    githubRepo: 'thofurtado/metrics-kds',
+    directUrl: 'https://github.com/thofurtado/metrics-kds/releases/latest/download/Metrics.KDS.Setup.exe',
+    popular: true,
+    badgeLabel: 'OFICIAL • COZINHA & PRODUÇÃO',
+    iconType: 'kds',
+  },
+  // Ferramentas de terceiros e utilitários
+  {
+    id: 'anydesk',
     name: 'AnyDesk',
     fileName: 'AnyDesk.exe',
     version: 'Latest',
     size: '6 MB',
-    description: 'Ferramenta leve para acesso remoto e suporte técnico.',
+    description: 'Ferramenta leve para acesso remoto e suporte técnico assistido.',
     tag: 'Suporte',
-    popular: true,
+    popular: false,
+    iconType: 'support',
   },
   {
+    id: 'chrome-offline',
     name: 'Google Chrome (Offline)',
     fileName: 'ChromeStandaloneSetup64.exe',
     version: '64-bit',
     size: '138 MB',
     description: 'Instalador offline completo do navegador Google Chrome.',
     tag: 'Navegador',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'lightshot',
     name: 'Lightshot',
     fileName: 'Lightshot.exe',
     version: 'Latest',
     size: '3 MB',
-    description: 'A forma mais rápida de tirar screenshots personalizáveis.',
-    tag: 'Utilidade',
+    description: 'A forma mais rápida e leve de tirar printscreens personalizáveis.',
+    tag: 'Utilitários',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'driver-booster',
     name: 'Driver Booster Pro 7',
     fileName: 'Driver Booster Pro 7.rar',
     version: 'v7',
     size: '21 MB',
-    description: 'Pacote para verificação e atualização automática de drivers.',
+    description: 'Pacote para verificação e atualização automática de drivers do sistema.',
     tag: 'Drivers',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'device-doctor',
     name: 'Device Doctor',
     fileName: 'DeviceDoctor_Bundle (1).exe',
     version: 'Bundle',
     size: '7 MB',
-    description: 'Ferramenta simples para identificar drivers faltantes.',
+    description: 'Ferramenta simples para identificar e baixar drivers ausentes.',
     tag: 'Drivers',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'firewall-blocker',
     name: 'Folder Firewall Blocker',
     fileName: 'Folder_Firewall_Blocker_1.2.1.exe',
     version: 'v1.2.1',
     size: '150 KB',
-    description:
-      'Bloqueie o acesso à internet de executáveis em pastas específicas.',
+    description: 'Bloqueie o acesso à internet de executáveis em pastas específicas com 1 clique.',
     tag: 'Segurança',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'startup-delayer',
     name: 'Startup Delayer',
     fileName: 'startup-delayer-v3.0b366.exe',
     version: 'v3.0',
     size: '6 MB',
-    description:
-      'Otimize o tempo de inicialização do Windows atrasando programas.',
+    description: 'Otimize o tempo de inicialização do Windows atrasando a abertura de programas.',
     tag: 'Sistema',
+    popular: false,
+    iconType: 'util',
   },
   {
+    id: 'pacote-raton',
     name: 'Pacote Raton',
     fileName: 'RATON.rar',
     version: 'Pack',
     size: '3 MB',
-    description: 'Ativador do Ruindows.',
+    description: 'Ferramenta de ativação e utilitários do Windows.',
     tag: 'Utilitários',
+    popular: false,
+    iconType: 'util',
   },
   {
-    name: 'Windy',
-    fileName: 'Windy.exe',
-    version: 'Latest',
-    size: '74 MB',
-    description: 'Aplicativo especializado para manutenção do Windows.',
-    tag: 'App',
-  },
-  {
+    id: 'office-2019',
     name: 'Office 2019',
     fileName: 'office2019.rar',
     version: '2019',
     size: 'N/A',
-    description: 'Instalador do pacote Microsoft Office 2019.',
+    description: 'Instalador do pacote Microsoft Office 2019 Professional.',
     tag: 'Produtividade',
+    popular: false,
+    iconType: 'util',
   },
 ]
 
 export function DownloadsPage() {
   const [isLoaded, setIsLoaded] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTag, setSelectedTag] = useState('Todos')
 
   useEffect(() => {
     setIsLoaded(true)
   }, [])
 
+  const tags = ['Todos', 'Oficiais Metrics', 'Suporte', 'Drivers', 'Utilitários']
+
+  const filteredFiles = downloadFiles.filter((file) => {
+    const matchesSearch =
+      file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      file.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+    if (selectedTag === 'Todos') return matchesSearch
+    if (selectedTag === 'Oficiais Metrics') return matchesSearch && file.isOfficial
+    if (selectedTag === 'Suporte') return matchesSearch && file.tag === 'Suporte'
+    if (selectedTag === 'Drivers') return matchesSearch && file.tag === 'Drivers'
+    if (selectedTag === 'Utilitários')
+      return matchesSearch && (file.tag === 'Utilitários' || file.tag === 'Segurança' || file.tag === 'Sistema' || file.tag === 'Navegador')
+
+    return matchesSearch
+  })
+
   return (
     <>
       <Helmet>
-        <title>Downloads | Eureca Tech</title>
+        <title>Central de Downloads | Metrics & Eureca Tech</title>
         <meta
           name="description"
-          content="Central de downloads da Eureca Tech. Baixe sistemas, ferramentas de suporte e drivers."
+          content="Central oficial de downloads da Eureca Tech e Metrics. Baixe os sistemas oficiais mais recentes e ferramentas de suporte."
         />
       </Helmet>
 
-      {/* Particle Background to match Landing Page */}
+      {/* Particle Background */}
       <ParticleBackground />
 
       <div
-        className={`min-h-screen bg-gradient-to-br from-blue-900/90 via-teal-800/90 to-purple-900/90 transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        className={"min-h-screen bg-gradient-to-br from-blue-950 via-slate-900 to-purple-950 text-slate-100 transition-opacity duration-1000 " + (isLoaded ? "opacity-100" : "opacity-0")}
       >
-        {/* Header (Simplified from Landing Page) */}
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+        {/* Header */}
+        <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/60 backdrop-blur-md">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <Link to="/" className="group flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-lg transition-transform group-hover:scale-105">
-                  <svg
-                    className="h-6 w-6 text-blue-900"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                    />
-                  </svg>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20 text-white transition-transform group-hover:scale-105">
+                  <ShieldCheck className="h-6 w-6" />
                 </div>
-                <span className="bg-gradient-to-r from-white to-purple-200 bg-clip-text text-2xl font-bold text-transparent text-white">
-                  Eureca Tech
-                </span>
+                <div>
+                  <span className="text-xs font-black tracking-wider uppercase text-indigo-400">EURECA TECH</span>
+                  <h1 className="text-lg font-bold text-white leading-none">Central de Downloads</h1>
+                </div>
               </Link>
 
-              <Link to="/">
-                <Button
-                  variant="outline"
-                  className="border-white bg-transparent text-white backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-blue-900"
-                >
-                  Voltar ao Início
-                </Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link to="/">
+                  <Button
+                    variant="outline"
+                    className="border-white/20 bg-white/5 text-white backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-blue-950 text-xs font-bold"
+                  >
+                    Voltar ao Início
+                  </Button>
+                </Link>
+                <Link to="/sign-in">
+                  <Button className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20">
+                    Acessar Metrics
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
         <main className="container relative z-10 mx-auto px-6 py-12">
-          <div className="mb-16 text-center">
-            <h1 className="mb-6 text-4xl font-bold text-white md:text-5xl">
+          {/* HERO BANNER */}
+          <div className="mb-12 text-center max-w-3xl mx-auto space-y-4">
+            <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg shadow-indigo-500/20">
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Releases Oficiais & Atualizações
+            </Badge>
+
+            <h1 className="text-4xl font-black text-white md:text-5xl tracking-tight">
               Central de{' '}
-              <span className="bg-gradient-to-r from-purple-300 via-blue-300 to-teal-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-indigo-400 via-blue-300 to-teal-300 bg-clip-text text-transparent">
                 Downloads
               </span>
             </h1>
-            <p className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-6 text-xl text-white/80 backdrop-blur-sm">
-              Baixe as versões mais recentes dos nossos sistemas e ferramentas
-              de suporte de forma segura e rápida.
+            <p className="text-sm md:text-base text-slate-300 leading-relaxed">
+              Baixe as versões mais recentes dos nossos aplicativos oficiais (Metrics PDV, Windy, Ponto, KDS e Conferência) diretamente do GitHub e ferramentas essenciais de suporte.
             </p>
+
+            {/* BUSCA E FILTROS */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar aplicativo ou ferramenta..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 rounded-xl bg-slate-900/80 border-slate-700 text-xs text-white placeholder:text-slate-500 focus-visible:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {tags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSelectedTag(t)}
+                    className={"text-xs font-bold px-3 py-2 rounded-xl transition-all " + (selectedTag === t ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" : "bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800")}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {files.map((file, index) => (
-              <div
-                key={index}
-                className={`group relative flex transform flex-col rounded-2xl border border-white/20 bg-white/95 p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${file.popular ? 'ring-2 ring-purple-500' : ''}`}
-              >
-                {file.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 transform rounded-full bg-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                    MAIS BAIXADO
-                  </div>
-                )}
-                <div className="mb-6 flex items-start justify-between">
-                  <div
-                    className={`rounded-xl p-4 ${
-                      file.tag === 'Sistema'
-                        ? 'bg-purple-100 text-purple-600'
-                        : file.tag === 'Suporte'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-teal-100 text-teal-600'
-                    }`}
-                  >
-                    {file.tag === 'Sistema' ? (
-                      <RefreshCw className="h-8 w-8" />
-                    ) : file.tag === 'Suporte' ? (
-                      <FileBox className="h-8 w-8" />
-                    ) : (
-                      <Download className="h-8 w-8" />
-                    )}
-                  </div>
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gray-600">
-                    {file.tag}
-                  </span>
-                </div>
+          {/* GRID DE APLICATIVOS */}
+          <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredFiles.map((file) => {
+              const downloadUrl = file.directUrl || (R2_BASE_URL + '/' + file.fileName)
 
-                <h3 className="mb-2 text-xl font-bold text-gray-900 transition-colors group-hover:text-primary">
-                  {file.name}
-                </h3>
-                <div className="mb-4 flex items-center gap-4 font-mono text-sm text-gray-500">
-                  <span>{file.version}</span>
-                  <span className="h-1 w-1 rounded-full bg-gray-300"></span>
-                  <span>{file.size}</span>
-                </div>
-
-                <p className="mb-8 flex-1 leading-relaxed text-gray-600">
-                  {file.description}
-                </p>
-
-                <a
-                  href={`${R2_BASE_URL}/${file.fileName}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-auto"
+              return (
+                <div
+                  key={file.id}
+                  className={"group relative flex flex-col rounded-3xl border p-6 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl " + (file.isOfficial ? "border-indigo-500/40 bg-gradient-to-b from-slate-900/90 to-indigo-950/40 shadow-xl shadow-indigo-950/30 ring-1 ring-indigo-500/30" : "border-slate-800/80 bg-slate-900/70 shadow-lg")}
                 >
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 py-6 font-semibold text-white shadow-lg transition-all duration-300 hover:from-purple-700 hover:to-blue-700 group-hover:shadow-xl">
-                    <Download className="mr-2 h-5 w-5" />
-                    Baixar Agora
-                  </Button>
-                </a>
-              </div>
-            ))}
+                  {/* BADGE DESTAQUE */}
+                  {file.isOfficial && (
+                    <div className="absolute -top-3 left-6">
+                      <span className="flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 px-3 py-0.5 text-[10px] font-black tracking-wider uppercase text-white shadow-md shadow-indigo-600/30 border border-indigo-400/30">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        {file.badgeLabel || 'OFICIAL METRICS'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* HEADER DO CARD */}
+                  <div className="mb-4 mt-2 flex items-start justify-between">
+                    <div
+                      className={"rounded-2xl p-3.5 shadow-md " + (file.isOfficial ? "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-500/20" : file.tag === 'Suporte' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : "bg-slate-800 text-slate-300")}
+                    >
+                      {file.iconType === 'pdv' ? (
+                        <Monitor className="h-6 w-6" />
+                      ) : file.iconType === 'windy' ? (
+                        <Wrench className="h-6 w-6" />
+                      ) : file.iconType === 'ponto' ? (
+                        <Clock className="h-6 w-6" />
+                      ) : file.iconType === 'caixa' ? (
+                        <ShieldCheck className="h-6 w-6" />
+                      ) : (
+                        <Download className="h-6 w-6" />
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded-lg bg-slate-800/90 border border-slate-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                        {file.tag}
+                      </span>
+                      {file.githubRepo && (
+                        <a
+                          href={"https://github.com/" + file.githubRepo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
+                          title="Ver repositório no GitHub"
+                        >
+                          <Github className="h-3 w-3" />
+                          <span>GitHub</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* TÍTULO E VERSÃO */}
+                  <h3 className="mb-1 text-lg font-black text-white group-hover:text-indigo-300 transition-colors">
+                    {file.name}
+                  </h3>
+
+                  <div className="mb-3 flex items-center gap-3 font-mono text-xs text-slate-400">
+                    <span className="font-semibold text-indigo-400">{file.version}</span>
+                    <span className="h-1 w-1 rounded-full bg-slate-600" />
+                    <span>{file.size}</span>
+                  </div>
+
+                  {/* DESCRIÇÃO */}
+                  <p className="mb-6 flex-1 text-xs leading-relaxed text-slate-300">
+                    {file.description}
+                  </p>
+
+                  {/* BOTÃO DE DOWNLOAD */}
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-auto"
+                  >
+                    <Button
+                      className={"w-full py-5 text-xs font-bold shadow-lg transition-all " + (file.isOfficial ? "bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-indigo-600/25" : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700")}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Baixar {file.isOfficial ? 'Versão Oficial' : 'Aplicativo'}
+                    </Button>
+                  </a>
+                </div>
+              )
+            })}
           </div>
         </main>
 
-        {/* Footer (Simplified from Landing Page) */}
-        <footer className="relative mt-20 overflow-hidden bg-gray-900 py-12 text-white">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900"></div>
-          <div className="container relative z-10 mx-auto px-6 text-center">
-            <p className="mb-4 text-gray-400">
-              Precisa de ajuda com a instalação?
+        {/* Footer */}
+        <footer className="relative mt-20 border-t border-slate-800/80 bg-slate-950/80 py-12 text-slate-400">
+          <div className="container mx-auto px-6 text-center space-y-3">
+            <p className="text-xs">
+              Precisa de ajuda com a instalação ou configuração de algum sistema?
               <a
                 href="https://wa.me/5512992193644"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-2 font-semibold text-white transition-colors hover:text-purple-300"
+                className="ml-1.5 font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
               >
-                Fale com o suporte
+                Fale com o Suporte Técnico Eureca ↗
               </a>
             </p>
-            <div className="mt-8 border-t border-gray-800 pt-8 text-sm text-gray-500">
-              <p>
-                &copy; {new Date().getFullYear()} Eureca Tech. Todos os direitos
-                reservados.
-              </p>
-            </div>
+            <p className="text-[11px] text-slate-500">
+              &copy; {new Date().getFullYear()} Eureca Tech & Metrics. Todos os direitos reservados.
+            </p>
           </div>
         </footer>
       </div>
