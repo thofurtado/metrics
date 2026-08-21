@@ -3,7 +3,6 @@
  * Implementação baseada na especificação do niim.blue / niimbluelib sem dependências nativas.
  */
 
-// UUIDs de serviços BLE padrão Niimbot
 const NIIMBOT_SERVICES = [
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
   '0000fee7-0000-1000-8000-00805f9b34fb',
@@ -82,7 +81,7 @@ export class NiimbotBluetooth {
       throw new Error('Não foi possível estabelecer conexão de serviço com a Niimbot.')
     }
 
-    // Encontrar característica de escrita
+    // Encontrar característica de comunicação
     for (const cUuid of NIIMBOT_CHARACTERISTICS) {
       try {
         this.characteristic = await service.getCharacteristic(cUuid)
@@ -101,28 +100,54 @@ export class NiimbotBluetooth {
       throw new Error('Canal de comunicação de impressão não encontrado.')
     }
 
+    // Iniciar notificações se suportado para habilitar canal bidirecional
+    if (this.characteristic.properties && (this.characteristic.properties.notify || this.characteristic.properties.indicate)) {
+      try {
+        await this.characteristic.startNotifications()
+      } catch {}
+    }
+
     // Handshake inicial
-    await this.sendPacket(createPacket(0xd3, [0x01]))
-    await new Promise((r) => setTimeout(r, 60))
+    try {
+      await this.sendPacket(createPacket(0xd3, [0x01]))
+      await new Promise((r) => setTimeout(r, 60))
+    } catch {}
 
     return this.device.name || 'Niimbot D110'
   }
 
   /**
-   * Envia um pacote BLE fatiado em blocos de até 20 bytes
+   * Envia um pacote BLE fatiado em blocos de até 20 bytes com fallback automático
    */
   private async sendPacket(packet: Uint8Array) {
     if (!this.characteristic) throw new Error('Impressora não conectada.')
 
     const chunkSize = 20
+    const props = this.characteristic.properties || {}
+
     for (let i = 0; i < packet.length; i += chunkSize) {
       const slice = packet.slice(i, i + chunkSize)
-      if (this.characteristic.writeValueWithoutResponse) {
-        await this.characteristic.writeValueWithoutResponse(slice)
-      } else {
-        await this.characteristic.writeValue(slice)
+      
+      try {
+        if (props.writeWithoutResponse && this.characteristic.writeValueWithoutResponse) {
+          await this.characteristic.writeValueWithoutResponse(slice)
+        } else if (this.characteristic.writeValue) {
+          await this.characteristic.writeValue(slice)
+        } else if (this.characteristic.writeValueWithoutResponse) {
+          await this.characteristic.writeValueWithoutResponse(slice)
+        }
+      } catch (err) {
+        // Fallback entre write e writeWithoutResponse se o stack do Windows rejeitar
+        try {
+          if (this.characteristic.writeValue) {
+            await this.characteristic.writeValue(slice)
+          } else if (this.characteristic.writeValueWithoutResponse) {
+            await this.characteristic.writeValueWithoutResponse(slice)
+          }
+        } catch {}
       }
-      await new Promise((r) => setTimeout(r, 6))
+      
+      await new Promise((r) => setTimeout(r, 8))
     }
   }
 
@@ -145,28 +170,28 @@ export class NiimbotBluetooth {
 
     // 1. Configuração inicial do trabalho de impressão
     await this.sendPacket(createPacket(0x21, [density])) // SetDensity (1-5)
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     await this.sendPacket(createPacket(0x23, [0x01])) // SetLabelType (1 = WithGaps)
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     await this.sendPacket(createPacket(0x01, [0x01])) // PrintStart (1 byte)
     await new Promise((r) => setTimeout(r, 60))
 
     // 2. Início de página e dimensões
     await this.sendPacket(createPacket(0x20, [0x01])) // PrintClear
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     await this.sendPacket(createPacket(0x03, [0x01])) // PageStart
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     // SetPageSize4b: [rows_hi, rows_lo, cols_hi, cols_lo]
     await this.sendPacket(createPacket(0x13, [(rows >> 8) & 0xff, rows & 0xff, (cols >> 8) & 0xff, cols & 0xff]))
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     // SetPrintQuantity: [qty_hi, qty_lo]
     await this.sendPacket(createPacket(0x15, [(quantity >> 8) & 0xff, quantity & 0xff]))
-    await new Promise((r) => setTimeout(r, 40))
+    await new Promise((r) => setTimeout(r, 50))
 
     // 3. Transmissão das 240 linhas de bitmap
     for (let r = 0; r < rows; r++) {
