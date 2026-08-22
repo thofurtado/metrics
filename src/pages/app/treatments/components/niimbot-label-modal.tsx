@@ -75,59 +75,62 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
 
-            // Renderizar o Canvas da etiqueta 30x15mm (240x136 pixels @ 203 DPI) com centralização perfeita
+              // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI - padrão exato da Niimbot D110)
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     canvas.width = 240
-    canvas.height = 136
+    canvas.height = 120
 
     // 1. Fundo branco puro
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Deslocamento vertical de segurança (abaixado ~3x para eliminar corte no topo)
-    const offY = verticalOffset
+    // Base Y perfeitamente centralizada (deixa margem segura no topo e no rodapé)
+    const baseY = 10 + verticalOffset
 
-    // 2. Textos no lado direito com fontes AUMENTADAS EM +1px
+    // 2. Textos no lado direito com fontes GRANDES (+1px em todos os textos)
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
-    // Cabeçalho / Branding (+1px = 14px)
+    // Cabeçalho / Branding (14px Black)
     ctx.font = '900 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('METRICS TI', 112, 4 + offY)
+    ctx.fillText('METRICS TI', 110, baseY)
 
     // Linha divisória preta sólida de 2px
-    ctx.fillRect(112, 21 + offY, 118, 2)
+    ctx.fillRect(110, baseY + 18, 120, 2)
 
-    // Identificação do Equipamento (+1px = 14px)
+    // Identificação do Equipamento (14px Bold)
     ctx.font = 'bold 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedId =
       identification.length > 15
         ? identification.substring(0, 15) + '..'
         : identification
-    ctx.fillText(truncatedId, 112, 27 + offY)
+    ctx.fillText(truncatedId, 110, baseY + 24)
 
-    // Nome do Cliente (+1px = 12px)
+    // Nome do Cliente (12px Bold)
     ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedClient =
       clientName.length > 18
         ? clientName.substring(0, 18) + '..'
         : clientName
-    ctx.fillText(truncatedClient, 112, 47 + offY)
+    ctx.fillText(truncatedClient, 110, baseY + 43)
 
-    // Data de Emissão (+1px = 11px)
+    // Data de Emissão (11px Bold)
     ctx.font = 'bold 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 112, 65 + offY)
+    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 110, baseY + 60)
 
-    // Chamada para Ação (+1px = 11px)
+    // Chamada para Ação (11px Black)
     ctx.font = '900 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('Prontuário ↗', 112, 82 + offY)
+    ctx.fillText('Prontuário ↗', 110, baseY + 77)
 
-    // 3. Gerar QR Code (84x84px) perfeitamente enquadrado com Quiet Zone
+    // 3. Gerar QR Code (80x80px) perfeitamente centralizado verticalmente com Quiet Zone
+    const qrSize = 78
+    const qrY = baseY + 5
+
     QRCode.toDataURL(targetUrl, {
-      width: 84,
+      width: qrSize,
       margin: 1,
       errorCorrectionLevel: 'M',
       color: {
@@ -139,8 +142,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
         const img = new Image()
         img.onload = () => {
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(6, 2 + offY, 96, 96)
-          ctx.drawImage(img, 10, 6 + offY, 84, 84)
+          ctx.fillRect(6, qrY - 2, qrSize + 8, qrSize + 8)
+          ctx.drawImage(img, 10, qrY, qrSize, qrSize)
         }
         img.src = qrDataUrl
       })
@@ -372,20 +375,22 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
             </div>
           </div>
 
-                    {/* PAINEL DE CONFIGURAÇÕES AVANÇADAS */}
+                              {/* PAINEL DE CONFIGURAÇÕES AVANÇADAS */}
           {showSettings && (
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold text-slate-300">Posição Vertical</Label>
+                <Label className="text-[11px] font-bold text-slate-300">Ajuste Vertical (Topo/Baixo)</Label>
                 <select
                   value={verticalOffset}
                   onChange={(e) => setVerticalOffset(Number(e.target.value))}
                   className="w-full h-8 rounded-lg bg-slate-950 border border-slate-800 text-xs px-2 text-white font-bold"
                 >
-                  <option value={15}>+15px (Leve)</option>
-                  <option value={26}>+26px (Recomendado / 3x)</option>
-                  <option value={32}>+32px (Mais para baixo)</option>
-                  <option value={38}>+38px (Máximo)</option>
+                  <option value={-12}>-12px (Mais para Cima)</option>
+                  <option value={-6}>-6px (Leve para Cima)</option>
+                  <option value={0}>0px (Centro Perfeito - Padrão)</option>
+                  <option value={6}>+6px (Leve para Baixo)</option>
+                  <option value={12}>+12px (Mais para Baixo)</option>
+                  <option value={18}>+18px (Máximo para Baixo)</option>
                 </select>
               </div>
 
