@@ -75,59 +75,59 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
     ? `${window.location.origin}/e/${shortId}`
     : `https://app.metrics.dev.br/e/${shortId}`
 
-          // Renderizar o Canvas da etiqueta 30x15mm (240x120 pixels @ 203 DPI) com centralização perfeita
+            // Renderizar o Canvas da etiqueta 30x15mm (240x136 pixels @ 203 DPI) com centralização perfeita
   const renderLabel = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     canvas.width = 240
-    canvas.height = 120
+    canvas.height = 136
 
     // 1. Fundo branco puro
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Deslocamento vertical de segurança (move o conteúdo para baixo para não cortar o topo)
+    // Deslocamento vertical de segurança (abaixado ~3x para eliminar corte no topo)
     const offY = verticalOffset
 
-    // 2. Textos no lado direito com fontes GRANDES e perfeitamente centralizadas
+    // 2. Textos no lado direito com fontes AUMENTADAS EM +1px
     ctx.fillStyle = '#000000'
     ctx.textBaseline = 'top'
 
-    // Cabeçalho / Branding
-    ctx.font = '900 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('METRICS TI', 112, 6 + offY)
+    // Cabeçalho / Branding (+1px = 14px)
+    ctx.font = '900 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('METRICS TI', 112, 4 + offY)
 
     // Linha divisória preta sólida de 2px
-    ctx.fillRect(112, 22 + offY, 118, 2)
+    ctx.fillRect(112, 21 + offY, 118, 2)
 
-    // Identificação do Equipamento (Destaque Principal - Grande)
-    ctx.font = 'bold 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    // Identificação do Equipamento (+1px = 14px)
+    ctx.font = 'bold 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedId =
       identification.length > 15
         ? identification.substring(0, 15) + '..'
         : identification
-    ctx.fillText(truncatedId, 112, 28 + offY)
+    ctx.fillText(truncatedId, 112, 27 + offY)
 
-    // Nome do Cliente (Médio / Negrito)
-    ctx.font = 'bold 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    // Nome do Cliente (+1px = 12px)
+    ctx.font = 'bold 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     const truncatedClient =
       clientName.length > 18
         ? clientName.substring(0, 18) + '..'
         : clientName
-    ctx.fillText(truncatedClient, 112, 46 + offY)
+    ctx.fillText(truncatedClient, 112, 47 + offY)
 
-    // Data de Emissão
-    ctx.font = 'bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 112, 63 + offY)
+    // Data de Emissão (+1px = 11px)
+    ctx.font = 'bold 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 112, 65 + offY)
 
-    // Chamada para Ação (Prontuário)
-    ctx.font = '900 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    ctx.fillText('Prontuário ↗', 112, 79 + offY)
+    // Chamada para Ação (+1px = 11px)
+    ctx.font = '900 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.fillText('Prontuário ↗', 112, 82 + offY)
 
-    // 3. Gerar QR Code (88x88px) perfeitamente enquadrado com Quiet Zone
+    // 3. Gerar QR Code (84x84px) perfeitamente enquadrado com Quiet Zone
     QRCode.toDataURL(targetUrl, {
-      width: 88,
+      width: 84,
       margin: 1,
       errorCorrectionLevel: 'M',
       color: {
@@ -139,8 +139,8 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
         const img = new Image()
         img.onload = () => {
           ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(8, 4 + offY, 96, 96)
-          ctx.drawImage(img, 12, 6 + offY, 88, 88)
+          ctx.fillRect(6, 2 + offY, 96, 96)
+          ctx.drawImage(img, 10, 6 + offY, 84, 84)
         }
         img.src = qrDataUrl
       })
@@ -372,9 +372,23 @@ export function NiimbotLabelModal({ open, onOpenChange, equipment }: NiimbotLabe
             </div>
           </div>
 
-          {/* PAINEL DE CONFIGURAÇÕES AVANÇADAS */}
+                    {/* PAINEL DE CONFIGURAÇÕES AVANÇADAS */}
           {showSettings && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-300">Posição Vertical</Label>
+                <select
+                  value={verticalOffset}
+                  onChange={(e) => setVerticalOffset(Number(e.target.value))}
+                  className="w-full h-8 rounded-lg bg-slate-950 border border-slate-800 text-xs px-2 text-white font-bold"
+                >
+                  <option value={15}>+15px (Leve)</option>
+                  <option value={26}>+26px (Recomendado / 3x)</option>
+                  <option value={32}>+32px (Mais para baixo)</option>
+                  <option value={38}>+38px (Máximo)</option>
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold text-slate-300">Densidade Térmica</Label>
                 <select
