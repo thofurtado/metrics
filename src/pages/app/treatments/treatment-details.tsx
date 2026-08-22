@@ -247,7 +247,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
   return (
     <DialogContent
       ref={dialogContentRef}
-      className={`overflow-y-auto bg-gray-50/95 transition-all duration-300 ${
+      className={`overflow-y-auto bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-all duration-300 ${
         isExpanded
           ? 'max-h-[95vh] w-[95vw] max-w-[1200px]'
           : 'max-h-[85vh] w-[90vw] max-w-3xl'
@@ -255,12 +255,12 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
       onEscapeKeyDown={() => setIsExpanded(false)}
     >
       {/* HEADER FIXO DO DIALOG */}
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-4 shadow-sm">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 py-4 shadow-sm">
         <DialogHeader className="flex flex-col text-left">
-          <DialogTitle className="text-lg font-bold text-gray-800">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
             Detalhes do Atendimento
           </DialogTitle>
-          <DialogDescription className="font-mono text-xs text-gray-500">
+          <DialogDescription className="font-mono text-xs text-slate-500 dark:text-slate-400">
             Protocolo: {treatmentId}
           </DialogDescription>
         </DialogHeader>
@@ -286,7 +286,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
       {treatment ? (
         <div className="space-y-6 p-6">
           {/* 1. HEADER CARD PRINCIPAL */}
-          <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-gray-100">
+          <Card className="overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
             <div className="h-2 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between">
@@ -299,7 +299,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                       ? 'Finalizado'
                       : 'Em Andamento'}
                   </Badge>
-                  <CardTitle className="text-2xl font-bold leading-tight text-gray-900">
+                  <CardTitle className="text-2xl font-bold leading-tight text-slate-900 dark:text-white">
                     {treatment.request}
                   </CardTitle>
                 </div>
@@ -312,9 +312,9 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   <User className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Cliente</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Cliente</p>
                   <p
-                    className="line-clamp-1 font-semibold text-gray-900"
+                    className="line-clamp-1 font-semibold text-slate-900 dark:text-white"
                     title={treatment.clients.name}
                   >
                     {treatment.clients.name}
@@ -327,8 +327,8 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Aberto em</p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Aberto em</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">
                     {dayjs(treatment.opening_date).format('DD/MM/YYYY')}
                     <span className="ml-1 text-xs font-normal text-gray-400">
                       {dayjs(treatment.opening_date).format('HH:mm')}
@@ -342,8 +342,8 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Duração</p>
-                  <p className="font-semibold text-gray-900">{totalDuration}</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Duração</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{totalDuration}</p>
                 </div>
               </div>
             </CardContent>
@@ -355,7 +355,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
             <div className="space-y-6 md:col-span-2">
               {/* Observações */}
               {treatment.observations && (
-                <Card className="border-l-4 border-l-yellow-400 shadow-sm">
+                <Card className="border-l-4 border-l-amber-500 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 text-yellow-700">
                       <FileText className="h-5 w-5" />
@@ -363,7 +363,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
+                    <p className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-200">
                       {treatment.observations}
                     </p>
                   </CardContent>
@@ -372,10 +372,10 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
 
               {/* Mercadorias / Items */}
               {treatment.items.length > 0 && (
-                <Card className="shadow-sm">
-                  <CardHeader className="border-b bg-gray-50/50 pb-3">
+                <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                  <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 pb-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-gray-700">
+                      <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
                         <Package className="h-5 w-5" />
                         <h3 className="font-semibold">Itens e Serviços</h3>
                       </div>
@@ -385,13 +385,13 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="divide-y">
+                    <div className="divide-y divide-slate-200 dark:divide-slate-800">
                       {treatment.items.map((item, idx) => (
                         <div
                           key={`${item.item_id}-${idx}`}
                           className="grid grid-cols-12 items-start gap-4 p-4 transition-colors hover:bg-gray-50"
                         >
-                          <div className="col-span-6 flex flex-col font-medium text-gray-900">
+                          <div className="col-span-6 flex flex-col font-medium text-slate-900 dark:text-white">
                             <span>{item.items.name}</span>
                             {item.observations && (
                               <span
@@ -430,7 +430,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                                 )}
                               </>
                             ) : (
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-slate-900 dark:text-white">
                                 R${' '}
                                 {(item.quantity * item.salesValue).toFixed(2)}
                               </span>
@@ -439,7 +439,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                         </div>
                       ))}
                     </div>
-                    <div className="flex flex-col gap-2 border-t bg-gray-50 p-4">
+                    <div className="flex flex-col gap-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 p-4">
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>Subtotal</span>
                         <span>R$ {subtotal.toFixed(2)}</span>
@@ -467,7 +467,7 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
             {/* Right Column: Vertical Timeline */}
             <div className="md:col-span-1">
               <Card className="h-full border-0 bg-transparent shadow-none shadow-sm ring-0">
-                <div className="mb-4 flex items-center gap-2 px-1 text-gray-700">
+                <div className="mb-4 flex items-center gap-2 px-1 text-slate-700 dark:text-slate-200">
                   <Activity className="h-5 w-5 text-indigo-500" />
                   <h3 className="text-lg font-bold">Linha do Tempo</h3>
                 </div>
@@ -476,8 +476,8 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   {/* Evento Inicial */}
                   <div className="relative">
                     <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white bg-indigo-400 ring-2 ring-indigo-100"></div>
-                    <div className="rounded-lg border bg-white p-3 text-sm shadow-sm">
-                      <p className="font-semibold text-gray-800">
+                    <div className="rounded-lg border bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 text-sm shadow-sm">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">
                         Atendimento Iniciado
                       </p>
                       <span className="mt-1 block text-xs text-gray-400">
@@ -492,9 +492,9 @@ ${totalDiscounts > 0 ? `Subtotal: R$ ${subtotal.toFixed(2)}\nDescontos: -R$ ${to
                   {treatment.interactions.map((interaction, idx) => (
                     <div key={`${interaction.id}-${idx}`} className="relative">
                       <div className="absolute -left-[21px] top-3 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100"></div>
-                      <div className="group relative rounded-lg border bg-white p-4 shadow-sm transition-all hover:border-blue-200">
+                      <div className="group relative rounded-lg border bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 shadow-sm transition-all hover:border-blue-200">
                         <div className="absolute -left-2 top-4 h-2 w-2 rotate-45 transform border-b border-l bg-white"></div>
-                        <p className="mb-2 text-sm leading-relaxed text-gray-700">
+                        <p className="mb-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
                           {interaction.description}
                         </p>
 

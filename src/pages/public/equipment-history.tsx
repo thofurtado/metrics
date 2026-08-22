@@ -24,6 +24,8 @@ import {
   ShieldCheck,
   FileText,
   Info,
+  CheckCircle,
+  HelpCircle
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -382,12 +384,12 @@ export function EquipmentHistoryPage() {
               Histórico Técnico Completo
             </h2>
             <p className="text-xs text-slate-400">
-              Detalhamento de cada chamado técnico, peças aplicadas e linha do tempo de evolução
+              Linha do tempo cronológica da abertura à resolução com peças e quitação financeira
             </p>
           </div>
         </div>
 
-        {/* LISTA DE ORDENS DE SERVIÇO NO ESTILO EXATO DE DETALHES DO ATENDIMENTO */}
+        {/* LISTA DE ORDENS DE SERVIÇO EM DARK THEME STORYTELLING */}
         {equipment.treatments.length === 0 ? (
           <Card className="border-slate-800 bg-slate-900/40 text-center py-12 rounded-3xl">
             <CardContent className="space-y-2">
@@ -410,13 +412,21 @@ export function EquipmentHistoryPage() {
               const isFinished = treatment.status === 'finished' || treatment.status === 'resolved' || !!treatment.endingDate
               const durText = calculateDuration(treatment.openingDate, treatment.endingDate)
 
+              // Separar a última interação (se concluído) das interações intermediárias
+              const allInteractions = treatment.interactions || []
+              const hasInteractions = allInteractions.length > 0
+              const lastInteraction = isFinished && hasInteractions ? allInteractions[allInteractions.length - 1] : null
+              const intermediateInteractions = isFinished && hasInteractions
+                ? allInteractions.slice(0, allInteractions.length - 1)
+                : allInteractions
+
               return (
                 <div
                   key={treatment.id}
-                  className="overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-xl transition-all duration-200"
+                  className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 text-slate-100 shadow-2xl backdrop-blur-xl transition-all duration-200"
                 >
                   {/* BARRA SUPERIOR AZUL BRANDING */}
-                  <div className="h-2 w-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+                  <div className="h-2 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
                   {/* 1. HEADER CARD PRINCIPAL */}
                   <div className="p-6 pb-4">
@@ -425,63 +435,63 @@ export function EquipmentHistoryPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge
                             variant="outline"
-                            className={"border font-bold text-xs px-2.5 py-0.5 " + (isFinished ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700")}
+                            className={"border font-bold text-xs px-2.5 py-0.5 " + (isFinished ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-blue-500/30 bg-blue-500/10 text-blue-400")}
                           >
                             {isFinished ? 'Finalizado' : 'Em Andamento'}
                           </Badge>
 
-                          <span className="text-xs text-slate-400 font-bold">•</span>
+                          <span className="text-xs text-slate-600 font-bold">•</span>
 
-                          <span className={"text-xs font-bold " + (treatment.isPaid ? "text-emerald-600" : "text-slate-500")}>
+                          <span className={"text-xs font-bold " + (treatment.isPaid ? "text-emerald-400" : "text-amber-400")}>
                             {treatment.isPaid ? '✓ Quitado' : '● Pendente'}
                           </span>
                         </div>
 
-                        <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                        <h2 className="text-2xl font-black tracking-tight text-white">
                           {treatment.request || 'Chamado Técnico'}
                         </h2>
                       </div>
 
                       <div className="flex items-center gap-3 self-end sm:self-start">
                         <div className="text-right">
-                          <span className="text-xs font-bold text-slate-500">Valor O.S.</span>
-                          <p className="text-lg font-black text-slate-900">{formatBRL(treatment.totalAmount)}</p>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Valor O.S.</span>
+                          <p className="text-lg font-black text-emerald-400">{formatBRL(treatment.totalAmount)}</p>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => toggleTreatment(treatment.id)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                          className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
                           title={isExpanded ? 'Recolher' : 'Expandir'}
                         >
                           <ChevronDown
-                            className={"h-5 w-5 transition-transform duration-200 " + (isExpanded ? "rotate-180 text-indigo-600" : "")}
+                            className={"h-5 w-5 transition-transform duration-200 " + (isExpanded ? "rotate-180 text-indigo-400" : "")}
                           />
                         </button>
                       </div>
                     </div>
 
                     {/* 3 CHIPS HORIZONTAIS: CLIENTE, ABERTO EM, DURAÇÃO */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-5 border-t border-slate-100 mt-4 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-5 border-t border-slate-800/80 mt-4 text-xs">
                       <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
+                        <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400 border border-blue-500/20">
                           <User className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-500 text-[11px]">Cliente</p>
-                          <p className="font-bold text-slate-900 truncate" title={equipment.clientName}>
+                          <p className="font-semibold text-slate-400 text-[11px]">Cliente</p>
+                          <p className="font-bold text-white truncate" title={equipment.clientName}>
                             {equipment.clientName}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-purple-50 p-2.5 text-purple-600">
+                        <div className="rounded-xl bg-purple-500/10 p-2.5 text-purple-400 border border-purple-500/20">
                           <Calendar className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-500 text-[11px]">Aberto em</p>
-                          <p className="font-bold text-slate-900">
+                          <p className="font-semibold text-slate-400 text-[11px]">Aberto em</p>
+                          <p className="font-bold text-white">
                             {dayjs(treatment.openingDate).format('DD/MM/YYYY')}
                             <span className="ml-1.5 font-normal text-slate-400">
                               {dayjs(treatment.openingDate).format('HH:mm')}
@@ -491,101 +501,164 @@ export function EquipmentHistoryPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-orange-50 p-2.5 text-orange-600">
+                        <div className="rounded-xl bg-orange-500/10 p-2.5 text-orange-400 border border-orange-500/20">
                           <Clock className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-500 text-[11px]">Duração</p>
-                          <p className="font-bold text-slate-900">{durText}</p>
+                          <p className="font-semibold text-slate-400 text-[11px]">Duração</p>
+                          <p className="font-bold text-white">{durText}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* 2. GRID EM 2 COLUNAS: OBSERVAÇÕES/ITENS (ESQ) & LINHA DO TEMPO (DIR) */}
+                  {/* 2. LINHA DO TEMPO CRONOLÓGICA CONTÍNUA (STORYTELLING DA O.S.) */}
                   {isExpanded && (
-                    <div className="border-t border-slate-100 bg-slate-50/60 p-6 pt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        
-                        {/* COLUNA ESQUERDA: OBSERVAÇÕES E ITENS */}
-                        <div className="space-y-6 md:col-span-2">
+                    <div className="border-t border-slate-800 bg-slate-950/60 p-6 space-y-6">
+                      
+                      {/* LINHA DO TEMPO UNIFICADA */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+                          <Activity className="h-4 w-4" />
+                          <span>Evolução Cronológica do Atendimento</span>
+                        </div>
+
+                        <div className="relative ml-2 space-y-6 border-l-2 border-slate-800 pl-5">
                           
-                          {/* CARD DE OBSERVAÇÕES (COM BORDA AMARELA) */}
-                          <Card className="border-l-4 border-l-amber-400 border-t-0 border-r-0 border-b-0 bg-white shadow-sm ring-1 ring-slate-100">
-                            <CardHeader className="pb-2">
-                              <div className="flex items-center gap-2 text-amber-700">
-                                <FileText className="h-4 w-4" />
-                                <h3 className="font-bold text-xs uppercase tracking-wide">Observações</h3>
+                          {/* NÓ 1: ABERTURA + MOTIVO / RELATO INICIAL */}
+                          <div className="relative">
+                            <div className="absolute -left-[27px] top-2 h-3.5 w-3.5 rounded-full border-2 border-slate-950 bg-indigo-500 ring-2 ring-indigo-500/30" />
+                            <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 shadow-lg space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">
+                                  1. Chamado Aberto
+                                </span>
+                                <span className="text-[11px] text-slate-400 font-medium">
+                                  {dayjs(treatment.openingDate).format('DD/MM/YYYY HH:mm')}
+                                </span>
                               </div>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="whitespace-pre-wrap text-xs sm:text-sm font-medium leading-relaxed text-slate-700">
-                                {treatment.observations || treatment.request || 'Nenhuma observação adicional cadastrada.'}
-                              </p>
-                            </CardContent>
-                          </Card>
+                              <h4 className="font-bold text-sm text-white">
+                                {treatment.request}
+                              </h4>
+                              {treatment.observations && (
+                                <div className="p-3 rounded-xl bg-amber-500/10 border-l-4 border-amber-500 text-xs text-amber-200 font-medium leading-relaxed">
+                                  <p className="text-[10px] uppercase font-bold text-amber-400 mb-1">Relato Inicial / Observações:</p>
+                                  {treatment.observations}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                          {/* CARD DE ITENS E SERVIÇOS */}
-                          {treatment.items.length > 0 && (
-                            <Card className="border-0 shadow-sm ring-1 ring-slate-100 bg-white overflow-hidden">
-                              <CardHeader className="border-b bg-slate-50/80 py-3 px-4">
+                          {/* NÓ 2: INTERAÇÕES TÉCNICAS INTERMEDIÁRIAS */}
+                          {intermediateInteractions.map((inter, idx) => (
+                            <div key={inter.id || idx} className="relative">
+                              <div className="absolute -left-[27px] top-3 h-3.5 w-3.5 rounded-full border-2 border-slate-950 bg-blue-500 ring-2 ring-blue-500/30" />
+                              <div className="group relative rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-md transition-all hover:border-slate-700">
+                                <div className="absolute -left-1.5 top-3.5 h-2 w-2 rotate-45 transform border-b border-l border-slate-800 bg-slate-900" />
+                                <p className="text-xs leading-relaxed text-slate-200 font-medium mb-3 whitespace-pre-wrap">
+                                  {inter.description}
+                                </p>
+                                <div className="flex items-center justify-between border-t border-slate-800/80 pt-2 text-[10px]">
+                                  <span className="rounded-full bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 font-bold text-blue-400">
+                                    {inter.authorName || 'Técnico Responsável'}
+                                  </span>
+                                  <span className="text-slate-400">
+                                    {dayjs(inter.createdAt).format('DD/MM/YYYY HH:mm')} ({dayjs(inter.createdAt).fromNow()})
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* NÓ 3: RESOLUÇÃO / ENCERRAMENTO (ÚLTIMA INTERAÇÃO) */}
+                          {isFinished && (
+                            <div className="relative">
+                              <div className="absolute -left-[27px] top-2 h-3.5 w-3.5 rounded-full border-2 border-slate-950 bg-emerald-500 ring-2 ring-emerald-500/30" />
+                              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-4 shadow-lg space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 text-slate-700">
-                                    <Package className="h-5 w-5 text-slate-600" />
-                                    <h3 className="font-bold text-xs">Itens e Serviços</h3>
-                                  </div>
-                                  <Badge variant="secondary" className="text-[10px] font-bold bg-slate-200 text-slate-700">
-                                    {treatment.items.length} {treatment.items.length === 1 ? 'item' : 'itens'}
-                                  </Badge>
+                                  <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-emerald-400">
+                                    <CheckCircle className="h-3.5 w-3.5" /> Encerramento & Resolução
+                                  </span>
+                                  <span className="text-[11px] text-emerald-400 font-bold">
+                                    {dayjs(treatment.endingDate || treatment.openingDate).format('DD/MM/YYYY HH:mm')}
+                                  </span>
                                 </div>
-                              </CardHeader>
-                              <CardContent className="p-0 divide-y divide-slate-100 text-xs">
-                                {treatment.items.map((item, idx) => (
-                                  <div
-                                    key={item.id || idx}
-                                    className="grid grid-cols-12 items-center gap-3 p-3.5 hover:bg-slate-50/50 transition-colors"
-                                  >
-                                    <div className="col-span-6 flex flex-col font-semibold text-slate-900">
-                                      <span>{item.name}</span>
-                                      <span className="text-[10px] text-slate-400 font-normal uppercase">
-                                        {item.type === 'product' ? 'Peça / Produto' : 'Mão de Obra / Serviço'}
-                                      </span>
-                                    </div>
-                                    <div className="col-span-2 rounded-md bg-slate-100 py-1 text-center font-bold text-slate-600">
-                                      {item.quantity}x
-                                    </div>
-                                    <div className="col-span-4 text-right font-black text-slate-900">
-                                      {formatBRL(item.totalPrice)}
-                                    </div>
-                                  </div>
-                                ))}
-
-                                {/* TOTAIS */}
-                                <div className="p-4 bg-slate-50/80 border-t border-slate-100 space-y-2">
-                                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                                    <span>Subtotal</span>
-                                    <span>{formatBRL(treatment.totalAmount)}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                                    <span className="font-bold text-slate-700 text-sm">Total Geral</span>
-                                    <span className="text-xl font-black text-emerald-600">
-                                      {formatBRL(treatment.totalAmount)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
+                                <p className="text-xs sm:text-sm font-semibold text-emerald-100 leading-relaxed whitespace-pre-wrap">
+                                  {lastInteraction?.description || 'Atendimento concluído com sucesso e equipamento liberado.'}
+                                </p>
+                                {lastInteraction?.authorName && (
+                                  <span className="inline-block text-[10px] font-bold text-emerald-400 pt-1">
+                                    Finalizado por: {lastInteraction.authorName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           )}
 
-                          {/* CONDIÇÃO DE PAGAMENTO */}
-                          <div className="rounded-2xl bg-white border border-slate-200 p-4 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                        </div>
+                      </div>
+
+                      {/* PEÇAS, SERVIÇOS E PAGAMENTO (INTEGRADOS AO FINAL DO STORYTELLING) */}
+                      <div className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        {/* CARD DE PEÇAS E SERVIÇOS */}
+                        {treatment.items.length > 0 ? (
+                          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden shadow-lg">
+                            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/40 p-3.5 px-4">
+                              <div className="flex items-center gap-2 text-slate-200">
+                                <Package className="h-4 w-4 text-indigo-400" />
+                                <h3 className="font-bold text-xs">Peças & Serviços Aplicados</h3>
+                              </div>
+                              <Badge variant="secondary" className="text-[10px] font-bold bg-slate-800 text-slate-300">
+                                {treatment.items.length} {treatment.items.length === 1 ? 'item' : 'itens'}
+                              </Badge>
+                            </div>
+                            <div className="divide-y divide-slate-800/80 text-xs">
+                              {treatment.items.map((item, idx) => (
+                                <div
+                                  key={item.id || idx}
+                                  className="grid grid-cols-12 items-center gap-2 p-3 hover:bg-slate-800/40 transition-colors"
+                                >
+                                  <div className="col-span-6 flex flex-col font-medium text-slate-200">
+                                    <span>{item.name}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal uppercase">
+                                      {item.type === 'product' ? 'Peça / Material' : 'Mão de Obra'}
+                                    </span>
+                                  </div>
+                                  <div className="col-span-2 rounded-md bg-slate-800 py-1 text-center font-bold text-slate-300">
+                                    {item.quantity}x
+                                  </div>
+                                  <div className="col-span-4 text-right font-black text-white">
+                                    {formatBRL(item.totalPrice)}
+                                  </div>
+                                </div>
+                              ))}
+
+                              <div className="p-3.5 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-400">Total O.S.</span>
+                                <span className="text-base font-black text-emerald-400">
+                                  {formatBRL(treatment.totalAmount)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex items-center gap-3 text-xs text-slate-400">
+                            <Info className="h-5 w-5 text-slate-500 shrink-0" />
+                            <span>Nenhuma peça ou serviço com cobrança foi lançado nesta O.S.</span>
+                          </div>
+                        )}
+
+                        {/* CARD DE CONDIÇÃO FINANCEIRA / PAGAMENTO */}
+                        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col justify-between shadow-lg space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                                 <CreditCard className="h-4 w-4" />
                               </div>
                               <div>
                                 <p className="text-[10px] uppercase font-bold text-slate-400">Forma de Pagamento</p>
-                                <p className="font-bold text-slate-800">
+                                <p className="font-bold text-sm text-white">
                                   {treatment.payments.length > 0
                                     ? treatment.payments.map((p) => p.method).join(', ')
                                     : 'À Vista / Faturamento'}
@@ -599,66 +672,17 @@ export function EquipmentHistoryPage() {
                               {treatment.isPaid ? '✓ PAGO' : 'PENDENTE'}
                             </Badge>
                           </div>
-                        </div>
 
-                        {/* COLUNA DIREITA: LINHA DO TEMPO VERTICAL */}
-                        <div className="md:col-span-1">
-                          <Card className="h-full border-0 bg-transparent shadow-none ring-0">
-                            <div className="mb-4 flex items-center gap-2 px-1 text-slate-800">
-                              <Activity className="h-5 w-5 text-indigo-600" />
-                              <h3 className="text-base font-bold">Linha do Tempo</h3>
-                            </div>
-
-                            <div className="relative ml-2 space-y-6 border-l-2 border-indigo-100 pl-4">
-                              {/* 1. Evento Inicial (Abertura) */}
-                              <div className="relative">
-                                <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-500 ring-2 ring-indigo-100" />
-                                <div className="rounded-xl border border-slate-200 bg-white p-3.5 text-xs shadow-sm">
-                                  <p className="font-bold text-slate-800">Atendimento Iniciado</p>
-                                  <span className="mt-1 block text-[11px] text-slate-400 font-medium">
-                                    {dayjs(treatment.openingDate).format('DD/MM/YYYY HH:mm')}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* 2. Interações Cronológicas */}
-                              {treatment.interactions.map((interaction, idx) => (
-                                <div key={interaction.id || idx} className="relative">
-                                  <div className="absolute -left-[21px] top-3 h-3 w-3 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100" />
-                                  <div className="group relative rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition-all hover:border-blue-300">
-                                    <div className="absolute -left-1.5 top-3.5 h-2 w-2 rotate-45 transform border-b border-l border-slate-200 bg-white" />
-                                    <p className="mb-2 text-xs leading-relaxed text-slate-700 font-medium">
-                                      {interaction.description}
-                                    </p>
-                                    <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px]">
-                                      <span className="rounded-full bg-blue-50 px-2 py-0.5 font-bold text-blue-600">
-                                        {interaction.authorName || 'Atualização'}
-                                      </span>
-                                      <span className="text-slate-400">
-                                        {dayjs(interaction.createdAt).fromNow()}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* 3. Evento Final (se concluído) */}
-                              {isFinished && (
-                                <div className="relative">
-                                  <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 ring-2 ring-emerald-100" />
-                                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs shadow-sm">
-                                    <p className="font-bold text-emerald-800">Atendimento Concluído</p>
-                                    <span className="mt-1 block text-[11px] text-emerald-600 font-medium">
-                                      {dayjs(treatment.endingDate || treatment.openingDate).format('DD/MM/YYYY HH:mm')}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </Card>
+                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                            <span className="text-slate-400">Status Financeiro:</span>
+                            <span className={"font-bold " + (treatment.isPaid ? "text-emerald-400" : "text-amber-400")}>
+                              {treatment.isPaid ? 'Totalmente Quitado' : 'Aguardando Pagamento'}
+                            </span>
+                          </div>
                         </div>
 
                       </div>
+
                     </div>
                   )}
                 </div>
