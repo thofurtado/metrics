@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, Monitor, Wrench, Clock, ShieldCheck, Search, Github, Sparkles } from 'lucide-react'
+import { Download, Monitor, Wrench, Clock, ShieldCheck, Search, Sparkles, Smartphone, CheckCircle2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
@@ -11,6 +11,7 @@ import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 
 const R2_BASE_URL = 'https://pub-92bef1bd95274c4885abde2bc51eadfb.r2.dev'
+const API_BASE_URL = 'https://api.metrics.dev.br'
 
 interface DownloadItem {
   id: string
@@ -21,91 +22,57 @@ interface DownloadItem {
   description: string
   tag: 'Oficial' | 'Sistema' | 'Suporte' | 'Navegador' | 'Drivers' | 'Segurança' | 'Utilitários' | 'Produtividade'
   isOfficial?: boolean
-  githubRepo?: string
-  directUrl?: string
+  downloadUrl: string
   popular?: boolean
   badgeLabel?: string
-  iconType?: 'pdv' | 'windy' | 'ponto' | 'caixa' | 'kds' | 'support' | 'util'
+  iconType?: 'windy' | 'ponto' | 'mobile' | 'support' | 'util'
 }
 
-// Os primeiros 5 são os aplicativos oficiais da nossa empresa (Latest do GitHub)
+// Os 3 aplicativos oficiais ativos da nossa empresa
 const downloadFiles: DownloadItem[] = [
   {
-    id: 'metrics-pdv',
-    name: 'Metrics PDV - Frente de Caixa',
-    fileName: 'Metrics.PDV.Setup.exe',
-    version: 'v2.4.0 (Latest)',
-    size: '110 MB',
-    description: 'Sistema completo de automação comercial, emissão de NFC-e/SAT, controle de comandas, mesas, delivery e integração com balanças e impressoras.',
-    tag: 'Oficial',
-    isOfficial: true,
-    githubRepo: 'thofurtado/Metrics.PDV',
-    directUrl: 'https://github.com/thofurtado/Metrics.PDV/releases/latest/download/Metrics.PDV.Setup.exe',
-    popular: true,
-    badgeLabel: 'OFICIAL • FRENTE DE CAIXA',
-    iconType: 'pdv',
-  },
-  {
     id: 'metrics-windy',
-    name: 'Metrics Windy - Agente de Telemetria',
+    name: 'Metrics Windy - Agente de Telemetria & Suporte',
     fileName: 'Windy.exe',
-    version: 'v2.1.3 (Latest)',
-    size: '74 MB',
+    version: 'v2.1.3 (Oficial)',
+    size: '54 MB',
     description: 'Agente inteligente para monitoramento de hardware em tempo real, suporte remoto assistido (RustDesk/AnyDesk integrado) e manutenção preventiva do Windows.',
     tag: 'Oficial',
     isOfficial: true,
-    githubRepo: 'thofurtado/Metrics.Windy',
-    directUrl: 'https://github.com/thofurtado/Metrics.Windy/releases/latest/download/Windy.exe',
+    downloadUrl: `${API_BASE_URL}/api/public/windy/download`,
     popular: true,
     badgeLabel: 'OFICIAL • TELEMETRIA & SUPORTE',
     iconType: 'windy',
   },
   {
     id: 'metrics-ponto',
-    name: 'Metrics Ponto - Ponto Eletrônico',
+    name: 'Metrics Ponto - Ponto Eletrônico & Gestão',
     fileName: 'Metrics Setup 0.0.0.exe',
-    version: 'v1.2.0 (Latest)',
+    version: 'v1.2.0 (Oficial)',
     size: '85 MB',
-    description: 'Sistema oficial para registro e controle de ponto eletrônico, espelho de ponto digital, banco de horas e conformidade trabalhista (Portaria 671).',
+    description: 'Sistema oficial para registro e controle de jornada de trabalho, espelho de ponto digital, banco de horas e conformidade com a Portaria 671.',
     tag: 'Oficial',
     isOfficial: true,
-    githubRepo: 'thofurtado/Metrics.Ponto',
-    directUrl: 'https://github.com/thofurtado/Metrics.Ponto/releases/latest/download/Metrics.Ponto.Setup.exe',
+    downloadUrl: `${R2_BASE_URL}/Metrics%20Setup%200.0.0.exe`,
     popular: true,
     badgeLabel: 'OFICIAL • GESTÃO DE RH',
     iconType: 'ponto',
   },
   {
-    id: 'metrics-conferencia',
-    name: 'Metrics Conferência de Caixa',
-    fileName: 'Metrics.ConferenciaCaixa.Setup.exe',
-    version: 'v1.5.0 (Latest)',
-    size: '45 MB',
-    description: 'Módulo de fechamento de caixa, conciliação de cartões e PIX, auditoria de sangrias, suprimentos e relatórios financeiros detalhados.',
+    id: 'metrics-mobile',
+    name: 'Metrics Mobile - Comanda & Gestão Móvel',
+    fileName: 'metrics-mobile.apk',
+    version: 'v2.0.0 (Oficial)',
+    size: '32 MB',
+    description: 'Aplicativo móvel para garçons e atendimento de mesas, lançamento ágil de pedidos na praça e acompanhamento em tempo real.',
     tag: 'Oficial',
     isOfficial: true,
-    githubRepo: 'thofurtado/CONFERENCIA-CAIXA',
-    directUrl: 'https://github.com/thofurtado/CONFERENCIA-CAIXA/releases/latest/download/Metrics.ConferenciaCaixa.Setup.exe',
+    downloadUrl: `${R2_BASE_URL}/metrics-mobile.apk`,
     popular: true,
-    badgeLabel: 'OFICIAL • AUDITORIA FINANCEIRA',
-    iconType: 'caixa',
+    badgeLabel: 'OFICIAL • ATENDIMENTO MÓVEL',
+    iconType: 'mobile',
   },
-  {
-    id: 'metrics-kds',
-    name: 'Metrics KDS - Painel de Produção',
-    fileName: 'Metrics.KDS.Setup.exe',
-    version: 'v2.0.0 (Latest)',
-    size: '60 MB',
-    description: 'Display de cozinha em tempo real (Kitchen Display System) para visualização de pedidos, controle de tempo de preparo e despacho de entregas.',
-    tag: 'Oficial',
-    isOfficial: true,
-    githubRepo: 'thofurtado/metrics-kds',
-    directUrl: 'https://github.com/thofurtado/metrics-kds/releases/latest/download/Metrics.KDS.Setup.exe',
-    popular: true,
-    badgeLabel: 'OFICIAL • COZINHA & PRODUÇÃO',
-    iconType: 'kds',
-  },
-  // Ferramentas de terceiros e utilitários
+  // Ferramentas de suporte e utilitários
   {
     id: 'anydesk',
     name: 'AnyDesk',
@@ -114,6 +81,7 @@ const downloadFiles: DownloadItem[] = [
     size: '6 MB',
     description: 'Ferramenta leve para acesso remoto e suporte técnico assistido.',
     tag: 'Suporte',
+    downloadUrl: `${R2_BASE_URL}/AnyDesk.exe`,
     popular: false,
     iconType: 'support',
   },
@@ -125,6 +93,7 @@ const downloadFiles: DownloadItem[] = [
     size: '138 MB',
     description: 'Instalador offline completo do navegador Google Chrome.',
     tag: 'Navegador',
+    downloadUrl: `${R2_BASE_URL}/ChromeStandaloneSetup64.exe`,
     popular: false,
     iconType: 'util',
   },
@@ -136,6 +105,7 @@ const downloadFiles: DownloadItem[] = [
     size: '3 MB',
     description: 'A forma mais rápida e leve de tirar printscreens personalizáveis.',
     tag: 'Utilitários',
+    downloadUrl: `${R2_BASE_URL}/Lightshot.exe`,
     popular: false,
     iconType: 'util',
   },
@@ -147,6 +117,7 @@ const downloadFiles: DownloadItem[] = [
     size: '21 MB',
     description: 'Pacote para verificação e atualização automática de drivers do sistema.',
     tag: 'Drivers',
+    downloadUrl: `${R2_BASE_URL}/Driver%20Booster%20Pro%207.rar`,
     popular: false,
     iconType: 'util',
   },
@@ -158,6 +129,7 @@ const downloadFiles: DownloadItem[] = [
     size: '7 MB',
     description: 'Ferramenta simples para identificar e baixar drivers ausentes.',
     tag: 'Drivers',
+    downloadUrl: `${R2_BASE_URL}/DeviceDoctor_Bundle%20(1).exe`,
     popular: false,
     iconType: 'util',
   },
@@ -169,6 +141,7 @@ const downloadFiles: DownloadItem[] = [
     size: '150 KB',
     description: 'Bloqueie o acesso à internet de executáveis em pastas específicas com 1 clique.',
     tag: 'Segurança',
+    downloadUrl: `${R2_BASE_URL}/Folder_Firewall_Blocker_1.2.1.exe`,
     popular: false,
     iconType: 'util',
   },
@@ -180,6 +153,7 @@ const downloadFiles: DownloadItem[] = [
     size: '6 MB',
     description: 'Otimize o tempo de inicialização do Windows atrasando a abertura de programas.',
     tag: 'Sistema',
+    downloadUrl: `${R2_BASE_URL}/startup-delayer-v3.0b366.exe`,
     popular: false,
     iconType: 'util',
   },
@@ -191,6 +165,7 @@ const downloadFiles: DownloadItem[] = [
     size: '3 MB',
     description: 'Ferramenta de ativação e utilitários do Windows.',
     tag: 'Utilitários',
+    downloadUrl: `${R2_BASE_URL}/RATON.rar`,
     popular: false,
     iconType: 'util',
   },
@@ -202,6 +177,7 @@ const downloadFiles: DownloadItem[] = [
     size: 'N/A',
     description: 'Instalador do pacote Microsoft Office 2019 Professional.',
     tag: 'Produtividade',
+    downloadUrl: `${R2_BASE_URL}/office2019.rar`,
     popular: false,
     iconType: 'util',
   },
@@ -239,7 +215,7 @@ export function DownloadsPage() {
         <title>Central de Downloads | Metrics & Eureca Tech</title>
         <meta
           name="description"
-          content="Central oficial de downloads da Eureca Tech e Metrics. Baixe os sistemas oficiais mais recentes e ferramentas de suporte."
+          content="Central oficial de downloads da Eureca Tech e Metrics. Baixe os sistemas oficiais e ferramentas de suporte."
         />
       </Helmet>
 
@@ -287,7 +263,7 @@ export function DownloadsPage() {
           {/* HERO BANNER */}
           <div className="mb-12 text-center max-w-3xl mx-auto space-y-4">
             <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg shadow-indigo-500/20">
-              <Sparkles className="h-3.5 w-3.5 mr-1" /> Releases Oficiais & Atualizações
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Aplicativos Oficiais & Ferramentas
             </Badge>
 
             <h1 className="text-4xl font-black text-white md:text-5xl tracking-tight">
@@ -297,7 +273,7 @@ export function DownloadsPage() {
               </span>
             </h1>
             <p className="text-sm md:text-base text-slate-300 leading-relaxed">
-              Baixe as versões mais recentes dos nossos aplicativos oficiais (Metrics PDV, Windy, Ponto, KDS e Conferência) diretamente do GitHub e ferramentas essenciais de suporte.
+              Baixe os instaladores oficiais dos sistemas Metrics (Windy, Ponto e Mobile) distribuídos de forma segura e rápida através da nossa infraestrutura.
             </p>
 
             {/* BUSCA E FILTROS */}
@@ -331,8 +307,6 @@ export function DownloadsPage() {
           {/* GRID DE APLICATIVOS */}
           <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredFiles.map((file) => {
-              const downloadUrl = file.directUrl || (R2_BASE_URL + '/' + file.fileName)
-
               return (
                 <div
                   key={file.id}
@@ -353,14 +327,12 @@ export function DownloadsPage() {
                     <div
                       className={"rounded-2xl p-3.5 shadow-md " + (file.isOfficial ? "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-500/20" : file.tag === 'Suporte' ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : "bg-slate-800 text-slate-300")}
                     >
-                      {file.iconType === 'pdv' ? (
-                        <Monitor className="h-6 w-6" />
-                      ) : file.iconType === 'windy' ? (
+                      {file.iconType === 'windy' ? (
                         <Wrench className="h-6 w-6" />
                       ) : file.iconType === 'ponto' ? (
                         <Clock className="h-6 w-6" />
-                      ) : file.iconType === 'caixa' ? (
-                        <ShieldCheck className="h-6 w-6" />
+                      ) : file.iconType === 'mobile' ? (
+                        <Smartphone className="h-6 w-6" />
                       ) : (
                         <Download className="h-6 w-6" />
                       )}
@@ -370,17 +342,10 @@ export function DownloadsPage() {
                       <span className="rounded-lg bg-slate-800/90 border border-slate-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
                         {file.tag}
                       </span>
-                      {file.githubRepo && (
-                        <a
-                          href={"https://github.com/" + file.githubRepo}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
-                          title="Ver repositório no GitHub"
-                        >
-                          <Github className="h-3 w-3" />
-                          <span>GitHub</span>
-                        </a>
+                      {file.isOfficial && (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                          <CheckCircle2 className="h-3 w-3" /> Produção
+                        </span>
                       )}
                     </div>
                   </div>
@@ -403,7 +368,7 @@ export function DownloadsPage() {
 
                   {/* BOTÃO DE DOWNLOAD */}
                   <a
-                    href={downloadUrl}
+                    href={file.downloadUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-auto"
@@ -412,7 +377,7 @@ export function DownloadsPage() {
                       className={"w-full py-5 text-xs font-bold shadow-lg transition-all " + (file.isOfficial ? "bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-indigo-600/25" : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700")}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      Baixar {file.isOfficial ? 'Versão Oficial' : 'Aplicativo'}
+                      Baixar {file.isOfficial ? 'Instalador Oficial' : 'Aplicativo'}
                     </Button>
                   </a>
                 </div>
