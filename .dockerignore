@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.git
+.github
+.vscode
+*.log
+*.tmp
+tmp*
+tsc*
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
