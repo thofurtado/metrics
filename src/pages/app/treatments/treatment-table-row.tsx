@@ -125,7 +125,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
                 <span className="sr-only">Itens</span>
               </Button>
             </DialogTrigger>
-            <TreatmentItems open={isItemsOpen} treatmentId={treatments.id} />
+            <TreatmentItems open={isItemsOpen} onOpenChange={setIsItemsOpen} treatmentId={treatments.id} />
           </Dialog>
         ) : (
           <Button
