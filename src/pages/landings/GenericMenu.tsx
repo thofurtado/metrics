@@ -513,7 +513,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
         const data = await res.json()
         setStreet(data.street || '')
-        setNeighborhood(data.neighborhood || '')
+        const matched = matchNeighborhoodWithConfig(data.neighborhood || '')
+        setNeighborhood(matched)
         setCity(data.city || '')
         setState(data.state || '')
 
@@ -541,6 +542,43 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   })
 
   const storeStatus = useMemo(() => checkIsOpen(profile), [profile])
+
+  const normalizeText = (text: string) => {
+    return (text || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+  }
+
+  const availableNeighborhoodsList = useMemo(() => {
+    const sectors = profile?.deliverySectors || []
+    const fromSectors = sectors.flatMap((s: any) => s.neighborhoods || [])
+    const fromAvailable = profile?.availableNeighborhoods || []
+    const unique = Array.from(
+      new Set([...fromSectors, ...fromAvailable]),
+    ).filter(Boolean) as string[]
+    return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [profile])
+
+  const matchNeighborhoodWithConfig = (cepNeighborhood: string) => {
+    if (!cepNeighborhood || !availableNeighborhoodsList.length) {
+      return cepNeighborhood || ''
+    }
+    const target = normalizeText(cepNeighborhood)
+    const exact = availableNeighborhoodsList.find(
+      (n) => normalizeText(n) === target,
+    )
+    if (exact) return exact
+
+    const partial = availableNeighborhoodsList.find((n) => {
+      const norm = normalizeText(n)
+      return norm.includes(target) || target.includes(norm)
+    })
+    if (partial) return partial
+
+    return cepNeighborhood
+  }
 
   const rawProducts = useMemo(() => {
     return Array.isArray(products) ? products : []
@@ -1863,17 +1901,55 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
-                            <Label htmlFor="neighborhood" className="text-xs">
+                            <Label htmlFor="neighborhood" className="text-xs font-bold text-slate-800">
                               Bairro *
                             </Label>
-                            <Input
-                              id="neighborhood"
-                              value={neighborhood}
-                              onChange={(e) => setNeighborhood(e.target.value)}
-                              disabled={addressReadonly}
-                              placeholder="Bairro"
-                              className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
-                            />
+                            {availableNeighborhoodsList.length > 0 ? (
+                              <select
+                                id="neighborhood"
+                                value={neighborhood}
+                                onChange={(e) => setNeighborhood(e.target.value)}
+                                disabled={addressReadonly}
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:bg-slate-100"
+                              >
+                                <option value="">Selecione o Bairro...</option>
+                                {availableNeighborhoodsList.map((b) => {
+                                  const sectors = profile?.deliverySectors || []
+                                  const foundSec = sectors.find((s: any) =>
+                                    (s.neighborhoods || []).some(
+                                      (nb: string) => normalizeText(nb) === normalizeText(b),
+                                    ),
+                                  )
+                                  const feeStr = foundSec
+                                    ? Number(foundSec.fee) > 0
+                                      ? ` (+ ${formatCurrency(foundSec.fee)})`
+                                      : ' (Taxa Grátis)'
+                                    : ''
+                                  return (
+                                    <option key={b} value={b}>
+                                      {b}{feeStr}
+                                    </option>
+                                  )
+                                })}
+                                {neighborhood &&
+                                  !availableNeighborhoodsList.some(
+                                    (n) => normalizeText(n) === normalizeText(neighborhood),
+                                  ) && (
+                                    <option value={neighborhood}>
+                                      {neighborhood} (Não tabelado)
+                                    </option>
+                                  )}
+                              </select>
+                            ) : (
+                              <Input
+                                id="neighborhood"
+                                value={neighborhood}
+                                onChange={(e) => setNeighborhood(e.target.value)}
+                                disabled={addressReadonly}
+                                placeholder="Bairro"
+                                className="border-slate-300 bg-white font-medium focus-visible:ring-primary disabled:bg-slate-100"
+                              />
+                            )}
                           </div>
                           <div className="space-y-1">
                             <Label htmlFor="complement" className="text-xs">
