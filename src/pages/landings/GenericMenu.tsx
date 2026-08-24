@@ -47,12 +47,43 @@ interface Product {
   measureUnit: string
   category: string
   imageUrl?: string
+  is_priority?: boolean
+  subcategory?: {
+    id: string
+    name: string
+    accepts_fractions: boolean
+    max_fractions: number
+  } | null
+  complementGroups?: {
+    id: string
+    name: string
+    min_quantity: number
+    max_quantity: number
+    free_quantity: number
+    options: {
+      id: string
+      name: string
+      price: number
+    }[]
+  }[]
 }
 
 interface CartItem {
+  id: string
   product: Product
+  displayName?: string
+  unitPrice: number
   quantity: number
   observation?: string
+  fractions?: string[]
+  selectedOptions?: {
+    groupId: string
+    groupName: string
+    optionId: string
+    optionName: string
+    price: number
+    quantity: number
+  }[]
 }
 
 const DAYS_OF_WEEK = [
@@ -303,18 +334,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [customizingProduct, setCustomizingProduct] = useState<ProductItem | null>(null)
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string>('All')
-  const [deliveryFeeOverride, setDeliveryFeeOverride] = useState<number | null>(null)
-
-  const availableNeighborhoodsList = useMemo(() => {
-    const sectors = profile?.deliverySectors || []
-    const list: { name: string; fee: number; sectorName: string }[] = []
-    sectors.forEach((s: any) => {
-      (s.neighborhoods || []).forEach((n: string) => {
-        list.push({ name: n, fee: s.fee, sectorName: s.name })
-      })
-    })
-    return list.sort((a, b) => a.name.localeCompare(b.name))
-  }, [profile])
   const [isCartModalOpen, setIsCartModalOpen] = useState(false)
   const [isStoreInfoOpen, setIsStoreInfoOpen] = useState(false)
 
@@ -343,7 +362,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   // Estados de Busca do Cliente Marujo & Múltiplos Endereços
   const [clientFound, setClientFound] = useState(false)
   const [isLoadingPhone, setIsLoadingPhone] = useState(false)
-  const [hasSearchedPhone, setHasSearchedPhone] = useState(false)
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [addressReadonly, setAddressReadonly] = useState(false)
   const [isNewAddress, setIsNewAddress] = useState(false)
@@ -378,7 +396,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value)
     setCustomerPhone(formatted)
-    setHasSearchedPhone(false)
     const raw = formatted.replace(/\D/g, '')
     if (raw.length >= 10) {
       handlePhoneSearch(raw)
@@ -452,7 +469,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       }, 150)
     } finally {
       setIsLoadingPhone(false)
-      setHasSearchedPhone(true)
       setTimeout(() => setPhoneSearchToast(null), 4000)
     }
   }
@@ -572,13 +588,56 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     )
   }, [filteredProducts])
 
-  const handleAddToCart = (product: Product, obs?: string) => {
+  const handleProductClick = (product: Product) => {
+    const hasComplements =
+      product.complementGroups && product.complementGroups.length > 0
+    const acceptsFractions = Boolean(product.subcategory?.accepts_fractions)
+
+    if (hasComplements || acceptsFractions) {
+      setCustomizingProduct(product as ProductItem)
+      setIsCustomizerOpen(true)
+    } else {
+      handleAddToCart(product)
+    }
+  }
+
+  const handleConfirmCustomizedItem = (result: CustomizedItemResult) => {
     setCart((prev) => {
-      const existing = prev[product.id]
+      const existing = prev[result.customKey]
       if (existing) {
         return {
           ...prev,
-          [product.id]: {
+          [result.customKey]: {
+            ...existing,
+            quantity: existing.quantity + result.quantity,
+            observation: result.observation || existing.observation,
+          },
+        }
+      }
+      return {
+        ...prev,
+        [result.customKey]: {
+          id: result.customKey,
+          product: result.product as Product,
+          displayName: result.displayName,
+          unitPrice: result.unitPrice,
+          quantity: result.quantity,
+          observation: result.observation,
+          fractions: result.fractions,
+          selectedOptions: result.selectedOptions,
+        },
+      }
+    })
+  }
+
+  const handleAddToCart = (product: Product, obs?: string) => {
+    const customKey = product.id
+    setCart((prev) => {
+      const existing = prev[customKey]
+      if (existing) {
+        return {
+          ...prev,
+          [customKey]: {
             ...existing,
             quantity: existing.quantity + 1,
             observation: obs !== undefined ? obs : existing.observation,
@@ -587,42 +646,87 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       }
       return {
         ...prev,
-        [product.id]: { product, quantity: 1, observation: obs || '' },
+        [customKey]: {
+          id: customKey,
+          product,
+          displayName: product.name,
+          unitPrice: product.price,
+          quantity: 1,
+          observation: obs || '',
+        },
       }
     })
   }
 
-  const handleUpdateItemObs = (productId: string, obs: string) => {
+  const handleIncrementCartItem = (cartItemId: string) => {
     setCart((prev) => {
-      const existing = prev[productId]
+      const existing = prev[cartItemId]
       if (!existing) return prev
-      return { ...prev, [productId]: { ...existing, observation: obs } }
+      return {
+        ...prev,
+        [cartItemId]: {
+          ...existing,
+          quantity: existing.quantity + 1,
+        },
+      }
     })
   }
 
-  const handleRemoveFromCart = (productId: string) => {
+  const handleRemoveFromCart = (cartItemId: string) => {
     setCart((prev) => {
-      const existing = prev[productId]
+      const existing = prev[cartItemId]
       if (!existing) return prev
-      if (existing.quantity === 1) {
+      if (existing.quantity <= 1) {
         const newCart = { ...prev }
-        delete newCart[productId]
+        delete newCart[cartItemId]
         return newCart
       }
       return {
         ...prev,
-        [productId]: { ...existing, quantity: existing.quantity - 1 },
+        [cartItemId]: { ...existing, quantity: existing.quantity - 1 },
       }
     })
   }
 
+  const handleUpdateItemObs = (cartItemId: string, obs: string) => {
+    setCart((prev) => {
+      const existing = prev[cartItemId]
+      if (!existing) return prev
+      return { ...prev, [cartItemId]: { ...existing, observation: obs } }
+    })
+  }
+
+  const getProductCartCount = (productId: string) => {
+    return Object.values(cart)
+      .filter((item) => item.product.id === productId)
+      .reduce((sum, item) => sum + item.quantity, 0)
+  }
+
+  const resolvedDeliveryFee = useMemo(() => {
+    if (fulfillmentType !== 'DELIVERY') return 0
+
+    if (neighborhood && neighborhood.trim()) {
+      const cleanNeighborhood = neighborhood.trim().toLowerCase()
+      const sectors = profile?.deliverySectors || []
+      const foundSector = sectors.find((s: any) =>
+        (s.neighborhoods || []).some(
+          (n: string) => n.trim().toLowerCase() === cleanNeighborhood,
+        ),
+      )
+      if (foundSector) {
+        return Number(foundSector.fee) || 0
+      }
+    }
+
+    return Number(profile?.deliveryFee || 0)
+  }, [fulfillmentType, neighborhood, profile])
+
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
-    (sum, item) => sum + (item.unitPrice || item.product.price) * item.quantity,
+    (sum, item) => sum + item.unitPrice * item.quantity,
     0,
   )
-  const deliveryFee =
-    fulfillmentType === 'DELIVERY' ? Number(profile?.deliveryFee || 0) : 0
+  const deliveryFee = resolvedDeliveryFee
   const cartTotal = cartSubtotal + deliveryFee
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -707,10 +811,56 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     try {
-      // Registra dados do cliente no backend via API publica (Marujo Standard para Delivery e Balcão)
+      // 1. Registra dados do cliente no backend via API publica
       await registerClientInBackend()
 
-      // Formata mensagem estruturada padrão iFood / Anota AI para o WhatsApp
+      // 2. Envia pedido para fila de sincronização do PDV
+      try {
+        await api.post('/public/orders', {
+          client_name: customerName,
+          client_phone: customerPhone,
+          street: street || 'Retirada no Balcão',
+          number: number || 'S/N',
+          neighborhood: neighborhood || 'Geral',
+          city: city || 'Local',
+          state: state || 'UF',
+          zipcode: zipcode || undefined,
+          complement: complement || undefined,
+          payment_method_name:
+            paymentMethod === 'PIX'
+              ? 'PIX'
+              : paymentMethod === 'CREDIT'
+                ? 'Cartão de Crédito'
+                : paymentMethod === 'DEBIT'
+                  ? 'Cartão de Débito'
+                  : 'Dinheiro',
+          change_for: changeAmount ? Number(changeAmount) : undefined,
+          delivery_fee: fulfillmentType === 'DELIVERY' ? resolvedDeliveryFee : 0,
+          total_amount: cartTotal,
+          notes: `${fulfillmentType === 'DELIVERY' ? 'Entrega (Delivery)' : 'Retirada no Balcão'}`,
+          items: cartItems.map((item) => ({
+            product_id: item.product.id,
+            name: item.displayName || item.product.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            notes: item.observation || undefined,
+            complements: (item.selectedOptions || []).map((c) => ({
+              name: c.optionName,
+              price: c.price,
+              quantity: c.quantity,
+            })),
+            fractions: (item.fractions || []).map((f) => ({
+              product_id: item.product.id,
+              name: f,
+              fraction: 1 / Math.max(1, (item.fractions || []).length),
+            })),
+          })),
+        })
+      } catch (orderApiErr) {
+        console.warn('Aviso: envio direto ao PDV falhou, continuando para WhatsApp:', orderApiErr)
+      }
+
+      // 3. Formata mensagem estruturada padrão iFood / Anota AI para o WhatsApp
       let text = `🛒 *NOVO PEDIDO - ${tenantName.toUpperCase()}*\n`
       text += `─────────────────────────\n`
       text += `👤 *Cliente:* ${customerName}\n`
@@ -726,6 +876,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       if (fulfillmentType === 'DELIVERY') {
         text += `📍 *Endereço:* ${street}, ${number} - ${neighborhood}`
         if (complement) text += ` (${complement})`
+        if (city) text += ` - ${city}/${state}`
+        if (zipcode) text += ` (CEP: ${zipcode})`
         text += `\n`
       }
 
@@ -733,7 +885,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       text += `📦 *ITENS DO PEDIDO:*\n\n`
 
       cartItems.forEach((item) => {
-        text += `• *${item.quantity}x* ${item.product.name} - ${formatCurrency(item.product.price * item.quantity)}\n`
+        const itemTitle = item.displayName || item.product.name
+        const itemTotal = item.unitPrice * item.quantity
+        text += `• *${item.quantity}x* ${itemTitle} - ${formatCurrency(itemTotal)}\n`
         if (item.observation) {
           text += `   ↳ _Obs: ${item.observation}_\n`
         }
@@ -741,8 +895,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       text += `─────────────────────────\n`
       text += `💵 *Subtotal:* ${formatCurrency(cartSubtotal)}\n`
-      if (fulfillmentType === 'DELIVERY' && deliveryFee > 0) {
-        text += `🛵 *Taxa de Entrega:* ${formatCurrency(deliveryFee)}\n`
+      if (fulfillmentType === 'DELIVERY' && resolvedDeliveryFee > 0) {
+        text += `🛵 *Taxa de Entrega:* ${formatCurrency(resolvedDeliveryFee)}\n`
+      } else if (fulfillmentType === 'DELIVERY') {
+        text += `🛵 *Taxa de Entrega:* Grátis\n`
       }
       text += `💰 *TOTAL FINAL:* ${formatCurrency(cartTotal)}\n\n`
 
@@ -790,7 +946,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             <AnimatePresence>
               {cartItems.map((item) => (
                 <motion.div
-                  key={item.product.id}
+                  key={item.id}
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -800,18 +956,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold leading-snug text-slate-800">
-                        {item.product.name}
+                        {item.displayName || item.product.name}
                       </h4>
                       <p
                         className="mt-0.5 text-[14px] font-black"
                         style={{ color: 'var(--primary-color)' }}
                       >
-                        {formatCurrency(item.product.price * item.quantity)}
+                        {formatCurrency(item.unitPrice * item.quantity)}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-inner">
                       <button
-                        onClick={() => handleRemoveFromCart(item.product.id)}
+                        onClick={() => handleRemoveFromCart(item.id)}
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-sm transition-transform active:scale-90"
                       >
                         <Minus className="h-4 w-4 stroke-[3]" />
@@ -820,7 +976,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => handleAddToCart(item.product)}
+                        onClick={() => handleIncrementCartItem(item.id)}
                         className="flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
                         style={{ backgroundColor: 'var(--primary-color)' }}
                       >
@@ -834,7 +990,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       placeholder="Observação (ex: Sem cebola)..."
                       value={item.observation || ''}
                       onChange={(e) =>
-                        handleUpdateItemObs(item.product.id, e.target.value)
+                        handleUpdateItemObs(item.id, e.target.value)
                       }
                       className="h-8 bg-white/80 text-xs"
                     />
@@ -1047,7 +1203,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </div>
           ) : (
             <div className="space-y-12">
-              {Object.entries(groupedProducts).map(([catName, prods]) => (
+              {(Object.entries(groupedProducts) as [string, Product[]][]).map(
+                ([catName, prods]) => (
                 <section key={catName}>
                   {!searchQuery && (
                     <h2 className="mb-5 flex items-center gap-2 text-[20px] font-black tracking-tight text-slate-900">
@@ -1096,41 +1253,86 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             </div>
 
                             <div>
-                              {cart[product.id] ? (
-                                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-inner">
+                              {(() => {
+                                const isCustomizable =
+                                  (product.complementGroups &&
+                                    product.complementGroups.length > 0) ||
+                                  Boolean(product.subcategory?.accepts_fractions)
+                                const totalInCart = getProductCartCount(
+                                  product.id,
+                                )
+
+                                if (isCustomizable) {
+                                  return (
+                                    <button
+                                      onClick={() =>
+                                        handleProductClick(product)
+                                      }
+                                      className="flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:scale-95"
+                                      style={{
+                                        backgroundColor: 'var(--primary-color)',
+                                      }}
+                                    >
+                                      {totalInCart > 0 ? (
+                                        <>
+                                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs font-black">
+                                            {totalInCart}
+                                          </span>
+                                          Personalizar
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Plus className="h-4 w-4 stroke-[3]" />
+                                          Personalizar
+                                        </>
+                                      )}
+                                    </button>
+                                  )
+                                }
+
+                                if (cart[product.id]) {
+                                  return (
+                                    <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1 shadow-inner">
+                                      <button
+                                        onClick={() =>
+                                          handleRemoveFromCart(product.id)
+                                        }
+                                        className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-transform active:scale-90"
+                                      >
+                                        <Minus className="h-4 w-4 stroke-[3]" />
+                                      </button>
+                                      <span className="w-6 text-center text-[15px] font-bold text-slate-800">
+                                        {cart[product.id].quantity}
+                                      </span>
+                                      <button
+                                        onClick={() =>
+                                          handleAddToCart(product)
+                                        }
+                                        className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
+                                        style={{
+                                          backgroundColor:
+                                            'var(--primary-color)',
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 stroke-[3]" />
+                                      </button>
+                                    </div>
+                                  )
+                                }
+
+                                return (
                                   <button
-                                    onClick={() =>
-                                      handleRemoveFromCart(product.id)
-                                    }
-                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-transform active:scale-90"
-                                  >
-                                    <Minus className="h-4 w-4 stroke-[3]" />
-                                  </button>
-                                  <span className="w-6 text-center text-[15px] font-bold text-slate-800">
-                                    {cart[product.id].quantity}
-                                  </span>
-                                  <button
-                                    onClick={() => handleProductClick(product)}
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-sm transition-transform active:scale-90"
+                                    onClick={() => handleAddToCart(product)}
+                                    className="flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:scale-95"
                                     style={{
                                       backgroundColor: 'var(--primary-color)',
                                     }}
                                   >
                                     <Plus className="h-4 w-4 stroke-[3]" />
+                                    Adicionar
                                   </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddToCart(product)}
-                                  className="flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 active:scale-95"
-                                  style={{
-                                    backgroundColor: 'var(--primary-color)',
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4 stroke-[3]" />
-                                  Adicionar
-                                </button>
-                              )}
+                                )
+                              })()}
                             </div>
                           </div>
                         </div>

@@ -1,11 +1,9 @@
-import { motion } from 'framer-motion'
-import { Check, ChevronDown, Minus, Pizza, Plus, UtensilsCrossed, X } from 'lucide-react'
-import React, { useMemo, useState } from 'react'
+import { Minus, Pizza, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -158,7 +156,7 @@ export function ItemCustomizerDialog({
   }
 
   // Cálculo Comercial em Tempo Real
-  const { basePrice, complementsExtraPrice, unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
+  const { unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
     // 1. Preço Base dos Sabores: REGRA COMERCIAL DE OURO (MAIOR PREÇO)
     const flavorPrices = selectedFlavors.map((f) => f.price)
     const base = flavorPrices.length > 0 ? Math.max(...flavorPrices) : product.price
