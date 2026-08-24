@@ -78,7 +78,7 @@ export function DivergenceModal({
   const { mutateAsync: resolveMutate, isPending } = useMutation({
     mutationFn: resolveDivergence,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['monthly-audit'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-cash-audit'] })
       queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
       toast.success('Divergência resolvida com sucesso!')
       onClose()
@@ -316,3 +316,4 @@ export function DivergenceModal({
     </Dialog>
   )
 }
+
