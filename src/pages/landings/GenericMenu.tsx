@@ -860,57 +860,84 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         console.warn('Aviso: envio direto ao PDV falhou, continuando para WhatsApp:', orderApiErr)
       }
 
-      // 3. Formata mensagem estruturada padrão iFood / Anota AI para o WhatsApp
-      let text = `🛒 *NOVO PEDIDO - ${tenantName.toUpperCase()}*\n`
-      text += `─────────────────────────\n`
+      // 3. Formata mensagem estruturada ultra-profissional para o WhatsApp
+      const now = new Date()
+      const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
+      const formattedTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+      let text = `🧾 *NOVO PEDIDO - ${(profile?.tradeName || tenantName).toUpperCase()}*\n`
+      text += `📅 _${formattedDate} às ${formattedTime}_\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
       text += `👤 *Cliente:* ${customerName}\n`
-      text += `📞 *Contato:* ${customerPhone}\n`
-      text += `📌 *Tipo de Pedido:* ${
+      text += `📱 *WhatsApp:* ${customerPhone}\n`
+      text += `🛵 *Tipo:* ${
         fulfillmentType === 'DELIVERY'
-          ? '🚀 Entrega (Delivery)'
+          ? 'Entrega (Delivery)'
           : fulfillmentType === 'TAKEOUT'
-            ? '🛍️ Retirada no Balcão'
-            : '🍽️ Consumo no Local'
+            ? 'Retirada no Balcão'
+            : 'Consumo no Local'
       }\n`
 
       if (fulfillmentType === 'DELIVERY') {
-        text += `📍 *Endereço:* ${street}, ${number} - ${neighborhood}`
-        if (complement) text += ` (${complement})`
-        if (city) text += ` - ${city}/${state}`
-        if (zipcode) text += ` (CEP: ${zipcode})`
-        text += `\n`
+        text += `\n📍 *Endereço de Entrega:*\n`
+        text += `> ${street}, ${number || 'S/N'}\n`
+        if (complement) text += `> Complemento: ${complement}\n`
+        text += `> ${neighborhood} - ${city || profile?.city || 'Local'}/${state || profile?.state || 'SP'}\n`
+        if (zipcode) text += `> CEP: ${zipcode}\n`
       }
 
-      text += `─────────────────────────\n`
-      text += `📦 *ITENS DO PEDIDO:*\n\n`
+      text += `\n━━━━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `📋 *ITENS DO PEDIDO:*\n\n`
 
       cartItems.forEach((item) => {
         const itemTitle = item.displayName || item.product.name
         const itemTotal = item.unitPrice * item.quantity
-        text += `• *${item.quantity}x* ${itemTitle} - ${formatCurrency(itemTotal)}\n`
+        text += `▪️ *${item.quantity}x* ${itemTitle}\n`
+        text += `   _${formatCurrency(itemTotal)}_\n`
         if (item.observation) {
-          text += `   ↳ _Obs: ${item.observation}_\n`
+          text += `   ↳ 💬 _Obs: ${item.observation}_\n`
         }
+        if (item.selectedOptions && item.selectedOptions.length > 0) {
+          item.selectedOptions.forEach((opt) => {
+            text += `   ↳ ➕ ${opt.quantity > 1 ? `${opt.quantity}x ` : ''}${opt.optionName} (${formatCurrency(opt.price * opt.quantity)})\n`
+          })
+        }
+        if (item.fractions && item.fractions.length > 0) {
+          text += `   ↳ 🍕 Sabores: ${item.fractions.join(' / ')}\n`
+        }
+        text += `\n`
       })
 
-      text += `─────────────────────────\n`
-      text += `💵 *Subtotal:* ${formatCurrency(cartSubtotal)}\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `💵 Subtotal: *${formatCurrency(cartSubtotal)}*\n`
       if (fulfillmentType === 'DELIVERY' && resolvedDeliveryFee > 0) {
-        text += `🛵 *Taxa de Entrega:* ${formatCurrency(resolvedDeliveryFee)}\n`
+        text += `🛵 Taxa de Entrega: *${formatCurrency(resolvedDeliveryFee)}*\n`
       } else if (fulfillmentType === 'DELIVERY') {
-        text += `🛵 *Taxa de Entrega:* Grátis\n`
+        text += `🛵 Taxa de Entrega: *Grátis*\n`
       }
-      text += `💰 *TOTAL FINAL:* ${formatCurrency(cartTotal)}\n\n`
+      text += `💰 *TOTAL: ${formatCurrency(cartTotal)}*\n\n`
 
-      text += `💳 *Forma de Pagamento:* ${
-        paymentMethod === 'PIX'
-          ? 'Pix'
-          : paymentMethod === 'CREDIT'
-            ? 'Cartão de Crédito (na entrega)'
-            : paymentMethod === 'DEBIT'
-              ? 'Cartão de Débito (na entrega)'
-              : `Dinheiro ${changeAmount ? `(Troco para R$ ${changeAmount})` : '(Sem troco)'}`
-      }\n`
+      if (paymentMethod === 'PIX') {
+        text += `💳 *Forma de Pagamento:* Pix\n`
+      } else if (paymentMethod === 'CREDIT') {
+        text += `💳 *Forma de Pagamento:* Cartão de Crédito (na entrega)\n`
+      } else if (paymentMethod === 'DEBIT') {
+        text += `💳 *Forma de Pagamento:* Cartão de Débito (na entrega)\n`
+      } else {
+        const trocoNum = parseFloat((changeAmount || '0').replace(',', '.'))
+        if (trocoNum > cartTotal) {
+          const levarTroco = trocoNum - cartTotal
+          text += `💳 *Forma de Pagamento:* Dinheiro\n`
+          text += `💵 *Troco para:* ${formatCurrency(trocoNum)} _(Levar ${formatCurrency(levarTroco)} de troco)_\n`
+        } else if (changeAmount) {
+          text += `💳 *Forma de Pagamento:* Dinheiro (Troco para R$ ${changeAmount})\n`
+        } else {
+          text += `💳 *Forma de Pagamento:* Dinheiro (Sem troco)\n`
+        }
+      }
+
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `_✅ Pedido gerado via Cardápio Digital Metrics_`
 
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
       const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(text)}`
