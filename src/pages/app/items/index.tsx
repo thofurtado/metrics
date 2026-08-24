@@ -360,11 +360,15 @@ export function Items() {
                         <TableSkeleton columns={6} rows={10} />
                       ) : result.items && result.items.length > 0 ? (
                         result.items.map((item: any) => (
-                          <ItemTableRow key={item.id} item={item} />
+                          <ItemTableRow
+                            key={item.id}
+                            item={item}
+                            activeTabType={activeTabType}
+                          />
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} className="h-64 text-center">
+                          <TableCell colSpan={8} className="h-64 text-center">
                             <EmptyState
                               title="Nenhum item encontrado"
                               description="Tente ajustar os filtros ou adicione um novo item."
@@ -379,7 +383,7 @@ export function Items() {
 
               {result.meta && result.meta.totalCount > 0 && (
                 <Pagination
-                  pageIndex={result.meta.pageIndex}
+                  pageIndex={pageIndex}
                   totalCount={result.meta.totalCount}
                   perPage={result.meta.perPage}
                   onPageChange={handlePaginate}
