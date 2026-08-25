@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Layers, Package, Plus, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { createSupply } from '@/api/create-supply'
+import { getSupplies } from '@/api/get-supplies'
 import { updateItem } from '@/api/update-item'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,14 +23,45 @@ import {
   ResponsiveDialogClose,
   ResponsiveDialogFooter,
 } from '@/components/ui/responsive-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+
+const DEFAULT_SUPPLY_CATEGORIES = [
+  'Laticínios & Frios',
+  'Carnes & Aves',
+  'Hortifruti',
+  'Embalagens',
+  'Mercearia & Secos',
+  'Bebidas & Líquidos',
+  'Temperos & Molhos',
+  'Padaria & Confeitaria',
+  'Descartáveis & Limpeza',
+]
+
+export const STANDARDIZED_UNITS = [
+  { value: 'UN', label: 'UN - Unidade' },
+  { value: 'KG', label: 'KG - Quilograma' },
+  { value: 'G', label: 'G - Grama' },
+  { value: 'LT', label: 'LT - Litro' },
+  { value: 'ML', label: 'ML - Mililitro' },
+  { value: 'CX', label: 'CX - Caixa' },
+  { value: 'PCT', label: 'PCT - Pacote' },
+  { value: 'FD', label: 'FD - Fardo' },
+  { value: 'DZ', label: 'DZ - Dúzia' },
+]
 
 const supplySchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
   category: z.string().optional(),
-  unit: z.string().optional(),
+  unit: z.string().optional().default('UN'),
   cost: z.coerce.number().min(0).optional().default(0),
   stock: z.coerce.number().optional().default(0),
   active: z.boolean().default(true),
@@ -45,19 +77,34 @@ interface SupplyFormProps {
 export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
   const queryClient = useQueryClient()
   const isEdit = !!initialData
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+
+  const { data: suppliesData } = useQuery({
+    queryKey: ['supplies-categories-list'],
+    queryFn: () => getSupplies({ perPage: 500 }),
+  })
+
+  const categoriesList = useMemo(() => {
+    const fetched = (suppliesData?.data?.supplies || [])
+      .map((s: any) => s.category)
+      .filter(Boolean) as string[]
+    const all = Array.from(new Set([...DEFAULT_SUPPLY_CATEGORIES, ...fetched]))
+    return all.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [suppliesData])
+
+  const initialCat = initialData?.category ?? initialData?.supply?.category ?? ''
+  const initialUnit = (initialData?.unit ?? initialData?.supply?.unit ?? 'UN').toUpperCase()
 
   const form = useForm<SupplySchema>({
     resolver: zodResolver(supplySchema),
     defaultValues: {
       name: initialData?.name ?? '',
       description: initialData?.description ?? '',
-      category: initialData?.category ?? initialData?.supply?.category ?? '',
-      unit: initialData?.unit ?? initialData?.supply?.unit ?? '',
+      category: initialCat,
+      unit: initialUnit || 'UN',
       cost: initialData?.cost ?? initialData?.supply?.cost ?? 0,
       stock: initialData?.stock ?? initialData?.supply?.stock ?? 0,
-      unit: initialData?.supply?.unit ?? '',
-      cost: initialData?.supply?.cost ?? 0,
-      stock: initialData?.supply?.stock ?? 0,
       active: initialData?.active ?? true,
     },
   })
@@ -75,6 +122,7 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
     mutationFn: createSupply,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['supplies-categories-list'] })
       onSuccess?.()
     },
   })
@@ -83,16 +131,25 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
     mutationFn: updateItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['supplies-categories-list'] })
       onSuccess?.()
     },
   })
+
+  const handleAddNewCategory = () => {
+    if (!newCategoryName.trim()) return
+    const cat = newCategoryName.trim()
+    form.setValue('category', cat, { shouldDirty: true })
+    setIsCreatingCategory(false)
+    setNewCategoryName('')
+    toast.success(`Categoria "${cat}" adicionada!`)
+  }
 
   async function onSubmit(data: SupplySchema) {
     if (!isMounted.current) return
 
     try {
       if (isEdit) {
-        // If cost changed, backend will trigger cascade update. Warn user.
         const costChanged = initialData?.supply?.cost !== data.cost
         if (costChanged) {
           toast.loading('Salvando e atualizando produtos dependentes...', {
@@ -141,7 +198,7 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
         className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden text-left"
       >
         {/* SCROLLABLE CONTENT */}
-        <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 sm:px-8 sm:py-8">
           {/* --- HEADER: Name & Active --- */}
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 space-y-2 sm:col-span-8">
@@ -151,13 +208,13 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      Nome do Insumo
+                      Nome do Insumo *
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Ex: Cimento CP-II"
+                        placeholder="Ex: Queijo Mussarela Fatiado, Bacon em Cubos, Caixa Pizza 35cm..."
                         {...field}
-                        className="h-12 text-lg font-medium"
+                        className="h-12 text-base font-bold"
                       />
                     </FormControl>
                     <FormMessage />
@@ -191,60 +248,148 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
 
           {/* --- DETAILS: Category, Unit, Stock --- */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {/* Categoria do Insumo */}
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Categoria
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Layers className="h-3.5 w-3.5 text-primary" /> Categoria
+                    </span>
+                    {!isCreatingCategory && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingCategory(true)}
+                        className="text-[11px] font-bold text-primary hover:underline"
+                      >
+                        + Nova
+                      </button>
+                    )}
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ex: Laticínios, Embalagens, Carnes..."
-                      {...field}
-                      className="h-10"
-                    />
-                  </FormControl>
+
+                  {isCreatingCategory ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        placeholder="Nova Categoria..."
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddNewCategory()
+                          }
+                        }}
+                        className="h-10 text-xs font-bold"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddNewCategory}
+                        className="h-10 px-2.5 text-xs font-bold"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsCreatingCategory(false)
+                          setNewCategoryName('')
+                        }}
+                        className="h-10 px-2 text-xs"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={(val) => {
+                        if (val === '__new__') {
+                          setIsCreatingCategory(true)
+                        } else {
+                          field.onChange(val)
+                        }
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-10 text-xs font-medium">
+                          <SelectValue placeholder="Selecione a Categoria..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categoriesList.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        {field.value && !categoriesList.includes(field.value) && (
+                          <SelectItem value={field.value}>
+                            {field.value}
+                          </SelectItem>
+                        )}
+                        <SelectItem value="__new__" className="font-bold text-primary">
+                          + Cadastrar Nova Categoria...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Unidade de Medida Padronizada */}
             <FormField
               control={form.control}
               name="unit"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="space-y-1.5">
                   <FormLabel className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    <Package className="h-3 w-3" /> Unidade
+                    <Package className="h-3.5 w-3.5 text-primary" /> Unidade *
                   </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ex: kg, m, un"
-                      {...field}
-                      className="h-10"
-                    />
-                  </FormControl>
+                  <Select
+                    value={field.value?.toUpperCase() || 'UN'}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-10 text-xs font-bold">
+                        <SelectValue placeholder="Selecione a Unidade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {STANDARDIZED_UNITS.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Estoque */}
             <FormField
               control={form.control}
               name="stock"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="space-y-1.5">
                   <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     {!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
+                      step="any"
                       {...field}
                       disabled={isEdit}
-                      className={isEdit ? 'bg-muted' : ''}
+                      className={`h-10 font-mono font-bold ${isEdit ? 'bg-muted/50' : ''}`}
                     />
                   </FormControl>
                   <FormMessage />
@@ -253,35 +398,35 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
             />
           </div>
 
-          {/* --- COST HERO --- */}
-          <div className="space-y-6 rounded-2xl border bg-muted/10 p-6">
-            <div className="mb-2 flex items-center gap-2">
-              <div className="h-6 w-1 rounded-full bg-red-500"></div>
-              <h4 className="text-lg font-bold tracking-tight">
-                Custo do Insumo
-              </h4>
-            </div>
+          {/* --- COST SECTION --- */}
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <h4 className="text-xs font-black uppercase tracking-wider text-primary">
+              Custo de Aquisição / Produção do Insumo
+            </h4>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Este valor é utilizado como base de custo na montagem das fichas técnicas de produtos compostos.
+            </p>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="cost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-bold uppercase tracking-wide text-red-600/70">
-                      Preço de Custo
+                    <FormLabel className="text-xs font-bold">
+                      Preço de Custo Unitário (R$)
                     </FormLabel>
                     <FormControl>
-                      <div className="relative rounded-md shadow-sm">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-red-600">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted-foreground">
                           R$
                         </span>
                         <Input
                           type="number"
                           step="0.01"
-                          inputMode="decimal"
+                          placeholder="0,00"
                           {...field}
-                          className="h-14 border-red-200 bg-red-50/20 pl-10 text-2xl font-bold tabular-nums text-red-600 shadow-sm focus-visible:border-red-500 focus-visible:ring-red-500"
+                          className="h-11 bg-white pl-10 font-mono text-base font-bold dark:bg-slate-950"
                         />
                       </div>
                     </FormControl>
@@ -290,13 +435,10 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                 )}
               />
 
-              <div className="flex flex-col justify-center gap-1 rounded-lg border bg-white p-3 text-sm text-muted-foreground">
-                <span className="text-xs font-semibold uppercase">
-                  Nota Importante:
-                </span>
+              <div className="flex flex-col justify-center rounded-xl border border-border/50 bg-background/60 p-3 text-xs text-muted-foreground">
+                <span className="font-bold text-foreground">💡 Dica de Engenharia:</span>
                 <span>
-                  Alterar este custo impactará automaticamente o custo de
-                  produtos compostos.
+                  Cadastre o custo pela unidade selecionada (ex: se a unidade for KG, informe o custo por 1 KG).
                 </span>
               </div>
             </div>
@@ -309,13 +451,13 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  Descrição / Observações
+                  Descrição / Detalhes do Fornecedor (Opcional)
                 </FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Detalhes do insumo..."
-                    className="min-h-[100px] resize-none"
+                    placeholder="Marca preferencial, código do fornecedor, especificações técnicas..."
                     {...field}
+                    className="min-h-[70px] text-xs resize-none"
                   />
                 </FormControl>
                 <FormMessage />
@@ -324,26 +466,25 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
           />
         </div>
 
-        {/* --- FIXED FOOTER --- */}
-        <div className="z-10 flex shrink-0 justify-end gap-3 border-t bg-background p-6 sm:p-8">
+        {/* FOOTER */}
+        <ResponsiveDialogFooter className="border-t bg-muted/20 px-6 py-4 sm:px-8">
           <ResponsiveDialogClose asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-12 w-full font-medium sm:w-auto"
-            >
+            <Button variant="outline" type="button">
               Cancelar
             </Button>
           </ResponsiveDialogClose>
           <Button
-            form="supply-form"
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="text-md h-12 w-full bg-primary px-8 font-bold shadow-lg hover:bg-primary/90 sm:w-auto"
+            className="min-w-[140px] font-bold"
           >
-            {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Insumo'}
+            {form.formState.isSubmitting
+              ? 'Salvando...'
+              : isEdit
+                ? 'Atualizar Insumo'
+                : 'Salvar Insumo'}
           </Button>
-        </div>
+        </ResponsiveDialogFooter>
       </form>
     </Form>
   )

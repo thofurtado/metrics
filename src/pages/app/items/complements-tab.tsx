@@ -1,10 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Boxes,
+  Check,
+  CheckSquare,
+  Package,
   Plus,
   Save,
   Search,
   Sliders,
+  Square,
   Trash2,
+  UtensilsCrossed,
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -17,8 +23,11 @@ import {
   getComplementGroups,
   updateComplementGroup,
 } from '@/api/complements'
+import { getProducts } from '@/api/get-products'
+import { getSupplies } from '@/api/get-supplies'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -28,6 +37,7 @@ export function ComplementsTab() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [search, setSearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
 
   // Form State
   const [groupName, setGroupName] = useState('')
@@ -35,6 +45,7 @@ export function ComplementsTab() {
   const [maxQty, setMaxQty] = useState(1)
   const [freeQty, setFreeQty] = useState(0)
   const [options, setOptions] = useState<ComplementOption[]>([])
+  const [linkedProductIds, setLinkedProductIds] = useState<string[]>([])
 
   // Fetch groups
   const { data: groupsData, isLoading } = useQuery({
@@ -42,8 +53,26 @@ export function ComplementsTab() {
     queryFn: getComplementGroups,
   })
 
+  // Fetch supplies for stock deduction binding
+  const { data: suppliesData } = useQuery({
+    queryKey: ['supplies-for-complements'],
+    queryFn: () => getSupplies({ perPage: 500 }),
+  })
+  const supplies = suppliesData?.data?.supplies || []
+
+  // Fetch products for group assignment
+  const { data: productsData } = useQuery({
+    queryKey: ['products-for-complements'],
+    queryFn: () => getProducts({ perPage: 500 }),
+  })
+  const allProducts = productsData?.products || []
+
   const groups = (groupsData?.groups || []).filter((g) =>
     g.name.toLowerCase().includes(search.toLowerCase()),
+  )
+
+  const filteredProducts = allProducts.filter((p) =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase()),
   )
 
   const handleSelectGroup = (group: ComplementGroup) => {
@@ -54,6 +83,8 @@ export function ComplementsTab() {
     setMaxQty(group.max_quantity)
     setFreeQty(group.free_quantity)
     setOptions(group.options || [])
+    setLinkedProductIds(group.products?.map((p) => p.product_id) || [])
+    setProductSearch('')
   }
 
   const handleStartNew = () => {
@@ -64,14 +95,17 @@ export function ComplementsTab() {
     setMaxQty(1)
     setFreeQty(0)
     setOptions([])
+    setLinkedProductIds([])
+    setProductSearch('')
   }
 
   // Mutations
   const { mutateAsync: createGroup, isPending: isCreating } = useMutation({
     mutationFn: createComplementGroup,
     onSuccess: (data) => {
-      toast.success('Grupo de adicionais criado!')
+      toast.success('Grupo de adicionais criado com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['complement-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       handleSelectGroup(data.group)
     },
     onError: () => toast.error('Erro ao criar grupo.'),
@@ -81,8 +115,9 @@ export function ComplementsTab() {
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       updateComplementGroup(id, data),
     onSuccess: () => {
-      toast.success('Grupo de adicionais atualizado!')
+      toast.success('Grupo de adicionais atualizado com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['complement-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
     },
     onError: () => toast.error('Erro ao atualizar grupo.'),
   })
@@ -92,6 +127,7 @@ export function ComplementsTab() {
     onSuccess: () => {
       toast.success('Grupo de adicionais excluído!')
       queryClient.invalidateQueries({ queryKey: ['complement-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
       setSelectedGroupId(null)
       setIsCreatingNew(false)
     },
@@ -99,7 +135,7 @@ export function ComplementsTab() {
   })
 
   const handleAddOption = () => {
-    setOptions([...options, { name: '', price: 0 }])
+    setOptions([...options, { name: '', price: 0, linked_supply_id: null }])
   }
 
   const handleUpdateOption = (
@@ -114,6 +150,14 @@ export function ComplementsTab() {
 
   const handleRemoveOption = (index: number) => {
     setOptions(options.filter((_, i) => i !== index))
+  }
+
+  const toggleProductLink = (productId: string) => {
+    if (linkedProductIds.includes(productId)) {
+      setLinkedProductIds(linkedProductIds.filter((id) => id !== productId))
+    } else {
+      setLinkedProductIds([...linkedProductIds, productId])
+    }
   }
 
   const handleSave = async () => {
@@ -133,7 +177,9 @@ export function ComplementsTab() {
           id: opt.id,
           name: opt.name.trim(),
           price: Number(opt.price || 0),
+          linked_supply_id: opt.linked_supply_id || null,
         })),
+      product_ids: linkedProductIds,
     }
 
     if (isCreatingNew) {
@@ -144,7 +190,7 @@ export function ComplementsTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-12 text-left">
       {/* Coluna Esquerda: Lista de Grupos */}
       <div className="space-y-3 md:col-span-4">
         <div className="flex items-center justify-between">
@@ -154,7 +200,7 @@ export function ComplementsTab() {
           <Button
             onClick={handleStartNew}
             size="sm"
-            className="h-8 rounded-xl bg-orange-600 px-3 text-xs font-bold text-white hover:bg-orange-700"
+            className="h-8 rounded-xl bg-orange-600 px-3 text-xs font-bold text-white hover:bg-orange-700 shadow-sm"
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> Novo Grupo
           </Button>
@@ -170,9 +216,9 @@ export function ComplementsTab() {
           />
         </div>
 
-        <div className="space-y-2 overflow-y-auto pr-1">
+        <div className="space-y-2 overflow-y-auto pr-1 max-h-[70vh]">
           {isLoading && (
-            <p className="py-6 text-center text-xs text-slate-400">Carregando...</p>
+            <p className="py-6 text-center text-xs text-slate-400">Carregando grupos...</p>
           )}
           {!isLoading && groups.length === 0 && (
             <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-500 dark:border-slate-800">
@@ -181,14 +227,15 @@ export function ComplementsTab() {
           )}
           {groups.map((group) => {
             const isSelected = group.id === selectedGroupId
+            const productCount = group.products?.length ?? group._count?.products ?? 0
             return (
               <div
                 key={group.id}
                 onClick={() => handleSelectGroup(group)}
                 className={cn(
-                  'flex cursor-pointer flex-col gap-1 rounded-2xl border p-4 transition-all',
+                  'flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 transition-all',
                   isSelected
-                    ? 'border-orange-500/50 bg-orange-50/60 shadow-sm dark:border-orange-500/40 dark:bg-orange-950/20'
+                    ? 'border-orange-500/60 bg-orange-50/60 shadow-sm ring-1 ring-orange-500/30 dark:border-orange-500/40 dark:bg-orange-950/20'
                     : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-slate-700',
                 )}
               >
@@ -196,12 +243,22 @@ export function ComplementsTab() {
                   <span className="font-bold text-slate-900 dark:text-slate-100">
                     {group.name}
                   </span>
-                  <Badge
-                    variant="outline"
-                    className="border-slate-200 text-[10px] dark:border-slate-800"
-                  >
-                    {group.options?.length || 0} opções
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    {productCount > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
+                      >
+                        {productCount} {productCount === 1 ? 'produto' : 'produtos'}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className="border-slate-200 text-[10px] dark:border-slate-800"
+                    >
+                      {group.options?.length || 0} opções
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                   <span>
@@ -227,7 +284,7 @@ export function ComplementsTab() {
       </div>
 
       {/* Coluna Direita: Editor do Grupo */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-8">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-8 overflow-y-auto max-h-[85vh]">
         {selectedGroupId || isCreatingNew ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
@@ -236,14 +293,14 @@ export function ComplementsTab() {
                   {isCreatingNew ? 'Novo Grupo de Adicionais' : `Editar: ${groupName}`}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Defina o nome, limites de escolha e opções deste grupo.
+                  Defina o nome, limites de escolha, opções com baixa de insumo e produtos vinculados.
                 </p>
               </div>
               <Button
                 type="button"
                 onClick={handleSave}
                 disabled={isCreating || isUpdating}
-                className="h-9 rounded-xl bg-orange-600 px-4 text-xs font-bold text-white hover:bg-orange-700"
+                className="h-9 rounded-xl bg-orange-600 px-4 text-xs font-bold text-white hover:bg-orange-700 shadow-sm"
               >
                 <Save className="mr-1.5 h-4 w-4" /> Salvar Grupo
               </Button>
@@ -252,12 +309,12 @@ export function ComplementsTab() {
             {/* Nome do Grupo */}
             <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Nome do Grupo
+                Nome do Grupo *
               </Label>
               <Input
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Ex: Ponto da Carne, Borda Recheada, Adicionais de Hambúrguer..."
+                placeholder="Ex: Ponto da Carne, Borda Recheada, Adicionais de Hambúrguer, Acompanhamentos do Açaí..."
                 className="h-11 rounded-xl border-slate-200 bg-white font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               />
             </div>
@@ -309,12 +366,17 @@ export function ComplementsTab() {
               </div>
             </div>
 
-            {/* Tabela de Opções */}
+            {/* SEÇÃO 1: OPÇÕES DO GRUPO */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  Opções do Grupo ({options.length})
-                </span>
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Opções do Grupo ({options.length})
+                  </span>
+                  <p className="text-[11px] text-slate-400">
+                    Cadastre cada adicional e vincule ao insumo correspondente para baixa automática de estoque.
+                  </p>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
@@ -326,7 +388,7 @@ export function ComplementsTab() {
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {options.length === 0 && (
                   <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400 dark:border-slate-800">
                     Nenhuma opção cadastrada. Clique em "+ Adicionar Opção".
@@ -335,18 +397,23 @@ export function ComplementsTab() {
                 {options.map((opt, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-slate-950/50"
+                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/50"
                   >
-                    <Input
-                      placeholder="Nome da opção (ex: Bacon Extra, Ao Ponto, Catupiry)"
-                      value={opt.name}
-                      onChange={(e) =>
-                        handleUpdateOption(idx, 'name', e.target.value)
-                      }
-                      className="h-10 flex-1 rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                    />
-                    <div className="relative w-36">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
+                    {/* Nome da Opção */}
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Nome da opção (ex: Bacon Extra, Catupiry, Mal Passada)"
+                        value={opt.name}
+                        onChange={(e) =>
+                          handleUpdateOption(idx, 'name', e.target.value)
+                        }
+                        className="h-10 rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+
+                    {/* Preço Adicional */}
+                    <div className="relative w-full sm:w-32">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400 font-bold">
                         R$
                       </span>
                       <Input
@@ -360,12 +427,32 @@ export function ComplementsTab() {
                         className="h-10 rounded-xl border-slate-200 bg-white pl-9 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </div>
+
+                    {/* Insumo Vinculado para Baixa de Estoque */}
+                    <div className="w-full sm:w-56">
+                      <select
+                        value={opt.linked_supply_id || ''}
+                        onChange={(e) =>
+                          handleUpdateOption(idx, 'linked_supply_id', e.target.value || null)
+                        }
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <option value="">📦 Sem baixa de estoque</option>
+                        {supplies.map((s: any) => (
+                          <option key={s.id} value={s.id}>
+                            Baixar: {s.name} ({s.unit || 'UN'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Remover Opção */}
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveOption(idx)}
-                      className="h-9 w-9 text-slate-400 hover:text-red-500"
+                      className="h-9 w-9 text-slate-400 hover:text-red-500 shrink-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -374,9 +461,56 @@ export function ComplementsTab() {
               </div>
             </div>
 
+            {/* SEÇÃO 2: PRODUTOS VINCULADOS A ESTE GRUPO */}
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/40 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <UtensilsCrossed className="h-4 w-4 text-orange-600" /> Produtos Vinculados a este Grupo ({linkedProductIds.length})
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Selecione quais produtos terão estas opções disponíveis no PDV e Cardápio.
+                  </p>
+                </div>
+                <div className="w-full sm:w-48">
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="h-8 rounded-xl text-xs bg-white dark:bg-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                {filteredProducts.map((p) => {
+                  const isChecked = linkedProductIds.includes(p.id)
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => toggleProductLink(p.id)}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2.5 rounded-xl border p-2.5 transition-all text-xs',
+                        isChecked
+                          ? 'border-orange-500/50 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-950/30 dark:text-orange-100 font-bold'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 text-slate-700 dark:text-slate-300',
+                      )}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => {}}
+                        className="pointer-events-none"
+                      />
+                      <span className="truncate flex-1">{p.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Footer com Exclusão */}
             {selectedGroupId && (
-              <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+              <div className="border-t border-slate-100 pt-4 dark:border-slate-800 flex justify-between items-center">
                 <Button
                   type="button"
                   variant="ghost"
@@ -386,6 +520,15 @@ export function ComplementsTab() {
                   className="text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Excluir Grupo
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isCreating || isUpdating}
+                  className="h-9 rounded-xl bg-orange-600 px-4 text-xs font-bold text-white hover:bg-orange-700 shadow-sm"
+                >
+                  <Save className="mr-1.5 h-4 w-4" /> Salvar Grupo
                 </Button>
               </div>
             )}
@@ -397,7 +540,7 @@ export function ComplementsTab() {
               Selecione um grupo para editar ou crie um novo
             </p>
             <p className="max-w-md text-xs text-slate-400">
-              Configure adicionais, valores extras, pontos de carne e regras de quantidade estilo iFood.
+              Configure adicionais, valores extras, baixa automática de insumo por opção e produtos vinculados.
             </p>
           </div>
         )}

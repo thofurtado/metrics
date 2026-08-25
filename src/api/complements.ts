@@ -17,6 +17,7 @@ export interface ComplementGroup {
   free_quantity: number
   active: boolean
   options: ComplementOption[]
+  products?: { product_id: string }[]
   _count?: {
     products: number
   }
@@ -28,6 +29,7 @@ export interface CreateComplementGroupBody {
   max_quantity?: number
   free_quantity?: number
   options?: ComplementOption[]
+  product_ids?: string[]
 }
 
 export interface UpdateComplementGroupBody {
@@ -37,6 +39,7 @@ export interface UpdateComplementGroupBody {
   free_quantity?: number
   active?: boolean
   options?: ComplementOption[]
+  product_ids?: string[]
 }
 
 export async function getComplementGroups(): Promise<{ groups: ComplementGroup[] }> {
