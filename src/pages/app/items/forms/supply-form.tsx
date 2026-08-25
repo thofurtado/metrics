@@ -51,7 +51,10 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
     defaultValues: {
       name: initialData?.name ?? '',
       description: initialData?.description ?? '',
-      category: initialData?.category ?? '',
+      category: initialData?.category ?? initialData?.supply?.category ?? '',
+      unit: initialData?.unit ?? initialData?.supply?.unit ?? '',
+      cost: initialData?.cost ?? initialData?.supply?.cost ?? 0,
+      stock: initialData?.stock ?? initialData?.supply?.stock ?? 0,
       unit: initialData?.supply?.unit ?? '',
       cost: initialData?.supply?.cost ?? 0,
       stock: initialData?.supply?.stock ?? 0,
@@ -198,7 +201,7 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Ex: Construção"
+                      placeholder="Ex: Laticínios, Embalagens, Carnes..."
                       {...field}
                       className="h-10"
                     />
