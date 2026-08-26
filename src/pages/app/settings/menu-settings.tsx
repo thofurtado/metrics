@@ -245,6 +245,8 @@ export function MenuSettings() {
     mutationFn: updatePayment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['company-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['public-profile'] })
       toast.success('Forma de pagamento atualizada para o cardápio!')
     },
     onError: () => {
@@ -1377,7 +1379,7 @@ export function MenuSettings() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(Array.isArray(paymentsList) ? paymentsList : []).map((payment) => {
-                      const isEnabled = payment.show_in_menu !== false
+                      const isEnabled = payment.active_for_out !== false && payment.show_in_menu !== false
                       const isCash = payment.name.toLowerCase().includes('dinheiro')
                       const isPix = payment.name.toLowerCase().includes('pix')
 
@@ -1434,6 +1436,7 @@ export function MenuSettings() {
                                     in_sight: payment.in_sight,
                                     account_id: payment.account_id || undefined,
                                     show_in_menu: checked,
+                                    active_for_out: checked,
                                   },
                                 })
                               }

@@ -2052,55 +2052,44 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <div className="space-y-3 border-t pt-3">
                 <Label className="font-bold">Forma de Pagamento</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('PIX')}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
-                      paymentMethod === 'PIX'
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                        : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    ⚡ Pix
-                  </button>
+                  {(() => {
+                    const availablePayments = Array.isArray(profile?.paymentMethods) && profile.paymentMethods.length > 0
+                      ? profile.paymentMethods
+                      : [
+                          { id: 'pix', name: 'Pix' },
+                          { id: 'credit', name: 'Cartão de Crédito' },
+                          { id: 'debit', name: 'Cartão de Débito' },
+                          { id: 'cash', name: 'Dinheiro' },
+                        ];
 
-                  {fulfillmentType === 'DELIVERY' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('CREDIT')}
-                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
-                          paymentMethod === 'CREDIT'
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        💳 Cartão Crédito
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('DEBIT')}
-                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
-                          paymentMethod === 'DEBIT'
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        💳 Cartão Débito
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('CASH')}
-                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
-                          paymentMethod === 'CASH'
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        💵 Dinheiro
-                      </button>
-                    </>
-                  )}
+                    const filtered = fulfillmentType === 'TAKEOUT'
+                      ? availablePayments.filter((p: any) => p.name.toLowerCase().includes('pix'))
+                      : availablePayments;
+
+                    const listToRender = filtered.length > 0 ? filtered : availablePayments;
+
+                    return listToRender.map((p: any) => {
+                      const lower = p.name.toLowerCase();
+                      const key = lower.includes('pix') ? 'PIX' : lower.includes('crédit') || lower.includes('credit') ? 'CREDIT' : lower.includes('débit') || lower.includes('debit') ? 'DEBIT' : lower.includes('dinheiro') ? 'CASH' : p.name;
+                      const icon = lower.includes('pix') ? '⚡' : lower.includes('crédit') || lower.includes('credit') || lower.includes('débit') || lower.includes('debit') ? '💳' : lower.includes('dinheiro') ? '💵' : '🏷️';
+                      const isSelected = paymentMethod === key || (key === 'PIX' && paymentMethod === 'PIX') || paymentMethod === p.name;
+
+                      return (
+                        <button
+                          key={p.id || p.name}
+                          type="button"
+                          onClick={() => setPaymentMethod(key)}
+                          className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-emerald-400'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {icon} {p.name}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* Caixa da Chave Pix & QR Code Oficial (Retirada ou Opção Pix) */}
