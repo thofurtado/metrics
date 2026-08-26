@@ -47,12 +47,19 @@ import { EquipmentDetailsModal } from './components/equipment-details-modal'
 import { NiimbotLabelModal } from '../treatments/components/niimbot-label-modal'
 import { Printer } from 'lucide-react'
 
-export function checkIsOnline(equipment: any, maxInactiveMinutes = 3): boolean {
-  if (!equipment || !equipment.last_seen_at) return false
-  const lastSeenDate = new Date(equipment.last_seen_at)
-  if (isNaN(lastSeenDate.getTime())) return false
-  const diffMs = Date.now() - lastSeenDate.getTime()
-  return Boolean(equipment.is_online) && diffMs >= 0 && diffMs < maxInactiveMinutes * 60 * 1000
+export function checkIsOnline(equipment: any, maxInactiveMinutes = 6): boolean {
+  if (!equipment) return false
+  if (equipment.last_seen_at) {
+    const lastSeenDate = new Date(equipment.last_seen_at)
+    if (!isNaN(lastSeenDate.getTime())) {
+      const diffMs = Date.now() - lastSeenDate.getTime()
+      // Considera online se o contato ocorreu dentro da janela de minutos permitida (com tolerância de skew)
+      if (diffMs > -120000 && diffMs < maxInactiveMinutes * 60 * 1000) {
+        return true
+      }
+    }
+  }
+  return Boolean(equipment.is_online)
 }
 
 export function ClientsEquipments() {
