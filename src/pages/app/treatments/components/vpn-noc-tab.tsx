@@ -169,7 +169,12 @@ export function VpnNocTab() {
                       group.devices.map((device) => (
                         <TableRow key={device.id}>
                           <TableCell className="text-center">
-                            {device.isOnline ? (
+                            {Boolean(
+    device.lastSeenAt &&
+    !isNaN(new Date(device.lastSeenAt).getTime()) &&
+    (Date.now() - new Date(device.lastSeenAt).getTime()) > -120000 &&
+    (Date.now() - new Date(device.lastSeenAt).getTime()) < 6 * 60 * 1000
+  ) ? (
                               <span className="flex h-2.5 w-2.5 mx-auto rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" title="Online" />
                             ) : (
                               <span className="flex h-2.5 w-2.5 mx-auto rounded-full bg-slate-500" title="Offline" />

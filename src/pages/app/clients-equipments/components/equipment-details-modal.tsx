@@ -48,12 +48,11 @@ export function EquipmentDetailsModal({
 }: EquipmentDetailsModalProps) {
   if (!equipment) return null
 
-  const isOnline = Boolean(
-    equipment.is_online ||
-    (equipment.last_seen_at &&
+    const isOnline = Boolean(
+    equipment.last_seen_at &&
       !isNaN(new Date(equipment.last_seen_at).getTime()) &&
       (Date.now() - new Date(equipment.last_seen_at).getTime()) > -120000 &&
-      (Date.now() - new Date(equipment.last_seen_at).getTime()) < 6 * 60 * 1000)
+      (Date.now() - new Date(equipment.last_seen_at).getTime()) < 6 * 60 * 1000
   )
   const telemetry = equipment.last_telemetry || {}
 
