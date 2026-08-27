@@ -339,7 +339,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
-  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3>(1)
+  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4>(1)
+  const [lastOrderText, setLastOrderText] = useState('')
   const [fulfillmentType, setFulfillmentType] = useState<
     'DELIVERY' | 'TAKEOUT'
   >('DELIVERY')
@@ -817,6 +818,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             : profile?.state || 'SP',
         zipcode:
           fulfillmentType === 'DELIVERY' && rawZipcode ? rawZipcode : undefined,
+        complement: complement || undefined,
         isNewAddress,
       }
 
@@ -980,10 +982,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
       const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(text)}`
       window.open(url, '_blank')
+
+      setLastOrderText(text)
+      setCheckoutWizardStep(4)
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
     }
+  }
+
+  const handleFinishAndReset = () => {
+    setCart({})
+    setIsCheckoutStepOpen(false)
+    setIsCartModalOpen(false)
+    setCheckoutWizardStep(1)
+    setLastOrderText('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const renderCartSection = () => (
@@ -2214,6 +2228,100 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   Confirmar e Enviar Pedido via WhatsApp 🚀
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {/* PASSO 4: Sucesso e Parabéns pelo Pedido */}
+          {checkoutWizardStep === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-center justify-center py-4 text-center"
+            >
+              <div className="relative mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
+                <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+              </div>
+
+              <h3 className="text-2xl font-black tracking-tight text-slate-900">
+                Parabéns pelo seu Pedido! 🎉
+              </h3>
+              <p className="mt-2 max-w-md text-sm font-medium text-slate-600">
+                Seu pedido foi registrado e enviado com sucesso para o nosso WhatsApp! Já estamos prontos para preparar tudo com muito carinho.
+              </p>
+
+              {/* Resumo do Pedido Confirmado */}
+              <div className="mt-5 w-full space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-left">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Cliente:</span>
+                  <span className="font-bold text-slate-900">{customerName}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>WhatsApp:</span>
+                  <span className="font-bold text-slate-900">{customerPhone}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Modalidade:</span>
+                  <span className="font-bold text-slate-900">
+                    {fulfillmentType === 'DELIVERY' ? '🛵 Entrega (Delivery)' : '🥡 Retirada no Balcão'}
+                  </span>
+                </div>
+                {fulfillmentType === 'DELIVERY' && (
+                  <div className="flex items-start justify-between text-xs text-slate-600">
+                    <span>Endereço:</span>
+                    <span className="font-bold text-slate-900 text-right max-w-[240px]">
+                      {street}, {number}{complement ? ` (${complement})` : ''} - {neighborhood}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>Forma de Pagamento:</span>
+                  <span className="font-bold text-slate-900">
+                    {paymentMethod === 'PIX'
+                      ? '⚡ Pix'
+                      : paymentMethod === 'CREDIT'
+                        ? '💳 Cartão de Crédito'
+                        : paymentMethod === 'DEBIT'
+                          ? '💳 Cartão de Débito'
+                          : '💵 Dinheiro'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm">
+                  <span className="font-bold text-slate-800">Total:</span>
+                  <span className="text-base font-black text-emerald-600">
+                    {formatCurrency(cartTotal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reenviar WhatsApp caso necessário */}
+              {lastOrderText && (
+                <p className="mt-4 text-xs text-slate-400">
+                  Não abriu o WhatsApp automaticamente?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
+                      const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(lastOrderText)}`
+                      window.open(url, '_blank')
+                    }}
+                    className="font-bold text-emerald-600 hover:underline"
+                  >
+                    Clique aqui para abrir
+                  </button>
+                </p>
+              )}
+
+              {/* Botão de Concluir */}
+              <button
+                type="button"
+                onClick={handleFinishAndReset}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white shadow-xl transition-all hover:opacity-95 active:scale-[0.98]"
+                style={{ backgroundColor: 'var(--primary-color, #10B981)' }}
+              >
+                OK, Voltar ao Cardápio ✨
+              </button>
             </motion.div>
           )}
         </DialogContent>
