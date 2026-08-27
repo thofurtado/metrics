@@ -102,6 +102,10 @@ export function EquipmentDetailsModal({
   const sysDriveFreeGB = systemDrive?.freeGB !== undefined ? systemDrive.freeGB.toFixed(1) : driveFreeGB
   const sysDriveUsedPercent = systemDrive?.usedPercent !== undefined ? Number(systemDrive.usedPercent).toFixed(0) : driveUsedPercent
   const sysDriveIsLow = systemDrive?.isLowSpace ?? (Number(sysDriveFreeGB) < 15 || Number(sysDriveUsedPercent) > 90)
+  const diskActivePercent = systemDrive?.activeTimePercent !== undefined ? Number(systemDrive.activeTimePercent).toFixed(0) : null
+  const diskDailyAvgActive = systemDrive?.dailyAverageActivePercent !== undefined ? Number(systemDrive.dailyAverageActivePercent).toFixed(0) : null
+  const diskDailyPeakActive = systemDrive?.dailyPeakActivePercent !== undefined ? Number(systemDrive.dailyPeakActivePercent).toFixed(0) : null
+  const isHighDiskActive = systemDrive?.isHighDiskUsage ?? (Number(diskActivePercent ?? 0) >= 90)
 
   // Top Programas Consumidores
   const topProcesses: Array<{ name: string; memoryMB: number }> = telemetry.topProcesses || []
@@ -748,30 +752,40 @@ export function EquipmentDetailsModal({
                     </div>
                   </div>
 
-                  {/* DISCO DO SISTEMA (C:) */}
+                  {/* DISCO DO SISTEMA (C:) - TEMPO DE ATIVIDADE (USO) & CAPACIDADE */}
                   <div className={`rounded-3xl border p-5 sm:p-6 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
-                    sysDriveIsLow
-                      ? 'border-red-300/80 bg-gradient-to-b from-red-50/30 to-white dark:border-red-500/40 dark:from-red-950/20 dark:to-slate-900'
-                      : 'border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/90'
+                    isHighDiskActive
+                      ? 'border-red-400/80 bg-gradient-to-b from-red-50/40 to-white dark:border-red-500/50 dark:from-red-950/30 dark:to-slate-900 ring-2 ring-red-500/20'
+                      : sysDriveIsLow
+                        ? 'border-amber-300/80 bg-gradient-to-b from-amber-50/30 to-white dark:border-amber-500/40 dark:from-amber-950/20 dark:to-slate-900'
+                        : 'border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/90'
                   }`}>
                     <div>
                       <div className="mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className={`rounded-2xl p-2.5 shadow-sm ${
-                            sysDriveIsLow
-                              ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                            isHighDiskActive
+                              ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 animate-pulse'
                               : 'bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400'
                           }`}>
                             <HardDrive className="h-5 w-5" />
                           </div>
                           <div>
                             <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">Disco ({sysDriveLetter})</h4>
-                            <span className="text-[11px] text-slate-400 font-medium">Armazenamento</span>
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {diskActivePercent !== null ? 'Tempo de Atividade (Uso)' : 'Armazenamento'}
+                            </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`}>
-                            {sysDriveUsedPercent}%
+                          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                            isHighDiskActive 
+                              ? 'text-red-600 dark:text-red-400' 
+                              : diskActivePercent !== null 
+                                ? 'text-purple-600 dark:text-purple-400' 
+                                : sysDriveIsLow ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400'
+                          }`}>
+                            {diskActivePercent !== null ? `${diskActivePercent}%` : `${sysDriveUsedPercent}%`}
                           </span>
                         </div>
                       </div>
@@ -779,33 +793,65 @@ export function EquipmentDetailsModal({
                       <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            sysDriveIsLow ? 'bg-gradient-to-r from-red-500 to-rose-600' : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                            isHighDiskActive 
+                              ? 'bg-gradient-to-r from-red-500 to-rose-600' 
+                              : 'bg-gradient-to-r from-purple-500 to-indigo-500'
                           }`}
-                          style={{ width: Math.min(Number(sysDriveUsedPercent), 100) + '%' }}
+                          style={{ width: Math.min(Number(diskActivePercent ?? sysDriveUsedPercent), 100) + '%' }}
                         />
                       </div>
                     </div>
 
                     <div className="mt-5 space-y-2">
                       <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
-                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Espaço Livre</span>
-                          <strong className={`text-sm font-black ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                            {sysDriveFreeGB} GB
-                          </strong>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Capacidade</span>
-                          <strong className="text-sm font-black text-slate-900 dark:text-slate-100">{sysDriveTotalGB} GB</strong>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-center font-bold">
-                        {sysDriveIsLow ? (
-                          <span className="text-red-600 dark:text-red-400">⚠️ Atenção: Menos de 15 GB livres no Windows</span>
+                        {diskActivePercent !== null ? (
+                          <>
+                            <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                              <span className="text-[10px] uppercase text-slate-400 block font-bold">Média Atividade</span>
+                              <strong className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                {diskDailyAvgActive ? `${diskDailyAvgActive}%` : `${diskActivePercent}%`}
+                              </strong>
+                            </div>
+                            <div className="text-center">
+                              <span className="text-[10px] uppercase text-slate-400 block font-bold">Pico Atividade</span>
+                              <strong className={`text-sm font-black ${isHighDiskActive ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                {diskDailyPeakActive ? `${diskDailyPeakActive}%` : `${diskActivePercent}%`}
+                              </strong>
+                            </div>
+                          </>
                         ) : (
-                          <span className="text-slate-400 font-medium">Drive do Sistema Operacional Saudável</span>
+                          <>
+                            <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                              <span className="text-[10px] uppercase text-slate-400 block font-bold">Espaço Livre</span>
+                              <strong className={`text-sm font-black ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                {sysDriveFreeGB} GB
+                              </strong>
+                            </div>
+                            <div className="text-center">
+                              <span className="text-[10px] uppercase text-slate-400 block font-bold">Capacidade</span>
+                              <strong className="text-sm font-black text-slate-900 dark:text-slate-100">{sysDriveTotalGB} GB</strong>
+                            </div>
+                          </>
                         )}
-                      </p>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] pt-0.5">
+                        <span className="font-semibold text-slate-500 dark:text-slate-400 truncate pr-1">
+                          {sysDriveFreeGB} GB livres de {sysDriveTotalGB} GB ({sysDriveUsedPercent}% ocupado)
+                        </span>
+                        {isHighDiskActive ? (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 font-black text-[10px] text-red-800 dark:bg-red-950 dark:text-red-300 whitespace-nowrap">
+                            ⚠️ 100% de Disco
+                          </span>
+                        ) : sysDriveIsLow ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-300 whitespace-nowrap">
+                            ⚠️ Pouco Espaço
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 whitespace-nowrap">
+                            🟢 I/O Normal
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
