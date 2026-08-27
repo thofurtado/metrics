@@ -1484,6 +1484,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </AnimatePresence>
 
       <ItemCustomizerDialog
+        key={customizingProduct ? customizingProduct.id : 'empty'}
         open={isCustomizerOpen}
         onOpenChange={setIsCustomizerOpen}
         product={customizingProduct}

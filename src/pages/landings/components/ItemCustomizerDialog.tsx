@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -98,6 +98,19 @@ export function ItemCustomizerDialog({
   const [itemQuantity, setItemQuantity] = useState<number>(1)
   const [observation, setObservation] = useState<string>('')
 
+  // Reseta estado para os padrões sempre que abrir o modal ou mudar de produto
+  useEffect(() => {
+    if (open && product) {
+      setFractionCount(1)
+      setSelectedFlavors([product])
+      setActiveFlavorStep(null)
+      setFlavorSearch('')
+      setSelectedOptionsQty({})
+      setItemQuantity(1)
+      setObservation('')
+    }
+  }, [open, product?.id])
+
   // Lista de produtos irmãos da mesma categoria para montagem de sabores
   const siblingProducts = useMemo(() => {
     const list = Array.isArray(allProducts) ? allProducts : []
@@ -112,19 +125,20 @@ export function ItemCustomizerDialog({
     if (count === 1) {
       setSelectedFlavors([product])
       setActiveFlavorStep(null)
+      setFlavorSearch('')
     } else {
+      // Ao mudar de 1 sabor para 2 ou mais sabores, nenhum sabor deve vir pré-selecionado
+      const isComingFromSingleFlavor = fractionCount === 1
       const next: (ProductItem | null)[] = []
       for (let i = 0; i < count; i++) {
-        if (i === 0) {
-          next.push(selectedFlavors[0] || product)
-        } else if (selectedFlavors[i]) {
+        if (!isComingFromSingleFlavor && selectedFlavors[i]) {
           next.push(selectedFlavors[i])
         } else {
           next.push(null)
         }
       }
       setSelectedFlavors(next)
-      // Se o próximo slot estiver vazio, abre ele automaticamente
+      // Se o próximo slot estiver vazio, abre ele automaticamente (o 1º slot)
       const firstEmpty = next.findIndex((f) => f === null)
       setActiveFlavorStep(firstEmpty !== -1 ? firstEmpty : null)
       setFlavorSearch('')
@@ -138,13 +152,19 @@ export function ItemCustomizerDialog({
     setFlavorSearch('')
 
     // Auto-avanço inteligente (estilo iFood):
-    // Se o próximo slot estiver vazio, abre ele automaticamente
+    // Se o próximo slot posterior estiver vazio, abre ele automaticamente
     const nextEmptyIndex = newFlavors.findIndex((f, idx) => idx > index && f === null)
     if (nextEmptyIndex !== -1) {
       setActiveFlavorStep(nextEmptyIndex)
     } else {
-      // Se todos os sabores já foram definidos, fecha o acordeão
-      setActiveFlavorStep(null)
+      // Se não há slots posteriores vazios, procura se há algum anterior vazio
+      const anyEmptyIndex = newFlavors.findIndex((f) => f === null)
+      if (anyEmptyIndex !== -1) {
+        setActiveFlavorStep(anyEmptyIndex)
+      } else {
+        // Se todos os sabores já foram definidos, fecha o acordeão
+        setActiveFlavorStep(null)
+      }
     }
   }
 
