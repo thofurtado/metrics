@@ -51,6 +51,7 @@ import { exportarRelatorioGeralPDF } from '@/utils/cashier/exportGeralPDF'
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
 import { DivergenceModal } from './components/divergence-modal'
+import { OutflowsModal } from './components/outflows-modal'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -81,6 +82,7 @@ export function CashierDashboard() {
   const [divergenceModalSession, setDivergenceModalSession] =
     useState<any>(null)
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
+  const [isOutflowsModalOpen, setIsOutflowsModalOpen] = useState(false)
   const [isCreateSessionModalOpen, setIsCreateSessionModalOpen] = useState(false)
 
   const token = localStorage.getItem('token')
@@ -654,9 +656,17 @@ export function CashierDashboard() {
           <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
             R$ {kpisMes.totalDinheiro.toFixed(2)}
           </p>
-          <span className="mt-1 block text-[11px] font-semibold text-red-500 dark:text-red-400 border-t border-slate-100 pt-1 dark:border-slate-800">
-            -R$ {kpisMes.totalSangrias.toFixed(2)} sangrias realizadas
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsOutflowsModalOpen(true)}
+            className="group/btn mt-1 flex w-full items-center justify-between border-t border-slate-100 pt-1 text-[11px] font-bold text-red-500 hover:text-red-600 dark:border-slate-800 dark:text-red-400"
+            title="Clique para ver o relatório detalhado de saídas"
+          >
+            <span>-R$ {kpisMes.totalSangrias.toFixed(2)} sangrias realizadas</span>
+            <span className="flex items-center gap-0.5 underline transition-transform group-hover/btn:translate-x-0.5">
+              Ver Detalhes ➔
+            </span>
+          </button>
         </div>
 
         {/* Card 4: Saldo Físico Atual em Caixa (Após Sangrias) */}
@@ -1418,12 +1428,9 @@ export function CashierDashboard() {
                                         : 'Divergência tratada'
                                     }
                                   >
-                                    <CheckCircle2 size={11} /> Resolvido (
-                                    {item.resolutionDetails?.type ===
-                                    'SANGRIA_DESTINO'
-                                      ? item.resolutionDetails.bank || 'Destino'
+                                    <CheckCircle2 size={11} /> {item.resolutionDetails?.type === 'SANGRIA_DESTINO'
+                                      ? `Depositado ${item.resolutionDetails.bank ? `na ${item.resolutionDetails.bank}` : ''}`
                                       : 'Justificado'}
-                                    )
                                   </button>
                                 ) : isDivergent ? (
                                   <button
@@ -1547,6 +1554,15 @@ export function CashierDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* MODAL GERENCIAL DE SAÍDAS (SANGRIAS, DESPESAS E VALES) */}
+      <OutflowsModal
+        isOpen={isOutflowsModalOpen}
+        onClose={() => setIsOutflowsModalOpen(false)}
+        sessions={sessionsFiltradas}
+        monthName={nomesMeses[mesVisualizacao]}
+        year={anoVisualizacao}
+      />
     </div>
   )
 }

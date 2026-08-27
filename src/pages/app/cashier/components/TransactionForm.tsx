@@ -173,6 +173,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
   const [consumidorCasa, setConsumidorCasa] = useState('')
 
   const [descricaoRetirada, setDescricaoRetirada] = useState('')
+  const [subTipoSangria, setSubTipoSangria] = useState<'recolhimento' | 'despesa' | 'vale'>('recolhimento')
   const [funcionarioRetiradaId, setFuncionarioRetiradaId] = useState<
     string | null
   >(null)
@@ -577,7 +578,11 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
       isSuprimento: tipo === 'suprimento',
       type:
         tipo === 'sangria'
-          ? 'WITHDRAWAL'
+          ? subTipoSangria === 'recolhimento'
+            ? 'WITHDRAWAL_OWNER'
+            : subTipoSangria === 'vale'
+              ? 'WITHDRAWAL_EMPLOYEE'
+              : 'WITHDRAWAL_EXPENSE'
           : tipo === 'suprimento'
             ? 'ADDITION'
             : tipo === 'caixinha'
@@ -1045,6 +1050,59 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
           {(tipo === 'sangria' || tipo === 'suprimento') && (
             <>
+              {tipo === 'sangria' && (
+                <div className="col-span-2 w-full mb-1">
+                  <label className="mb-1.5 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
+                    Tipo de Retirada
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubTipoSangria('recolhimento')
+                        setSectorId(null)
+                        setFuncionarioRetiradaId(null)
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-black transition-all ${
+                        subTipoSangria === 'recolhimento'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                      }`}
+                    >
+                      <span>🏦</span> Cofre / Dono
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubTipoSangria('despesa')
+                        setFuncionarioRetiradaId(null)
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-black transition-all ${
+                        subTipoSangria === 'despesa'
+                          ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                      }`}
+                    >
+                      <span>🛒</span> Despesa / Compra
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubTipoSangria('vale')
+                        setSectorId(null)
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-black transition-all ${
+                        subTipoSangria === 'vale'
+                          ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                      }`}
+                    >
+                      <span>👤</span> Vale RH
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* MOTIVO / DESCRIÇÃO */}
               <div className="col-span-2 md:flex-1">
                 <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
@@ -1055,27 +1113,31 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                   required
                   value={descricaoRetirada}
                   onChange={(e) => setDescricaoRetirada(e.target.value)}
-                  placeholder="Ex: Depósito banco, Troco inicial, Vale..."
+                  placeholder={
+                    tipo === 'suprimento'
+                      ? 'Ex: Troco inicial, Adição de troco...'
+                      : subTipoSangria === 'recolhimento'
+                        ? 'Ex: Sangria Samir, Retirada cofre, Manobra troco...'
+                        : subTipoSangria === 'despesa'
+                          ? 'Ex: Músico, Mercado, Gás, Fornecedor...'
+                          : 'Ex: Vale Rogério, Adiantamento...'
+                  }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                 />
               </div>
 
-              {tipo === 'sangria' && (
+              {tipo === 'sangria' && subTipoSangria === 'vale' && (
                 <div className="col-span-2 md:w-56">
                   <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
-                    Funcionário (Vale RH - Opcional)
+                    Funcionário (Vale RH)
                   </label>
                   <select
+                    required
                     value={funcionarioRetiradaId || ''}
-                    disabled={!!sectorId}
-                    onChange={(e) => {
-                      const val = e.target.value || null
-                      setFuncionarioRetiradaId(val)
-                      if (val) setSectorId(null)
-                    }}
+                    onChange={(e) => setFuncionarioRetiradaId(e.target.value || null)}
                     className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                   >
-                    <option value="">Não vincular (Sangria Comum)</option>
+                    <option value="">Selecione o Colaborador...</option>
                     {employeesList.map((emp: any) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.name}
@@ -1085,28 +1147,25 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 </div>
               )}
 
-              <div className="col-span-2 md:w-48">
-                <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
-                  Setor / Categoria (Opcional)
-                </label>
-                <select
-                  value={sectorId || ''}
-                  disabled={!!funcionarioRetiradaId}
-                  onChange={(e) => {
-                    const val = e.target.value || null
-                    setSectorId(val)
-                    if (val) setFuncionarioRetiradaId(null)
-                  }}
-                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
-                >
-                  <option value="">Nenhum Setor</option>
-                  {sectorsList.map((sec: any) => (
-                    <option key={sec.id} value={sec.id}>
-                      {sec.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {(tipo === 'suprimento' || (tipo === 'sangria' && subTipoSangria === 'despesa')) && (
+                <div className="col-span-2 md:w-48">
+                  <label className="mb-1 ml-1 block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
+                    Setor / Categoria
+                  </label>
+                  <select
+                    value={sectorId || ''}
+                    onChange={(e) => setSectorId(e.target.value || null)}
+                    className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
+                  >
+                    <option value="">Selecione um Setor (Opcional)</option>
+                    {sectorsList.map((sec: any) => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
 
