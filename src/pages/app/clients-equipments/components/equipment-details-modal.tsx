@@ -176,7 +176,7 @@ export function EquipmentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[94vh] w-[96vw] sm:max-w-[920px] flex-col overflow-hidden border-none bg-slate-50 p-0 shadow-2xl dark:bg-slate-900 rounded-3xl">
+      <DialogContent className="flex max-h-[92vh] w-[96vw] md:max-w-5xl lg:max-w-6xl xl:max-w-[1280px] 2xl:max-w-[1400px] flex-col overflow-hidden border-none bg-slate-50 p-0 shadow-2xl dark:bg-slate-900 rounded-3xl">
         
         {/* CABEÇALHO FIXO RESPONSIVO */}
         <div className="flex-none border-b border-slate-100 bg-white p-4 sm:p-6 dark:border-slate-800 dark:bg-slate-950">
@@ -569,260 +569,476 @@ export function EquipmentDetailsModal({
             {/* ABA: TELEMETRIA & HARDWARE (WINDY) */}
             {hasWindy && (
               <TabsContent value="telemetry" className="mt-0 space-y-6">
-                {/* Card OS Full Width */}
-                <div className="flex items-center justify-between rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-lg shadow-blue-500/20">
-                  <div>
-                    <p className="text-sm font-medium text-blue-100 uppercase tracking-wider">
-                      Sistema Operacional
-                    </p>
-                    <h3 className="mt-1 text-2xl font-black">
-                      {osInfo.distro || 'Windows'} {osInfo.release || ''}
-                    </h3>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-blue-200">
-                      <Server className="h-4 w-4" />{' '}
-                      {osInfo.hostname || 'N/A'} • {osInfo.arch || 'N/A'} {osInfo.motherboard ? ('• ' + osInfo.motherboard) : ''}
-                    </p>
-                  </div>
-                  <div className="hidden sm:block rounded-xl bg-white/20 p-4 backdrop-blur-sm">
-                    <MonitorPlay className="h-8 w-8 text-white" />
+                {/* Hero Card: Sistema Operacional & Ambiente NOC */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-6 sm:p-7 text-white shadow-xl shadow-indigo-950/30 border border-indigo-500/30">
+                  <div className="absolute right-0 top-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+                  <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 px-3 py-1 text-xs font-black uppercase tracking-wider text-blue-300 border border-blue-400/30 shadow-inner">
+                          <Server className="h-3.5 w-3.5 text-blue-400" />
+                          Sistema Operacional & Ambiente
+                        </span>
+                        {osInfo.arch && (
+                          <span className="rounded-lg bg-white/10 px-2.5 py-0.5 font-mono text-[11px] font-bold text-slate-300 border border-white/5">
+                            {osInfo.arch}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                          Telemetria Ativa
+                        </span>
+                      </div>
+
+                      <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                        {osInfo.distro || 'Windows'} {osInfo.release || ''}
+                      </h3>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-300 pt-1">
+                        <span className="flex items-center gap-1.5 font-bold text-white bg-white/10 px-3 py-1 rounded-xl backdrop-blur-sm">
+                          🖥️ Host: {osInfo.hostname || 'Terminal'}
+                        </span>
+                        {osInfo.motherboard && (
+                          <span className="flex items-center gap-1.5 font-mono text-slate-300 bg-white/5 px-3 py-1 rounded-xl border border-white/5">
+                            Placa-Mãe: <strong className="text-indigo-200">{osInfo.motherboard}</strong>
+                          </span>
+                        )}
+                        {cpuInfo.brand && (
+                          <span className="flex items-center gap-1.5 text-slate-300 font-medium bg-white/5 px-3 py-1 rounded-xl border border-white/5">
+                            CPU: <strong className="text-blue-200 truncate max-w-[320px]">{cpuInfo.brand}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Widgets Laterais do Hero */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md min-w-[150px]">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Agente Windy</p>
+                        <p className="flex items-center gap-2 font-black text-emerald-400 text-base mt-0.5">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
+                          v{windyVersion}
+                        </p>
+                        <span className="text-[10px] text-slate-400">Suporte Remoto Ativo</span>
+                      </div>
+
+                      {rustdeskId && (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md min-w-[170px]">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Acesso RustDesk</p>
+                          <p className="font-mono font-black text-blue-300 text-base mt-0.5 tracking-wider">
+                            {rustdeskId}
+                          </p>
+                          <span className="text-[10px] text-emerald-400">Pronto para Conectar</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Grid 4 Colunas (Métricas Rápidas & Médias Diárias) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Grid 4 Colunas (Métricas Rápidas & Médias Diárias Espaçosas) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                   {/* CPU */}
-                  <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <Cpu className="h-4 w-4 text-blue-500" /> CPU
-                      </h4>
-                      <div className="text-right">
-                        <span className="text-xl font-black text-blue-600">{cpuLoad}%</span>
-                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
+                  <div className="rounded-3xl border border-slate-200/70 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90 flex flex-col justify-between">
+                    <div>
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="rounded-2xl bg-blue-50 p-2.5 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 shadow-sm">
+                            <Cpu className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">Processador</h4>
+                            <span className="text-[11px] text-slate-400 font-medium">Uso Instantâneo</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                            {cpuLoad}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                          style={{ width: Math.min(Number(cpuLoad), 100) + '%' }}
+                        />
                       </div>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
-                      <div
-                        className="h-2 rounded-full bg-blue-500 transition-all duration-500"
-                        style={{ width: Math.min(Number(cpuLoad), 100) + '%' }}
-                      />
+
+                    <div className="mt-5 space-y-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Média do Dia</span>
+                          <strong className="text-sm font-black text-slate-900 dark:text-slate-100">{cpuDailyAvg ? `${cpuDailyAvg}%` : `${cpuLoad}%`}</strong>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Pico Diário</span>
+                          <strong className="text-sm font-black text-amber-600 dark:text-amber-400">{cpuDailyPeak ? `${cpuDailyPeak}%` : `${cpuLoad}%`}</strong>
+                        </div>
+                      </div>
+                      <p className="truncate text-[11px] text-slate-400 text-center font-medium" title={cpuInfo.brand}>
+                        {cpuInfo.brand || 'Processador da Máquina'}
+                      </p>
                     </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
-                      <span>Média do Dia: <strong className="text-slate-800 dark:text-slate-200">{cpuDailyAvg ? `${cpuDailyAvg}%` : `${cpuLoad}%`}</strong></span>
-                      <span>Pico: <strong className="text-amber-600 dark:text-amber-400">{cpuDailyPeak ? `${cpuDailyPeak}%` : `${cpuLoad}%`}</strong></span>
-                    </div>
-                    <p className="mt-1.5 truncate text-[10px] text-slate-400" title={cpuInfo.brand}>
-                      {cpuInfo.brand || 'Processador'}
-                    </p>
                   </div>
 
                   {/* RAM */}
-                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                  <div className={`rounded-3xl border p-5 sm:p-6 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
                     needsRamUpgrade
-                      ? 'border-amber-400/80 bg-amber-50/20 dark:border-amber-500/40 dark:bg-amber-950/10'
-                      : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                      ? 'border-amber-300/80 bg-gradient-to-b from-amber-50/30 to-white dark:border-amber-500/40 dark:from-amber-950/20 dark:to-slate-900'
+                      : 'border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/90'
                   }`}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <Activity className="h-4 w-4 text-emerald-500" /> RAM
-                      </h4>
-                      <div className="text-right">
-                        <span className={`text-xl font-black ${needsRamUpgrade ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`}>
-                          {memUsedPercent}%
-                        </span>
-                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
+                    <div>
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`rounded-2xl p-2.5 shadow-sm ${
+                            needsRamUpgrade
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                          }`}>
+                            <Activity className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">Memória RAM</h4>
+                            <span className="text-[11px] text-slate-400 font-medium">Consumo Atual</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${needsRamUpgrade ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            {memUsedPercent}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            needsRamUpgrade ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                          }`}
+                          style={{ width: Math.min(Number(memUsedPercent), 100) + '%' }}
+                        />
                       </div>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          needsRamUpgrade ? 'bg-amber-500' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: Math.min(Number(memUsedPercent), 100) + '%' }}
-                      />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
-                      <span>Média do Dia: <strong className={needsRamUpgrade ? 'font-black text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}>{memDailyAvg ? `${memDailyAvg}%` : `${memUsedPercent}%`}</strong></span>
-                      <span>Pico: <strong className="text-amber-600 dark:text-amber-400">{memDailyPeak ? `${memDailyPeak}%` : `${memUsedPercent}%`}</strong></span>
-                    </div>
-                    <div className="mt-1.5 flex items-center justify-between text-[10px]">
-                      <span className="text-slate-400">{memTotalGB} GB Total {mem.clock ? ('• ' + mem.clock + ' MHz') : ''}</span>
-                      {needsRamUpgrade && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          ⚠️ Upgrade Recomendado
-                        </span>
-                      )}
+
+                    <div className="mt-5 space-y-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Média do Dia</span>
+                          <strong className={`text-sm font-black ${needsRamUpgrade ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                            {memDailyAvg ? `${memDailyAvg}%` : `${memUsedPercent}%`}
+                          </strong>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Pico Diário</span>
+                          <strong className="text-sm font-black text-amber-600 dark:text-amber-400">{memDailyPeak ? `${memDailyPeak}%` : `${memUsedPercent}%`}</strong>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] pt-0.5">
+                        <span className="font-semibold text-slate-500 dark:text-slate-400">{memTotalGB} GB Total {mem.clock ? `(${mem.clock} MHz)` : ''}</span>
+                        {needsRamUpgrade ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-black text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            ⚠️ Upgrade Indicado
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            🟢 Estável
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   {/* DISCO DO SISTEMA (C:) */}
-                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                  <div className={`rounded-3xl border p-5 sm:p-6 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
                     sysDriveIsLow
-                      ? 'border-red-400/80 bg-red-50/20 dark:border-red-500/40 dark:bg-red-950/10'
-                      : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                      ? 'border-red-300/80 bg-gradient-to-b from-red-50/30 to-white dark:border-red-500/40 dark:from-red-950/20 dark:to-slate-900'
+                      : 'border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/90'
                   }`}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <HardDrive className="h-4 w-4 text-purple-500" /> Disco ({sysDriveLetter})
-                      </h4>
-                      <div className="text-right">
-                        <span className={`text-xl font-black ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-purple-600'}`}>
-                          {sysDriveUsedPercent}%
-                        </span>
-                        <span className="block text-[10px] text-slate-400">Ocupado</span>
+                    <div>
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`rounded-2xl p-2.5 shadow-sm ${
+                            sysDriveIsLow
+                              ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                              : 'bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400'
+                          }`}>
+                            <HardDrive className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">Disco ({sysDriveLetter})</h4>
+                            <span className="text-[11px] text-slate-400 font-medium">Armazenamento</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`}>
+                            {sysDriveUsedPercent}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            sysDriveIsLow ? 'bg-gradient-to-r from-red-500 to-rose-600' : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                          }`}
+                          style={{ width: Math.min(Number(sysDriveUsedPercent), 100) + '%' }}
+                        />
                       </div>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          sysDriveIsLow ? 'bg-red-500' : 'bg-purple-500'
-                        }`}
-                        style={{ width: Math.min(Number(sysDriveUsedPercent), 100) + '%' }}
-                      />
+
+                    <div className="mt-5 space-y-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Espaço Livre</span>
+                          <strong className={`text-sm font-black ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            {sysDriveFreeGB} GB
+                          </strong>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Capacidade</span>
+                          <strong className="text-sm font-black text-slate-900 dark:text-slate-100">{sysDriveTotalGB} GB</strong>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-center font-bold">
+                        {sysDriveIsLow ? (
+                          <span className="text-red-600 dark:text-red-400">⚠️ Atenção: Menos de 15 GB livres no Windows</span>
+                        ) : (
+                          <span className="text-slate-400 font-medium">Drive do Sistema Operacional Saudável</span>
+                        )}
+                      </p>
                     </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
-                      <span>Livre: <strong className={sysDriveIsLow ? 'font-black text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}>{sysDriveFreeGB} GB</strong></span>
-                      <span>Total: <strong>{sysDriveTotalGB} GB</strong></span>
-                    </div>
-                    <p className="mt-1.5 text-[10px] text-slate-400">
-                      {sysDriveIsLow ? '⚠️ Menos de 15 GB livres no Windows' : 'Drive do Sistema Operacional'}
-                    </p>
                   </div>
 
                   {/* TEMPERATURA DA CPU (PROCESSADOR) */}
-                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                  <div className={`rounded-3xl border p-5 sm:p-6 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
                     tempStatus === 'warning'
-                      ? 'border-red-400/80 bg-red-50/20 dark:border-red-500/40 dark:bg-red-950/10'
+                      ? 'border-red-300/80 bg-gradient-to-b from-red-50/30 to-white dark:border-red-500/40 dark:from-red-950/20 dark:to-slate-900'
                       : tempStatus === 'moderate'
-                        ? 'border-amber-400/80 bg-amber-50/20 dark:border-amber-500/40 dark:bg-amber-950/10'
-                        : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                        ? 'border-amber-300/80 bg-gradient-to-b from-amber-50/30 to-white dark:border-amber-500/40 dark:from-amber-950/20 dark:to-slate-900'
+                        : 'border-slate-200/70 bg-white dark:border-slate-800 dark:bg-slate-900/90'
                   }`}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <Thermometer
-                          className={'h-4 w-4 ' + (tempStatus === 'warning' ? 'text-red-500' : tempStatus === 'moderate' ? 'text-amber-500' : 'text-emerald-500')}
+                    <div>
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`rounded-2xl p-2.5 shadow-sm ${
+                            tempStatus === 'warning'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                              : tempStatus === 'moderate'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                          }`}>
+                            <Thermometer className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">Temperatura</h4>
+                            <span className="text-[11px] text-slate-400 font-medium">Sensores CPU</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                              tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : tempStatus === 'moderate' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {tempMain ? `${tempMain} °C` : 'N/D'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            tempStatus === 'warning' ? 'bg-gradient-to-r from-red-500 to-rose-600' : tempStatus === 'moderate' ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                          }`}
+                          style={{ width: (tempMain ? Math.min(Number(tempMain), 100) : 0) + '%' }}
                         />
-                        Temp. CPU
-                      </h4>
-                      <div className="text-right">
-                        <span
-                          className={'text-xl font-black ' + (tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : tempStatus === 'moderate' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}
-                        >
-                          {tempMain ? `${tempMain} °C` : 'N/D'}
-                        </span>
-                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
                       </div>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
-                      <div
-                        className={'h-2 rounded-full transition-all duration-500 ' + (
-                          tempStatus === 'warning' ? 'bg-red-500' : tempStatus === 'moderate' ? 'bg-amber-500' : 'bg-emerald-500'
+
+                    <div className="mt-5 space-y-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <div className="text-center border-r border-slate-200/60 dark:border-slate-700/60">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Média do Dia</span>
+                          <strong className="text-sm font-black text-slate-900 dark:text-slate-100">{tempDailyAvg ? `${tempDailyAvg} °C` : (tempMain ? `${tempMain} °C` : '-')}</strong>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] uppercase text-slate-400 block font-bold">Pico Diário</span>
+                          <strong className={`text-sm font-black ${tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {tempDailyPeak ? `${tempDailyPeak} °C` : (tempMain ? `${tempMain} °C` : '-')}
+                          </strong>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-1.5 pt-0.5">
+                        {tempStatus === 'warning' ? (
+                          <span className="rounded-full bg-red-100 px-2.5 py-0.5 font-black text-[10px] text-red-800 dark:bg-red-950 dark:text-red-300">
+                            🔴 {tempStatusLabel}
+                          </span>
+                        ) : tempStatus === 'moderate' ? (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-bold text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            🟡 {tempStatusLabel}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-bold text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            🟢 {tempStatusLabel}
+                          </span>
                         )}
-                        style={{ width: (tempMain ? Math.min(Number(tempMain), 100) : 0) + '%' }}
-                      />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
-                      <span>Média do Dia: <strong className="text-slate-800 dark:text-slate-200">{tempDailyAvg ? `${tempDailyAvg} °C` : (tempMain ? `${tempMain} °C` : '-')}</strong></span>
-                      <span>Pico: <strong className={tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}>{tempDailyPeak ? `${tempDailyPeak} °C` : (tempMain ? `${tempMain} °C` : '-')}</strong></span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-1.5 text-[10.5px]">
-                      {tempStatus === 'warning' ? (
-                        <span className="rounded bg-red-100 px-1.5 py-0.5 font-bold text-red-800 dark:bg-red-950/60 dark:text-red-300">
-                          🔴 {tempStatusLabel}
+                        <span className="text-[11px] font-medium text-slate-400 truncate max-w-[180px]" title={tempRecommendation}>
+                          {tempRecommendation}
                         </span>
-                      ) : tempStatus === 'moderate' ? (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          🟡 {tempStatusLabel}
-                        </span>
-                      ) : (
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                          🟢 {tempStatusLabel}
-                        </span>
-                      )}
-                      <span className="truncate text-slate-400" title={tempRecommendation}>
-                        {tempRecommendation}
-                      </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* NOVO BLOCO: TOP PROGRAMAS QUE MAIS CONSOMEM MEMÓRIA */}
+                {/* NOVO BLOCO: TOP PROGRAMAS QUE MAIS CONSOMEM MEMÓRIA (ESPAÇOSO PADRÃO OURO) */}
                 {topProcesses && topProcesses.length > 0 && (
-                  <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-800">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        <Activity className="h-4 w-4 text-indigo-500" />
-                        Top Programas Mais Pesados em Memória (RAM)
-                      </h4>
-                      <span className="text-[11px] font-medium text-slate-400">Diagnóstico Ativo do Windy</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                      {topProcesses.map((proc, i) => (
-                        <div key={i} className="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700/60 dark:bg-slate-900/60">
-                          <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
-                            <span className="truncate pr-1" title={proc.name}>{proc.name}</span>
-                            <span className="font-mono text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{proc.memoryMB} MB</span>
-                          </div>
-                          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800">
-                            <div
-                              className="h-1.5 rounded-full bg-indigo-500"
-                              style={{ width: Math.min(Math.round((proc.memoryMB / (Number(memTotalGB || 8) * 1024)) * 100 * 3), 100) + '%' }}
-                            />
-                          </div>
+                  <div className="rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
+                    <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-2xl bg-indigo-50 p-2.5 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-sm">
+                          <Activity className="h-5 w-5" />
                         </div>
-                      ))}
+                        <div>
+                          <h4 className="text-base font-black text-slate-900 dark:text-slate-100">
+                            Top Processos Mais Pesados em Memória (RAM)
+                          </h4>
+                          <p className="text-xs text-slate-400 font-medium">Diagnóstico Ativo em Tempo Real do Windy</p>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-indigo-50 px-3 py-1 font-mono text-xs font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 w-fit">
+                        {topProcesses.length} Maiores Consumidores
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                      {topProcesses.map((proc, i) => {
+                        const mb = proc.memoryMB || 0
+                        const formattedMem = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${Math.round(mb)} MB`
+                        const totalMemMB = Number(memTotalGB || 8) * 1024
+                        const pctOfTotal = totalMemMB > 0 ? ((mb / totalMemMB) * 100).toFixed(1) : '0'
+
+                        return (
+                          <div
+                            key={i}
+                            className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50/80 to-white p-4 transition-all hover:-translate-y-1 hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:from-slate-800/40 dark:to-slate-900"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-100 font-mono text-xs font-black text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                #{i + 1}
+                              </span>
+                              <span className="font-mono text-xs font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
+                                {formattedMem}
+                              </span>
+                            </div>
+
+                            <p
+                              className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+                              title={proc.name}
+                            >
+                              {proc.name}
+                            </p>
+
+                            <div className="mt-3 space-y-1.5">
+                              <div className="flex justify-between text-[11px] text-slate-400">
+                                <span className="font-medium">Impacto na RAM</span>
+                                <span className="font-bold text-slate-600 dark:text-slate-300">{pctOfTotal}%</span>
+                              </div>
+                              <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500"
+                                  style={{ width: `${Math.min(Math.max(Number(pctOfTotal) * 2.5, 6), 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
 
-                {/* RustDesk Credentials Box */}
+                {/* RustDesk Credentials Box - Design Console NOC */}
                 {rustdeskId && (
-                  <div className="rounded-2xl border border-slate-200/50 bg-slate-50 p-5 dark:border-slate-800/50 dark:bg-slate-900/50">
-                    <h4 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-200">Credenciais Fixas de Acesso Remoto</h4>
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">ID:</span>
-                        <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-100">{rustdeskId}</span>
+                  <div className="rounded-3xl border border-slate-200/70 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 p-6 text-white shadow-xl shadow-slate-950/20">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            <MonitorPlay className="h-4 w-4" />
+                          </span>
+                          <h4 className="font-black text-white text-base tracking-tight">
+                            Credenciais Fixas de Acesso Remoto (RustDesk)
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-400 font-medium">
+                          Servidor dedicado corporativo: <strong className="text-slate-200 font-mono">suporte.metrics.dev.br</strong>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* ID */}
+                        <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm shadow-inner">
+                          <span className="text-xs font-bold uppercase text-slate-400">ID:</span>
+                          <span className="font-mono text-base font-black text-white tracking-wider">{rustdeskId}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-slate-300 hover:bg-white/10 hover:text-white"
+                            onClick={() => {
+                              const cleanId = String(rustdeskId).replace(/\s+/g, '')
+                              navigator.clipboard.writeText(cleanId)
+                              toast.success('ID copiado!')
+                            }}
+                            title="Copiar ID"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* SENHA */}
+                        <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm shadow-inner">
+                          <span className="text-xs font-bold uppercase text-slate-400">Senha:</span>
+                          <span className="font-mono text-base font-black text-white tracking-widest">
+                            {showPassword ? rustdeskPassword : '••••••••••'}
+                          </span>
+                          <div className="flex items-center gap-1 border-l border-white/10 pl-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-slate-300 hover:bg-white/10 hover:text-white"
+                              onClick={() => setShowPassword(!showPassword)}
+                              title={showPassword ? 'Ocultar Senha' : 'Ver Senha'}
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-slate-300 hover:bg-white/10 hover:text-white"
+                              onClick={() => {
+                                navigator.clipboard.writeText(rustdeskPassword)
+                                toast.success('Senha copiada!')
+                              }}
+                              title="Copiar Senha"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Botão Conectar Remoto */}
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          className="gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 transition-all hover:scale-[1.02]"
                           onClick={() => {
                             const cleanId = String(rustdeskId).replace(/\s+/g, '')
                             navigator.clipboard.writeText(cleanId)
-                            toast.success('ID copiado!')
+                            toast.success('ID ' + cleanId + ' copiado! Abrindo RustDesk...')
+                            window.location.href = 'rustdesk://' + cleanId
                           }}
                         >
-                          <Copy className="h-3.5 w-3.5" />
+                          <MonitorPlay className="h-4 w-4" />
+                          Conectar Agora
                         </Button>
-                      </div>
-
-                      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Senha:</span>
-                        <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-100">
-                          {showPassword ? rustdeskPassword : '••••••••••'}
-                        </span>
-                        <div className="flex items-center gap-1 border-l border-slate-100 pl-2 dark:border-slate-700">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                            onClick={() => {
-                              navigator.clipboard.writeText(rustdeskPassword)
-                              toast.success('Senha copiada!')
-                            }}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
                       </div>
                     </div>
                   </div>
