@@ -987,8 +987,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const renderCartSection = () => (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 p-6">
+    <div className="flex h-full flex-col bg-white overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-6">
         <h2 className="text-xl font-bold tracking-tight text-slate-900">
           Seu Pedido
         </h2>
@@ -997,7 +997,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
         {cartItems.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-slate-400">
             <ShoppingBag className="mb-4 h-16 w-16 opacity-20" />
@@ -1067,7 +1067,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         )}
       </div>
 
-      <div className="space-y-4 border-t border-slate-100 bg-slate-50 p-6">
+      <div className="shrink-0 space-y-4 border-t border-slate-100 bg-slate-50 p-6">
         {minOrderValue > 0 && (
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>Pedido mínimo:</span>
@@ -1412,7 +1412,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </main>
 
       {/* Sidebar Carrinho Desktop */}
-      <aside className="z-30 hidden w-[400px] shrink-0 border-l border-slate-200 bg-white shadow-2xl lg:block">
+      <aside className="z-30 hidden w-[400px] shrink-0 self-start border-l border-slate-200 bg-white shadow-2xl lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
         {renderCartSection()}
       </aside>
 
