@@ -57,11 +57,6 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
   const minStock = activeTabType === 'PRODUCT' ? item.product?.min_stock : null
   const isLowStock = (stock ?? 0) <= (minStock ?? 0)
 
-  // DEBUG: Inspect item structure
-  if (activeTabType === 'PRODUCT') {
-    console.log(`[ItemTableRow] Product: ${item.name}`, item)
-  }
-
   return (
     <TableRow className="group border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50">
       {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (

@@ -29,6 +29,5 @@ export async function createTreatmentItem({
     discount,
     observations,
   })
-  console.log(response)
   return response
 }

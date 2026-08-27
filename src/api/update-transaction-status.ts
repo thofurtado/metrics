@@ -31,7 +31,6 @@ export async function updateStatusTransaction({
 
   try {
     const response = await api.patch(`/switch-transaction/${id}`, payload)
-    console.log('✅ RESPOSTA DA API:', response.data)
     return response.data
   } catch (error: any) {
     console.error('🔴 ERRO NA REQUISIÇÃO:', {

@@ -19,7 +19,6 @@ export async function createClientEquipment({
   brand,
   details,
 }: EquipmentForm) {
-  console.log(client_id, identification, type, brand, details)
   const response = await api.post(`/equipment`, {
     client_id,
     identification,

@@ -22,7 +22,6 @@ export async function getInventoryMetrics({
   const response = await api.get('/inventory-summary', {
     params: { month, year },
   })
-  console.log('📦 Dados recebidos da API de Inventário:', response.data)
 
   const apiData = response.data?.inventorySummary || {}
 

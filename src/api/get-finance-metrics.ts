@@ -23,15 +23,8 @@ export async function getFinanceMetrics({
     const response = await api.get('/summary', {
       params: { month, year },
     })
-    console.log('📊 Dados COMPLETOS recebidos da API:', response.data)
-    console.log('📊 Estrutura do summary:', response.data.summary)
-
     // Verifique a estrutura real dos dados
     const apiData = response.data.summary || response.data
-
-    console.log('🔍 Dados que vamos mapear:', apiData)
-    console.log('🔍 overdueIncome existe?', 'overdueIncome' in apiData)
-    console.log('🔍 overdueExpenses existe?', 'overdueExpenses' in apiData)
 
     const result = {
       saldoDisponivel: apiData.totalBalance || 0,
@@ -43,7 +36,6 @@ export async function getFinanceMetrics({
       despesaVencida: apiData.overdueExpenses || 0,
     }
 
-    console.log('🎯 Resultado final:', result)
     return result
   } catch (error) {
     console.error('❌ Erro na API financeira:', error)

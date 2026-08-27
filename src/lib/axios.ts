@@ -8,9 +8,6 @@ import { toast } from 'sonner'
 export const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 const BASE_URL = API_BASE_URL
 
-// Log para ajudar no debug se houver erro de conexão
-console.log('DEBUG: Conectando na API central:', BASE_URL)
-
 export const api = axios.create({
   baseURL: BASE_URL,
 })

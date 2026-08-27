@@ -16,6 +16,8 @@ dayjs.locale('pt-br')
 
 i18next.init({
   lng: 'pt',
+  debug: false,
+  showSupportNotice: false,
   resources: {
     pt: { zod: translation },
   },

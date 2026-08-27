@@ -14,8 +14,6 @@ export function GeneralBalance() {
     queryKey: ['metrics', 'general-balance'],
   })
 
-  console.log('general balance:' + generalBalance)
-
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 !pb-2">

@@ -11,7 +11,6 @@ export async function updateStatusTreatment({
   status,
   endingDate,
 }: UpdateStatusTreatmentParams) {
-  console.log(id, status, endingDate)
   await api.patch(`/treatment/${id}`, {
     status,
     ending_date: endingDate,

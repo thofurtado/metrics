@@ -15,7 +15,6 @@ export async function createInteraction({
   description,
   date,
 }: InteractionForm) {
-  console.log(id, description, date)
   const response = await api.post(`/treatment/${id}/interaction`, {
     description,
     date,

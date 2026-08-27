@@ -233,12 +233,6 @@ export function EmployeeFormDialog({
         // Explicit focus with delay to ensure the modal state is updated and field is interactive
         setTimeout(() => form.setFocus('pin'), 100)
       } else {
-        if (error?.response?.data) {
-          console.log(
-            'Detalhes do erro do backend (ex. Zod):',
-            error.response.data,
-          )
-        }
         toast.error(
           `Erro ao salvar funcionário: ${errorMessage || 'Verifique os dados enviados.'}`,
         )

@@ -240,8 +240,6 @@ export function TreatmentPaymentModal({
 
     setIsFinishing(true)
     try {
-      console.log('Enviando pagamentos:', paymentMethodsData)
-
       const payloadPayments = paymentMethodsData.map((method) => ({
         payment_id: method.paymentId,
         amount: method.amount,
