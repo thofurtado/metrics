@@ -12,7 +12,23 @@ export interface SystemConfig {
   dashboard_cards?: Record<string, Record<string, boolean>>
 }
 
-export async function getSystemConfig() {
-  const response = await api.get<SystemConfig>('/settings/modules')
-  return response.data
+export async function getSystemConfig(): Promise<SystemConfig> {
+  try {
+    const response = await api.get<SystemConfig>('/settings/modules')
+    return response.data
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return {
+        merchandise: true,
+        financial: true,
+        treatments: true,
+        cashier: false,
+        cashier_default_origin: 'Mesa',
+        hr_module: true,
+        cestaBasicaValue: 0,
+        financial_management_profile: 'OPERATIONAL',
+      }
+    }
+    throw error
+  }
 }
