@@ -18,6 +18,7 @@ import {
   Server,
   ShoppingCart,
   Terminal,
+  Thermometer,
   Wifi,
   Zap,
 } from 'lucide-react'
@@ -75,6 +76,19 @@ export function EquipmentDetailsModal({
   const needsRamUpgrade = telemetry.mem?.needsRamUpgrade ?? (Number(memDailyAvg ?? memUsedPercent) >= 75)
 
   const temp = telemetry.temp?.main || 0
+  const tempObj = telemetry.temp || {}
+  const tempMain = tempObj.main ? Math.round(Number(tempObj.main)) : (temp > 0 ? Math.round(temp) : null)
+  const tempDailyAvg = tempObj.dailyAverage ? Math.round(Number(tempObj.dailyAverage)) : null
+  const tempDailyPeak = tempObj.dailyPeak ? Math.round(Number(tempObj.dailyPeak)) : null
+  const tempStatus = tempObj.status || (tempMain ? (tempMain >= 85 ? 'warning' : tempMain >= 70 ? 'moderate' : 'normal') : 'normal')
+  const tempStatusLabel = tempObj.statusLabel || (tempStatus === 'warning' ? 'Superaquecimento' : tempStatus === 'moderate' ? 'Moderada' : 'Normal')
+  const tempRecommendation = tempObj.recommendation || (
+    tempStatus === 'warning'
+      ? 'Atenção: CPU muito quente. Verificar ventoinhas e pasta térmica.'
+      : tempStatus === 'moderate'
+        ? 'Aceitável sob carga de processamento.'
+        : 'Refrigeração ideal, sem preocupações.'
+  )
   const fsSize = telemetry.fsSize || []
   const mainDrive = fsSize[0] || {}
   const driveTotalGB = mainDrive.size ? (mainDrive.size / 1024 ** 3).toFixed(1) : 0
@@ -675,30 +689,60 @@ export function EquipmentDetailsModal({
                     </p>
                   </div>
 
-                  {/* TEMPERATURA */}
-                  <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-                    <div className="mb-4 flex items-center justify-between">
+                  {/* TEMPERATURA DA CPU (PROCESSADOR) */}
+                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                    tempStatus === 'warning'
+                      ? 'border-red-400/80 bg-red-50/20 dark:border-red-500/40 dark:bg-red-950/10'
+                      : tempStatus === 'moderate'
+                        ? 'border-amber-400/80 bg-amber-50/20 dark:border-amber-500/40 dark:bg-amber-950/10'
+                        : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                  }`}>
+                    <div className="mb-3 flex items-center justify-between">
                       <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <AlertTriangle
-                          className={'h-4 w-4 ' + (temp > 0 ? (temp > 80 ? 'text-red-500' : 'text-amber-500') : 'text-slate-400')}
-                        />{' '}
-                        Temp.
+                        <Thermometer
+                          className={'h-4 w-4 ' + (tempStatus === 'warning' ? 'text-red-500' : tempStatus === 'moderate' ? 'text-amber-500' : 'text-emerald-500')}
+                        />
+                        Temp. CPU
                       </h4>
-                      <span
-                        className={'text-xl font-black ' + (temp > 0 ? (temp > 80 ? 'text-red-600' : 'text-amber-600') : 'text-slate-400')}
-                      >
-                        {temp > 0 ? (temp + ' °C') : 'N/D'}
-                      </span>
+                      <div className="text-right">
+                        <span
+                          className={'text-xl font-black ' + (tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : tempStatus === 'moderate' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}
+                        >
+                          {tempMain ? `${tempMain} °C` : 'N/D'}
+                        </span>
+                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
+                      </div>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
                       <div
-                        className={'h-2 rounded-full transition-all duration-500 ' + (temp > 80 ? 'bg-red-500' : temp > 60 ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700')}
-                        style={{ width: (temp > 0 ? Math.min(Number(temp), 100) : 0) + '%' }}
+                        className={'h-2 rounded-full transition-all duration-500 ' + (
+                          tempStatus === 'warning' ? 'bg-red-500' : tempStatus === 'moderate' ? 'bg-amber-500' : 'bg-emerald-500'
+                        )}
+                        style={{ width: (tempMain ? Math.min(Number(tempMain), 100) : 0) + '%' }}
                       />
                     </div>
-                    <p className="mt-3 text-xs font-medium text-slate-400">
-                      Sensores de Hardware
-                    </p>
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                      <span>Média do Dia: <strong className="text-slate-800 dark:text-slate-200">{tempDailyAvg ? `${tempDailyAvg} °C` : (tempMain ? `${tempMain} °C` : '-')}</strong></span>
+                      <span>Pico: <strong className={tempStatus === 'warning' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}>{tempDailyPeak ? `${tempDailyPeak} °C` : (tempMain ? `${tempMain} °C` : '-')}</strong></span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-[10.5px]">
+                      {tempStatus === 'warning' ? (
+                        <span className="rounded bg-red-100 px-1.5 py-0.5 font-bold text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                          🔴 {tempStatusLabel}
+                        </span>
+                      ) : tempStatus === 'moderate' ? (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          🟡 {tempStatusLabel}
+                        </span>
+                      ) : (
+                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          🟢 {tempStatusLabel}
+                        </span>
+                      )}
+                      <span className="truncate text-slate-400" title={tempRecommendation}>
+                        {tempRecommendation}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
