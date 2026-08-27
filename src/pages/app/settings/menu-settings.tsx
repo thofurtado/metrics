@@ -346,6 +346,7 @@ export function MenuSettings() {
     mutationFn: updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['public-profile'] })
       toast.success('Configurações salvas com sucesso!')
     },
     onError: () => {
@@ -487,8 +488,9 @@ export function MenuSettings() {
   const handleAddSector = () => {
     const rawCurrent = getValues('deliverySectors')
     const current = Array.isArray(rawCurrent) ? rawCurrent : []
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
     const newSector = {
-      id: crypto.randomUUID(),
+      id: newId,
       name: `Setor ${current.length + 1}`,
       fee: 5.0,
       estimatedTimeMin: 30,
@@ -622,7 +624,21 @@ export function MenuSettings() {
   }
 
   const onSubmit = async (data: ProfileFormData) => {
-    await updateProfileFn(data)
+    try {
+      await updateProfileFn(data)
+    } catch {
+      // Toast already handled by useMutation onError
+    }
+  }
+
+  const onError = (errors: any) => {
+    console.error('Erros no formulário:', errors)
+    const errorKeys = Object.keys(errors)
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0]
+      const msg = errors[firstKey]?.message || 'Verifique os campos obrigatórios em todas as abas.'
+      toast.error(`Atenção: ${msg}`)
+    }
   }
 
   if (isFetching) {
@@ -647,7 +663,7 @@ export function MenuSettings() {
       </div>
       <Separator />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
         <Tabs defaultValue="delivery" className="space-y-6">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 gap-1">
             <TabsTrigger
