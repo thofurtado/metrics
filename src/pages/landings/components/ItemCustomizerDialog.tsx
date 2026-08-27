@@ -1,4 +1,4 @@
-import { Minus, Pizza, Plus } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import {
@@ -87,7 +87,9 @@ export function ItemCustomizerDialog({
 
   // Estado de Sabores (Fracionamento)
   const [fractionCount, setFractionCount] = useState<number>(1)
-  const [selectedFlavors, setSelectedFlavors] = useState<ProductItem[]>([product])
+  const [selectedFlavors, setSelectedFlavors] = useState<(ProductItem | null)[]>([product])
+  const [activeFlavorStep, setActiveFlavorStep] = useState<number | null>(null)
+  const [flavorSearch, setFlavorSearch] = useState<string>('')
 
   // Estado de Complementos: Map de optionId -> quantidade
   const [selectedOptionsQty, setSelectedOptionsQty] = useState<Record<string, number>>({})
@@ -107,19 +109,43 @@ export function ItemCustomizerDialog({
   // Troca a quantidade de frações (1, 2, 3, 4 sabores)
   const handleSetFractions = (count: number) => {
     setFractionCount(count)
-    const newFlavors = [...selectedFlavors]
-    while (newFlavors.length < count) {
-      newFlavors.push(product)
+    if (count === 1) {
+      setSelectedFlavors([product])
+      setActiveFlavorStep(null)
+    } else {
+      const next: (ProductItem | null)[] = []
+      for (let i = 0; i < count; i++) {
+        if (i === 0) {
+          next.push(selectedFlavors[0] || product)
+        } else if (selectedFlavors[i]) {
+          next.push(selectedFlavors[i])
+        } else {
+          next.push(null)
+        }
+      }
+      setSelectedFlavors(next)
+      // Se o próximo slot estiver vazio, abre ele automaticamente
+      const firstEmpty = next.findIndex((f) => f === null)
+      setActiveFlavorStep(firstEmpty !== -1 ? firstEmpty : null)
+      setFlavorSearch('')
     }
-    setSelectedFlavors(newFlavors.slice(0, count))
   }
 
-  const handleFlavorChange = (index: number, flavorId: string) => {
-    const found = siblingProducts.find((p) => p.id === flavorId)
-    if (!found) return
+  const handleSelectFlavor = (index: number, flavor: ProductItem) => {
     const newFlavors = [...selectedFlavors]
-    newFlavors[index] = found
+    newFlavors[index] = flavor
     setSelectedFlavors(newFlavors)
+    setFlavorSearch('')
+
+    // Auto-avanço inteligente (estilo iFood):
+    // Se o próximo slot estiver vazio, abre ele automaticamente
+    const nextEmptyIndex = newFlavors.findIndex((f, idx) => idx > index && f === null)
+    if (nextEmptyIndex !== -1) {
+      setActiveFlavorStep(nextEmptyIndex)
+    } else {
+      // Se todos os sabores já foram definidos, fecha o acordeão
+      setActiveFlavorStep(null)
+    }
   }
 
   // Grupos de adicionais do produto
@@ -157,8 +183,20 @@ export function ItemCustomizerDialog({
 
   // Cálculo Comercial em Tempo Real
   const { unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
-    // 1. Preço Base dos Sabores: REGRA COMERCIAL DE OURO (MAIOR PREÇO)
-    const flavorPrices = selectedFlavors.map((f) => f.price)
+    // 1. Validação dos Sabores Escolhidos
+    const chosenFlavors = selectedFlavors.filter((f): f is ProductItem => Boolean(f))
+    if (fractionCount > 1 && chosenFlavors.length < fractionCount) {
+      return {
+        basePrice: product.price,
+        complementsExtraPrice: 0,
+        unitPrice: product.price,
+        isReadyToConfirm: false,
+        validationError: `Selecione todos os ${fractionCount} sabores da pizza (${chosenFlavors.length}/${fractionCount} escolhidos).`,
+      }
+    }
+
+    // 2. Preço Base dos Sabores: REGRA COMERCIAL DE OURO (MAIOR PREÇO)
+    const flavorPrices = chosenFlavors.map((f) => f.price)
     const base = flavorPrices.length > 0 ? Math.max(...flavorPrices) : product.price
 
     // 2. Cálculo dos Adicionais considerando Cotas Gratuitas (Estilo iFood)
@@ -201,7 +239,8 @@ export function ItemCustomizerDialog({
   const handleConfirm = () => {
     if (!isReadyToConfirm) return
 
-    const flavorNames = selectedFlavors.map((f) => f.name)
+    const validFlavors = selectedFlavors.filter((f): f is ProductItem => Boolean(f))
+    const flavorNames = validFlavors.map((f) => f.name)
     const isFractioned = fractionCount > 1
     const displayName = isFractioned
       ? '1/' + fractionCount + ' ' + flavorNames.join(' + 1/' + fractionCount + ' ')
@@ -240,7 +279,7 @@ export function ItemCustomizerDialog({
       .map(([id, qty]) => id + ':' + qty)
       .join('|')
 
-    const flavorsKey = selectedFlavors.map((f) => f.id).sort().join('-')
+    const flavorsKey = validFlavors.map((f) => f.id).sort().join('-')
     const customKey = product.id + '_' + fractionCount + '_' + flavorsKey + '_' + optionsKey + '_' + observation.trim()
 
     onConfirm({
@@ -338,26 +377,193 @@ export function ItemCustomizerDialog({
                 )}
               </div>
 
-              {/* Seletores de Sabores */}
+              {/* Seletores de Sabores - Acordeão Colapsável Estilo iFood */}
               <div className="mt-4 space-y-2.5">
-                {selectedFlavors.map((flv, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <span className="w-28 text-xs font-bold text-slate-500">
-                      {fractionCount === 1 ? 'Sabor:' : 'Sabor ' + (idx + 1) + ' (1/' + fractionCount + '):'}
-                    </span>
-                    <select
-                      value={flv.id}
-                      onChange={(e) => handleFlavorChange(idx, e.target.value)}
-                      className="flex-1 h-9 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                {Array.from({ length: fractionCount }).map((_, idx) => {
+                  const selectedFlavor = selectedFlavors[idx]
+                  const isExpanded = activeFlavorStep === idx
+
+                  // Filtro por busca rápida
+                  const filteredSiblings = siblingProducts.filter((sp) => {
+                    if (!flavorSearch.trim()) return true
+                    const q = flavorSearch.toLowerCase()
+                    return (
+                      sp.name.toLowerCase().includes(q) ||
+                      (sp.description && sp.description.toLowerCase().includes(q))
+                    )
+                  })
+
+                  // 1. ESTADO EXPANDIDO (SELEÇÃO ABERTA)
+                  if (isExpanded) {
+                    return (
+                      <div
+                        key={idx}
+                        className="rounded-2xl border-2 border-emerald-500 bg-white p-3.5 shadow-md transition-all"
+                      >
+                        {/* Cabeçalho do Slot Aberto */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-black text-white">
+                              {idx + 1}
+                            </span>
+                            <h4 className="text-xs font-black text-slate-900">
+                              Escolha o {idx + 1}º Sabor (1/{fractionCount})
+                            </h4>
+                          </div>
+                          {selectedFlavor && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveFlavorStep(null)
+                                setFlavorSearch('')
+                              }}
+                              className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-0.5"
+                            >
+                              Fechar <ChevronUp className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Campo de Busca Rápida de Sabores */}
+                        {siblingProducts.length > 5 && (
+                          <div className="relative mb-2.5">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="Buscar sabor (ex: calabresa, frango...)"
+                              value={flavorSearch}
+                              onChange={(e) => setFlavorSearch(e.target.value)}
+                              className="w-full h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                              autoFocus
+                            />
+                          </div>
+                        )}
+
+                        {/* Lista Scrollável de Sabores */}
+                        <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 pr-1">
+                          {filteredSiblings.map((sp) => {
+                            const isCurrentSelected = selectedFlavor?.id === sp.id
+                            return (
+                              <div
+                                key={sp.id}
+                                onClick={() => handleSelectFlavor(idx, sp)}
+                                className={
+                                  'flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all ' +
+                                  (isCurrentSelected
+                                    ? 'bg-emerald-50/80 text-emerald-950 font-bold'
+                                    : 'hover:bg-slate-50 text-slate-700')
+                                }
+                              >
+                                <div className="flex-1 pr-3">
+                                  <p
+                                    className={
+                                      'text-xs ' +
+                                      (isCurrentSelected
+                                        ? 'font-black text-emerald-900'
+                                        : 'font-bold text-slate-800')
+                                    }
+                                  >
+                                    {sp.name}
+                                  </p>
+                                  {sp.description && (
+                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-normal">
+                                      {sp.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                  <span className="text-xs font-black text-slate-900">
+                                    {formatBRL(sp.price)}
+                                  </span>
+                                  <div
+                                    className={
+                                      'h-5 w-5 rounded-full border flex items-center justify-center transition-all ' +
+                                      (isCurrentSelected
+                                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                                        : 'border-slate-300 bg-white')
+                                    }
+                                  >
+                                    {isCurrentSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // 2. ESTADO COLAPSADO - SELECIONADO
+                  if (selectedFlavor) {
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setActiveFlavorStep(idx)
+                          setFlavorSearch('')
+                        }}
+                        className="flex items-center justify-between p-3 bg-emerald-50/40 border border-emerald-200/80 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-xs group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs shadow-xs">
+                            <Check className="h-4 w-4 stroke-[3]" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                              {fractionCount === 1 ? 'Sabor Único' : `${idx + 1}º Sabor (1/${fractionCount})`}
+                            </p>
+                            <p className="text-xs font-black text-slate-900 truncate">
+                              {selectedFlavor.name}
+                            </p>
+                            {selectedFlavor.description && (
+                              <p className="text-[11px] font-medium text-slate-500 truncate max-w-sm">
+                                {selectedFlavor.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs font-black text-slate-700">
+                            {formatBRL(selectedFlavor.price)}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">
+                            Alterar <ChevronDown className="h-3.5 w-3.5" />
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // 3. ESTADO COLAPSADO - PENDENTE DE ESCOLHA
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setActiveFlavorStep(idx)
+                        setFlavorSearch('')
+                      }}
+                      className="flex items-center justify-between p-3.5 bg-amber-50/40 border border-dashed border-amber-300 rounded-2xl cursor-pointer hover:bg-amber-50 hover:border-amber-400 transition-all group"
                     >
-                      {siblingProducts.map((sp) => (
-                        <option key={sp.id} value={sp.id}>
-                          {sp.name} ({formatBRL(sp.price)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 font-black text-xs">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                            {idx + 1}º Sabor (1/{fractionCount}) • Escolha Obrigatória
+                          </p>
+                          <p className="text-xs font-bold text-amber-900">
+                            Toque para escolher o {idx + 1}º sabor
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-amber-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        Escolher &rarr;
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
               <p className="mt-3 text-[11px] font-semibold text-slate-400">
                 💡 O valor base da pizza fracionada é calculado pelo <span className="font-bold text-slate-600">maior preço</span> entre os sabores.
