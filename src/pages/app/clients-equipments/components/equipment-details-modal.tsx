@@ -59,18 +59,38 @@ export function EquipmentDetailsModal({
   // Extração dos dados de telemetria
   const osInfo = telemetry.osInfo || {}
   const cpuInfo = telemetry.cpu || {}
-  const cpuLoad = telemetry.cpu?.currentLoad?.toFixed(1) || 0
+  const cpuLoad = telemetry.cpu?.currentLoad !== undefined ? telemetry.cpu.currentLoad.toFixed(1) : 0
+  const cpuDailyAvg = telemetry.cpu?.dailyAverage !== undefined ? telemetry.cpu.dailyAverage.toFixed(1) : null
+  const cpuDailyPeak = telemetry.cpu?.dailyPeak !== undefined ? telemetry.cpu.dailyPeak.toFixed(1) : null
+
   const mem = telemetry.mem || {}
   const memTotalGB = mem.total ? (mem.total / 1024 ** 3).toFixed(1) : 0
-  const memUsedPercent = mem.total
-    ? ((mem.active / mem.total) * 100).toFixed(0)
-    : 0
+  const memUsedPercent = mem.usedPercent !== undefined
+    ? Number(mem.usedPercent).toFixed(0)
+    : mem.total
+      ? ((mem.active / mem.total) * 100).toFixed(0)
+      : 0
+  const memDailyAvg = telemetry.mem?.dailyAveragePercent !== undefined ? Number(telemetry.mem.dailyAveragePercent).toFixed(0) : null
+  const memDailyPeak = telemetry.mem?.dailyPeakPercent !== undefined ? Number(telemetry.mem.dailyPeakPercent).toFixed(0) : null
+  const needsRamUpgrade = telemetry.mem?.needsRamUpgrade ?? (Number(memDailyAvg ?? memUsedPercent) >= 75)
+
   const temp = telemetry.temp?.main || 0
   const fsSize = telemetry.fsSize || []
   const mainDrive = fsSize[0] || {}
   const driveTotalGB = mainDrive.size ? (mainDrive.size / 1024 ** 3).toFixed(1) : 0
   const driveUsedPercent = mainDrive.use ? mainDrive.use.toFixed(0) : 0
   const driveFreeGB = mainDrive.size && mainDrive.use ? ((mainDrive.size - (mainDrive.size * (mainDrive.use / 100))) / 1024 ** 3).toFixed(1) : 0
+
+  // Informações do Disco do Sistema (Windy v2.1.4+)
+  const systemDrive = telemetry.systemDrive || null
+  const sysDriveLetter = systemDrive?.driveLetter || 'C:'
+  const sysDriveTotalGB = systemDrive?.totalGB !== undefined ? systemDrive.totalGB.toFixed(1) : driveTotalGB
+  const sysDriveFreeGB = systemDrive?.freeGB !== undefined ? systemDrive.freeGB.toFixed(1) : driveFreeGB
+  const sysDriveUsedPercent = systemDrive?.usedPercent !== undefined ? Number(systemDrive.usedPercent).toFixed(0) : driveUsedPercent
+  const sysDriveIsLow = systemDrive?.isLowSpace ?? (Number(sysDriveFreeGB) < 15 || Number(sysDriveUsedPercent) > 90)
+
+  // Top Programas Consumidores
+  const topProcesses: Array<{ name: string; memoryMB: number }> = telemetry.topProcesses || []
 
   // Identificação do Perfil do Equipamento (PDV, Windy, Híbrido)
   const windy = telemetry.windy || {}
@@ -554,15 +574,18 @@ export function EquipmentDetailsModal({
                   </div>
                 </div>
 
-                {/* Grid 4 Colunas (Métricas Rápidas) */}
+                {/* Grid 4 Colunas (Métricas Rápidas & Médias Diárias) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* CPU */}
                   <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-3 flex items-center justify-between">
                       <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
                         <Cpu className="h-4 w-4 text-blue-500" /> CPU
                       </h4>
-                      <span className="text-xl font-black text-blue-600">{cpuLoad}%</span>
+                      <div className="text-right">
+                        <span className="text-xl font-black text-blue-600">{cpuLoad}%</span>
+                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
+                      </div>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
                       <div
@@ -570,46 +593,85 @@ export function EquipmentDetailsModal({
                         style={{ width: Math.min(Number(cpuLoad), 100) + '%' }}
                       />
                     </div>
-                    <p className="mt-3 truncate text-xs font-medium text-slate-400" title={cpuInfo.brand}>
-                      {cpuInfo.brand || 'N/A'}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                      <span>Média do Dia: <strong className="text-slate-800 dark:text-slate-200">{cpuDailyAvg ? `${cpuDailyAvg}%` : `${cpuLoad}%`}</strong></span>
+                      <span>Pico: <strong className="text-amber-600 dark:text-amber-400">{cpuDailyPeak ? `${cpuDailyPeak}%` : `${cpuLoad}%`}</strong></span>
+                    </div>
+                    <p className="mt-1.5 truncate text-[10px] text-slate-400" title={cpuInfo.brand}>
+                      {cpuInfo.brand || 'Processador'}
                     </p>
                   </div>
 
                   {/* RAM */}
-                  <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-                    <div className="mb-4 flex items-center justify-between">
+                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                    needsRamUpgrade
+                      ? 'border-amber-400/80 bg-amber-50/20 dark:border-amber-500/40 dark:bg-amber-950/10'
+                      : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                  }`}>
+                    <div className="mb-3 flex items-center justify-between">
                       <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
                         <Activity className="h-4 w-4 text-emerald-500" /> RAM
                       </h4>
-                      <span className="text-xl font-black text-emerald-600">{memUsedPercent}%</span>
+                      <div className="text-right">
+                        <span className={`text-xl font-black ${needsRamUpgrade ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`}>
+                          {memUsedPercent}%
+                        </span>
+                        <span className="block text-[10px] text-slate-400">Instantâneo</span>
+                      </div>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
                       <div
-                        className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          needsRamUpgrade ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
                         style={{ width: Math.min(Number(memUsedPercent), 100) + '%' }}
                       />
                     </div>
-                    <p className="mt-3 text-xs font-medium text-slate-400">
-                      {memTotalGB} GB Total {mem.clock ? ('• ' + mem.clock + ' MHz') : ''}
-                    </p>
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                      <span>Média do Dia: <strong className={needsRamUpgrade ? 'font-black text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}>{memDailyAvg ? `${memDailyAvg}%` : `${memUsedPercent}%`}</strong></span>
+                      <span>Pico: <strong className="text-amber-600 dark:text-amber-400">{memDailyPeak ? `${memDailyPeak}%` : `${memUsedPercent}%`}</strong></span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400">{memTotalGB} GB Total {mem.clock ? ('• ' + mem.clock + ' MHz') : ''}</span>
+                      {needsRamUpgrade && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          ⚠️ Upgrade Recomendado
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* DISCO */}
-                  <div className="rounded-2xl border border-slate-200/50 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800">
-                    <div className="mb-4 flex items-center justify-between">
+                  {/* DISCO DO SISTEMA (C:) */}
+                  <div className={`rounded-2xl border p-5 shadow-sm transition-all ${
+                    sysDriveIsLow
+                      ? 'border-red-400/80 bg-red-50/20 dark:border-red-500/40 dark:bg-red-950/10'
+                      : 'border-slate-200/50 bg-white dark:border-slate-700/50 dark:bg-slate-800'
+                  }`}>
+                    <div className="mb-3 flex items-center justify-between">
                       <h4 className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                        <HardDrive className="h-4 w-4 text-purple-500" /> Armazenamento
+                        <HardDrive className="h-4 w-4 text-purple-500" /> Disco ({sysDriveLetter})
                       </h4>
-                      <span className="text-xl font-black text-purple-600">{driveUsedPercent}%</span>
+                      <div className="text-right">
+                        <span className={`text-xl font-black ${sysDriveIsLow ? 'text-red-600 dark:text-red-400' : 'text-purple-600'}`}>
+                          {sysDriveUsedPercent}%
+                        </span>
+                        <span className="block text-[10px] text-slate-400">Ocupado</span>
+                      </div>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-900">
                       <div
-                        className="h-2 rounded-full bg-purple-500 transition-all duration-500"
-                        style={{ width: Math.min(Number(driveUsedPercent), 100) + '%' }}
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          sysDriveIsLow ? 'bg-red-500' : 'bg-purple-500'
+                        }`}
+                        style={{ width: Math.min(Number(sysDriveUsedPercent), 100) + '%' }}
                       />
                     </div>
-                    <p className="mt-3 text-xs font-medium text-slate-400">
-                      {driveFreeGB} GB Livres de {driveTotalGB} GB
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+                      <span>Livre: <strong className={sysDriveIsLow ? 'font-black text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}>{sysDriveFreeGB} GB</strong></span>
+                      <span>Total: <strong>{sysDriveTotalGB} GB</strong></span>
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-slate-400">
+                      {sysDriveIsLow ? '⚠️ Menos de 15 GB livres no Windows' : 'Drive do Sistema Operacional'}
                     </p>
                   </div>
 
@@ -639,6 +701,35 @@ export function EquipmentDetailsModal({
                     </p>
                   </div>
                 </div>
+
+                {/* NOVO BLOCO: TOP PROGRAMAS QUE MAIS CONSOMEM MEMÓRIA */}
+                {topProcesses && topProcesses.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-800">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        <Activity className="h-4 w-4 text-indigo-500" />
+                        Top Programas Mais Pesados em Memória (RAM)
+                      </h4>
+                      <span className="text-[11px] font-medium text-slate-400">Diagnóstico Ativo do Windy</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {topProcesses.map((proc, i) => (
+                        <div key={i} className="rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700/60 dark:bg-slate-900/60">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                            <span className="truncate pr-1" title={proc.name}>{proc.name}</span>
+                            <span className="font-mono text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{proc.memoryMB} MB</span>
+                          </div>
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800">
+                            <div
+                              className="h-1.5 rounded-full bg-indigo-500"
+                              style={{ width: Math.min(Math.round((proc.memoryMB / (Number(memTotalGB || 8) * 1024)) * 100 * 3), 100) + '%' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* RustDesk Credentials Box */}
                 {rustdeskId && (
