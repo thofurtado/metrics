@@ -25,7 +25,7 @@ interface DownloadItem {
   downloadUrl: string
   popular?: boolean
   badgeLabel?: string
-  iconType?: 'windy' | 'ponto' | 'mobile' | 'support' | 'util'
+  iconType?: 'windy' | 'pdv' | 'ponto' | 'mobile' | 'support' | 'util'
 }
 
 // Os 3 aplicativos oficiais ativos da nossa empresa
@@ -33,16 +33,30 @@ const downloadFiles: DownloadItem[] = [
   {
     id: 'metrics-windy',
     name: 'Metrics Windy - Agente de Telemetria & Suporte',
-    fileName: 'Windy.exe',
-    version: 'v2.1.3 (Oficial)',
-    size: '54 MB',
-    description: 'Agente inteligente para monitoramento de hardware em tempo real, suporte remoto assistido (RustDesk/AnyDesk integrado) e manutenção preventiva do Windows.',
+    fileName: 'Metrics_Windy_Setup.exe',
+    version: 'v2.2.2.5 (Oficial)',
+    size: '60 MB',
+    description: 'Agente inteligente para monitoramento contínuo em tempo real (CPU, RAM, Atividade de Leitura/Escrita de Disco e Sensores Térmicos), suporte remoto integrado e manutenção preventiva do Windows.',
     tag: 'Oficial',
     isOfficial: true,
     downloadUrl: `${API_BASE_URL}/api/public/windy/download`,
     popular: true,
     badgeLabel: 'OFICIAL • TELEMETRIA & SUPORTE',
     iconType: 'windy',
+  },
+  {
+    id: 'metrics-pdv',
+    name: 'Metrics PDV - Frente de Caixa & Emissor Fiscal',
+    fileName: 'Instalar_MetricsPDV.exe',
+    version: 'v2.4.0 (Oficial)',
+    size: '520 MB',
+    description: 'Frente de caixa completo para alta velocidade com emissão de NFC-e/CF-e SAT, contingência offline automática, TEF integrado, controle de mesas e comandas.',
+    tag: 'Oficial',
+    isOfficial: true,
+    downloadUrl: `${API_BASE_URL}/api/public/pdv/download`,
+    popular: true,
+    badgeLabel: 'OFICIAL • FRENTE DE CAIXA',
+    iconType: 'pdv',
   },
   {
     id: 'metrics-ponto',
@@ -329,6 +343,8 @@ export function DownloadsPage() {
                     >
                       {file.iconType === 'windy' ? (
                         <Wrench className="h-6 w-6" />
+                      ) : file.iconType === 'pdv' ? (
+                        <Monitor className="h-6 w-6" />
                       ) : file.iconType === 'ponto' ? (
                         <Clock className="h-6 w-6" />
                       ) : file.iconType === 'mobile' ? (
