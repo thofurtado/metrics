@@ -41,6 +41,13 @@ export function OutflowsModal({
           } else if (
             e.type === 'WITHDRAWAL_OWNER' ||
             normIdent.includes('samir') ||
+            normIdent.includes('reserva') ||
+            normIdent.includes('ronaldo') ||
+            normIdent.includes('dono') ||
+            normIdent.includes('socio') ||
+            normIdent.includes('sócio') ||
+            normIdent.includes('proprietario') ||
+            normIdent.includes('proprietário') ||
             normIdent.includes('manobra') ||
             normIdent.includes('troco') ||
             normIdent.includes('cofre') ||
