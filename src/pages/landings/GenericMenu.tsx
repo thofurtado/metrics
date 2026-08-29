@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  Bell,
+  Bike,
   Check,
   CheckCircle2,
+  ChefHat,
   ChevronRight,
   Clock,
   Copy,
@@ -33,6 +36,35 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
+
+function showBrowserNotification(title: string, options?: NotificationOptions) {
+  if (typeof window === 'undefined') return;
+
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate([200, 100, 200]);
+    } catch (e) {}
+  }
+
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.showNotification(title, options);
+    }).catch(() => {
+      try {
+        new Notification(title, options);
+      } catch (e) {}
+    });
+  } else {
+    try {
+      new Notification(title, options);
+    } catch (e) {
+      console.warn('Fallback Notification error:', e);
+    }
+  }
+}
+
 
 interface GenericMenuProps {
   tenantName: string
@@ -1038,7 +1070,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
-        new Notification('🔔 Notificações Ativadas!', {
+        showBrowserNotification('🔔 Notificações Ativadas!', {
           body: 'Você será avisado assim que o restaurante aceitar seu pedido e quando o motoboy sair!',
           icon: '/favicon.ico'
         });
