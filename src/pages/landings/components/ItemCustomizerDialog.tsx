@@ -127,18 +127,14 @@ export function ItemCustomizerDialog({
       setActiveFlavorStep(null)
       setFlavorSearch('')
     } else {
-      // Ao mudar de 1 sabor para 2 ou mais sabores, nenhum sabor deve vir pré-selecionado
-      const isComingFromSingleFlavor = fractionCount === 1
+      // Mantém o produto inicial como o 1º sabor e abre o 2º slot para seleção
       const next: (ProductItem | null)[] = []
-      for (let i = 0; i < count; i++) {
-        if (!isComingFromSingleFlavor && selectedFlavors[i]) {
-          next.push(selectedFlavors[i])
-        } else {
-          next.push(null)
-        }
+      next.push(selectedFlavors[0] || product)
+      for (let i = 1; i < count; i++) {
+        next.push(selectedFlavors[i] || null)
       }
       setSelectedFlavors(next)
-      // Se o próximo slot estiver vazio, abre ele automaticamente (o 1º slot)
+      // Se o 2º slot estiver vazio (ou qualquer posterior), abre ele automaticamente para o cliente escolher
       const firstEmpty = next.findIndex((f) => f === null)
       setActiveFlavorStep(firstEmpty !== -1 ? firstEmpty : null)
       setFlavorSearch('')
@@ -341,7 +337,7 @@ export function ItemCustomizerDialog({
             </div>
             <div className="text-right">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                A partir de
+                Preço Base
               </span>
               <p className="text-lg font-black text-slate-900">{formatBRL(product.price)}</p>
             </div>
