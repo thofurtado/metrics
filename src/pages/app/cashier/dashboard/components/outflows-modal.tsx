@@ -40,6 +40,10 @@ export function OutflowsModal({
             category = 'vale'
           } else if (
             e.type === 'WITHDRAWAL_OWNER' ||
+            e.type === 'RECOLHIMENTO_COFRE' ||
+            normIdent.includes('depósito') ||
+            normIdent.includes('deposito') ||
+            normIdent.includes('caixa central') ||
             normIdent.includes('samir') ||
             normIdent.includes('reserva') ||
             normIdent.includes('ronaldo') ||

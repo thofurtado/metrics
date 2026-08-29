@@ -297,17 +297,27 @@ export function MenuSettings() {
 
   useEffect(() => {
     if (profile) {
-      const savedHoursMap = new Map(
-        (profile.businessHours || []).map((bh: any) => [bh.dayOfWeek, bh]),
-      )
+      const existingHours = profile.businessHours || []
+      const businessHours: any[] = []
 
-      const businessHours = DAYS_OF_WEEK.map((_, index) => {
-        const saved = savedHoursMap.get(index)
-        return {
-          dayOfWeek: index,
-          openTime: saved?.openTime || '18:00',
-          closeTime: saved?.closeTime || '23:00',
-          isOpen: saved?.isOpen ?? index !== 0,
+      DAYS_OF_WEEK.forEach((_, dayIdx) => {
+        const dayShifts = existingHours.filter((bh: any) => bh.dayOfWeek === dayIdx)
+        if (dayShifts.length > 0) {
+          dayShifts.forEach((s: any) => {
+            businessHours.push({
+              dayOfWeek: dayIdx,
+              openTime: s.openTime || '18:00',
+              closeTime: s.closeTime || '23:00',
+              isOpen: s.isOpen ?? true,
+            })
+          })
+        } else {
+          businessHours.push({
+            dayOfWeek: dayIdx,
+            openTime: '18:00',
+            closeTime: '23:00',
+            isOpen: dayIdx !== 0,
+          })
         }
       })
 
@@ -603,24 +613,90 @@ export function MenuSettings() {
     toast.info(`Bairro "${neighborhoodName}" removido.`)
   }
 
-  const copyMondayToWeekdays = () => {
-    const hours = getValues('businessHours')
-    const monday = hours[1]
-    if (!monday) return
+  const handleToggleDay = (dayIndex: number, isOpen: boolean) => {
+    const currentHours = getValues('businessHours') || []
+    const dayShifts = currentHours.filter((bh) => bh.dayOfWeek === dayIndex)
 
-    const updated = hours.map((h) => {
-      if (h.dayOfWeek >= 1 && h.dayOfWeek <= 5) {
-        return {
-          ...h,
-          openTime: monday.openTime,
-          closeTime: monday.closeTime,
-          isOpen: monday.isOpen,
-        }
+    if (dayShifts.length === 0) {
+      setValue('businessHours', [
+        ...currentHours,
+        { dayOfWeek: dayIndex, openTime: '12:00', closeTime: '16:00', isOpen },
+      ], { shouldDirty: true })
+      return
+    }
+
+    const updated = currentHours.map((bh) => {
+      if (bh.dayOfWeek === dayIndex) {
+        return { ...bh, isOpen }
       }
-      return h
+      return bh
     })
-    setValue('businessHours', updated)
-    toast.success('Horário de Segunda aplicado para os dias úteis (Seg-Sex)!')
+    setValue('businessHours', updated, { shouldDirty: true })
+  }
+
+  const handleAddShift = (dayIndex: number) => {
+    const currentHours = getValues('businessHours') || []
+    const dayShifts = currentHours.filter((bh) => bh.dayOfWeek === dayIndex)
+    
+    // Sugere almoço (12h-16h) se não tiver nada ou jantar (18h-22h) se já tiver 1 turno
+    const defaultOpen = dayShifts.length === 1 ? '18:00' : '12:00'
+    const defaultClose = dayShifts.length === 1 ? '22:00' : '16:00'
+
+    const newShift = {
+      dayOfWeek: dayIndex,
+      openTime: defaultOpen,
+      closeTime: defaultClose,
+      isOpen: true,
+    }
+
+    // Marca todos os outros turnos do dia como ativos também
+    const updated = currentHours.map((bh) => bh.dayOfWeek === dayIndex ? { ...bh, isOpen: true } : bh)
+
+    setValue('businessHours', [...updated, newShift], { shouldDirty: true })
+    toast.success('Novo turno adicionado!')
+  }
+
+  const handleRemoveShift = (originalIndex: number, dayIndex: number) => {
+    const currentHours = getValues('businessHours') || []
+    const dayShifts = currentHours.filter((bh) => bh.dayOfWeek === dayIndex)
+
+    if (dayShifts.length <= 1) {
+      handleToggleDay(dayIndex, false)
+      return
+    }
+
+    const updated = currentHours.filter((_, idx) => idx !== originalIndex)
+    setValue('businessHours', updated, { shouldDirty: true })
+    toast.info('Turno removido.')
+  }
+
+  const copyMondayToWeekdays = () => {
+    const currentHours = getValues('businessHours') || []
+    const mondayShifts = currentHours.filter((bh) => bh.dayOfWeek === 1)
+
+    if (mondayShifts.length === 0) {
+      toast.error('Segunda-feira não possui horários configurados.')
+      return
+    }
+
+    // Remove turnos existentes de Terça a Sexta (2 a 5)
+    const remaining = currentHours.filter((bh) => bh.dayOfWeek < 2 || bh.dayOfWeek > 5)
+
+    // Duplica todos os turnos de Segunda para Terça(2), Quarta(3), Quinta(4) e Sexta(5)
+    const newWeekdaysShifts: any[] = []
+    for (let d = 2; d <= 5; d++) {
+      mondayShifts.forEach((s) => {
+        newWeekdaysShifts.push({
+          dayOfWeek: d,
+          openTime: s.openTime,
+          closeTime: s.closeTime,
+          isOpen: s.isOpen,
+        })
+      })
+    }
+
+    setValue('businessHours', [...remaining, ...newWeekdaysShifts], { shouldDirty: true })
+    toast.success('Todos os turnos de Segunda foram replicados para Terça a Sexta!')
   }
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -1508,59 +1584,110 @@ export function MenuSettings() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dia da Semana</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead>Horário Abertura</TableHead>
-                      <TableHead>Horário Fechamento</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {DAYS_OF_WEEK.map((dayName, index) => (
-                      <TableRow key={dayName}>
-                        <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
-                          {dayName}
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`businessHours.${index}.isOpen`}
-                            control={control}
-                            render={({ field }) => (
-                              <div className="flex items-center gap-2">
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                                <span className="text-xs font-semibold text-muted-foreground">
-                                  {field.value ? 'Aberto' : 'Fechado'}
-                                </span>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-indigo-50/50 p-3.5 border border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900/30 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-indigo-500 shrink-0" />
+                    <span>Configure múltiplos turnos por dia (ex: <strong>Almoço: 12h-16h</strong> e <strong>Jantar: 18h-22h</strong>) ou horários de madrugada.</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {DAYS_OF_WEEK.map((dayName, dayIndex) => {
+                    const currentHours = watch('businessHours') || []
+                    const dayShiftsWithIndices = currentHours
+                      .map((bh, idx) => ({ ...bh, originalIndex: idx }))
+                      .filter((bh) => bh.dayOfWeek === dayIndex)
+
+                    const isDayOpen = dayShiftsWithIndices.length > 0 && dayShiftsWithIndices.some((s) => s.isOpen)
+
+                    return (
+                      <div
+                        key={dayName}
+                        className={`rounded-xl border p-4 transition-all ${
+                          isDayOpen
+                            ? 'border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60'
+                            : 'border-slate-200/60 bg-slate-50/50 opacity-70 dark:border-slate-800/40 dark:bg-slate-950/40'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={isDayOpen}
+                              onCheckedChange={(checked) => handleToggleDay(dayIndex, checked)}
+                            />
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">{dayName}</h4>
+                              <span className="text-xs text-muted-foreground">
+                                {isDayOpen
+                                  ? `${dayShiftsWithIndices.length} ${dayShiftsWithIndices.length === 1 ? 'turno configurado' : 'turnos configurados'}`
+                                  : 'Fechado o dia todo'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isDayOpen && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddShift(dayIndex)}
+                              className="h-8 text-xs font-medium border-dashed border-primary/40 hover:border-primary text-primary hover:bg-primary/5 shadow-none"
+                            >
+                              <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar Turno (ex: Jantar)
+                            </Button>
+                          )}
+                        </div>
+
+                        {isDayOpen && (
+                          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800/60">
+                            {dayShiftsWithIndices.map((shift, shiftIndex) => (
+                              <div
+                                key={shift.originalIndex}
+                                className="flex flex-wrap items-center gap-2 sm:gap-4 bg-slate-50/80 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800"
+                              >
+                                <Badge variant="outline" className="text-[11px] font-mono shrink-0 bg-background font-semibold">
+                                  Turno {shiftIndex + 1}
+                                </Badge>
+                                
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground font-medium">De:</span>
+                                  <Input
+                                    type="time"
+                                    className="h-8 w-28 text-xs font-mono"
+                                    {...register(`businessHours.${shift.originalIndex}.openTime`)}
+                                  />
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground font-medium">Até:</span>
+                                  <Input
+                                    type="time"
+                                    className="h-8 w-28 text-xs font-mono"
+                                    {...register(`businessHours.${shift.originalIndex}.closeTime`)}
+                                  />
+                                </div>
+
+                                {dayShiftsWithIndices.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveShift(shift.originalIndex, dayIndex)}
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10 ml-auto"
+                                    title="Remover este turno"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="time"
-                            disabled={!watch(`businessHours.${index}.isOpen`)}
-                            {...register(`businessHours.${index}.openTime`)}
-                            className="h-9 w-32 text-xs"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="time"
-                            disabled={!watch(`businessHours.${index}.isOpen`)}
-                            {...register(`businessHours.${index}.closeTime`)}
-                            className="h-9 w-32 text-xs"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

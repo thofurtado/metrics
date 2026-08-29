@@ -237,7 +237,7 @@ function generatePixBRCode({
   return payload + checksum
 }
 
-// Utilitário para verificar se a loja está aberta no momento
+// Utilitário para verificar se a loja está aberta no momento (suporte a múltiplos turnos por dia)
 function checkIsOpen(profile: any) {
   if (!profile) return { isOpen: true, reason: 'Aberto' }
   if (profile.isOpenManual === false) {
@@ -250,23 +250,41 @@ function checkIsOpen(profile: any) {
   const currentMinutes = String(now.getMinutes()).padStart(2, '0')
   const currentTime = `${currentHours}:${currentMinutes}`
 
-  const businessHours = profile.businessHours || []
-  const todaySchedule = businessHours.find(
-    (bh: any) => bh.dayOfWeek === currentDayOfWeek,
+  const businessHours: any[] = profile.businessHours || []
+  const todaySchedules = businessHours.filter(
+    (bh: any) => bh.dayOfWeek === currentDayOfWeek && bh.isOpen,
   )
 
-  if (!todaySchedule || !todaySchedule.isOpen) {
+  if (!todaySchedules || todaySchedules.length === 0) {
     return { isOpen: false, reason: 'Fechado hoje' }
   }
 
-  const { openTime, closeTime } = todaySchedule
-  if (openTime && closeTime) {
-    if (currentTime < openTime || currentTime > closeTime) {
-      return { isOpen: false, reason: `Fechado (Abre às ${openTime})` }
+  // Verifica se o horário atual está dentro de algum dos turnos ativos hoje
+  const activeShift = todaySchedules.find((schedule: any) => {
+    const { openTime, closeTime } = schedule
+    if (!openTime || !closeTime) return false
+    if (closeTime > openTime) {
+      return currentTime >= openTime && currentTime <= closeTime
+    } else {
+      // Turno que vira a madrugada (ex: 18:00 às 02:00)
+      return currentTime >= openTime || currentTime <= closeTime
     }
+  })
+
+  if (activeShift) {
+    return { isOpen: true, reason: 'Aberto' }
   }
 
-  return { isOpen: true, reason: 'Aberto' }
+  // Se não está aberto agora, busca o próximo turno de hoje (se houver)
+  const upcomingToday = todaySchedules
+    .filter((s: any) => s.openTime && s.openTime > currentTime)
+    .sort((a: any, b: any) => a.openTime.localeCompare(b.openTime))[0]
+
+  if (upcomingToday) {
+    return { isOpen: false, reason: `Fechado (Abre às ${upcomingToday.openTime})` }
+  }
+
+  return { isOpen: false, reason: 'Fechado no momento' }
 }
 
 // Subcomponente: Dynamic Hero Background (Preenchimento Absoluto)
@@ -1548,26 +1566,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <Clock className="h-4 w-4 text-primary" /> Horários de
                 Funcionamento
               </h4>
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1.5 text-xs">
                 {DAYS_OF_WEEK.map((dayName, idx) => {
-                  const bh = (profile?.businessHours || []).find(
-                    (b: any) => b.dayOfWeek === idx,
+                  const daySchedules = (profile?.businessHours || []).filter(
+                    (b: any) => b.dayOfWeek === idx && b.isOpen,
                   )
                   return (
                     <div
                       key={dayName}
-                      className="flex items-center justify-between border-b border-slate-100 py-1"
+                      className="flex items-start justify-between border-b border-slate-100 py-1.5"
                     >
                       <span className="font-medium text-slate-600">
                         {dayName}
                       </span>
-                      {bh && bh.isOpen ? (
-                        <span className="font-bold text-emerald-600">
-                          {bh.openTime} - {bh.closeTime}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">Fechado</span>
-                      )}
+                      <div className="text-right">
+                        {daySchedules.length > 0 ? (
+                          daySchedules.map((bh: any, sIdx: number) => (
+                            <div key={sIdx} className="font-bold text-emerald-600">
+                              {bh.openTime} - {bh.closeTime}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-slate-400 font-medium">Fechado</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
