@@ -71,7 +71,11 @@ export function Permissions() {
       if (isCreating) {
         return createUser(formData)
       } else if (selectedUser) {
-        return updateUser({ id: selectedUser.id, ...formData })
+        const payload: any = { id: selectedUser.id, ...formData }
+        if (!payload.password || payload.password.trim() === '') {
+          delete payload.password
+        }
+        return updateUser(payload)
       }
     },
     onSuccess: () => {
