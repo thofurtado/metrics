@@ -37,9 +37,18 @@ import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
 
-function showBrowserNotification(title: string, options?: NotificationOptions) {
+
+// Registra o Service Worker para Notificações no Android / Mobile
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((e) => console.log('SW register info:', e));
+  });
+}
+
+async function showBrowserNotification(title: string, options?: NotificationOptions) {
   if (typeof window === 'undefined') return;
 
+  // Vibração tátil no celular
   if ('vibrate' in navigator) {
     try {
       navigator.vibrate([200, 100, 200]);
@@ -48,22 +57,26 @@ function showBrowserNotification(title: string, options?: NotificationOptions) {
 
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.showNotification(title, options);
-    }).catch(() => {
-      try {
-        new Notification(title, options);
-      } catch (e) {}
-    });
-  } else {
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && typeof reg.showNotification === 'function') {
+        return reg.showNotification(title, {
+          ...options,
+          icon: '/favicon.svg',
+          badge: '/favicon.svg',
+          vibrate: [200, 100, 200]
+        });
+      }
+    }
+    new Notification(title, options);
+  } catch (e) {
     try {
       new Notification(title, options);
-    } catch (e) {
-      console.warn('Fallback Notification error:', e);
-    }
+    } catch (err) {}
   }
 }
+
 
 
 interface GenericMenuProps {
