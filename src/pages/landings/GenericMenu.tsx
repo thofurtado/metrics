@@ -38,20 +38,78 @@ import { api } from '@/lib/axios'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
 
 
+function playChimeAlert() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880.00, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+}
+
+function requestNotificationPermission(): Promise<NotificationPermission> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return resolve('denied');
+    }
+    try {
+      // Callback support (older mobile safari/chrome engines)
+      let resolved = false;
+      const result = Notification.requestPermission((p) => {
+        if (!resolved) {
+          resolved = true;
+          resolve(p);
+        }
+      });
+      // Promise support
+      if (result && typeof result.then === 'function') {
+        result.then((p) => {
+          if (!resolved) {
+            resolved = true;
+            resolve(p);
+          }
+        }).catch(() => {
+          if (!resolved) {
+            resolved = true;
+            resolve('denied');
+          }
+        });
+      }
+    } catch (err) {
+      try {
+        Notification.requestPermission().then(resolve).catch(() => resolve('denied'));
+      } catch (e) {
+        resolve('denied');
+      }
+    }
+  });
+}
+
 // Registra o Service Worker para Notificações no Android / Mobile
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((e) => console.log('SW register info:', e));
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((e) => console.log('SW register info:', e));
   });
 }
 
 async function showBrowserNotification(title: string, options?: NotificationOptions) {
   if (typeof window === 'undefined') return;
 
-  // Vibração tátil no celular
+  // Toca alerta sonoro
+  playChimeAlert();
+
+  // Vibração tátil no celular (2 pulsos fortes)
   if ('vibrate' in navigator) {
     try {
-      navigator.vibrate([200, 100, 200]);
+      navigator.vibrate([200, 100, 200, 100, 300]);
     } catch (e) {}
   }
 
@@ -65,8 +123,11 @@ async function showBrowserNotification(title: string, options?: NotificationOpti
           ...options,
           icon: '/favicon.svg',
           badge: '/favicon.svg',
+          tag: 'order-status-update',
+          renotify: true,
+          requireInteraction: true,
           vibrate: [200, 100, 200]
-        });
+        } as any);
       }
     }
     new Notification(title, options);
@@ -1089,7 +1150,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       return;
     }
 
-    if (Notification.permission === 'denied') {
+    const currentPerm = Notification.permission;
+
+    if (currentPerm === 'denied') {
       alert(
         '⚠️ As notificações estão bloqueadas no seu navegador para este site.\n\n' +
         'Para ativar no celular:\n' +
@@ -1101,22 +1164,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await requestNotificationPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
-        await showBrowserNotification('🔔 Notificações Ativadas!', {
-          body: 'Você será avisado assim que o restaurante aceitar seu pedido e quando o motoboy sair!',
+        await showBrowserNotification('🔔 Notificações Ativadas com Sucesso!', {
+          body: 'Você será avisado em tempo real quando o restaurante aceitar e quando o motoboy sair!',
           icon: '/favicon.svg'
         });
       } else if (permission === 'denied') {
         alert(
           '⚠️ Você selecionou bloquear notificações.\n\n' +
-          'Se mudar de ideia, você pode permitir tocando no cadeado ao lado do endereço web no topo do Chrome.'
+          'Se mudar de ideia, toque no cadeado ao lado do endereço web no topo do navegador para permitir.'
         );
       }
     } catch (err) {
       console.warn('Erro ao solicitar permissão de notificação:', err);
-      alert('Não foi possível ativar as notificações: ' + (err as any)?.message);
     }
   };
 
@@ -2424,9 +2486,31 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <h3 className="text-2xl font-black tracking-tight text-slate-900">
                 Parabéns pelo seu Pedido! 🎉
               </h3>
-              <p className="mt-2 max-w-md text-sm font-medium text-slate-600">
-                Seu pedido foi registrado e enviado com sucesso! Acompanhe o status em tempo real abaixo:
+              <p className="mt-1 max-w-md text-xs font-medium text-slate-600">
+                Seu pedido foi registrado com sucesso! Acompanhe o status ao vivo:
               </p>
+
+              {/* CARD DESTACADO PARA ATIVAR NOTIFICAÇÕES (SOFT PROMPT) */}
+              {!pushNotificationEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                <div className="mt-4 w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-3.5 text-left shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
+                      <Bell className="h-5 w-5 animate-bounce" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-black text-slate-900">Deseja ser avisado no celular?</p>
+                      <p className="text-[11px] text-slate-600">Seu celular vai vibrar e apitar quando o motoboy sair!</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRequestPushNotification}
+                    className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow transition-transform active:scale-95 hover:bg-slate-800"
+                  >
+                    <span>🔔 Ativar Avisos no Celular</span>
+                  </button>
+                </div>
+              )}
 
               {/* CARD DE STATUS EM TEMPO REAL (LIVE TRACKER) */}
               <div className="mt-4 w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md text-left">
