@@ -1,3 +1,15 @@
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -1167,8 +1179,28 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const permission = await requestNotificationPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
+
+        // Inscreve no Google FCM Web Push nativo
+        try {
+          if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array('BGQradO0xULQAgILyiblpRWIplGvISWCmwpeOEDmxQVicz3fg78eqkFRw-TknarkuLhLYiBq9RyL-94CPYpfb-k')
+            });
+
+            if (createdOrderId) {
+              await api.post('/public/orders/' + createdOrderId + '/push-subscription', {
+                subscription: sub
+              });
+            }
+          }
+        } catch (subErr) {
+          console.warn('Erro ao registrar assinatura WebPush:', subErr);
+        }
+
         await showBrowserNotification('🔔 Notificações Ativadas com Sucesso!', {
-          body: 'Você será avisado em tempo real quando o restaurante aceitar e quando o motoboy sair!',
+          body: 'Você será avisado em tempo real mesmo com a tela apagada!',
           icon: '/favicon.svg'
         });
       } else if (permission === 'denied') {
