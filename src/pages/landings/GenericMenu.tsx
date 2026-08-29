@@ -1375,12 +1375,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs font-black">
                                             {totalInCart}
                                           </span>
-                                          Montar Pedido
+                                          Adicionar
                                         </>
                                       ) : (
                                         <>
                                           <Plus className="h-4 w-4 stroke-[3]" />
-                                          Montar Pedido
+                                          Adicionar
                                         </>
                                       )}
                                     </button>
