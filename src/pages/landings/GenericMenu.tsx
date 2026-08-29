@@ -1010,10 +1010,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setLiveOrderStatus('pending');
       }
 
-      window.open(url, '_blank')
-
       setLastOrderText(text)
       setCheckoutWizardStep(4)
+
+      // Solicita permissão de notificação push imediatamente no clique
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            setPushNotificationEnabled(true)
+          }
+        }).catch(() => {})
+      }
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
@@ -2468,10 +2475,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
-              {/* Reenviar WhatsApp caso necessário */}
+              {/* Botão Principal de Envio no WhatsApp */}
               {lastOrderText && (
-                <p className="mt-4 text-xs text-slate-400">
-                  Não abriu o WhatsApp automaticamente?{' '}
+                <div className="mt-4 w-full">
                   <button
                     type="button"
                     onClick={() => {
@@ -2479,11 +2485,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(lastOrderText)}`
                       window.open(url, '_blank')
                     }}
-                    className="font-bold text-emerald-600 hover:underline"
+                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 py-3.5 text-sm font-extrabold text-white shadow-lg transition-transform active:scale-98 hover:bg-emerald-700"
                   >
-                    Clique aqui para abrir
+                    <span>Enviar Cópia no WhatsApp</span>
+                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">💬</span>
                   </button>
-                </p>
+                </div>
               )}
 
               {/* Botão de Concluir */}

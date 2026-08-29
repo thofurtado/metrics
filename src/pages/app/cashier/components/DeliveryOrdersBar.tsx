@@ -45,7 +45,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       const res = await api.get('/public/orders/pending')
       return res.data?.orders || []
     },
-    refetchInterval: 6000,
+    refetchInterval: 3000,
   })
 
   const orders: any[] = Array.isArray(data) ? data : []
@@ -62,6 +62,28 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     }
     prevPendingCount.current = pendingOrders.length
   }, [pendingOrders.length])
+
+  // Escuta SSE em tempo real para atualizar instantaneamente sem precisar de F5
+  useEffect(() => {
+    const sseUrl = (api.defaults.baseURL || '') + '/public/orders/stream'
+    let eventSource: EventSource | null = null
+    try {
+      eventSource = new EventSource(sseUrl)
+      eventSource.addEventListener('new_order', () => {
+        queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
+        playChimeSound()
+      })
+      eventSource.addEventListener('order_status_updated', () => {
+        queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
+      })
+    } catch (e) {
+      console.warn('Erro ao conectar SSE no DeliveryOrdersBar:', e)
+    }
+
+    return () => {
+      if (eventSource) eventSource.close()
+    }
+  }, [queryClient])
 
   // A barra fica sempre visível no turno para dar visibilidade operacional ao caixa
 
