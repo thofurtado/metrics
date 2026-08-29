@@ -63,10 +63,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     prevPendingCount.current = pendingOrders.length
   }, [pendingOrders.length])
 
-  // Se não há nenhum pedido de delivery no dia, mantém a tela 100% limpa
-  if (orders.length === 0 && !isLoading) {
-    return null
-  }
+  // A barra fica sempre visível no turno para dar visibilidade operacional ao caixa
 
   const openTab = (tab: 'pending' | 'in_preparation' | 'dispatched' | 'delivered') => {
     setSelectedTab(tab)
