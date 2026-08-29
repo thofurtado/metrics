@@ -902,6 +902,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleFinalizeOrder = async () => {
+    // Tenta solicitar permissão no momento exato do clique do usuário (User Gesture)
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      try {
+        Notification.requestPermission().then((p) => {
+          if (p === 'granted') setPushNotificationEnabled(true)
+        }).catch(() => {})
+      } catch (e) {}
+    }
+
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Por favor, preencha seu nome e WhatsApp.')
       setCheckoutWizardStep(2)
@@ -1075,21 +1084,39 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   
   // Solicita permissão de Notificação Nativa do Celular / Navegador
   const handleRequestPushNotification = async () => {
-    if (!('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
       alert('Seu navegador não suporta notificações nativas.');
       return;
     }
+
+    if (Notification.permission === 'denied') {
+      alert(
+        '⚠️ As notificações estão bloqueadas no seu navegador para este site.\n\n' +
+        'Para ativar no celular:\n' +
+        '1. Toque no ícone de configurações / cadeado (🔒) ao lado do endereço no topo do navegador\n' +
+        '2. Toque em "Permissões" ou "Configurações do site"\n' +
+        '3. Ative "Notificações" para "Permitir" e recarregue a página.'
+      );
+      return;
+    }
+
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
-        showBrowserNotification('🔔 Notificações Ativadas!', {
+        await showBrowserNotification('🔔 Notificações Ativadas!', {
           body: 'Você será avisado assim que o restaurante aceitar seu pedido e quando o motoboy sair!',
-          icon: '/favicon.ico'
+          icon: '/favicon.svg'
         });
+      } else if (permission === 'denied') {
+        alert(
+          '⚠️ Você selecionou bloquear notificações.\n\n' +
+          'Se mudar de ideia, você pode permitir tocando no cadeado ao lado do endereço web no topo do Chrome.'
+        );
       }
     } catch (err) {
       console.warn('Erro ao solicitar permissão de notificação:', err);
+      alert('Não foi possível ativar as notificações: ' + (err as any)?.message);
     }
   };
 
