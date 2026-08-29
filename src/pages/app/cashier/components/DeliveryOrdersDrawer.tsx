@@ -253,23 +253,30 @@ export function DeliveryOrdersDrawer({
                   )}
 
                   {/* Itens do Pedido */}
-                  <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                       Itens do Pedido:
                     </p>
                     {order.items?.map((item: any) => (
-                      <div key={item.id} className="flex items-start justify-between text-xs">
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {item.quantity}x {item.name}
-                          {item.observation && (
-                            <span className="block text-[11px] text-slate-400">
-                              {item.observation}
-                            </span>
-                          )}
-                        </span>
-                        <span className="font-bold text-slate-600 dark:text-slate-400">
-                          {formatBRL(item.price * item.quantity)}
-                        </span>
+                      <div key={item.id} className="space-y-0.5 text-xs">
+                        <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
+                          <span>{item.quantity}x {item.name}</span>
+                          <span>{formatBRL(item.price * item.quantity)}</span>
+                        </div>
+                        {Array.isArray(item.complements) && item.complements.length > 0 && (
+                          <div className="pl-3 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">
+                            {item.complements.map((c: any, idx: number) => (
+                              <span key={idx} className="block font-medium">
+                                + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name} {c.price > 0 ? `(${formatBRL(c.price)})` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {item.observation && item.observation.trim() && (
+                          <div className="pl-3 text-[11px] italic text-amber-700 dark:text-amber-400">
+                            Obs: {item.observation}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
