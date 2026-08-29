@@ -359,6 +359,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
   const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4>(1)
   const [lastOrderText, setLastOrderText] = useState('')
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
+  const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
+  const [pushNotificationEnabled, setPushNotificationEnabled] = useState(false)
   const [fulfillmentType, setFulfillmentType] = useState<
     'DELIVERY' | 'TAKEOUT'
   >('DELIVERY')
@@ -874,7 +878,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       // 2. Envia pedido para fila de sincronização do PDV
       try {
-        await api.post('/public/orders', {
+        const orderApiRes = await api.post('/public/orders', {
           client_name: customerName,
           client_phone: customerPhone,
           street: street || 'Retirada no Balcão',
@@ -999,6 +1003,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
       const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(text)}`
+      if (orderApiRes?.data?.order_id) {
+        setCreatedOrderId(orderApiRes.data.order_id);
+        setCreatedDisplayId(orderApiRes.data.display_id);
+        setLiveOrderStatus('pending');
+      }
+
       window.open(url, '_blank')
 
       setLastOrderText(text)
@@ -1008,6 +1018,71 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
     }
   }
+
+  
+  // Solicita permissão de Notificação Nativa do Celular / Navegador
+  const handleRequestPushNotification = async () => {
+    if (!('Notification' in window)) {
+      alert('Seu navegador não suporta notificações nativas.');
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setPushNotificationEnabled(true);
+        new Notification('🔔 Notificações Ativadas!', {
+          body: 'Você será avisado assim que o restaurante aceitar seu pedido e quando o motoboy sair!',
+          icon: '/favicon.ico'
+        });
+      }
+    } catch (err) {
+      console.warn('Erro ao solicitar permissão de notificação:', err);
+    }
+  };
+
+  // Efeito de escuta periódica do status do pedido criado (Live Tracking)
+  useEffect(() => {
+    if (!createdOrderId || checkoutWizardStep !== 4) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/public/orders/${createdOrderId}/status`);
+        if (res.data && res.data.status) {
+          const newStatus = res.data.status;
+          setLiveOrderStatus((prev) => {
+            if (prev !== newStatus) {
+              // Dispara notificação nativa do navegador se autorizado
+              if ('Notification' in window && Notification.permission === 'granted') {
+                if (newStatus === 'in_preparation') {
+                  new Notification(`👨‍🍳 Pedido #${res.data.display_id || ''} Confirmado!`, {
+                    body: 'O restaurante aceitou seu pedido e já está preparando tudo com carinho!',
+                    icon: '/favicon.ico'
+                  });
+                  if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+                } else if (newStatus === 'dispatched') {
+                  new Notification(`🛵 Pedido #${res.data.display_id || ''} a Caminho!`, {
+                    body: 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
+                    icon: '/favicon.ico'
+                  });
+                  if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+                } else if (newStatus === 'delivered') {
+                  new Notification(`🎉 Pedido #${res.data.display_id || ''} Entregue!`, {
+                    body: 'Seu pedido foi entregue. Bom apetite!',
+                    icon: '/favicon.ico'
+                  });
+                }
+              }
+            }
+            return newStatus;
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao verificar status do pedido:', err);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [createdOrderId, checkoutWizardStep]);
 
   const handleFinishAndReset = () => {
     setCart({})
@@ -2270,8 +2345,83 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 Parabéns pelo seu Pedido! 🎉
               </h3>
               <p className="mt-2 max-w-md text-sm font-medium text-slate-600">
-                Seu pedido foi registrado e enviado com sucesso para o nosso WhatsApp! Já estamos prontos para preparar tudo com muito carinho.
+                Seu pedido foi registrado e enviado com sucesso! Acompanhe o status em tempo real abaixo:
               </p>
+
+              {/* CARD DE STATUS EM TEMPO REAL (LIVE TRACKER) */}
+              <div className="mt-4 w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md text-left">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                    Acompanhamento do Pedido #{createdDisplayId || ''}
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Tempo Real
+                  </span>
+                </div>
+
+                <div className="mt-3">
+                  {liveOrderStatus === 'pending' && (
+                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 text-amber-900 border border-amber-200/60">
+                      <Clock className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold">🟡 Aguardando Confirmação do Restaurante</p>
+                        <p className="text-xs text-amber-800/80 mt-0.5">
+                          O restaurante recebeu seu pedido e está validando para iniciar o preparo.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {liveOrderStatus === 'in_preparation' && (
+                    <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-3 text-orange-900 border border-orange-200/60 animate-fade-in">
+                      <ChefHat className="h-5 w-5 shrink-0 text-orange-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold">👨‍🍳 Pedido Confirmado! Em Preparo</p>
+                        <p className="text-xs text-orange-800/80 mt-0.5">
+                          Nossa cozinha já está preparando seus pratos com todo o carinho.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {liveOrderStatus === 'dispatched' && (
+                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 p-3 text-blue-900 border border-blue-200/60 animate-fade-in">
+                      <Bike className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold">🛵 Pedido a Caminho!</p>
+                        <p className="text-xs text-blue-800/80 mt-0.5">
+                          O motoboy já retirou seu pedido e está a caminho do seu endereço.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {liveOrderStatus === 'delivered' && (
+                    <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-3 text-emerald-900 border border-emerald-200/60 animate-fade-in">
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold">🎉 Pedido Entregue!</p>
+                        <p className="text-xs text-emerald-800/80 mt-0.5">
+                          Seu pedido foi finalizado com sucesso. Tenha um excelente apetite!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botão de Ativar Notificação Push */}
+                {!pushNotificationEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
+                  <button
+                    type="button"
+                    onClick={handleRequestPushNotification}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow transition-transform active:scale-98 hover:bg-slate-800"
+                  >
+                    <Bell className="h-4 w-4 text-amber-400" />
+                    <span>Avisar no meu celular quando o motoboy sair 🔔</span>
+                  </button>
+                )}
+              </div>
 
               {/* Resumo do Pedido Confirmado */}
               <div className="mt-5 w-full space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-left">

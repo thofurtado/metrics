@@ -24,6 +24,7 @@ import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
 import { CaixinhasTable } from './CaixinhasTable'
 import { SummaryCards } from './SummaryCards'
+import { DeliveryOrdersBar } from './DeliveryOrdersBar'
 import { TransactionForm } from './TransactionForm'
 
 interface DetalheLoteProps {
