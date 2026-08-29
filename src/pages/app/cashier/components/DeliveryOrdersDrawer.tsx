@@ -75,9 +75,7 @@ export function DeliveryOrdersDrawer({
     }
   }, [open, initialTab])
 
-  if (!open) return null
-
-  const pendingOrders = orders.filter((o) => o.status === 'pending')
+    const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
@@ -300,6 +298,8 @@ export function DeliveryOrdersDrawer({
 
     return { total, count, avg, pixTotal, cardTotal, cashTotal, driverStats }
   }, [deliveredOrders])
+
+  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
