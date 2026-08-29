@@ -64,18 +64,23 @@ api.interceptors.response.use(
 
       // 401 Unauthorized: token inválido ou expirado → logout
       if (status === 401) {
-        localStorage.clear()
-        window.dispatchEvent(new Event('auth-change'))
-        if (typeof window !== 'undefined') {
-          const currentPath = window.location.pathname
-          if (currentPath.startsWith('/cashier')) {
-            if (currentPath !== '/cashier/sign-in') {
-              window.location.href = '/cashier/sign-in'
+        const url = error.config?.url || ''
+        // Não desloga se o 401 veio de rotas de sincronização opcionais ou quiosque
+        if (!url.includes('/sync') && !url.includes('/public/')) {
+          localStorage.clear()
+          window.dispatchEvent(new Event('auth-change'))
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname
+            if (currentPath.startsWith('/cashier')) {
+              if (currentPath !== '/cashier/sign-in') {
+                window.location.href = '/cashier/sign-in'
+              }
+            } else {
+              window.location.href = '/sign-in'
             }
-          } else {
-            window.location.href = '/sign-in'
           }
         }
+      }
       }
 
       // 403 Forbidden: autenticado mas sem permissão → só avisa, não faz logout
