@@ -467,6 +467,8 @@ export function DetalheLote({
           <SummaryCards resumo={resumoLote} onEditAbertura={onEditarAbertura} />
         )}
 
+        <DeliveryOrdersBar sessionId={loteAtivo?.id} />
+
         {loteAtivo.status === 'ABERTO' ||
         loteAtivo.status === 'Aberto' ||
         loteAtivo.status === 'OPEN' ? (
