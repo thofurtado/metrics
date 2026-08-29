@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Bike,
   CheckCircle2,
@@ -12,7 +12,9 @@ import {
   Receipt,
   User,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Flame,
+  Navigation
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -37,7 +39,6 @@ export function DeliveryOrdersDrawer({
   const [activeTab, setActiveTab] = useState<'pending' | 'in_preparation' | 'dispatched' | 'delivered'>(initialTab)
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null)
 
-  // Sincroniza a aba inicial se aberta
   React.useEffect(() => {
     if (open && initialTab) {
       setActiveTab(initialTab)
@@ -70,11 +71,11 @@ export function DeliveryOrdersDrawer({
       })
 
       if (nextStatus === 'in_preparation') {
-        toast.success('Pedido Aceito! Cliente notificado no celular.')
+        toast.success('Pedido Aceito! Enviado para a cozinha e cliente notificado.')
       } else if (nextStatus === 'dispatched') {
         toast.success('Pedido Despachado! Notificação enviada para o cliente.')
       } else if (nextStatus === 'delivered') {
-        toast.success('Baixa realizada! Venda lançada com sucesso no caixa.')
+        toast.success('Baixa confirmada! Venda lançada com sucesso no caixa.')
       }
 
       if (onOrderCompleted) onOrderCompleted()
@@ -88,6 +89,15 @@ export function DeliveryOrdersDrawer({
 
   const formatBRL = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+
+  const getElapsedTime = (dateString?: string) => {
+    if (!dateString) return ''
+    const diffMin = Math.max(0, Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 60000))
+    if (diffMin === 0) return 'Agora mesmo'
+    if (diffMin < 60) return `Há ${diffMin} min`
+    const diffH = Math.floor(diffMin / 60)
+    return `Há ${diffH}h ${diffMin % 60}m`
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -109,7 +119,7 @@ export function DeliveryOrdersDrawer({
         className="relative z-10 flex h-full w-full max-w-xl flex-col bg-slate-50 shadow-2xl dark:bg-slate-900"
       >
         {/* Header do Drawer */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
               <Bike className="h-5 w-5" />
@@ -119,7 +129,7 @@ export function DeliveryOrdersDrawer({
                 Gestão de Entregas & Pedidos Online
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Acompanhe e despache pedidos em tempo real
+                Acompanhe o fluxo operacional do pedido até a baixa no caixa
               </p>
             </div>
           </div>
@@ -131,8 +141,8 @@ export function DeliveryOrdersDrawer({
           </button>
         </div>
 
-        {/* Abas de Navegação */}
-        <div className="flex border-b border-slate-200 bg-white px-3 dark:border-slate-800 dark:bg-slate-950">
+        {/* Abas com Objetivos Operacionais Claros */}
+        <div className="flex border-b border-slate-200 bg-white px-2 dark:border-slate-800 dark:bg-slate-950">
           <button
             onClick={() => setActiveTab('pending')}
             className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
@@ -141,7 +151,16 @@ export function DeliveryOrdersDrawer({
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span>Novos ({pendingOrders.length})</span>
+            <div className="flex items-center justify-center gap-1.5">
+              <span>Novos</span>
+              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                pendingOrders.length > 0
+                  ? 'bg-amber-500 text-slate-950'
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {pendingOrders.length}
+              </span>
+            </div>
             {activeTab === 'pending' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
             )}
@@ -155,7 +174,16 @@ export function DeliveryOrdersDrawer({
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span>Cozinha ({inPrepOrders.length})</span>
+            <div className="flex items-center justify-center gap-1.5">
+              <span>Cozinha</span>
+              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                inPrepOrders.length > 0
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {inPrepOrders.length}
+              </span>
+            </div>
             {activeTab === 'in_preparation' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
             )}
@@ -169,7 +197,16 @@ export function DeliveryOrdersDrawer({
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span>Na Rua ({dispatchedOrders.length})</span>
+            <div className="flex items-center justify-center gap-1.5">
+              <span>Na Rua</span>
+              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                dispatchedOrders.length > 0
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {dispatchedOrders.length}
+              </span>
+            </div>
             {activeTab === 'dispatched' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
             )}
@@ -183,11 +220,32 @@ export function DeliveryOrdersDrawer({
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span>Baixados ({deliveredOrders.length})</span>
+            <div className="flex items-center justify-center gap-1.5">
+              <span>Baixados</span>
+              <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                {deliveredOrders.length}
+              </span>
+            </div>
             {activeTab === 'delivered' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
             )}
           </button>
+        </div>
+
+        {/* Banner Explicativo de Contexto de Cada Aba */}
+        <div className="border-b border-slate-200 bg-slate-100/70 px-4 py-2 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+          {activeTab === 'pending' && (
+            <p>⚡ <strong>Novos Pedidos:</strong> Revise pagamento, troco e itens antes de confirmar para produção.</p>
+          )}
+          {activeTab === 'in_preparation' && (
+            <p>🍳 <strong>Cozinha em Produção:</strong> Acompanhe o tempo de preparo dos pratos até o despacho.</p>
+          )}
+          {activeTab === 'dispatched' && (
+            <p>🛵 <strong>Em Rota de Entrega:</strong> Monitore o motoboy. Quando retornar, confirme e lance no caixa.</p>
+          )}
+          {activeTab === 'delivered' && (
+            <p>✅ <strong>Histórico de Baixas:</strong> Pedidos finalizados e integrados ao caixa da sessão atual.</p>
+          )}
         </div>
 
         {/* Lista de Pedidos */}
@@ -196,7 +254,7 @@ export function DeliveryOrdersDrawer({
             <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
               <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
               <p className="text-sm font-bold">Nenhum pedido nesta etapa</p>
-              <p className="text-xs">Os novos pedidos aparecerão aqui automaticamente.</p>
+              <p className="text-xs">Os pedidos em andamento aparecerão aqui automaticamente.</p>
             </div>
           ) : (
             currentList.map((order) => {
@@ -221,18 +279,31 @@ export function DeliveryOrdersDrawer({
                         </h3>
                       </div>
                       {order.client_phone && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                          <Phone className="h-3 w-3" /> {order.client_phone}
-                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <p className="flex items-center gap-1 text-xs text-slate-500">
+                            <Phone className="h-3 w-3" /> {order.client_phone}
+                          </p>
+                          {activeTab === 'dispatched' && (
+                            <a
+                              href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            >
+                              WhatsApp
+                            </a>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="text-right">
                       <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
                         {formatBRL(order.total_amount)}
                       </span>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        {order.created_at ? new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </p>
+                      <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-slate-400">
+                        <Clock className="h-3 w-3" />
+                        <span>{getElapsedTime(order.created_at)}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -240,48 +311,55 @@ export function DeliveryOrdersDrawer({
                   {order.address && (
                     <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
-                      <span>{order.address}</span>
+                      <span className="font-medium">{order.address}</span>
                     </div>
                   )}
 
-                  {/* Alerta de Troco / Maquininha */}
-                  {(hasTroco || hasCartao) && (
-                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-2.5 text-xs font-bold text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  {/* Alerta de Pagamento / Troco / Maquininha */}
+                  {(hasTroco || hasCartao || obs) && (
+                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 text-xs font-bold text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
                       <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
                       <span>{obs.split('\n').find((l: string) => l.includes('Pagamento')) || obs}</span>
                     </div>
                   )}
 
-                  {/* Itens do Pedido */}
+                  {/* Itens do Pedido (Formatados Limpos sem Repetição) */}
                   <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                       Itens do Pedido:
                     </p>
-                    {order.items?.map((item: any) => (
-                      <div key={item.id} className="space-y-0.5 text-xs">
-                        <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
-                          <span>{item.quantity}x {item.name}</span>
-                          <span>{formatBRL(item.price * item.quantity)}</span>
+                    {order.items?.map((item: any) => {
+                      const itemName = item.name || 'Item'
+                      const obsItem = (item.observation || '').trim()
+                      // Só exibe observação se ela existir e for DIFERENTE do nome do produto
+                      const showObs = obsItem && obsItem.toLowerCase() !== itemName.toLowerCase()
+
+                      return (
+                        <div key={item.id} className="space-y-0.5 text-xs">
+                          <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
+                            <span>{item.quantity}x {itemName}</span>
+                            <span>{formatBRL(item.price * item.quantity)}</span>
+                          </div>
+                          {Array.isArray(item.complements) && item.complements.length > 0 && (
+                            <div className="pl-3 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">
+                              {item.complements.map((c: any, idx: number) => (
+                                <span key={idx} className="block font-medium">
+                                  + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name} {c.price > 0 ? `(${formatBRL(c.price)})` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {showObs && (
+                            <div className="pl-3 text-[11px] italic font-medium text-amber-700 dark:text-amber-400">
+                              Obs: {obsItem}
+                            </div>
+                          )}
                         </div>
-                        {Array.isArray(item.complements) && item.complements.length > 0 && (
-                          <div className="pl-3 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">
-                            {item.complements.map((c: any, idx: number) => (
-                              <span key={idx} className="block font-medium">
-                                + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name} {c.price > 0 ? `(${formatBRL(c.price)})` : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {item.observation && item.observation.trim() && (
-                          <div className="pl-3 text-[11px] italic text-amber-700 dark:text-amber-400">
-                            Obs: {item.observation}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
-                  {/* Ações por Etapa */}
+                  {/* Ações Específicas por Etapa */}
                   <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
                     {order.status === 'pending' && (
                       <button
