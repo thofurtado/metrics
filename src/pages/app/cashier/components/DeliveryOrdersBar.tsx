@@ -43,12 +43,13 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     queryKey: ['cashier-online-orders'],
     queryFn: async () => {
       const res = await api.get('/public/orders/pending')
-      return res.data?.orders || []
+      return res.data || { orders: [], profile: null }
     },
     refetchInterval: 3000,
   })
 
-  const orders: any[] = Array.isArray(data) ? data : []
+  const orders: any[] = Array.isArray(data?.orders) ? data.orders : (Array.isArray(data) ? data : [])
+  const profile = data?.profile || null
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
@@ -150,7 +151,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               }`}
             >
               <ChefHat className="h-3.5 w-3.5" />
-              <span>{inPrepOrders.length} Na Cozinha</span>
+              <span>{inPrepOrders.length} Em Produção</span>
             </button>
 
             {/* 3. Na Rua */}
@@ -185,6 +186,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
         onClose={() => setIsDrawerOpen(false)}
         initialTab={selectedTab}
         orders={orders}
+        profile={profile}
         sessionId={sessionId}
         onOrderCompleted={() => {
           queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
