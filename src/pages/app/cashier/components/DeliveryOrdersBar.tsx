@@ -65,7 +65,8 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
 
   // Escuta SSE em tempo real para atualizar instantaneamente sem precisar de F5
   useEffect(() => {
-    const sseUrl = (api.defaults.baseURL || '') + '/public/orders/stream'
+    const host = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' ? 'marujo.metrics.dev.br' : window.location.hostname) : ''
+    const sseUrl = `${api.defaults.baseURL || ''}/public/orders/stream?tenant=${encodeURIComponent(host)}`
     let eventSource: EventSource | null = null
     try {
       eventSource = new EventSource(sseUrl)
