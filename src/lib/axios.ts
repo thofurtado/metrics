@@ -65,7 +65,7 @@ api.interceptors.response.use(
       // 401 Unauthorized: token inválido ou expirado → logout
       if (status === 401) {
         const url = error.config?.url || ''
-        // Não desloga se o 401 veio de rotas de sincronização opcionais ou quiosque
+        // Não desloga se o 401 veio de rotas de sincronização opcionais ou públicas
         if (!url.includes('/sync') && !url.includes('/public/')) {
           localStorage.clear()
           window.dispatchEvent(new Event('auth-change'))
@@ -80,7 +80,6 @@ api.interceptors.response.use(
             }
           }
         }
-      }
       }
 
       // 403 Forbidden: autenticado mas sem permissão → só avisa, não faz logout
