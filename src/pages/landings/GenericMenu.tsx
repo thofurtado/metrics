@@ -1225,26 +1225,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           const newStatus = res.data.status;
           setLiveOrderStatus((prev) => {
             if (prev !== newStatus) {
-              // Dispara notificação nativa do navegador se autorizado
-              if ('Notification' in window && Notification.permission === 'granted') {
-                if (newStatus === 'in_preparation') {
-                  new Notification(`👨‍🍳 Pedido #${res.data.display_id || ''} Confirmado!`, {
-                    body: 'O restaurante aceitou seu pedido e já está preparando tudo com carinho!',
-                    icon: '/favicon.ico'
-                  });
-                  if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-                } else if (newStatus === 'dispatched') {
-                  new Notification(`🛵 Pedido #${res.data.display_id || ''} a Caminho!`, {
-                    body: 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
-                    icon: '/favicon.ico'
-                  });
-                  if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-                } else if (newStatus === 'delivered') {
-                  new Notification(`🎉 Pedido #${res.data.display_id || ''} Entregue!`, {
-                    body: 'Seu pedido foi entregue. Bom apetite!',
-                    icon: '/favicon.ico'
-                  });
-                }
+              // Dispara notificação via Service Worker nativo (seguro em Android, iOS e PC)
+              if (newStatus === 'in_preparation') {
+                showBrowserNotification(`👨‍🍳 Pedido #${res.data.display_id || ''} Confirmado!`, {
+                  body: 'O restaurante aceitou seu pedido e já está preparando tudo com carinho!',
+                  icon: '/favicon.svg'
+                });
+              } else if (newStatus === 'dispatched') {
+                showBrowserNotification(`🛵 Pedido #${res.data.display_id || ''} a Caminho!`, {
+                  body: 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
+                  icon: '/favicon.svg'
+                });
+              } else if (newStatus === 'delivered') {
+                showBrowserNotification(`🎉 Pedido #${res.data.display_id || ''} Entregue!`, {
+                  body: 'Seu pedido foi entregue. Tenha um excelente apetite!',
+                  icon: '/favicon.svg'
+                });
               }
             }
             return newStatus;
