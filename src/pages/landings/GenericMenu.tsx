@@ -876,9 +876,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       // 1. Registra dados do cliente no backend via API publica
       await registerClientInBackend()
 
+      let orderApiRes: any = null
       // 2. Envia pedido para fila de sincronização do PDV
       try {
-        const orderApiRes = await api.post('/public/orders', {
+        orderApiRes = await api.post('/public/orders', {
           client_name: customerName,
           client_phone: customerPhone,
           street: street || 'Retirada no Balcão',
