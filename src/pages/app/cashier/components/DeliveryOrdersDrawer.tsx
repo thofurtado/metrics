@@ -39,7 +39,8 @@ import {
   ListOrdered,
   Check,
   Plus,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -54,8 +55,8 @@ interface DeliveryOrdersDrawerProps {
   onOrderCompleted?: () => void
 }
 
-// Cache local em memória de coordenadas para não sobrecarregar Nominatim
-const coordsCache: Record<string, [number, number]> = {}
+// Cache de coordenadas em memória
+const coordsCache: Record<string, { coords: [number, number]; precision: 'exact' | 'neighborhood' } | null> = {}
 
 export function DeliveryOrdersDrawer({
   open,
@@ -98,11 +99,19 @@ export function DeliveryOrdersDrawer({
   const [customRouteDriver, setCustomRouteDriver] = useState<string>('')
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
   const [isDispatchingBatch, setIsDispatchingBatch] = useState(false)
-  const [isRealGpsRoute, setIsRealGpsRoute] = useState(false)
+  const [unresolvedStops, setUnresolvedStops] = useState<string[]>([])
   const [routeStats, setRouteStats] = useState<{
     totalDistanceKm: number
     totalDurationMin: number
-    legs: { from: string; to: string; distanceKm: number; durationMin: number; sameAddress?: boolean }[]
+    isRealGps: boolean
+    legs: {
+      from: string
+      to: string
+      distanceKm: number
+      durationMin: number
+      sameAddress?: boolean
+      unresolved?: boolean
+    }[]
   } | null>(null)
 
   // Modal de Despacho Individual com Motoboy
@@ -229,7 +238,7 @@ export function DeliveryOrdersDrawer({
     return parts.length > 0 ? parts.join(' - ') : 'Restaurante'
   }, [profile])
 
-  // Cálculo inteligente de SLA com base nos setores configurados
+  // Cálculo de SLA
   const getSlaInfo = (order: any) => {
     const createdMs = order.created_at ? new Date(order.created_at).getTime() : Date.now()
     const diffMin = Math.max(0, Math.floor((currentTime - createdMs) / 60000))
@@ -439,7 +448,7 @@ export function DeliveryOrdersDrawer({
   }
 
   // =========================================================================
-  // MONTAGEM DE ROTA & CÁLCULO DE DISTÂNCIA E TEMPO ENTRE CADA PARADA
+  // MONTAGEM DE ROTA & CÁLCULO MULTI-TIER REAL COM OSRM
   // =========================================================================
   const openRouteBuilder = () => {
     if (selectedOrderIdsForRoute.length === 0) {
@@ -455,55 +464,93 @@ export function DeliveryOrdersDrawer({
     calculateRouteDistanceAndTime(selected)
   }
 
-  // Geocodificação OpenStreetMap Nominatim
-  const geocodeAddress = async (addr: string, cityFallback = ''): Promise<[number, number] | null> => {
-    const clean = addr.trim()
-    if (!clean) return null
-    if (coordsCache[clean]) return coordsCache[clean]
+  // Geocodificação Multi-tier com suporte a Bairro e Cidade
+  const geocodeMultiTier = async (
+    rawAddress: string,
+    neighborhood?: string,
+    city?: string
+  ): Promise<{ coords: [number, number]; precision: 'exact' | 'neighborhood' } | null> => {
+    const cleanAddr = (rawAddress || '').trim()
+    const cityClean = (city || profile?.city || '').trim()
+    const cacheKey = `${cleanAddr}|${neighborhood || ''}|${cityClean}`
+
+    if (coordsCache[cacheKey] !== undefined) {
+      return coordsCache[cacheKey]
+    }
+
     try {
-      const query = `${clean}${cityFallback ? `, ${cityFallback}` : ''}, Brasil`
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, {
-        headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' }
-      })
-      const data = await res.json()
-      if (Array.isArray(data) && data.length > 0) {
-        const coords: [number, number] = [parseFloat(data[0].lon), parseFloat(data[0].lat)]
-        coordsCache[clean] = coords
-        return coords
+      // Tier 1: Endereço completo limpo
+      if (cleanAddr) {
+        const q1 = `${cleanAddr.replace(/-/g, ',')}, Brasil`
+        const res1 = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q1)}`,
+          { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+        )
+        const data1 = await res1.json()
+        if (Array.isArray(data1) && data1.length > 0) {
+          const resObj = { coords: [parseFloat(data1[0].lon), parseFloat(data1[0].lat)] as [number, number], precision: 'exact' as const }
+          coordsCache[cacheKey] = resObj
+          return resObj
+        }
+      }
+
+      // Tier 2: Bairro + Cidade (Resolve cidades litorâneas e bairros com alta precisão)
+      if (neighborhood && cityClean) {
+        const q2 = `${neighborhood}, ${cityClean}, Brasil`
+        const res2 = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q2)}`,
+          { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+        )
+        const data2 = await res2.json()
+        if (Array.isArray(data2) && data2.length > 0) {
+          const resObj = { coords: [parseFloat(data2[0].lon), parseFloat(data2[0].lat)] as [number, number], precision: 'neighborhood' as const }
+          coordsCache[cacheKey] = resObj
+          return resObj
+        }
       }
     } catch (e) {
-      console.warn('Geocoding fallback para:', addr, e)
+      console.warn('Geocoding fail for:', cleanAddr, e)
     }
+
+    coordsCache[cacheKey] = null
     return null
   }
 
-  // Calcula Rota Completa com pernas individuais (Leg-by-Leg)
+  // Calcula Rota Completa com OSRM Real
   const calculateRouteDistanceAndTime = async (orderedList: any[]) => {
     setIsCalculatingRoute(true)
-    setIsRealGpsRoute(false)
+    setUnresolvedStops([])
+
     try {
       const cityFallback = profile?.city || ''
-      const restCoords = await geocodeAddress(restaurantFullAddress, cityFallback)
+      const restGeo = await geocodeMultiTier(restaurantFullAddress, profile?.neighborhood, cityFallback)
 
-      const stopCoordsList: ([number, number] | null)[] = await Promise.all(
-        orderedList.map((o) => geocodeAddress(o.address, o.city || cityFallback))
+      const stopsGeo = await Promise.all(
+        orderedList.map((o) => geocodeMultiTier(o.address, o.neighborhood, o.city || cityFallback))
       )
 
-      const allWaypoints: [number, number][] = []
-      if (restCoords) allWaypoints.push(restCoords)
-
-      stopCoordsList.forEach((c) => {
-        if (c) allWaypoints.push(c)
+      // Identifica paradas que não puderam ser resolvidas no mapa
+      const missing: string[] = []
+      if (!restGeo) missing.push('Restaurante (Endereço de Partida)')
+      stopsGeo.forEach((geo, idx) => {
+        if (!geo) {
+          missing.push(`Pedido #${orderedList[idx]?.display_id} (${orderedList[idx]?.client_name})`)
+        }
       })
+      setUnresolvedStops(missing)
 
-      if (restCoords && allWaypoints.length > 1) {
-        allWaypoints.push(restCoords)
-      }
+      // Se temos coordenadas para todos os pontos (Restaurante + Paradas + Retorno):
+      if (restGeo && stopsGeo.every((g) => g !== null)) {
+        const allCoords: [number, number][] = [
+          restGeo.coords,
+          ...stopsGeo.map((g) => g!.coords),
+          restGeo.coords
+        ]
 
-      // Se encontrou coordenadas reais para todos os pontos no mapa:
-      if (allWaypoints.length === orderedList.length + 2 && restCoords) {
-        const coordsStr = allWaypoints.map(([lon, lat]) => `${lon},${lat}`).join(';')
-        const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false&steps=false`)
+        const coordsParam = allCoords.map(([lon, lat]) => `${lon},${lat}`).join(';')
+        const osrmRes = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${coordsParam}?overview=false&steps=false`
+        )
         const osrmData = await osrmRes.json()
 
         if (osrmData.code === 'Ok' && osrmData.routes && osrmData.routes.length > 0) {
@@ -518,85 +565,82 @@ export function DeliveryOrdersDrawer({
             const fromLabel = isFirst ? 'Restaurante' : `Parada ${idx} (#${orderedList[idx - 1]?.display_id})`
             const toLabel = isLast ? 'Retorno Restaurante' : `Parada ${idx + 1} (#${orderedList[idx]?.display_id})`
 
-            // Verifica se o endereço é exatamente o mesmo
-            const isSameAddress = !isFirst && !isLast && orderedList[idx - 1]?.address?.trim().toLowerCase() === orderedList[idx]?.address?.trim().toLowerCase()
+            // Verifica se é o mesmo endereço
+            const isSameAddress =
+              !isFirst &&
+              !isLast &&
+              orderedList[idx - 1]?.address?.trim().toLowerCase() ===
+                orderedList[idx]?.address?.trim().toLowerCase()
+
+            const distKm = isSameAddress ? 0.0 : Number((leg.distance / 1000).toFixed(1))
+            const durMin = isSameAddress ? 0 : Math.ceil(leg.duration / 60)
 
             return {
               from: fromLabel,
               to: toLabel,
-              distanceKm: isSameAddress ? 0.0 : Number((leg.distance / 1000).toFixed(1)),
-              durationMin: isSameAddress ? 0 : Math.ceil(leg.duration / 60),
+              distanceKm: distKm,
+              durationMin: durMin,
               sameAddress: isSameAddress
             }
           })
 
-          setRouteStats({ totalDistanceKm, totalDurationMin, legs })
-          setIsRealGpsRoute(true)
+          setRouteStats({
+            totalDistanceKm,
+            totalDurationMin,
+            isRealGps: true,
+            legs
+          })
           setIsCalculatingRoute(false)
           return
         }
       }
 
-      // Cálculo Inteligente Passo a Passo por Trecho (Verifica endereços iguais e bairros)
-      const calculatedLegs: { from: string; to: string; distanceKm: number; durationMin: number; sameAddress?: boolean }[] = []
-      let totalDist = 0
-      let totalDur = 0
+      // Se não foi possível localizar algum endereço com precisão no mapa:
+      // Exibe de forma transparente e honesta sem mentir quilometragem
+      const legsPartial: {
+        from: string
+        to: string
+        distanceKm: number
+        durationMin: number
+        sameAddress?: boolean
+        unresolved?: boolean
+      }[] = []
 
-      // Trecho 1: Restaurante -> Parada 1
-      const p1Dist = 2.4
-      const p1Dur = 6
-      totalDist += p1Dist
-      totalDur += p1Dur
-      calculatedLegs.push({
-        from: 'Restaurante',
-        to: `Parada 1 (#${orderedList[0]?.display_id})`,
-        distanceKm: p1Dist,
-        durationMin: p1Dur
-      })
+      for (let i = 0; i <= orderedList.length; i++) {
+        const isFirst = i === 0
+        const isLast = i === orderedList.length
 
-      // Trechos intermediários entre as paradas
-      for (let i = 0; i < orderedList.length - 1; i++) {
-        const cur = orderedList[i]
-        const next = orderedList[i + 1]
+        const fromLabel = isFirst ? 'Restaurante' : `Parada ${i} (#${orderedList[i - 1]?.display_id})`
+        const toLabel = isLast ? 'Retorno Restaurante' : `Parada ${i + 1} (#${orderedList[i]?.display_id})`
 
-        const isSameAddr = cur.address && next.address && cur.address.trim().toLowerCase() === next.address.trim().toLowerCase()
-        const isSameBairro = cur.neighborhood && next.neighborhood && cur.neighborhood.trim().toLowerCase() === next.neighborhood.trim().toLowerCase()
+        const fromGeo = isFirst ? restGeo : stopsGeo[i - 1]
+        const toGeo = isLast ? restGeo : stopsGeo[i]
 
-        const legDist = isSameAddr ? 0.0 : isSameBairro ? 1.2 : 2.8
-        const legDur = isSameAddr ? 0 : isSameBairro ? 3 : 7
+        const isSameAddress =
+          !isFirst &&
+          !isLast &&
+          orderedList[i - 1]?.address?.trim().toLowerCase() ===
+            orderedList[i]?.address?.trim().toLowerCase()
 
-        totalDist += legDist
-        totalDur += legDur
-
-        calculatedLegs.push({
-          from: `Parada ${i + 1} (#${cur.display_id})`,
-          to: `Parada ${i + 2} (#${next.display_id})`,
-          distanceKm: legDist,
-          durationMin: legDur,
-          sameAddress: isSameAddr
+        legsPartial.push({
+          from: fromLabel,
+          to: toLabel,
+          distanceKm: isSameAddress ? 0.0 : 0,
+          durationMin: isSameAddress ? 0 : 0,
+          sameAddress: isSameAddress,
+          unresolved: !fromGeo || !toGeo
         })
       }
 
-      // Trecho Final: Última Parada -> Retorno ao Restaurante
-      const lastDist = 2.4
-      const lastDur = 6
-      totalDist += lastDist
-      totalDur += lastDur
-      calculatedLegs.push({
-        from: `Parada ${orderedList.length} (#${orderedList[orderedList.length - 1]?.display_id})`,
-        to: 'Retorno Restaurante',
-        distanceKm: lastDist,
-        durationMin: lastDur
-      })
-
       setRouteStats({
-        totalDistanceKm: Number(totalDist.toFixed(1)),
-        totalDurationMin: totalDur,
-        legs: calculatedLegs
+        totalDistanceKm: 0,
+        totalDurationMin: 0,
+        isRealGps: false,
+        legs: legsPartial
       })
-      setIsRealGpsRoute(false)
     } catch (e) {
-      console.warn('Erro no cálculo de rota:', e)
+      console.warn('Erro no cálculo de rota OSRM:', e)
+      setRouteStats(null)
     } finally {
       setIsCalculatingRoute(false)
     }
@@ -629,7 +673,6 @@ export function DeliveryOrdersDrawer({
     const finalDriver = customRouteDriver.trim() || routeDriver || 'Motoboy em Rota'
     if (routeOrders.length === 0) return
 
-    // Se o operador digitou um nome novo, salva no turno automaticamente
     if (customRouteDriver.trim() && !shiftMotoboys.includes(customRouteDriver.trim())) {
       handleAddShiftMotoboy(customRouteDriver.trim())
     }
@@ -738,7 +781,7 @@ export function DeliveryOrdersDrawer({
             </button>
           </div>
 
-          {/* Abas com Nomenclatura Operacional */}
+          {/* Abas */}
           <div className="flex border-b border-slate-200 bg-white px-2 dark:border-slate-800 dark:bg-slate-950">
             <button
               onClick={() => setActiveTab('pending')}
@@ -821,23 +864,7 @@ export function DeliveryOrdersDrawer({
             </button>
           </div>
 
-          {/* Guia de Contexto Superior */}
-          <div className="border-b border-slate-200 bg-slate-100/80 px-4 py-2 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-            {activeTab === 'pending' && (
-              <p>⚡ <strong>Triagem Imediata:</strong> Valide o comprovante/troco e aprove para produção.</p>
-            )}
-            {activeTab === 'in_preparation' && (
-              <p>🍳 <strong>Produção & Expedição:</strong> Acompanhe pratos, bebidas na geladeira e monte rotas por bairro.</p>
-            )}
-            {activeTab === 'dispatched' && (
-              <p>🛵 <strong>Entregas em Rota:</strong> Monitore o motoboy e dê baixa no caixa ao retorno.</p>
-            )}
-            {activeTab === 'delivered' && (
-              <p>📊 <strong>Fechamento do Delivery:</strong> Faturamento do turno e acerto de diárias dos motoboys.</p>
-            )}
-          </div>
-
-          {/* BARRA SUPERIOR DA PRODUÇÃO: CONSTRUIR ROTA & CONTROLE DE COLAPSO */}
+          {/* BARRA SUPERIOR DA PRODUÇÃO */}
           {activeTab === 'in_preparation' && inPrepOrders.length > 0 && (
             <div className="sticky top-0 z-20 border-b border-slate-200 bg-orange-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -874,7 +901,6 @@ export function DeliveryOrdersDrawer({
                       setExpandedOrderIds(nextState)
                     }}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                    title="Expandir ou recolher todos os cards de produção"
                   >
                     {inPrepOrders.every((o) => !!expandedOrderIds[o.id]) ? (
                       <>
@@ -890,7 +916,6 @@ export function DeliveryOrdersDrawer({
                   </button>
                 </div>
 
-                {/* Botão de Construir Rota Destacado */}
                 <button
                   type="button"
                   onClick={openRouteBuilder}
@@ -912,7 +937,7 @@ export function DeliveryOrdersDrawer({
 
           {/* Conteúdo Principal */}
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {/* ABA BAIXADOS: RESUMO FINANCEIRO E ACERTO */}
+            {/* ABA BAIXADOS: RESUMO FINANCEIRO */}
             {activeTab === 'delivered' && deliveredOrders.length > 0 && (
               <div className="space-y-3 mb-3">
                 <div className="grid grid-cols-3 gap-2">
@@ -975,9 +1000,7 @@ export function DeliveryOrdersDrawer({
                 const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
                 const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
 
-                // =========================================================================
-                // VISUALIZAÇÃO COLAPSADA ULTRA-COMPACTA NA PRODUÇÃO (2 A 3 LINHAS)
-                // =========================================================================
+                // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (2 LINHAS)
                 if (isProducaoTab && !isExpanded) {
                   return (
                     <div
@@ -989,7 +1012,6 @@ export function DeliveryOrdersDrawer({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2.5">
-                        {/* Checkbox de Seleção */}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1008,13 +1030,11 @@ export function DeliveryOrdersDrawer({
                           )}
                         </button>
 
-                        {/* Bloco Central Compacto: 2 Linhas */}
                         <div
                           onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
                           className="flex-1 min-w-0 cursor-pointer space-y-0.5"
                           title="Clique para ver pratos e detalhes"
                         >
-                          {/* Linha 1: #ID, Nome, Bairro e Qtd de Itens */}
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
                               #{order.display_id || '0'}
@@ -1032,7 +1052,6 @@ export function DeliveryOrdersDrawer({
                             </span>
                           </div>
 
-                          {/* Linha 2: Endereço Resumido com Cidade */}
                           <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
                             <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
                             <span className="truncate">
@@ -1041,7 +1060,6 @@ export function DeliveryOrdersDrawer({
                           </div>
                         </div>
 
-                        {/* Lado Direito: SLA + Botão de Abrir */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
                             <Clock className="h-2.5 w-2.5" />
@@ -1062,9 +1080,7 @@ export function DeliveryOrdersDrawer({
                   )
                 }
 
-                // =========================================================================
-                // VISUALIZAÇÃO PADRÃO (EXPANDIDO NA PRODUÇÃO OU OUTRAS ABAS)
-                // =========================================================================
+                // VISUALIZAÇÃO PADRÃO
                 return (
                   <div
                     key={order.id}
@@ -1077,7 +1093,6 @@ export function DeliveryOrdersDrawer({
                     {/* CABEÇALHO DO CARD */}
                     <div className="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
                       <div className="flex items-start gap-2.5">
-                        {/* Checkbox de Multi-seleção na Produção */}
                         {isProducaoTab && (
                           <button
                             type="button"
@@ -1106,7 +1121,6 @@ export function DeliveryOrdersDrawer({
                               {order.client_name}
                             </h3>
 
-                            {/* Botão Copiar Tudo Apenas na Aba Novos */}
                             {isNovosTab && (
                               <button
                                 type="button"
@@ -1119,7 +1133,6 @@ export function DeliveryOrdersDrawer({
                             )}
                           </div>
 
-                          {/* WhatsApp Claro na Aba Novos e Na Rua */}
                           {order.client_phone && (
                             <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                               <a
@@ -1147,7 +1160,6 @@ export function DeliveryOrdersDrawer({
                       </div>
 
                       <div className="flex items-center gap-2 text-right">
-                        {/* SLA com Cores Dinâmicas */}
                         {activeTab !== 'delivered' && (
                           <div className={`select-text inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
                             <Clock className="h-3 w-3" />
@@ -1155,7 +1167,6 @@ export function DeliveryOrdersDrawer({
                           </div>
                         )}
 
-                        {/* Botão de Recolher na Produção */}
                         {isProducaoTab && (
                           <button
                             type="button"
@@ -1169,7 +1180,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     </div>
 
-                    {/* ENDEREÇO COM BAIRRO E CIDADE */}
+                    {/* ENDEREÇO */}
                     {order.address && (
                       <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
                         <div className="flex items-start gap-2 select-text cursor-text">
@@ -1203,7 +1214,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* BANNER UNIFICADO DE PAGAMENTO (Apenas em Novos, Na Rua e Baixados) */}
+                    {/* BANNER DE PAGAMENTO */}
                     {!isProducaoTab && (
                       <div className={`mt-2.5 flex items-center gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
                         {paymentBanner.icon}
@@ -1214,7 +1225,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* ALERTA DE REGIÃO COMPARTILHADA (Aba Produção) */}
+                    {/* ALERTA DE REGIÃO */}
                     {hasSharedRegion && (
                       <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
                         <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
@@ -1222,7 +1233,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* SEÇÃO DE BEBIDAS / GELADEIRA (Aba Produção) */}
+                    {/* BEBIDAS */}
                     {isProducaoTab && drinkItems.length > 0 && (
                       <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
                         <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
@@ -1256,7 +1267,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* ITENS DE PRODUÇÃO / PRATOS */}
+                    {/* ITENS */}
                     <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
                         {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
@@ -1271,7 +1282,6 @@ export function DeliveryOrdersDrawer({
                           <div key={item.id} className="space-y-0.5 text-xs select-text cursor-text">
                             <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
                               <div className="flex items-center gap-1.5">
-                                {/* Botão Copiar Apenas Nome na Aba Novos */}
                                 {isNovosTab && (
                                   <button
                                     type="button"
@@ -1284,7 +1294,6 @@ export function DeliveryOrdersDrawer({
                                 )}
                                 <span className="select-text">{item.quantity}x {itemName}</span>
                               </div>
-                              {/* Oculta valores em R$ na Produção */}
                               {!isProducaoTab && (
                                 <span className="select-text">{formatBRL(item.price * item.quantity)}</span>
                               )}
@@ -1332,7 +1341,7 @@ export function DeliveryOrdersDrawer({
                       })}
                     </div>
 
-                    {/* Informações de Rota do Motoboy (Aba Na Rua) */}
+                    {/* Na Rua */}
                     {activeTab === 'dispatched' && (
                       <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
                         <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
@@ -1347,7 +1356,7 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* Botões de Ação */}
+                    {/* Ações */}
                     <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
                       {order.status === 'pending' && (
                         <button
@@ -1433,7 +1442,6 @@ export function DeliveryOrdersDrawer({
                   🛵 Qual motoboy levará esta bag/rota?
                 </label>
 
-                {/* Motoboys já cadastrados no turno (localStorage) */}
                 {shiftMotoboys.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {shiftMotoboys.map((name) => (
@@ -1463,7 +1471,6 @@ export function DeliveryOrdersDrawer({
                   </div>
                 )}
 
-                {/* Campo para digitar ou adicionar novo motoboy */}
                 <div className="flex gap-1.5">
                   <input
                     type="text"
@@ -1498,39 +1505,68 @@ export function DeliveryOrdersDrawer({
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-xs font-black text-blue-950 dark:text-blue-200">
-                    <Compass className="h-4 w-4 text-blue-600 animate-spin" style={{ animationDuration: isCalculatingRoute ? '1.5s' : '0s' }} />
+                    <Compass
+                      className="h-4 w-4 text-blue-600 animate-spin"
+                      style={{ animationDuration: isCalculatingRoute ? '1.5s' : '0s' }}
+                    />
                     <span>Cálculo de Trajeto & Distância:</span>
                   </div>
                   {isCalculatingRoute ? (
-                    <span className="text-[10px] text-blue-600 animate-pulse font-bold">Calculando via satélite...</span>
-                  ) : isRealGpsRoute ? (
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      ✓ GPS / OSRM Real
+                    <span className="text-[10px] text-blue-600 animate-pulse font-bold">
+                      Calculando via satélite OSRM...
+                    </span>
+                  ) : routeStats?.isRealGps ? (
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      ✓ Rota Real (GPS / OSRM)
                     </span>
                   ) : (
-                    <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      Estimativa por Setor
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                      ⚠️ Endereço não localizado no mapa
                     </span>
                   )}
                 </div>
+
+                {/* Se algum endereço não pôde ser localizado */}
+                {unresolvedStops.length > 0 && !isCalculatingRoute && (
+                  <div className="mb-2.5 rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                    <div className="flex items-start gap-1.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Aviso Amigável de Localização:</p>
+                        <p className="text-[11px] opacity-90 mt-0.5">
+                          Não foi possível localizar com precisão no mapa satélite:{' '}
+                          <strong>{unresolvedStops.join(', ')}</strong>. A distância exata deste ponto não pôde ser calculada automaticamente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
                     <p className="text-[10px] font-bold text-slate-500 uppercase">Distância Total (Ida + Volta)</p>
                     <p className="text-base font-black text-blue-600 dark:text-blue-400">
-                      {routeStats?.totalDistanceKm !== undefined ? `${routeStats.totalDistanceKm} km` : 'Calculando...'}
+                      {isCalculatingRoute
+                        ? 'Calculando...'
+                        : routeStats?.isRealGps && routeStats?.totalDistanceKm
+                        ? `${routeStats.totalDistanceKm} km`
+                        : 'Não calculável'}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
                     <p className="text-[10px] font-bold text-slate-500 uppercase">Tempo Estimado de Percurso</p>
                     <p className="text-base font-black text-indigo-600 dark:text-indigo-400">
-                      {routeStats?.totalDurationMin !== undefined ? `~${routeStats.totalDurationMin} min` : 'Calculando...'}
+                      {isCalculatingRoute
+                        ? 'Calculando...'
+                        : routeStats?.isRealGps && routeStats?.totalDurationMin
+                        ? `~${routeStats.totalDurationMin} min`
+                        : 'Não calculável'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* SEQUÊNCIA E ORDENAÇÃO DAS PARADAS COM DISTÂNCIA ENTRE CADA LUGAR */}
+              {/* SEQUÊNCIA E ORDENAÇÃO DAS PARADAS */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -1547,24 +1583,34 @@ export function DeliveryOrdersDrawer({
                     </div>
                     <div className="flex-1 truncate">
                       <p className="font-bold text-emerald-950 dark:text-emerald-200">Partida: Restaurante</p>
-                      <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 truncate">{restaurantFullAddress}</p>
+                      <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 truncate">
+                        {restaurantFullAddress}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Paradas dos Pedidos com Conectores de Distância/Tempo */}
+                  {/* Paradas dos Pedidos */}
                   {routeOrders.map((order, idx) => {
                     const legInfo = routeStats?.legs?.[idx]
                     return (
                       <React.Fragment key={order.id}>
-                        {/* Conector de Distância/Tempo do trecho anterior para esta parada */}
+                        {/* Conector de Distância/Tempo */}
                         {legInfo && (
                           <div className="flex items-center justify-center py-0.5">
                             <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                               <span>⬇️</span>
                               {legInfo.sameAddress ? (
-                                <span className="font-black text-emerald-600 dark:text-emerald-400">0.0 km • Mesmo endereço</span>
+                                <span className="font-black text-emerald-600 dark:text-emerald-400">
+                                  0.0 km • Mesmo endereço
+                                </span>
+                              ) : legInfo.unresolved ? (
+                                <span className="font-bold text-amber-600 dark:text-amber-400">
+                                  Distância não localizada
+                                </span>
                               ) : (
-                                <span>{legInfo.distanceKm} km • ~{legInfo.durationMin} min</span>
+                                <span>
+                                  {legInfo.distanceKm} km • ~{legInfo.durationMin} min
+                                </span>
                               )}
                             </div>
                           </div>
@@ -1577,19 +1623,34 @@ export function DeliveryOrdersDrawer({
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-black text-slate-900 dark:text-white">#{order.display_id}</span>
-                                <span className="font-bold text-slate-700 dark:text-slate-300 truncate">{order.client_name}</span>
+                                <span className="font-black text-slate-900 dark:text-white">
+                                  #{order.display_id}
+                                </span>
+                                <span className="font-bold text-slate-700 dark:text-slate-300 truncate">
+                                  {order.client_name}
+                                </span>
                                 {order.neighborhood && (
                                   <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                                     {order.neighborhood}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-slate-500 truncate">{order.address}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-[11px] text-slate-500 truncate flex-1">{order.address}</p>
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.city ? `, ${order.city}` : ''))}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5 shrink-0"
+                                >
+                                  <span>Maps</span>
+                                  <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Botões para Subir / Descer na Ordem */}
+                          {/* Botões Subir / Descer */}
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
@@ -1620,12 +1681,25 @@ export function DeliveryOrdersDrawer({
                     <div className="flex items-center justify-center py-0.5">
                       <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                         <span>⬇️</span>
-                        <span>{routeStats.legs[routeOrders.length].distanceKm} km • ~{routeStats.legs[routeOrders.length].durationMin} min (volta)</span>
+                        {routeStats.legs[routeOrders.length].sameAddress ? (
+                          <span className="font-black text-emerald-600 dark:text-emerald-400">
+                            0.0 km • Mesmo local (volta)
+                          </span>
+                        ) : routeStats.legs[routeOrders.length].unresolved ? (
+                          <span className="font-bold text-amber-600 dark:text-amber-400">
+                            Distância não localizada (volta)
+                          </span>
+                        ) : (
+                          <span>
+                            {routeStats.legs[routeOrders.length].distanceKm} km • ~
+                            {routeStats.legs[routeOrders.length].durationMin} min (volta)
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Ponto de Retorno: Restaurante */}
+                  {/* Retorno */}
                   <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100/70 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-900/60">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-[10px] font-black text-white shrink-0">
                       🔄
@@ -1639,7 +1713,7 @@ export function DeliveryOrdersDrawer({
               </div>
             </div>
 
-            {/* Rodapé do Modal de Rota */}
+            {/* Rodapé */}
             <div className="border-t pt-3 flex gap-2 dark:border-slate-800">
               <button
                 type="button"
@@ -1685,7 +1759,6 @@ export function DeliveryOrdersDrawer({
                   Qual entregador está levando?
                 </label>
 
-                {/* Motoboys do Turno */}
                 {shiftMotoboys.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {shiftMotoboys.map((name) => (
@@ -1745,7 +1818,6 @@ export function DeliveryOrdersDrawer({
                 </div>
               </div>
 
-              {/* Checklist Rápido de Saída */}
               <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs dark:border-amber-900/40 dark:bg-amber-950/20">
                 <p className="font-black text-amber-950 dark:text-amber-200 mb-1">⚠️ Checklist de Saída:</p>
                 <ul className="space-y-1 text-amber-900 dark:text-amber-300 text-[11px]">
