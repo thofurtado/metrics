@@ -2,32 +2,58 @@ import { Howl, Howler } from 'howler'
 
 export type SoundType = 'marimba' | 'glockenspiel' | 'zen_chord' | 'subtle_ping'
 
-export const SOUND_OPTIONS: { id: SoundType; name: string; description: string }[] = [
-  { id: 'marimba', name: 'Marimba Suave (Recomendado)', description: 'Toque amadeirado, aveludado e zero estridente' },
-  { id: 'glockenspiel', name: 'Glockenspiel Melódico', description: 'Sino delicado com harmônicos suaves' },
-  { id: 'zen_chord', name: 'Acorde Piano Rhodes', description: 'Acorde relaxante de piano elétrico vintage' },
-  { id: 'subtle_ping', name: 'Ping Discreto', description: 'Dois toques curtos e minimalistas' }
+export interface SoundOption {
+  id: SoundType
+  name: string
+  description: string
+}
+
+export const SOUND_OPTIONS: SoundOption[] = [
+  {
+    id: 'marimba',
+    name: 'Marimba Suave (Padrão)',
+    description: 'Acorde amigável de marimba, perfeito para ambiente de trabalho.'
+  },
+  {
+    id: 'glockenspiel',
+    name: 'Glockenspiel Harmonioso',
+    description: 'Campainha sutil em notas musicais agudas e relaxantes.'
+  },
+  {
+    id: 'zen_chord',
+    name: 'Teclado Rhodes / Sino Zen',
+    description: 'Toque moderno, quente e muito discreto.'
+  },
+  {
+    id: 'subtle_ping',
+    name: 'Ping Discreto de Notificação',
+    description: 'Apenas 2 notas suaves e limpas para avisar com sutileza.'
+  }
 ]
 
-function writeWavHeader(view: DataView, numSamples: number, sampleRate = 44100) {
-  const writeString = (offset: number, string: string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i))
-    }
-  }
-  writeString(0, 'RIFF')
-  view.setUint32(4, 36 + numSamples * 2, true)
-  writeString(8, 'WAVE')
-  writeString(12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true) // PCM
-  view.setUint16(22, 1, true) // Mono
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeString(36, 'data')
-  view.setUint32(40, numSamples * 2, true)
+// ============================================================================
+// SINTETIZADOR DE ÁUDIO WAV PURO (Sem dependência de arquivos externos / 404)
+// ============================================================================
+
+function writeWavHeader(view: DataView, numSamples: number, sampleRate: number = 44100) {
+  // RIFF chunk
+  view.setUint32(0, 0x52494646, false) // 'RIFF'
+  view.setUint32(4, 36 + numSamples * 2, true) // Tamanho total - 8
+  view.setUint32(8, 0x57415645, false) // 'WAVE'
+
+  // fmt chunk (PCM 16 bits, Mono)
+  view.setUint32(12, 0x666d7420, false) // 'fmt '
+  view.setUint32(16, 16, true) // SubChunk1Size (16 para PCM)
+  view.setUint16(20, 1, true) // AudioFormat (1 = PCM)
+  view.setUint16(22, 1, true) // NumChannels (1 = Mono)
+  view.setUint32(24, sampleRate, true) // SampleRate
+  view.setUint32(28, sampleRate * 2, true) // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+  view.setUint16(32, 2, true) // BlockAlign (NumChannels * BitsPerSample/8)
+  view.setUint16(34, 16, true) // BitsPerSample
+
+  // data chunk
+  view.setUint32(36, 0x64617461, false) // 'data'
+  view.setUint32(40, numSamples * 2, true) // SubChunk2Size
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -40,80 +66,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return `data:audio/wav;base64,${btoa(binary)}`
 }
 
-// 1. Marimba Acústica Suave (Frequências médias-graves 349Hz F4 -> 440Hz A4 -> 523Hz C5)
+// 1. Marimba Suave: Acorde Maior F# -> A# -> C# -> F# (Suave e Acústico)
 function generateMarimbaWav(): string {
-  const sampleRate = 44100
-  const duration = 1.3
-  const numSamples = Math.floor(sampleRate * duration)
-  const buffer = new ArrayBuffer(44 + numSamples * 2)
-  const view = new DataView(buffer)
-  writeWavHeader(view, numSamples, sampleRate)
-
-  let offset = 44
-  const notes = [
-    { freq: 349.23, start: 0.0, dur: 0.8 }, // F4
-    { freq: 440.00, start: 0.16, dur: 0.8 }, // A4
-    { freq: 523.25, start: 0.32, dur: 0.98 } // C5
-  ]
-
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate
-    let sample = 0
-
-    for (const note of notes) {
-      if (t >= note.start && t < note.start + note.dur) {
-        const dt = t - note.start
-        // Envelope de marimba de madeira com ataque suave e decaimento exponencial
-        const env = Math.exp(-dt * 5.5) * (1 - Math.exp(-dt * 60))
-        const fundamental = Math.sin(2 * Math.PI * note.freq * dt)
-        // Harmônicos secundários suaves (madeira)
-        const harm1 = 0.2 * Math.sin(2 * Math.PI * note.freq * 2 * dt) * Math.exp(-dt * 12)
-        sample += (fundamental + harm1) * env * 0.45
-      }
-    }
-
-    const clamped = Math.max(-1, Math.min(1, sample * 0.65))
-    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
-    offset += 2
-  }
-
-  return arrayBufferToBase64(buffer)
-}
-
-// 2. Glockenspiel Melódico (587Hz D5 -> 880Hz A5 suave)
-function generateGlockenspielWav(): string {
-  const sampleRate = 44100
-  const duration = 1.2
-  const numSamples = Math.floor(sampleRate * duration)
-  const buffer = new ArrayBuffer(44 + numSamples * 2)
-  const view = new DataView(buffer)
-  writeWavHeader(view, numSamples, sampleRate)
-
-  let offset = 44
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate
-    let sample = 0
-
-    if (t < 0.6) {
-      const env = Math.exp(-t * 4.5)
-      sample += Math.sin(2 * Math.PI * 587.33 * t) * env * 0.4
-    }
-    if (t >= 0.2) {
-      const dt = t - 0.2
-      const env = Math.exp(-dt * 4)
-      sample += Math.sin(2 * Math.PI * 880.00 * dt) * env * 0.45
-    }
-
-    const clamped = Math.max(-1, Math.min(1, sample * 0.6))
-    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
-    offset += 2
-  }
-
-  return arrayBufferToBase64(buffer)
-}
-
-// 3. Acorde Piano Rhodes (C4 261Hz, E4 329Hz, G4 392Hz, B4 493Hz)
-function generateZenChordWav(): string {
   const sampleRate = 44100
   const duration = 1.6
   const numSamples = Math.floor(sampleRate * duration)
@@ -121,18 +75,70 @@ function generateZenChordWav(): string {
   const view = new DataView(buffer)
   writeWavHeader(view, numSamples, sampleRate)
 
-  let offset = 44
-  const chord = [261.63, 329.63, 392.00, 493.88]
+  const notes = [
+    { freq: 369.99, start: 0.0, dur: 0.6 }, // F#4
+    { freq: 466.16, start: 0.1, dur: 0.6 }, // A#4
+    { freq: 554.37, start: 0.2, dur: 0.7 }, // C#5
+    { freq: 739.99, start: 0.32, dur: 1.1 }  // F#5
+  ]
 
+  let offset = 44
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate
     let sample = 0
-    const env = Math.exp(-t * 2.8) * (1 - Math.exp(-t * 40))
 
-    for (let idx = 0; idx < chord.length; idx++) {
-      const freq = chord[idx]
-      const tremolo = 1 + 0.05 * Math.sin(2 * Math.PI * 4 * t)
-      sample += Math.sin(2 * Math.PI * freq * t) * env * tremolo * 0.22
+    for (const note of notes) {
+      if (t >= note.start && t < note.start + note.dur) {
+        const dt = t - note.start
+        // Envelope percussivo de marimba (ataque rápido, decaimento exponencial suave)
+        const env = Math.exp(-dt * 5.5) * (1 - Math.exp(-dt * 200))
+        // Fundamental + 2º harmônico sutil (típico de barra de madeira)
+        const tone =
+          Math.sin(2 * Math.PI * note.freq * dt) * 0.75 +
+          Math.sin(2 * Math.PI * note.freq * 2 * dt) * 0.18 +
+          Math.sin(2 * Math.PI * note.freq * 3 * dt) * 0.07
+        sample += tone * env * 0.45
+      }
+    }
+
+    const clamped = Math.max(-1, Math.min(1, sample * 0.75))
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
+    offset += 2
+  }
+
+  return arrayBufferToBase64(buffer)
+}
+
+// 2. Glockenspiel / Carrilhão de Cristal
+function generateGlockenspielWav(): string {
+  const sampleRate = 44100
+  const duration = 1.8
+  const numSamples = Math.floor(sampleRate * duration)
+  const buffer = new ArrayBuffer(44 + numSamples * 2)
+  const view = new DataView(buffer)
+  writeWavHeader(view, numSamples, sampleRate)
+
+  const notes = [
+    { freq: 587.33, start: 0.0 },  // D5
+    { freq: 880.0, start: 0.12 },  // A5
+    { freq: 1174.66, start: 0.25 } // D6
+  ]
+
+  let offset = 44
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate
+    let sample = 0
+
+    for (const note of notes) {
+      if (t >= note.start) {
+        const dt = t - note.start
+        const env = Math.exp(-dt * 4.0)
+        // Tom puro de metal / sino
+        const tone =
+          Math.sin(2 * Math.PI * note.freq * dt) * 0.8 +
+          Math.sin(2 * Math.PI * note.freq * 2.76 * dt) * 0.15
+        sample += tone * env * 0.4
+      }
     }
 
     const clamped = Math.max(-1, Math.min(1, sample * 0.7))
@@ -143,7 +149,40 @@ function generateZenChordWav(): string {
   return arrayBufferToBase64(buffer)
 }
 
-// 4. Ping Minimalista Discreto
+// 3. Sino Zen / Teclado Rhodes Quente
+function generateZenChordWav(): string {
+  const sampleRate = 44100
+  const duration = 2.0
+  const numSamples = Math.floor(sampleRate * duration)
+  const buffer = new ArrayBuffer(44 + numSamples * 2)
+  const view = new DataView(buffer)
+  writeWavHeader(view, numSamples, sampleRate)
+
+  const freqs = [329.63, 440.0, 523.25, 659.25] // Am7 quente
+
+  let offset = 44
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate
+    let sample = 0
+
+    for (const freq of freqs) {
+      const env = Math.exp(-t * 2.8)
+      const tone =
+        Math.sin(2 * Math.PI * freq * t) * 0.6 +
+        Math.sin(2 * Math.PI * freq * 2 * t) * 0.25 +
+        Math.sin(2 * Math.PI * freq * 3 * t) * 0.1
+      sample += tone * env * 0.3
+    }
+
+    const clamped = Math.max(-1, Math.min(1, sample * 0.7))
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
+    offset += 2
+  }
+
+  return arrayBufferToBase64(buffer)
+}
+
+// 4. Ping Discreto de Notificação (2 notas)
 function generateSubtlePingWav(): string {
   const sampleRate = 44100
   const duration = 0.8
@@ -220,11 +259,12 @@ export function unlockAudioContext() {
   }
 }
 
-// Gerenciador de Alerta com Espaçamento Ajustado (18s) e Seleção de Som
+// Gerenciador de Alerta com Espaçamento Ajustado (18s) e Interrupção Imediata
 class DeliveryAlertManager {
   private intervalId: any = null
   private isMuted: boolean = false
   private isAlerting: boolean = false
+  private currentPendingCount: number = 0
   private soundType: SoundType = 'marimba'
 
   constructor() {
@@ -259,20 +299,54 @@ class DeliveryAlertManager {
     }
   }
 
+  /**
+   * Sincroniza a quantidade de pedidos pendentes.
+   * Se for 0, interrompe o alarme imediatamente.
+   * Se for > 0 e não estiver alertando, inicia o ciclo de alertas a cada 18s.
+   */
+  public syncPendingOrders(pendingCount: number) {
+    this.currentPendingCount = pendingCount
+
+    if (pendingCount <= 0) {
+      this.stopAlert()
+      return
+    }
+
+    if (this.isMuted) {
+      this.stopAlert()
+      return
+    }
+
+    if (!this.isAlerting) {
+      this.startAlert()
+    }
+  }
+
   public startAlert() {
     if (this.isMuted) return
+    if (this.currentPendingCount <= 0) {
+      this.stopAlert()
+      return
+    }
     if (this.isAlerting) return
 
     this.isAlerting = true
-    // Toca imediatamente na entrada do pedido
+    // Toca imediatamente
     this.previewSound()
 
-    // E repete a cada 18 segundos (espaçamento triplicado e confortável) enquanto houver pendentes
-    if (this.intervalId) clearInterval(this.intervalId)
+    // E repete a cada 18 segundos enquanto houver pedidos pendentes
+    if (this.intervalId) {
+      clearInterval(this.intervalId)
+      this.intervalId = null
+    }
+
     this.intervalId = setInterval(() => {
-      if (!this.isMuted) {
-        this.previewSound()
+      // Checagem de segurança a cada disparo do timer:
+      if (this.currentPendingCount <= 0 || this.isMuted) {
+        this.stopAlert()
+        return
       }
+      this.previewSound()
     }, 18000)
   }
 
@@ -282,12 +356,17 @@ class DeliveryAlertManager {
       clearInterval(this.intervalId)
       this.intervalId = null
     }
+    try {
+      Howler.stop()
+    } catch (e) {}
   }
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted
     if (this.isMuted) {
       this.stopAlert()
+    } else if (this.currentPendingCount > 0) {
+      this.startAlert()
     }
     return this.isMuted
   }

@@ -52,6 +52,16 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
 
+  // Sincroniza o alerta sonoro: toca APENAS enquanto houver pedidos pendentes (Novos)
+  // Se a contagem for 0, silencia e limpa o timer imediatamente.
+  useEffect(() => {
+    deliveryAlertManager.syncPendingOrders(pendingOrders.length)
+
+    return () => {
+      deliveryAlertManager.stopAlert()
+    }
+  }, [pendingOrders.length])
+
   // Fecha dropdown de som ao clicar fora
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -80,16 +90,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     }
   }, [])
 
-  // Alerta sonoro contínuo e espaçado (a cada 18s) enquanto houver pedidos pendentes
-  useEffect(() => {
-    if (pendingOrders.length > 0) {
-      deliveryAlertManager.startAlert()
-    } else {
-      deliveryAlertManager.stopAlert()
-    }
-  }, [pendingOrders.length])
-
-  // Escuta SSE em tempo real
+  // Escuta SSE em tempo real para atualizar o cache do React Query
   useEffect(() => {
     const host =
       typeof window !== 'undefined'
@@ -103,7 +104,6 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       eventSource = new EventSource(sseUrl)
       eventSource.addEventListener('new_order', () => {
         queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
-        deliveryAlertManager.startAlert()
       })
       eventSource.addEventListener('order_status_updated', () => {
         queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
@@ -135,9 +135,6 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       toast.info('Alerta sonoro silenciado')
     } else {
       toast.success('Alerta sonoro ativado')
-      if (pendingOrders.length > 0) {
-        deliveryAlertManager.startAlert()
-      }
     }
   }
 
