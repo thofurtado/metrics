@@ -37,7 +37,9 @@ import {
   ArrowDown,
   Compass,
   ListOrdered,
-  Check
+  Check,
+  Plus,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -75,23 +77,38 @@ export function DeliveryOrdersDrawer({
   // Multi-seleção de pedidos na Produção para montagem de rota
   const [selectedOrderIdsForRoute, setSelectedOrderIdsForRoute] = useState<string[]>([])
 
+  // Motoboys do Turno salvos no LocalStorage
+  const [shiftMotoboys, setShiftMotoboys] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('delivery_shift_motoboys')
+        return saved ? JSON.parse(saved) : []
+      } catch (e) {
+        return []
+      }
+    }
+    return []
+  })
+  const [newMotoboyInput, setNewMotoboyInput] = useState('')
+
   // Modal de Construção de Rota & Despacho em Lote
   const [routeModalOpen, setRouteModalOpen] = useState(false)
   const [routeOrders, setRouteOrders] = useState<any[]>([])
-  const [routeDriver, setRouteDriver] = useState<string>('Carlos (Moto 1)')
+  const [routeDriver, setRouteDriver] = useState<string>('')
   const [customRouteDriver, setCustomRouteDriver] = useState<string>('')
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
   const [isDispatchingBatch, setIsDispatchingBatch] = useState(false)
+  const [isRealGpsRoute, setIsRealGpsRoute] = useState(false)
   const [routeStats, setRouteStats] = useState<{
     totalDistanceKm: number
     totalDurationMin: number
-    legs: { from: string; to: string; distanceKm: number; durationMin: number }[]
+    legs: { from: string; to: string; distanceKm: number; durationMin: number; sameAddress?: boolean }[]
   } | null>(null)
 
   // Modal de Despacho Individual com Motoboy
   const [dispatchModalOpen, setDispatchModalOpen] = useState(false)
   const [orderToDispatch, setOrderToDispatch] = useState<any | null>(null)
-  const [selectedDriver, setSelectedDriver] = useState<string>('Carlos (Moto 1)')
+  const [selectedDriver, setSelectedDriver] = useState<string>('')
   const [customDriverName, setCustomDriverName] = useState<string>('')
 
   // Atualiza o relógio a cada 10 segundos
@@ -112,6 +129,37 @@ export function DeliveryOrdersDrawer({
       setSelectedOrderIdsForRoute([])
     }
   }, [activeTab])
+
+  // Salva motoboys do turno no localStorage
+  const saveShiftMotoboys = (list: string[]) => {
+    setShiftMotoboys(list)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('delivery_shift_motoboys', JSON.stringify(list))
+    }
+  }
+
+  const handleAddShiftMotoboy = (nameToAdd?: string) => {
+    const name = (nameToAdd || newMotoboyInput).trim()
+    if (!name) return
+    if (!shiftMotoboys.includes(name)) {
+      const updated = [...shiftMotoboys, name]
+      saveShiftMotoboys(updated)
+      setRouteDriver(name)
+      setSelectedDriver(name)
+      toast.success(`Motoboy ${name} adicionado ao turno!`)
+    }
+    setNewMotoboyInput('')
+    setCustomRouteDriver('')
+    setCustomDriverName('')
+  }
+
+  const handleRemoveShiftMotoboy = (name: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const updated = shiftMotoboys.filter((m) => m !== name)
+    saveShiftMotoboys(updated)
+    if (routeDriver === name) setRouteDriver(updated[0] || '')
+    if (selectedDriver === name) setSelectedDriver(updated[0] || '')
+  }
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
@@ -384,11 +432,14 @@ export function DeliveryOrdersDrawer({
 
   const openDispatch = (order: any) => {
     setOrderToDispatch(order)
+    if (!selectedDriver && shiftMotoboys.length > 0) {
+      setSelectedDriver(shiftMotoboys[0])
+    }
     setDispatchModalOpen(true)
   }
 
   // =========================================================================
-  // LOGICA DE MONTAGEM DE ROTA & CALCULO DE DISTANCIA/TEMPO (OSRM GRATUITO)
+  // MONTAGEM DE ROTA & CÁLCULO DE DISTÂNCIA E TEMPO ENTRE CADA PARADA
   // =========================================================================
   const openRouteBuilder = () => {
     if (selectedOrderIdsForRoute.length === 0) {
@@ -397,6 +448,9 @@ export function DeliveryOrdersDrawer({
     }
     const selected = inPrepOrders.filter((o) => selectedOrderIdsForRoute.includes(o.id))
     setRouteOrders(selected)
+    if (!routeDriver && shiftMotoboys.length > 0) {
+      setRouteDriver(shiftMotoboys[0])
+    }
     setRouteModalOpen(true)
     calculateRouteDistanceAndTime(selected)
   }
@@ -423,9 +477,10 @@ export function DeliveryOrdersDrawer({
     return null
   }
 
-  // Calcula Rota Completa com OSRM (Restaurante -> Paradas -> Volta ao Restaurante)
+  // Calcula Rota Completa com pernas individuais (Leg-by-Leg)
   const calculateRouteDistanceAndTime = async (orderedList: any[]) => {
     setIsCalculatingRoute(true)
+    setIsRealGpsRoute(false)
     try {
       const cityFallback = profile?.city || ''
       const restCoords = await geocodeAddress(restaurantFullAddress, cityFallback)
@@ -442,10 +497,11 @@ export function DeliveryOrdersDrawer({
       })
 
       if (restCoords && allWaypoints.length > 1) {
-        allWaypoints.push(restCoords) // Retorno ao restaurante
+        allWaypoints.push(restCoords)
       }
 
-      if (allWaypoints.length >= 2) {
+      // Se encontrou coordenadas reais para todos os pontos no mapa:
+      if (allWaypoints.length === orderedList.length + 2 && restCoords) {
         const coordsStr = allWaypoints.map(([lon, lat]) => `${lon},${lat}`).join(';')
         const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false&steps=false`)
         const osrmData = await osrmRes.json()
@@ -456,44 +512,89 @@ export function DeliveryOrdersDrawer({
           const totalDurationMin = Math.ceil(r.duration / 60)
 
           const legs = (r.legs || []).map((leg: any, idx: number) => {
-            const fromLabel = idx === 0 ? 'Restaurante' : `Parada ${idx}: #${orderedList[idx - 1]?.display_id}`
-            const toLabel = idx === orderedList.length ? 'Retorno Restaurante' : `Parada ${idx + 1}: #${orderedList[idx]?.display_id}`
+            const isFirst = idx === 0
+            const isLast = idx === orderedList.length
+
+            const fromLabel = isFirst ? 'Restaurante' : `Parada ${idx} (#${orderedList[idx - 1]?.display_id})`
+            const toLabel = isLast ? 'Retorno Restaurante' : `Parada ${idx + 1} (#${orderedList[idx]?.display_id})`
+
+            // Verifica se o endereço é exatamente o mesmo
+            const isSameAddress = !isFirst && !isLast && orderedList[idx - 1]?.address?.trim().toLowerCase() === orderedList[idx]?.address?.trim().toLowerCase()
+
             return {
               from: fromLabel,
               to: toLabel,
-              distanceKm: Number((leg.distance / 1000).toFixed(1)),
-              durationMin: Math.ceil(leg.duration / 60)
+              distanceKm: isSameAddress ? 0.0 : Number((leg.distance / 1000).toFixed(1)),
+              durationMin: isSameAddress ? 0 : Math.ceil(leg.duration / 60),
+              sameAddress: isSameAddress
             }
           })
 
           setRouteStats({ totalDistanceKm, totalDurationMin, legs })
+          setIsRealGpsRoute(true)
           setIsCalculatingRoute(false)
           return
         }
       }
 
-      // Fallback Heurístico Inteligente se OSRM/Nominatim não encontrar coordenadas exatas
-      const n = orderedList.length
-      const estDistance = Number(((n * 2.8) + 2.5).toFixed(1))
-      const estDuration = Math.ceil((n * 7) + 8)
-      const fallbackLegs = orderedList.map((o, idx) => ({
-        from: idx === 0 ? 'Restaurante' : `Parada ${idx}: #${orderedList[idx - 1]?.display_id}`,
-        to: `Parada ${idx + 1}: #${o.display_id}`,
-        distanceKm: 2.8,
-        durationMin: 7
-      }))
-      fallbackLegs.push({
-        from: `Parada ${n}: #${orderedList[n - 1]?.display_id}`,
+      // Cálculo Inteligente Passo a Passo por Trecho (Verifica endereços iguais e bairros)
+      const calculatedLegs: { from: string; to: string; distanceKm: number; durationMin: number; sameAddress?: boolean }[] = []
+      let totalDist = 0
+      let totalDur = 0
+
+      // Trecho 1: Restaurante -> Parada 1
+      const p1Dist = 2.4
+      const p1Dur = 6
+      totalDist += p1Dist
+      totalDur += p1Dur
+      calculatedLegs.push({
+        from: 'Restaurante',
+        to: `Parada 1 (#${orderedList[0]?.display_id})`,
+        distanceKm: p1Dist,
+        durationMin: p1Dur
+      })
+
+      // Trechos intermediários entre as paradas
+      for (let i = 0; i < orderedList.length - 1; i++) {
+        const cur = orderedList[i]
+        const next = orderedList[i + 1]
+
+        const isSameAddr = cur.address && next.address && cur.address.trim().toLowerCase() === next.address.trim().toLowerCase()
+        const isSameBairro = cur.neighborhood && next.neighborhood && cur.neighborhood.trim().toLowerCase() === next.neighborhood.trim().toLowerCase()
+
+        const legDist = isSameAddr ? 0.0 : isSameBairro ? 1.2 : 2.8
+        const legDur = isSameAddr ? 0 : isSameBairro ? 3 : 7
+
+        totalDist += legDist
+        totalDur += legDur
+
+        calculatedLegs.push({
+          from: `Parada ${i + 1} (#${cur.display_id})`,
+          to: `Parada ${i + 2} (#${next.display_id})`,
+          distanceKm: legDist,
+          durationMin: legDur,
+          sameAddress: isSameAddr
+        })
+      }
+
+      // Trecho Final: Última Parada -> Retorno ao Restaurante
+      const lastDist = 2.4
+      const lastDur = 6
+      totalDist += lastDist
+      totalDur += lastDur
+      calculatedLegs.push({
+        from: `Parada ${orderedList.length} (#${orderedList[orderedList.length - 1]?.display_id})`,
         to: 'Retorno Restaurante',
-        distanceKm: 2.5,
-        durationMin: 8
+        distanceKm: lastDist,
+        durationMin: lastDur
       })
 
       setRouteStats({
-        totalDistanceKm: estDistance,
-        totalDurationMin: estDuration,
-        legs: fallbackLegs
+        totalDistanceKm: Number(totalDist.toFixed(1)),
+        totalDurationMin: totalDur,
+        legs: calculatedLegs
       })
+      setIsRealGpsRoute(false)
     } catch (e) {
       console.warn('Erro no cálculo de rota:', e)
     } finally {
@@ -528,6 +629,11 @@ export function DeliveryOrdersDrawer({
     const finalDriver = customRouteDriver.trim() || routeDriver || 'Motoboy em Rota'
     if (routeOrders.length === 0) return
 
+    // Se o operador digitou um nome novo, salva no turno automaticamente
+    if (customRouteDriver.trim() && !shiftMotoboys.includes(customRouteDriver.trim())) {
+      handleAddShiftMotoboy(customRouteDriver.trim())
+    }
+
     setIsDispatchingBatch(true)
     try {
       await Promise.all(
@@ -539,7 +645,7 @@ export function DeliveryOrdersDrawer({
         )
       )
 
-      toast.success(`🛵 Rota despachada com ${routeOrders.length} pedidos para ${finalDriver}!`)
+      toast.success(`🛵 Rota com ${routeOrders.length} pedidos despachada para ${finalDriver}!`)
       setRouteModalOpen(false)
       setSelectedOrderIdsForRoute([])
       setRouteOrders([])
@@ -1321,51 +1427,90 @@ export function DeliveryOrdersDrawer({
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
-              {/* SELEÇÃO DO MOTOBOY */}
+              {/* SELEÇÃO DO MOTOBOY DO TURNO */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   🛵 Qual motoboy levará esta bag/rota?
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2">
-                  {['Carlos (Moto 1)', 'João (Moto 2)', 'Lucas (Moto 3)', 'Próprio'].map((name) => (
+
+                {/* Motoboys já cadastrados no turno (localStorage) */}
+                {shiftMotoboys.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {shiftMotoboys.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setRouteDriver(name)
+                          setCustomRouteDriver('')
+                        }}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                          routeDriver === name && !customRouteDriver
+                            ? 'border-orange-500 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20 dark:bg-orange-950/40 dark:text-orange-200'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                        }`}
+                      >
+                        <span>🛵 {name}</span>
+                        <span
+                          onClick={(e) => handleRemoveShiftMotoboy(name, e)}
+                          className="text-slate-400 hover:text-rose-500 p-0.5 rounded"
+                          title="Remover do turno"
+                        >
+                          ✕
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Campo para digitar ou adicionar novo motoboy */}
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do motoboy para esta rota..."
+                    value={customRouteDriver}
+                    onChange={(e) => {
+                      setCustomRouteDriver(e.target.value)
+                      setRouteDriver(e.target.value)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customRouteDriver.trim()) {
+                        handleAddShiftMotoboy(customRouteDriver.trim())
+                      }
+                    }}
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                  />
+                  {customRouteDriver.trim() && (
                     <button
-                      key={name}
                       type="button"
-                      onClick={() => {
-                        setRouteDriver(name)
-                        setCustomRouteDriver('')
-                      }}
-                      className={`rounded-xl border p-2 text-xs font-bold text-center transition-colors ${
-                        routeDriver === name && !customRouteDriver
-                          ? 'border-orange-500 bg-orange-50 text-orange-950 dark:bg-orange-950/40 dark:text-orange-200'
-                          : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800'
-                      }`}
+                      onClick={() => handleAddShiftMotoboy(customRouteDriver.trim())}
+                      className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                      title="Salvar motoboy no turno"
                     >
-                      {name}
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Salvar no turno</span>
                     </button>
-                  ))}
+                  )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Ou digite o nome de outro motoboy..."
-                  value={customRouteDriver}
-                  onChange={(e) => {
-                    setCustomRouteDriver(e.target.value)
-                    setRouteDriver(e.target.value)
-                  }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                />
               </div>
 
-              {/* CARD DE RESUMO DA DISTÂNCIA & TEMPO ESTIMADO (OSRM API) */}
+              {/* CARD DE RESUMO DA DISTÂNCIA & TEMPO TOTAL */}
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/30">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-xs font-black text-blue-950 dark:text-blue-200">
                     <Compass className="h-4 w-4 text-blue-600 animate-spin" style={{ animationDuration: isCalculatingRoute ? '1.5s' : '0s' }} />
-                    <span>Cálculo de Trajeto & Distância (OSRM Routing):</span>
+                    <span>Cálculo de Trajeto & Distância:</span>
                   </div>
-                  {isCalculatingRoute && (
+                  {isCalculatingRoute ? (
                     <span className="text-[10px] text-blue-600 animate-pulse font-bold">Calculando via satélite...</span>
+                  ) : isRealGpsRoute ? (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      ✓ GPS / OSRM Real
+                    </span>
+                  ) : (
+                    <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      Estimativa por Setor
+                    </span>
                   )}
                 </div>
 
@@ -1373,28 +1518,28 @@ export function DeliveryOrdersDrawer({
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
                     <p className="text-[10px] font-bold text-slate-500 uppercase">Distância Total (Ida + Volta)</p>
                     <p className="text-base font-black text-blue-600 dark:text-blue-400">
-                      {routeStats?.totalDistanceKm ? `${routeStats.totalDistanceKm} km` : 'Calculando...'}
+                      {routeStats?.totalDistanceKm !== undefined ? `${routeStats.totalDistanceKm} km` : 'Calculando...'}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
                     <p className="text-[10px] font-bold text-slate-500 uppercase">Tempo Estimado de Percurso</p>
                     <p className="text-base font-black text-indigo-600 dark:text-indigo-400">
-                      {routeStats?.totalDurationMin ? `~${routeStats.totalDurationMin} min` : 'Calculando...'}
+                      {routeStats?.totalDurationMin !== undefined ? `~${routeStats.totalDurationMin} min` : 'Calculando...'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* SEQUÊNCIA E ORDENAÇÃO DAS PARADAS */}
+              {/* SEQUÊNCIA E ORDENAÇÃO DAS PARADAS COM DISTÂNCIA ENTRE CADA LUGAR */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    📍 Sequência das Paradas (Altere a ordem se desejar):
+                    📍 Sequência das Paradas & Distância Entre Elas:
                   </label>
                   <span className="text-[10px] text-slate-400">Clique nas setas para reordenar</span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {/* Ponto de Partida: Restaurante */}
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-2.5 text-xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-black text-white shrink-0">
@@ -1406,53 +1551,79 @@ export function DeliveryOrdersDrawer({
                     </div>
                   </div>
 
-                  {/* Paradas dos Pedidos */}
-                  {routeOrders.map((order, idx) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950"
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-black text-white shrink-0">
-                          {idx + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-black text-slate-900 dark:text-white">#{order.display_id}</span>
-                            <span className="font-bold text-slate-700 dark:text-slate-300 truncate">{order.client_name}</span>
-                            {order.neighborhood && (
-                              <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                                {order.neighborhood}
-                              </span>
-                            )}
+                  {/* Paradas dos Pedidos com Conectores de Distância/Tempo */}
+                  {routeOrders.map((order, idx) => {
+                    const legInfo = routeStats?.legs?.[idx]
+                    return (
+                      <React.Fragment key={order.id}>
+                        {/* Conector de Distância/Tempo do trecho anterior para esta parada */}
+                        {legInfo && (
+                          <div className="flex items-center justify-center py-0.5">
+                            <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              <span>⬇️</span>
+                              {legInfo.sameAddress ? (
+                                <span className="font-black text-emerald-600 dark:text-emerald-400">0.0 km • Mesmo endereço</span>
+                              ) : (
+                                <span>{legInfo.distanceKm} km • ~{legInfo.durationMin} min</span>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[11px] text-slate-500 truncate">{order.address}</p>
-                        </div>
-                      </div>
+                        )}
 
-                      {/* Botões para Subir / Descer na Ordem */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          disabled={idx === 0}
-                          onClick={() => moveRouteOrderUp(idx)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
-                          title="Subir parada"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={idx === routeOrders.length - 1}
-                          onClick={() => moveRouteOrderDown(idx)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
-                          title="Descer parada"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-[11px] font-black text-white shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-black text-slate-900 dark:text-white">#{order.display_id}</span>
+                                <span className="font-bold text-slate-700 dark:text-slate-300 truncate">{order.client_name}</span>
+                                {order.neighborhood && (
+                                  <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                                    {order.neighborhood}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 truncate">{order.address}</p>
+                            </div>
+                          </div>
+
+                          {/* Botões para Subir / Descer na Ordem */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => moveRouteOrderUp(idx)}
+                              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                              title="Subir parada"
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === routeOrders.length - 1}
+                              onClick={() => moveRouteOrderDown(idx)}
+                              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 disabled:opacity-30 disabled:hover:bg-transparent"
+                              title="Descer parada"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    )
+                  })}
+
+                  {/* Conector para Retorno */}
+                  {routeStats?.legs?.[routeOrders.length] && (
+                    <div className="flex items-center justify-center py-0.5">
+                      <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                        <span>⬇️</span>
+                        <span>{routeStats.legs[routeOrders.length].distanceKm} km • ~{routeStats.legs[routeOrders.length].durationMin} min (volta)</span>
                       </div>
                     </div>
-                  ))}
+                  )}
 
                   {/* Ponto de Retorno: Restaurante */}
                   <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100/70 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-900/60">
@@ -1513,35 +1684,65 @@ export function DeliveryOrdersDrawer({
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Qual entregador está levando?
                 </label>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {['Carlos (Moto 1)', 'João (Moto 2)', 'Lucas (Moto 3)', 'Entregador Próprio'].map((name) => (
+
+                {/* Motoboys do Turno */}
+                {shiftMotoboys.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {shiftMotoboys.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDriver(name)
+                          setCustomDriverName('')
+                        }}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                          selectedDriver === name && !customDriverName
+                            ? 'border-orange-500 bg-orange-50 text-orange-950 ring-2 ring-orange-500/20 dark:bg-orange-950/40 dark:text-orange-200'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                        }`}
+                      >
+                        <span>🛵 {name}</span>
+                        <span
+                          onClick={(e) => handleRemoveShiftMotoboy(name, e)}
+                          className="text-slate-400 hover:text-rose-500 p-0.5 rounded"
+                          title="Remover do turno"
+                        >
+                          ✕
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do motoboy..."
+                    value={customDriverName}
+                    onChange={(e) => {
+                      setCustomDriverName(e.target.value)
+                      setSelectedDriver(e.target.value)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customDriverName.trim()) {
+                        handleAddShiftMotoboy(customDriverName.trim())
+                      }
+                    }}
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                  />
+                  {customDriverName.trim() && (
                     <button
-                      key={name}
                       type="button"
-                      onClick={() => {
-                        setSelectedDriver(name)
-                        setCustomDriverName('')
-                      }}
-                      className={`rounded-xl border p-2.5 text-xs font-bold text-left transition-colors ${
-                        selectedDriver === name
-                          ? 'border-orange-500 bg-orange-50 text-orange-950 dark:bg-orange-950/40 dark:text-orange-200'
-                          : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800'
-                      }`}
+                      onClick={() => handleAddShiftMotoboy(customDriverName.trim())}
+                      className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                      title="Salvar motoboy no turno"
                     >
-                      🛵 {name}
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Salvar</span>
                     </button>
-                  ))}
+                  )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Ou digite outro nome..."
-                  value={customDriverName}
-                  onChange={(e) => {
-                    setCustomDriverName(e.target.value)
-                    setSelectedDriver(e.target.value)
-                  }}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                />
               </div>
 
               {/* Checklist Rápido de Saída */}
@@ -1566,7 +1767,13 @@ export function DeliveryOrdersDrawer({
               <button
                 type="button"
                 disabled={loadingOrderId === orderToDispatch.id}
-                onClick={() => handleUpdateStatus(orderToDispatch.id, 'dispatched', customDriverName || selectedDriver)}
+                onClick={() => {
+                  const finalDriver = customDriverName.trim() || selectedDriver
+                  if (customDriverName.trim() && !shiftMotoboys.includes(customDriverName.trim())) {
+                    handleAddShiftMotoboy(customDriverName.trim())
+                  }
+                  handleUpdateStatus(orderToDispatch.id, 'dispatched', finalDriver)
+                }}
                 className="flex-1 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-lg hover:bg-orange-500"
               >
                 Confirmar Saída
