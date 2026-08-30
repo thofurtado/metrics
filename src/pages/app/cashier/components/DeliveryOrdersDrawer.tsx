@@ -28,7 +28,8 @@ import {
   Calculator,
   TrendingUp,
   Layers,
-  MapPinned
+  MapPinned,
+  Copy
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -177,15 +178,54 @@ export function DeliveryOrdersDrawer({
     }
   }
 
+  const copyToClipboard = (text: string, label: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    if (!text) return
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+      toast.success(`${label} copiado!`)
+    }
+  }
+
+  const copyFullOrderSummary = (order: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const itemsSummary = (order.items || []).map((i: any) => {
+      let line = `${i.quantity}x ${i.name || 'Item'}`
+      if (i.observation) line += `\n   Obs: ${i.observation}`
+      if (Array.isArray(i.complements) && i.complements.length > 0) {
+        line += `\n   Adicionais: ${i.complements.map((c: any) => `${c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name}`).join(', ')}`
+      }
+      return line
+    }).join('\n')
+
+    const paymentInfo = getUnifiedPaymentBanner(order)
+    const summary = [
+      `=== PEDIDO #${order.display_id || '0'} ===`,
+      `Cliente: ${order.client_name}`,
+      order.client_phone ? `WhatsApp: ${order.client_phone}` : null,
+      order.address ? `Endereço: ${order.address}` : null,
+      `Pagamento: ${paymentInfo.mainText}`,
+      order.observations ? `Observações: ${order.observations}` : null,
+      `Total: ${formatBRL(order.total_amount || 0)}`,
+      `\nITENS:\n${itemsSummary}`
+    ].filter(Boolean).join('\n')
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(summary)
+      toast.success(`Pedido #${order.display_id} completo copiado para o PDV!`)
+    }
+  }
+
   // Alerta Unificado de Pagamento + Valor
   const getUnifiedPaymentBanner = (order: any) => {
     const obs = (order.observations || '').trim()
     const total = order.total_amount || 0
     const totalFmt = formatBRL(total)
+    const lowerObs = obs.toLowerCase()
 
-    const isCartao = obs.toLowerCase().includes('cartão') || obs.toLowerCase().includes('débito') || obs.toLowerCase().includes('crédito')
-    const isDinheiro = obs.toLowerCase().includes('dinheiro')
-    const isPix = obs.toLowerCase().includes('pix')
+    const isCartao = lowerObs.includes('cartão') || lowerObs.includes('cartao') || lowerObs.includes('débito') || lowerObs.includes('debito') || lowerObs.includes('crédito') || lowerObs.includes('credito')
+    const isPix = lowerObs.includes('pix')
+    const isDinheiro = lowerObs.includes('dinheiro') || (!isCartao && !isPix)
 
     if (isPix) {
       return {
@@ -197,7 +237,11 @@ export function DeliveryOrdersDrawer({
     }
 
     if (isCartao) {
-      const tipo = obs.toLowerCase().includes('débito') ? 'Débito' : obs.toLowerCase().includes('crédito') ? 'Crédito' : 'Cartão'
+      const tipo = (lowerObs.includes('débito') || lowerObs.includes('debito'))
+        ? 'Débito'
+        : (lowerObs.includes('crédito') || lowerObs.includes('credito'))
+          ? 'Crédito'
+          : 'Cartão'
       return {
         icon: <CreditCard className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />,
         mainText: `💳 ${totalFmt} — Cartão de ${tipo} (Levar Maquininha)`,
@@ -207,17 +251,42 @@ export function DeliveryOrdersDrawer({
     }
 
     if (isDinheiro) {
-      const matchTroco = obs.match(/Troco para R$s*([d.,]+)/i)
-      if (matchTroco) {
-        const valorTrocoPara = parseFloat(matchTroco[1].replace(',', '.'))
+      let valorTrocoPara: number | null = null
+
+      if (typeof order.change_for === 'number' && order.change_for > 0) {
+        valorTrocoPara = order.change_for
+      } else if (typeof order.valor_troco === 'number' && order.valor_troco > 0) {
+        valorTrocoPara = order.valor_troco
+      } else {
+        const matchTroco = obs.match(/troco\s*(?:para|de|:)?\s*(?:r\$\s*)?([\d.,]+)/i)
+        if (matchTroco && matchTroco[1]) {
+          const rawMatch = matchTroco[1].trim()
+          if (!lowerObs.includes('sem troco') || lowerObs.indexOf('troco para') !== -1 || lowerObs.indexOf('troco de') !== -1) {
+            let parsedVal = 0
+            if (rawMatch.includes(',') && rawMatch.includes('.')) {
+              parsedVal = parseFloat(rawMatch.replace(/\./g, '').replace(',', '.'))
+            } else if (rawMatch.includes(',')) {
+              parsedVal = parseFloat(rawMatch.replace(',', '.'))
+            } else {
+              parsedVal = parseFloat(rawMatch)
+            }
+            if (!isNaN(parsedVal) && parsedVal > 0) {
+              valorTrocoPara = parsedVal
+            }
+          }
+        }
+      }
+
+      if (valorTrocoPara !== null && valorTrocoPara > 0) {
         const valorDevolver = Math.max(0, valorTrocoPara - total)
         return {
           icon: <Banknote className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />,
           mainText: `💵 ${totalFmt} — Dinheiro (Troco de ${formatBRL(valorDevolver)})`,
-          subText: `Cliente pagará com ${formatBRL(valorTrocoPara)}. Não esqueça de separar o troco!`,
+          subText: `Cliente pagará com ${formatBRL(valorTrocoPara)}. Não esqueça de separar ${formatBRL(valorDevolver)} de troco!`,
           style: 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200'
         }
       }
+
       return {
         icon: <Banknote className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />,
         mainText: `💵 ${totalFmt} — Dinheiro (Sem Troco)`,
@@ -511,23 +580,32 @@ export function DeliveryOrdersDrawer({
               return (
                 <div
                   key={order.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950"
+                  className="select-text overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950"
                 >
                   {/* Cabeçalho do Card */}
                   <div className="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="select-text rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
                           #{order.display_id || '0'}
                         </span>
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                        <h3 className="select-text text-sm font-bold text-slate-900 dark:text-white">
                           {order.client_name}
                         </h3>
+                        <button
+                          type="button"
+                          onClick={(e) => copyFullOrderSummary(order, e)}
+                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                          title="Copiar todos os dados deste pedido para o seu PDV/Sistema"
+                        >
+                          <Copy className="h-3 w-3" />
+                          <span>Copiar Tudo</span>
+                        </button>
                       </div>
                       
-                      {/* Botão de WhatsApp Claro e Acessível */}
+                      {/* Botão de WhatsApp Claro e Acessível com Opção de Copiar */}
                       {order.client_phone && (
-                        <div className="mt-1.5">
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                           <a
                             href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.client_name}, sobre o seu pedido #${order.display_id} no delivery:`)}`}
                             target="_blank"
@@ -535,8 +613,17 @@ export function DeliveryOrdersDrawer({
                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-500/20 dark:bg-emerald-950/50 dark:text-emerald-300 transition-colors"
                           >
                             <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                            <span>WhatsApp: {order.client_phone}</span>
+                            <span className="select-text">WhatsApp: {order.client_phone}</span>
                           </a>
+                          <button
+                            type="button"
+                            onClick={(e) => copyToClipboard(order.client_phone, 'Telefone', e)}
+                            title="Copiar apenas o número de telefone"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Copy className="h-3 w-3" />
+                            <span>Copiar Tel</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -544,9 +631,9 @@ export function DeliveryOrdersDrawer({
                     <div className="text-right space-y-1">
                       {/* SLA com Cores Dinâmicas */}
                       {activeTab !== 'delivered' && (
-                        <div className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                        <div className={`select-text inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
                           <Clock className="h-3 w-3" />
-                          <span>{sla.text}</span>
+                          <span className="select-text">{sla.text}</span>
                         </div>
                       )}
                     </div>
@@ -555,30 +642,50 @@ export function DeliveryOrdersDrawer({
                   {/* Endereço de Entrega */}
                   {order.address && (
                     <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                      <div className="flex items-start gap-2">
+                      <div className="flex items-start gap-2 select-text cursor-text">
                         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
-                        <span className="font-medium">{order.address}</span>
+                        <span className="font-medium select-text">{order.address}</span>
                       </div>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="shrink-0 text-slate-400 hover:text-orange-500"
-                        title="Abrir no Google Maps"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => copyToClipboard(order.address, 'Endereço', e)}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                          title="Copiar Endereço"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
+                          title="Abrir no Google Maps"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
                     </div>
                   )}
 
                   {/* Banner Unificado de Valor + Forma de Pagamento (Oculto em Produção) */}
                   {activeTab !== 'in_preparation' && (
-                    <div className={`mt-2.5 flex items-center gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
-                      {paymentBanner.icon}
-                      <div>
-                        <p className="font-black">{paymentBanner.mainText}</p>
-                        <p className="text-[11px] opacity-90">{paymentBanner.subText}</p>
+                    <div className={`mt-2.5 flex items-center justify-between gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
+                      <div className="flex items-center gap-2.5 select-text cursor-text">
+                        {paymentBanner.icon}
+                        <div className="select-text">
+                          <p className="font-black select-text">{paymentBanner.mainText}</p>
+                          <p className="text-[11px] opacity-90 select-text">{paymentBanner.subText}</p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => copyToClipboard(`${paymentBanner.mainText} - ${paymentBanner.subText}`, 'Informações de Pagamento', e)}
+                        className="rounded-md p-1.5 text-slate-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
+                        title="Copiar Pagamento & Troco"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   )}
 
@@ -586,7 +693,7 @@ export function DeliveryOrdersDrawer({
                   {hasSharedRegion && (
                     <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
                       <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
-                      <span>📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma bag!).</span>
+                      <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma bag!).</span>
                     </div>
                   )}
 
@@ -609,14 +716,14 @@ export function DeliveryOrdersDrawer({
                               key={item.id}
                               type="button"
                               onClick={() => setCheckedDrinks((prev) => ({ ...prev, [key]: !prev[key] }))}
-                              className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200"
+                              className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200 select-text cursor-pointer"
                             >
                               {isChecked ? (
-                                <CheckSquare className="h-4 w-4 text-emerald-600" />
+                                <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
                               ) : (
-                                <Square className="h-4 w-4 text-slate-400" />
+                                <Square className="h-4 w-4 text-slate-400 shrink-0" />
                               )}
-                              <span className={isChecked ? 'line-through opacity-50' : ''}>
+                              <span className={`select-text ${isChecked ? 'line-through opacity-50' : ''}`}>
                                 {item.quantity}x {item.name}
                               </span>
                             </button>
@@ -628,34 +735,52 @@ export function DeliveryOrdersDrawer({
 
                   {/* ITENS DE PRODUÇÃO / PRATOS */}
                   <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      {activeTab === 'in_preparation' ? 'Pratos & Produção:' : 'Itens do Pedido:'}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
+                        {activeTab === 'in_preparation' ? 'Pratos & Produção:' : 'Itens do Pedido:'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          const itemsText = (activeTab === 'in_preparation' ? foodItems : order.items)?.map((i: any) => {
+                            let t = `${i.quantity}x ${i.name || 'Item'}`
+                            if (i.observation) t += ` (Obs: ${i.observation})`
+                            return t
+                          }).join('\n')
+                          copyToClipboard(itemsText, 'Itens do Pedido', e)
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        title="Copiar lista de itens"
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span>Copiar Itens</span>
+                      </button>
+                    </div>
                     {(activeTab === 'in_preparation' ? foodItems : order.items)?.map((item: any) => {
                       const itemName = item.name || 'Item'
                       const obsItem = (item.observation || '').trim()
                       const showObs = obsItem && obsItem.toLowerCase() !== itemName.toLowerCase()
 
                       return (
-                        <div key={item.id} className="space-y-0.5 text-xs">
+                        <div key={item.id} className="space-y-0.5 text-xs select-text cursor-text">
                           <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
-                            <span>{item.quantity}x {itemName}</span>
+                            <span className="select-text">{item.quantity}x {itemName}</span>
                             {/* Oculta valores em R$ na Produção */}
                             {activeTab !== 'in_preparation' && (
-                              <span>{formatBRL(item.price * item.quantity)}</span>
+                              <span className="select-text">{formatBRL(item.price * item.quantity)}</span>
                             )}
                           </div>
                           {Array.isArray(item.complements) && item.complements.length > 0 && (
-                            <div className="pl-3 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">
+                            <div className="pl-3 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400 select-text">
                               {item.complements.map((c: any, idx: number) => (
-                                <span key={idx} className="block font-medium">
+                                <span key={idx} className="block font-medium select-text">
                                   + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
                                 </span>
                               ))}
                             </div>
                           )}
                           {showObs && (
-                            <div className="pl-3 text-[11px] italic font-semibold text-amber-700 dark:text-amber-400">
+                            <div className="pl-3 text-[11px] italic font-semibold text-amber-700 dark:text-amber-400 select-text">
                               Obs: {obsItem}
                             </div>
                           )}
@@ -668,11 +793,11 @@ export function DeliveryOrdersDrawer({
                   {activeTab === 'dispatched' && (
                     <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
                       <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5 select-text">
                           <Bike className="h-4 w-4 text-blue-600" />
-                          <span>Entregador: {order.delivery_man || 'Motoboy em Rota'}</span>
+                          <span className="select-text">Entregador: {order.delivery_man || 'Motoboy em Rota'}</span>
                         </span>
-                        <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 select-text">
                           {order.departed_at ? `Saída às ${new Date(order.departed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Em trânsito'}
                         </span>
                       </div>
