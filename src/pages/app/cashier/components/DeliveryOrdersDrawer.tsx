@@ -587,398 +587,312 @@ export function DeliveryOrdersDrawer({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Overlay */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
-      />
+    <>
+      {/* ========================================================================= */}
+      {/* GAVETA / DRAWER LATERAL (Z-INDEX 50)                                      */}
+      {/* ========================================================================= */}
+      <div className="fixed inset-0 z-50 flex justify-end pointer-events-none">
+        {/* Overlay */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-auto"
+        />
 
-      {/* Container */}
-      <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative z-10 flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl dark:bg-slate-900"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-              <Bike className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-black text-slate-900 dark:text-white">
-                Gestão de Entregas & Pedidos Online
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fluxo integrado: Triagem ➡️ Produção ➡️ Rota ➡️ Fechamento
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Abas com Nomenclatura Operacional */}
-        <div className="flex border-b border-slate-200 bg-white px-2 dark:border-slate-800 dark:bg-slate-950">
-          <button
-            onClick={() => setActiveTab('pending')}
-            className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
-              activeTab === 'pending'
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Novos</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                pendingOrders.length > 0
-                  ? 'bg-amber-500 text-slate-950 animate-pulse'
-                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {pendingOrders.length}
-              </span>
-            </div>
-            {activeTab === 'pending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('in_preparation')}
-            className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
-              activeTab === 'in_preparation'
-                ? 'text-orange-600 dark:text-orange-400'
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Produção</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                inPrepOrders.length > 0
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {inPrepOrders.length}
-              </span>
-            </div>
-            {activeTab === 'in_preparation' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('dispatched')}
-            className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
-              activeTab === 'dispatched'
-                ? 'text-blue-600 dark:text-blue-400'
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Na Rua</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                dispatchedOrders.length > 0
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {dispatchedOrders.length}
-              </span>
-            </div>
-            {activeTab === 'dispatched' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('delivered')}
-            className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
-              activeTab === 'delivered'
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Baixados</span>
-              <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                {deliveredOrders.length}
-              </span>
-            </div>
-            {activeTab === 'delivered' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />}
-          </button>
-        </div>
-
-        {/* Guia de Contexto Superior */}
-        <div className="border-b border-slate-200 bg-slate-100/80 px-4 py-2 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-          {activeTab === 'pending' && (
-            <p>⚡ <strong>Triagem Imediata:</strong> Valide o comprovante/troco e aprove para produção.</p>
-          )}
-          {activeTab === 'in_preparation' && (
-            <p>🍳 <strong>Produção & Expedição:</strong> Acompanhe pratos, bebidas na geladeira e monte rotas por bairro.</p>
-          )}
-          {activeTab === 'dispatched' && (
-            <p>🛵 <strong>Entregas em Rota:</strong> Monitore o motoboy e dê baixa no caixa ao retorno.</p>
-          )}
-          {activeTab === 'delivered' && (
-            <p>📊 <strong>Fechamento do Delivery:</strong> Faturamento do turno e acerto de diárias dos motoboys.</p>
-          )}
-        </div>
-
-        {/* ========================================================================= */}
-        {/* BARRA SUPERIOR DA PRODUÇÃO: CONSTRUIR ROTA & CONTROLE DE COLAPSO         */}
-        {/* ========================================================================= */}
-        {activeTab === 'in_preparation' && inPrepOrders.length > 0 && (
-          <div className="sticky top-0 z-20 border-b border-slate-200 bg-orange-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedOrderIdsForRoute.length === inPrepOrders.length) {
-                      setSelectedOrderIdsForRoute([])
-                    } else {
-                      setSelectedOrderIdsForRoute(inPrepOrders.map((o) => o.id))
-                    }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  {selectedOrderIdsForRoute.length === inPrepOrders.length ? (
-                    <CheckSquare className="h-3.5 w-3.5 text-orange-600" />
-                  ) : (
-                    <Square className="h-3.5 w-3.5 text-slate-400" />
-                  )}
-                  <span>
-                    {selectedOrderIdsForRoute.length === inPrepOrders.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allExpanded = inPrepOrders.every((o) => !!expandedOrderIds[o.id])
-                    const nextState: Record<string, boolean> = {}
-                    inPrepOrders.forEach((o) => {
-                      nextState[o.id] = !allExpanded
-                    })
-                    setExpandedOrderIds(nextState)
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                  title="Expandir ou recolher todos os cards de produção"
-                >
-                  {inPrepOrders.every((o) => !!expandedOrderIds[o.id]) ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                      <span>Recolher Tudo</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                      <span>Expandir Tudo</span>
-                    </>
-                  )}
-                </button>
+        {/* Container da Gaveta */}
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="relative z-10 flex h-full w-full max-w-2xl flex-col bg-slate-50 shadow-2xl dark:bg-slate-900 pointer-events-auto"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
+                <Bike className="h-5 w-5" />
               </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900 dark:text-white">
+                  Gestão de Entregas & Pedidos Online
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Fluxo integrado: Triagem ➡️ Produção ➡️ Rota ➡️ Fechamento
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-              {/* Botão de Construir Rota Destacado */}
-              <button
-                type="button"
-                onClick={openRouteBuilder}
-                disabled={selectedOrderIdsForRoute.length === 0}
-                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-black shadow-md transition-all ${
-                  selectedOrderIdsForRoute.length > 0
-                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-500 hover:to-amber-500 active:scale-98 animate-pulse'
-                    : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
-                }`}
-              >
-                <Route className="h-4 w-4" />
-                <span>
-                  Construir Rota {selectedOrderIdsForRoute.length > 0 ? `(${selectedOrderIdsForRoute.length})` : ''} 🛵
+          {/* Abas com Nomenclatura Operacional */}
+          <div className="flex border-b border-slate-200 bg-white px-2 dark:border-slate-800 dark:bg-slate-950">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
+                activeTab === 'pending'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Novos</span>
+                <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                  pendingOrders.length > 0
+                    ? 'bg-amber-500 text-slate-950 animate-pulse'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {pendingOrders.length}
                 </span>
-              </button>
-            </div>
+              </div>
+              {activeTab === 'pending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('in_preparation')}
+              className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
+                activeTab === 'in_preparation'
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Produção</span>
+                <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                  inPrepOrders.length > 0
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {inPrepOrders.length}
+                </span>
+              </div>
+              {activeTab === 'in_preparation' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('dispatched')}
+              className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
+                activeTab === 'dispatched'
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Na Rua</span>
+                <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                  dispatchedOrders.length > 0
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {dispatchedOrders.length}
+                </span>
+              </div>
+              {activeTab === 'dispatched' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('delivered')}
+              className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
+                activeTab === 'delivered'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Baixados</span>
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  {deliveredOrders.length}
+                </span>
+              </div>
+              {activeTab === 'delivered' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />}
+            </button>
           </div>
-        )}
 
-        {/* Conteúdo Principal */}
-        <div className="flex-1 space-y-3 overflow-y-auto p-4">
-          {/* ABA BAIXADOS: RESUMO FINANCEIRO E ACERTO */}
-          {activeTab === 'delivered' && deliveredOrders.length > 0 && (
-            <div className="space-y-3 mb-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-center dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                  <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">Faturamento</p>
-                  <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{formatBRL(deliveredStats.total)}</p>
-                </div>
-                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-2.5 text-center dark:border-blue-900/40 dark:bg-blue-950/20">
-                  <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase">Entregas</p>
-                  <p className="text-sm font-black text-blue-700 dark:text-blue-400">{deliveredStats.count} pedidos</p>
-                </div>
-                <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-2.5 text-center dark:border-purple-900/40 dark:bg-purple-950/20">
-                  <p className="text-[10px] font-bold text-purple-800 dark:text-purple-300 uppercase">Ticket Médio</p>
-                  <p className="text-sm font-black text-purple-700 dark:text-purple-400">{formatBRL(deliveredStats.avg)}</p>
-                </div>
-              </div>
+          {/* Guia de Contexto Superior */}
+          <div className="border-b border-slate-200 bg-slate-100/80 px-4 py-2 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+            {activeTab === 'pending' && (
+              <p>⚡ <strong>Triagem Imediata:</strong> Valide o comprovante/troco e aprove para produção.</p>
+            )}
+            {activeTab === 'in_preparation' && (
+              <p>🍳 <strong>Produção & Expedição:</strong> Acompanhe pratos, bebidas na geladeira e monte rotas por bairro.</p>
+            )}
+            {activeTab === 'dispatched' && (
+              <p>🛵 <strong>Entregas em Rota:</strong> Monitore o motoboy e dê baixa no caixa ao retorno.</p>
+            )}
+            {activeTab === 'delivered' && (
+              <p>📊 <strong>Fechamento do Delivery:</strong> Faturamento do turno e acerto de diárias dos motoboys.</p>
+            )}
+          </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <div className="flex items-center gap-2 mb-2">
-                  <Bike className="h-4 w-4 text-orange-500" />
-                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                    Acerto de Taxas dos Motoboys
-                  </h4>
-                </div>
-                <div className="divide-y divide-slate-100 text-xs dark:divide-slate-800">
-                  {Object.entries(deliveredStats.driverStats).map(([driver, stats]) => (
-                    <div key={driver} className="flex items-center justify-between py-1">
-                      <span className="font-bold text-slate-700 dark:text-slate-300">{driver}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-500">{stats.count} viagens</span>
-                        <span className="font-black text-emerald-600 dark:text-emerald-400">{formatBRL(stats.fee)} a pagar</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LISTAGEM DE PEDIDOS */}
-          {currentList.length === 0 ? (
-            <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
-              <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
-              <p className="text-sm font-bold">Nenhum pedido nesta etapa</p>
-              <p className="text-xs">Os novos pedidos aparecerão aqui automaticamente.</p>
-            </div>
-          ) : (
-            currentList.map((order) => {
-              const sla = getSlaInfo(order)
-              const paymentBanner = getUnifiedPaymentBanner(order)
-              const bairro = (order.neighborhood || '').trim()
-              const hasSharedRegion = activeTab === 'in_preparation' && bairro && neighborhoodCountInPrep[bairro.toLowerCase()] > 1
-
-              const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
-              const foodItems = (order.items || []).filter((i: any) => !isDrinkItem(i.name || ''))
-              const totalItemCount = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
-
-              const isProducaoTab = activeTab === 'in_preparation'
-              const isNovosTab = activeTab === 'pending'
-              const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
-              const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
-
-              // =========================================================================
-              // VISUALIZAÇÃO COLAPSADA ULTRA-COMPACTA NA PRODUÇÃO (2 A 3 LINHAS)
-              // =========================================================================
-              if (isProducaoTab && !isExpanded) {
-                return (
-                  <div
-                    key={order.id}
-                    className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
-                      isSelectedForRoute
-                        ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
-                        : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
-                    }`}
+          {/* BARRA SUPERIOR DA PRODUÇÃO: CONSTRUIR ROTA & CONTROLE DE COLAPSO */}
+          {activeTab === 'in_preparation' && inPrepOrders.length > 0 && (
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-orange-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedOrderIdsForRoute.length === inPrepOrders.length) {
+                        setSelectedOrderIdsForRoute([])
+                      } else {
+                        setSelectedOrderIdsForRoute(inPrepOrders.map((o) => o.id))
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   >
-                    <div className="flex items-center justify-between gap-2.5">
-                      {/* Checkbox de Seleção */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedOrderIdsForRoute((prev) =>
-                            prev.includes(order.id) ? prev.filter((id) => id !== order.id) : [...prev, order.id]
-                          )
-                        }}
-                        className="text-slate-400 hover:text-orange-600 transition-colors shrink-0"
-                        title="Selecionar pedido para montar rota"
-                      >
-                        {isSelectedForRoute ? (
-                          <CheckSquare className="h-5 w-5 text-orange-600" />
-                        ) : (
-                          <Square className="h-5 w-5" />
-                        )}
-                      </button>
+                    {selectedOrderIdsForRoute.length === inPrepOrders.length ? (
+                      <CheckSquare className="h-3.5 w-3.5 text-orange-600" />
+                    ) : (
+                      <Square className="h-3.5 w-3.5 text-slate-400" />
+                    )}
+                    <span>
+                      {selectedOrderIdsForRoute.length === inPrepOrders.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </span>
+                  </button>
 
-                      {/* Bloco Central Compacto: 2 Linhas */}
-                      <div
-                        onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                        className="flex-1 min-w-0 cursor-pointer space-y-0.5"
-                        title="Clique para ver pratos e detalhes"
-                      >
-                        {/* Linha 1: #ID, Nome, Bairro e Qtd de Itens */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
-                            #{order.display_id || '0'}
-                          </span>
-                          <span className="text-xs font-black text-slate-900 dark:text-white truncate">
-                            {order.client_name}
-                          </span>
-                          {bairro && (
-                            <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
-                              📍 {bairro}
-                            </span>
-                          )}
-                          <span className="rounded bg-orange-100 px-1.5 py-0.2 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
-                            📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
-                          </span>
-                        </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allExpanded = inPrepOrders.every((o) => !!expandedOrderIds[o.id])
+                      const nextState: Record<string, boolean> = {}
+                      inPrepOrders.forEach((o) => {
+                        nextState[o.id] = !allExpanded
+                      })
+                      setExpandedOrderIds(nextState)
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                    title="Expandir ou recolher todos os cards de produção"
+                  >
+                    {inPrepOrders.every((o) => !!expandedOrderIds[o.id]) ? (
+                      <>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                        <span>Recolher Tudo</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                        <span>Expandir Tudo</span>
+                      </>
+                    )}
+                  </button>
+                </div>
 
-                        {/* Linha 2: Endereço Resumido com Cidade */}
-                        <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
-                          <span className="truncate">
-                            {order.address}{order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Lado Direito: SLA + Botão de Abrir */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
-                          <Clock className="h-2.5 w-2.5" />
-                          <span>{sla.minutes}m</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                          className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
-                          title="Ver pratos e detalhes"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              // =========================================================================
-              // VISUALIZAÇÃO PADRÃO (EXPANDIDO NA PRODUÇÃO OU OUTRAS ABAS)
-              // =========================================================================
-              return (
-                <div
-                  key={order.id}
-                  className={`select-text overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all dark:bg-slate-950 ${
-                    isSelectedForRoute
-                      ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
-                      : 'border-slate-200 dark:border-slate-800'
+                {/* Botão de Construir Rota Destacado */}
+                <button
+                  type="button"
+                  onClick={openRouteBuilder}
+                  disabled={selectedOrderIdsForRoute.length === 0}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-black shadow-md transition-all ${
+                    selectedOrderIdsForRoute.length > 0
+                      ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-500 hover:to-amber-500 active:scale-98 animate-pulse'
+                      : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
                   }`}
                 >
-                  {/* CABEÇALHO DO CARD */}
-                  <div className="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-                    <div className="flex items-start gap-2.5">
-                      {/* Checkbox de Multi-seleção na Produção */}
-                      {isProducaoTab && (
+                  <Route className="h-4 w-4" />
+                  <span>
+                    Construir Rota {selectedOrderIdsForRoute.length > 0 ? `(${selectedOrderIdsForRoute.length})` : ''} 🛵
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Conteúdo Principal */}
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {/* ABA BAIXADOS: RESUMO FINANCEIRO E ACERTO */}
+            {activeTab === 'delivered' && deliveredOrders.length > 0 && (
+              <div className="space-y-3 mb-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-center dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">Faturamento</p>
+                    <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{formatBRL(deliveredStats.total)}</p>
+                  </div>
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-2.5 text-center dark:border-blue-900/40 dark:bg-blue-950/20">
+                    <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase">Entregas</p>
+                    <p className="text-sm font-black text-blue-700 dark:text-blue-400">{deliveredStats.count} pedidos</p>
+                  </div>
+                  <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-2.5 text-center dark:border-purple-900/40 dark:bg-purple-950/20">
+                    <p className="text-[10px] font-bold text-purple-800 dark:text-purple-300 uppercase">Ticket Médio</p>
+                    <p className="text-sm font-black text-purple-700 dark:text-purple-400">{formatBRL(deliveredStats.avg)}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bike className="h-4 w-4 text-orange-500" />
+                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      Acerto de Taxas dos Motoboys
+                    </h4>
+                  </div>
+                  <div className="divide-y divide-slate-100 text-xs dark:divide-slate-800">
+                    {Object.entries(deliveredStats.driverStats).map(([driver, stats]) => (
+                      <div key={driver} className="flex items-center justify-between py-1">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{driver}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-slate-500">{stats.count} viagens</span>
+                          <span className="font-black text-emerald-600 dark:text-emerald-400">{formatBRL(stats.fee)} a pagar</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LISTAGEM DE PEDIDOS */}
+            {currentList.length === 0 ? (
+              <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
+                <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
+                <p className="text-sm font-bold">Nenhum pedido nesta etapa</p>
+                <p className="text-xs">Os novos pedidos aparecerão aqui automaticamente.</p>
+              </div>
+            ) : (
+              currentList.map((order) => {
+                const sla = getSlaInfo(order)
+                const paymentBanner = getUnifiedPaymentBanner(order)
+                const bairro = (order.neighborhood || '').trim()
+                const hasSharedRegion = activeTab === 'in_preparation' && bairro && neighborhoodCountInPrep[bairro.toLowerCase()] > 1
+
+                const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
+                const foodItems = (order.items || []).filter((i: any) => !isDrinkItem(i.name || ''))
+                const totalItemCount = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
+
+                const isProducaoTab = activeTab === 'in_preparation'
+                const isNovosTab = activeTab === 'pending'
+                const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
+                const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
+
+                // =========================================================================
+                // VISUALIZAÇÃO COLAPSADA ULTRA-COMPACTA NA PRODUÇÃO (2 A 3 LINHAS)
+                // =========================================================================
+                if (isProducaoTab && !isExpanded) {
+                  return (
+                    <div
+                      key={order.id}
+                      className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
+                        isSelectedForRoute
+                          ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                          : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2.5">
+                        {/* Checkbox de Seleção */}
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setSelectedOrderIdsForRoute((prev) =>
                               prev.includes(order.id) ? prev.filter((id) => id !== order.id) : [...prev, order.id]
                             )
                           }}
-                          className="mt-0.5 text-slate-400 hover:text-orange-600 transition-colors"
+                          className="text-slate-400 hover:text-orange-600 transition-colors shrink-0"
                           title="Selecionar pedido para montar rota"
                         >
                           {isSelectedForRoute ? (
@@ -987,313 +901,402 @@ export function DeliveryOrdersDrawer({
                             <Square className="h-5 w-5" />
                           )}
                         </button>
-                      )}
 
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="select-text rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
-                            #{order.display_id || '0'}
-                          </span>
-                          <h3 className="select-text text-sm font-bold text-slate-900 dark:text-white">
-                            {order.client_name}
-                          </h3>
+                        {/* Bloco Central Compacto: 2 Linhas */}
+                        <div
+                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                          className="flex-1 min-w-0 cursor-pointer space-y-0.5"
+                          title="Clique para ver pratos e detalhes"
+                        >
+                          {/* Linha 1: #ID, Nome, Bairro e Qtd de Itens */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
+                              #{order.display_id || '0'}
+                            </span>
+                            <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                              {order.client_name}
+                            </span>
+                            {bairro && (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                📍 {bairro}
+                              </span>
+                            )}
+                            <span className="rounded bg-orange-100 px-1.5 py-0.2 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
+                              📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
+                            </span>
+                          </div>
 
-                          {/* Botão Copiar Tudo Apenas na Aba Novos */}
-                          {isNovosTab && (
-                            <button
-                              type="button"
-                              onClick={(e) => copyFullOrderSummary(order, e)}
-                              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                              title="Copiar todos os dados para o PDV"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                          )}
+                          {/* Linha 2: Endereço Resumido com Cidade */}
+                          <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+                            <span className="truncate">
+                              {order.address}{order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* WhatsApp Claro na Aba Novos e Na Rua */}
-                        {order.client_phone && (
-                          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                            <a
-                              href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.client_name}, sobre o seu pedido #${order.display_id} no delivery:`)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-500/20 dark:bg-emerald-950/50 dark:text-emerald-300 transition-colors"
-                            >
-                              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                              <span className="select-text">WhatsApp: {order.client_phone}</span>
-                            </a>
+                        {/* Lado Direito: SLA + Botão de Abrir */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                            <Clock className="h-2.5 w-2.5" />
+                            <span>{sla.minutes}m</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
+                            title="Ver pratos e detalhes"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // =========================================================================
+                // VISUALIZAÇÃO PADRÃO (EXPANDIDO NA PRODUÇÃO OU OUTRAS ABAS)
+                // =========================================================================
+                return (
+                  <div
+                    key={order.id}
+                    className={`select-text overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all dark:bg-slate-950 ${
+                      isSelectedForRoute
+                        ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                        : 'border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* CABEÇALHO DO CARD */}
+                    <div className="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+                      <div className="flex items-start gap-2.5">
+                        {/* Checkbox de Multi-seleção na Produção */}
+                        {isProducaoTab && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrderIdsForRoute((prev) =>
+                                prev.includes(order.id) ? prev.filter((id) => id !== order.id) : [...prev, order.id]
+                              )
+                            }}
+                            className="mt-0.5 text-slate-400 hover:text-orange-600 transition-colors"
+                            title="Selecionar pedido para montar rota"
+                          >
+                            {isSelectedForRoute ? (
+                              <CheckSquare className="h-5 w-5 text-orange-600" />
+                            ) : (
+                              <Square className="h-5 w-5" />
+                            )}
+                          </button>
+                        )}
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="select-text rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
+                              #{order.display_id || '0'}
+                            </span>
+                            <h3 className="select-text text-sm font-bold text-slate-900 dark:text-white">
+                              {order.client_name}
+                            </h3>
+
+                            {/* Botão Copiar Tudo Apenas na Aba Novos */}
                             {isNovosTab && (
                               <button
                                 type="button"
-                                onClick={(e) => copyToClipboard(order.client_phone, 'Telefone', e)}
-                                title="Copiar WhatsApp"
-                                className="rounded-lg border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                onClick={(e) => copyFullOrderSummary(order, e)}
+                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                                title="Copiar todos os dados para o PDV"
                               >
-                                <Copy className="h-3 w-3" />
+                                <Copy className="h-3.5 w-3.5" />
                               </button>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 text-right">
-                      {/* SLA com Cores Dinâmicas */}
-                      {activeTab !== 'delivered' && (
-                        <div className={`select-text inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
-                          <Clock className="h-3 w-3" />
-                          <span className="select-text">{sla.text}</span>
-                        </div>
-                      )}
-
-                      {/* Botão de Recolher na Produção */}
-                      {isProducaoTab && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: false }))}
-                          className="rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                          title="Recolher card"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ENDEREÇO COM BAIRRO E CIDADE */}
-                  {order.address && (
-                    <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                      <div className="flex items-start gap-2 select-text cursor-text">
-                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
-                        <span className="font-medium select-text">
-                          {order.address}
-                          {order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {isNovosTab && (
-                          <button
-                            type="button"
-                            onClick={(e) => copyToClipboard(order.address, 'Endereço', e)}
-                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                            title="Copiar Endereço"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
-                          title="Abrir no Google Maps"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* BANNER UNIFICADO DE PAGAMENTO (Apenas em Novos, Na Rua e Baixados) */}
-                  {!isProducaoTab && (
-                    <div className={`mt-2.5 flex items-center gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
-                      {paymentBanner.icon}
-                      <div className="select-text">
-                        <p className="font-black select-text">{paymentBanner.mainText}</p>
-                        <p className="text-[11px] opacity-90 select-text">{paymentBanner.subText}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ALERTA DE REGIÃO COMPARTILHADA (Aba Produção) */}
-                  {hasSharedRegion && (
-                    <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
-                      <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
-                      <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma rota!).</span>
-                    </div>
-                  )}
-
-                  {/* SEÇÃO DE BEBIDAS / GELADEIRA (Aba Produção) */}
-                  {isProducaoTab && drinkItems.length > 0 && (
-                    <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
-                      <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
-                        <CupSoda className="h-3.5 w-3.5 text-cyan-600" />
-                        <span>Itens de Geladeira / Bebidas (Conferir):</span>
-                      </div>
-                      <div className="space-y-1">
-                        {drinkItems.map((item: any) => {
-                          const key = `${order.id}-${item.id}`
-                          const isChecked = !!checkedDrinks[key]
-
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => setCheckedDrinks((prev) => ({ ...prev, [key]: !prev[key] }))}
-                              className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200 select-text cursor-pointer"
-                            >
-                              {isChecked ? (
-                                <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
-                              ) : (
-                                <Square className="h-4 w-4 text-slate-400 shrink-0" />
-                              )}
-                              <span className={`select-text ${isChecked ? 'line-through opacity-50' : ''}`}>
-                                {item.quantity}x {item.name}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ITENS DE PRODUÇÃO / PRATOS */}
-                  <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
-                      {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
-                    </p>
-
-                    {(isProducaoTab ? foodItems : order.items)?.map((item: any) => {
-                      const itemName = item.name || 'Item'
-                      const obsItem = (item.observation || '').trim()
-                      const showObs = obsItem && obsItem.toLowerCase() !== itemName.toLowerCase()
-
-                      return (
-                        <div key={item.id} className="space-y-0.5 text-xs select-text cursor-text">
-                          <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
-                            <div className="flex items-center gap-1.5">
-                              {/* Botão Copiar Apenas Nome na Aba Novos */}
+                          {/* WhatsApp Claro na Aba Novos e Na Rua */}
+                          {order.client_phone && (
+                            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                              <a
+                                href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.client_name}, sobre o seu pedido #${order.display_id} no delivery:`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-500/20 dark:bg-emerald-950/50 dark:text-emerald-300 transition-colors"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                <span className="select-text">WhatsApp: {order.client_phone}</span>
+                              </a>
                               {isNovosTab && (
                                 <button
                                   type="button"
-                                  onClick={(e) => copyToClipboard(itemName, 'Nome do item', e)}
-                                  className="rounded p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                                  title="Copiar nome do item"
+                                  onClick={(e) => copyToClipboard(order.client_phone, 'Telefone', e)}
+                                  title="Copiar WhatsApp"
+                                  className="rounded-lg border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
                                 >
                                   <Copy className="h-3 w-3" />
                                 </button>
                               )}
-                              <span className="select-text">{item.quantity}x {itemName}</span>
-                            </div>
-                            {/* Oculta valores em R$ na Produção */}
-                            {!isProducaoTab && (
-                              <span className="select-text">{formatBRL(item.price * item.quantity)}</span>
-                            )}
-                          </div>
-
-                          {Array.isArray(item.complements) && item.complements.length > 0 && (
-                            <div className="pl-5 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400 select-text">
-                              {item.complements.map((c: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-1.5 font-medium select-text">
-                                  {isNovosTab && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => copyToClipboard(c.name, 'Adicional', e)}
-                                      className="rounded p-0.5 text-emerald-500/70 hover:text-emerald-800 transition-colors"
-                                      title="Copiar adicional"
-                                    >
-                                      <Copy className="h-2.5 w-2.5" />
-                                    </button>
-                                  )}
-                                  <span className="select-text">
-                                    + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {showObs && (
-                            <div className="pl-5 flex items-center gap-1.5 text-[11px] italic font-semibold text-amber-700 dark:text-amber-400 select-text">
-                              {isNovosTab && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => copyToClipboard(obsItem, 'Observação', e)}
-                                  className="rounded p-0.5 text-amber-500/70 hover:text-amber-800 transition-colors"
-                                  title="Copiar observação"
-                                >
-                                  <Copy className="h-2.5 w-2.5" />
-                                </button>
-                              )}
-                              <span className="select-text">Obs: {obsItem}</span>
                             </div>
                           )}
                         </div>
-                      )
-                    })}
-                  </div>
+                      </div>
 
-                  {/* Informações de Rota do Motoboy (Aba Na Rua) */}
-                  {activeTab === 'dispatched' && (
-                    <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
-                      <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
-                        <span className="flex items-center gap-1.5 select-text">
-                          <Bike className="h-4 w-4 text-blue-600" />
-                          <span className="select-text">Entregador: {order.delivery_man || 'Motoboy em Rota'}</span>
-                        </span>
-                        <span className="text-[10px] text-blue-600 dark:text-blue-400 select-text">
-                          {order.departed_at ? `Saída às ${new Date(order.departed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Em trânsito'}
-                        </span>
+                      <div className="flex items-center gap-2 text-right">
+                        {/* SLA com Cores Dinâmicas */}
+                        {activeTab !== 'delivered' && (
+                          <div className={`select-text inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                            <Clock className="h-3 w-3" />
+                            <span className="select-text">{sla.text}</span>
+                          </div>
+                        )}
+
+                        {/* Botão de Recolher na Produção */}
+                        {isProducaoTab && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: false }))}
+                            className="rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                            title="Recolher card"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
 
-                  {/* Botões de Ação */}
-                  <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                    {order.status === 'pending' && (
-                      <button
-                        disabled={loadingOrderId === order.id}
-                        onClick={() => handleUpdateStatus(order.id, 'in_preparation')}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 shadow-md transition-transform hover:bg-amber-400 active:scale-98"
-                      >
-                        <ChefHat className="h-4 w-4" />
-                        <span>Aceitar e Enviar para Produção</span>
-                      </button>
-                    )}
-
-                    {order.status === 'in_preparation' && (
-                      <button
-                        disabled={loadingOrderId === order.id}
-                        onClick={() => openDispatch(order)}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
-                      >
-                        <Bike className="h-4 w-4" />
-                        <span>Despachar Individual / Saiu com Motoboy</span>
-                      </button>
-                    )}
-
-                    {order.status === 'dispatched' && (
-                      <button
-                        disabled={loadingOrderId === order.id}
-                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-emerald-500 active:scale-98"
-                      >
-                        <DollarSign className="h-4 w-4" />
-                        <span>Confirmar Retorno & Dar Baixa no Caixa</span>
-                      </button>
-                    )}
-
-                    {order.status === 'delivered' && (
-                      <div className="flex items-center justify-center gap-1.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Venda Lançada no Caixa com Sucesso</span>
+                    {/* ENDEREÇO COM BAIRRO E CIDADE */}
+                    {order.address && (
+                      <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        <div className="flex items-start gap-2 select-text cursor-text">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
+                          <span className="font-medium select-text">
+                            {order.address}
+                            {order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isNovosTab && (
+                            <button
+                              type="button"
+                              onClick={(e) => copyToClipboard(order.address, 'Endereço', e)}
+                              className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                              title="Copiar Endereço"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
+                            title="Abrir no Google Maps"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
                       </div>
                     )}
+
+                    {/* BANNER UNIFICADO DE PAGAMENTO (Apenas em Novos, Na Rua e Baixados) */}
+                    {!isProducaoTab && (
+                      <div className={`mt-2.5 flex items-center gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
+                        {paymentBanner.icon}
+                        <div className="select-text">
+                          <p className="font-black select-text">{paymentBanner.mainText}</p>
+                          <p className="text-[11px] opacity-90 select-text">{paymentBanner.subText}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ALERTA DE REGIÃO COMPARTILHADA (Aba Produção) */}
+                    {hasSharedRegion && (
+                      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+                        <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
+                        <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma rota!).</span>
+                      </div>
+                    )}
+
+                    {/* SEÇÃO DE BEBIDAS / GELADEIRA (Aba Produção) */}
+                    {isProducaoTab && drinkItems.length > 0 && (
+                      <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
+                        <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
+                          <CupSoda className="h-3.5 w-3.5 text-cyan-600" />
+                          <span>Itens de Geladeira / Bebidas (Conferir):</span>
+                        </div>
+                        <div className="space-y-1">
+                          {drinkItems.map((item: any) => {
+                            const key = `${order.id}-${item.id}`
+                            const isChecked = !!checkedDrinks[key]
+
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setCheckedDrinks((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200 select-text cursor-pointer"
+                              >
+                                {isChecked ? (
+                                  <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
+                                ) : (
+                                  <Square className="h-4 w-4 text-slate-400 shrink-0" />
+                                )}
+                                <span className={`select-text ${isChecked ? 'line-through opacity-50' : ''}`}>
+                                  {item.quantity}x {item.name}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ITENS DE PRODUÇÃO / PRATOS */}
+                    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
+                        {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
+                      </p>
+
+                      {(isProducaoTab ? foodItems : order.items)?.map((item: any) => {
+                        const itemName = item.name || 'Item'
+                        const obsItem = (item.observation || '').trim()
+                        const showObs = obsItem && obsItem.toLowerCase() !== itemName.toLowerCase()
+
+                        return (
+                          <div key={item.id} className="space-y-0.5 text-xs select-text cursor-text">
+                            <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
+                              <div className="flex items-center gap-1.5">
+                                {/* Botão Copiar Apenas Nome na Aba Novos */}
+                                {isNovosTab && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => copyToClipboard(itemName, 'Nome do item', e)}
+                                    className="rounded p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                                    title="Copiar nome do item"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                )}
+                                <span className="select-text">{item.quantity}x {itemName}</span>
+                              </div>
+                              {/* Oculta valores em R$ na Produção */}
+                              {!isProducaoTab && (
+                                <span className="select-text">{formatBRL(item.price * item.quantity)}</span>
+                              )}
+                            </div>
+
+                            {Array.isArray(item.complements) && item.complements.length > 0 && (
+                              <div className="pl-5 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400 select-text">
+                                {item.complements.map((c: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-1.5 font-medium select-text">
+                                    {isNovosTab && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => copyToClipboard(c.name, 'Adicional', e)}
+                                        className="rounded p-0.5 text-emerald-500/70 hover:text-emerald-800 transition-colors"
+                                        title="Copiar adicional"
+                                      >
+                                        <Copy className="h-2.5 w-2.5" />
+                                      </button>
+                                    )}
+                                    <span className="select-text">
+                                      + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {showObs && (
+                              <div className="pl-5 flex items-center gap-1.5 text-[11px] italic font-semibold text-amber-700 dark:text-amber-400 select-text">
+                                {isNovosTab && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => copyToClipboard(obsItem, 'Observação', e)}
+                                    className="rounded p-0.5 text-amber-500/70 hover:text-amber-800 transition-colors"
+                                    title="Copiar observação"
+                                  >
+                                    <Copy className="h-2.5 w-2.5" />
+                                  </button>
+                                )}
+                                <span className="select-text">Obs: {obsItem}</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Informações de Rota do Motoboy (Aba Na Rua) */}
+                    {activeTab === 'dispatched' && (
+                      <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
+                        <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
+                          <span className="flex items-center gap-1.5 select-text">
+                            <Bike className="h-4 w-4 text-blue-600" />
+                            <span className="select-text">Entregador: {order.delivery_man || 'Motoboy em Rota'}</span>
+                          </span>
+                          <span className="text-[10px] text-blue-600 dark:text-blue-400 select-text">
+                            {order.departed_at ? `Saída às ${new Date(order.departed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Em trânsito'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botões de Ação */}
+                    <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      {order.status === 'pending' && (
+                        <button
+                          disabled={loadingOrderId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'in_preparation')}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 shadow-md transition-transform hover:bg-amber-400 active:scale-98"
+                        >
+                          <ChefHat className="h-4 w-4" />
+                          <span>Aceitar e Enviar para Produção</span>
+                        </button>
+                      )}
+
+                      {order.status === 'in_preparation' && (
+                        <button
+                          disabled={loadingOrderId === order.id}
+                          onClick={() => openDispatch(order)}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
+                        >
+                          <Bike className="h-4 w-4" />
+                          <span>Despachar Individual / Saiu com Motoboy</span>
+                        </button>
+                      )}
+
+                      {order.status === 'dispatched' && (
+                        <button
+                          disabled={loadingOrderId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-emerald-500 active:scale-98"
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span>Confirmar Retorno & Dar Baixa no Caixa</span>
+                        </button>
+                      )}
+
+                      {order.status === 'delivered' && (
+                        <div className="flex items-center justify-center gap-1.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Venda Lançada no Caixa com Sucesso</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </motion.div>
+                )
+              })
+            )}
+          </div>
+        </motion.div>
+      </div>
 
       {/* ========================================================================= */}
-      {/* MODAL DE CONSTRUÇÃO DE ROTA & DESPACHO EM LOTE (API OSRM INCORPORADA)     */}
+      {/* MODAL DE CONSTRUÇÃO DE ROTA & DESPACHO EM LOTE (Z-INDEX 100 - NA FRENTE)  */}
       {/* ========================================================================= */}
       {routeModalOpen && routeOrders.length > 0 && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="relative z-10 w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
             {/* Header do Modal de Rota */}
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -1487,10 +1490,12 @@ export function DeliveryOrdersDrawer({
         </div>
       )}
 
-      {/* MODAL DE DESPACHO INDIVIDUAL */}
+      {/* ========================================================================= */}
+      {/* MODAL DE DESPACHO INDIVIDUAL (Z-INDEX 100 - NA FRENTE)                    */}
+      {/* ========================================================================= */}
       {dispatchModalOpen && orderToDispatch && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <Bike className="h-5 w-5 text-orange-500" />
@@ -1570,6 +1575,6 @@ export function DeliveryOrdersDrawer({
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
