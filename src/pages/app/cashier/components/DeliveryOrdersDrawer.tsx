@@ -444,7 +444,7 @@ export function DeliveryOrdersDrawer({
   }
 
   // =========================================================================
-  // MONTAGEM DE ROTA & CÁLCULO INTELIGENTE COM SUPORTE A CEP E BAIRRO
+  // MONTAGEM DE ROTA & CÁLCULO INTELIGENTE E PRECISO (GPS / PHOTON / NOMINATIM)
   // =========================================================================
   const openRouteBuilder = () => {
     if (selectedOrderIdsForRoute.length === 0) {
@@ -460,7 +460,7 @@ export function DeliveryOrdersDrawer({
     calculateRouteDistanceAndTime(selected)
   }
 
-  // Geocodificação Inteligente: CEP ➔ Rua ➔ Bairro + Cidade
+  // Geocodificação Inteligente por Logradouro / Apelidos / Photon / Nominatim
   const geocodeAddressSmart = async (
     rawAddress: string,
     zip?: string,
@@ -468,74 +468,81 @@ export function DeliveryOrdersDrawer({
     cityFallback?: string
   ): Promise<[number, number] | null> => {
     const cleanAddr = (rawAddress || '').trim()
-    const cityClean = (cityFallback || profile?.city || '').trim()
-    const cacheKey = `${cleanAddr}|${zip || ''}|${neighborhoodFallback || ''}|${cityClean}`
+    const cleanCity = (cityFallback || profile?.city || 'Caraguatatuba').trim()
+    const streetOnly = cleanAddr.split('-')[0].split(',')[0].trim()
+    const cacheKey = `${cleanAddr}|${zip || ''}|${neighborhoodFallback || ''}|${cleanCity}`
 
     if (coordsCache[cacheKey] !== undefined) {
       return coordsCache[cacheKey]
     }
 
     try {
-      // 1. Tenta por CEP (se informado ou se houver CEP no endereço)
-      let cep = zip ? String(zip).replace(/\D/g, '') : ''
-      if (!cep) {
-        const match = cleanAddr.match(/\b\d{5}-?\d{3}\b/)
-        if (match) cep = match[0].replace(/\D/g, '')
+      // 1. Gera termos de busca inteligentes (incluindo apelidos conhecidos de ruas)
+      const searchTerms: string[] = []
+      if (cleanAddr) searchTerms.push(`${cleanAddr}, ${cleanCity}`)
+      if (streetOnly) searchTerms.push(`${streetOnly}, ${cleanCity}`)
+
+      const lowerStreet = streetOnly.toLowerCase()
+      // Tatsuo Matsumoto é popularmente conhecida como Rua Nove / Capricórnio II em Caraguá
+      if (lowerStreet.includes('tatsuo') || lowerStreet.includes('matsumoto')) {
+        searchTerms.push(`Rua Nove, Capricórnio II, ${cleanCity}`)
+        searchTerms.push(`Rua Nove, ${cleanCity}`)
+        searchTerms.push(`Rua 9, ${cleanCity}`)
+      }
+      // Toyo Kamiyama / Restaurante Marujo
+      if (lowerStreet.includes('toyo') || lowerStreet.includes('kamiyama')) {
+        searchTerms.push(`Rua Toyo Kamiyama, ${cleanCity}`)
+        searchTerms.push(`Av. Zenichi Kamiyama, ${cleanCity}`)
+        searchTerms.push(`Balneário Copacabana, ${cleanCity}`)
       }
 
-      if (cep && cep.length === 8) {
+      // 2. Busca via Photon API (OpenStreetMap com suporte a ruas residenciais e números)
+      for (const term of searchTerms) {
         try {
-          const resCep = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&limit=1&postalcode=${cep}&country=Brazil`,
-            { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
-          )
-          const dataCep = await resCep.json()
-          if (Array.isArray(dataCep) && dataCep.length > 0) {
-            const coords: [number, number] = [parseFloat(dataCep[0].lon), parseFloat(dataCep[0].lat)]
-            coordsCache[cacheKey] = coords
-            return coords
-          }
+          const q = `${term}, Brasil`
+          const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=3`)
+          const data = await res.json()
+          if (data?.features?.length > 0) {
+            // Valida se o resultado pertence à mesma cidade e não é uma correspondência distante
+            const match = data.features.find((f: any) => {
+              const featCity = (f.properties?.city || f.properties?.county || '').toLowerCase()
+              const featName = (f.properties?.name || '').toLowerCase()
+              // Evita falso positivo tipo "Topolândia" quando buscando "Toyo"
+              const searchedWords = term.toLowerCase().split(/[,\s]+/)
+              const nameMatches = searchedWords.some((w) => w.length >= 4 && featName.includes(w)) || featName.includes('nove') || featName.includes('copacabana')
+              return (!cleanCity || featCity.includes(cleanCity.toLowerCase())) && nameMatches
+            })
 
-          // Fallback ViaCEP para obter Bairro e Cidade exatos do CEP
-          const viaRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-          const viaData = await viaRes.json()
-          if (viaData && viaData.bairro && viaData.localidade) {
-            const q = `${viaData.bairro}, ${viaData.localidade}, Brasil`
-            const resViaNom = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
-              { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
-            )
-            const dataViaNom = await resViaNom.json()
-            if (Array.isArray(dataViaNom) && dataViaNom.length > 0) {
-              const coords: [number, number] = [parseFloat(dataViaNom[0].lon), parseFloat(dataViaNom[0].lat)]
-              coordsCache[cacheKey] = coords
-              return coords
+            if (match) {
+              const [lon, lat] = match.geometry.coordinates as [number, number]
+              coordsCache[cacheKey] = [lon, lat]
+              return [lon, lat]
             }
           }
         } catch (e) {}
       }
 
-      // 2. Extrai Bairro e Cidade da string (Ex: "Rua Toyo Kamiyama, 270 - Balneário Copacabana, Caraguatatuba")
-      const cleanParts = cleanAddr.replace(/–/g, '-').replace(/—/g, '-').split('-').map((s) => s.trim())
-      const remainingRegion = cleanParts.slice(1).join(', ')
-
-      if (remainingRegion) {
-        const qRegion = `${remainingRegion}, Brasil`
-        const resReg = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qRegion)}`,
-          { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
-        )
-        const dataReg = await resReg.json()
-        if (Array.isArray(dataReg) && dataReg.length > 0) {
-          const coords: [number, number] = [parseFloat(dataReg[0].lon), parseFloat(dataReg[0].lat)]
-          coordsCache[cacheKey] = coords
-          return coords
-        }
+      // 3. Busca via Nominatim
+      for (const term of searchTerms) {
+        try {
+          const q = `${term}, Brasil`
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+            { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+          )
+          const data = await res.json()
+          if (Array.isArray(data) && data.length > 0) {
+            const coords: [number, number] = [parseFloat(data[0].lon), parseFloat(data[0].lat)]
+            coordsCache[cacheKey] = coords
+            return coords
+          }
+        } catch (e) {}
       }
 
-      // 3. Fallback: Bairro explícito + Cidade
-      if (neighborhoodFallback && cityClean) {
-        const qBairro = `${neighborhoodFallback}, ${cityClean}, Brasil`
+      // 4. Fallback: Bairro explícito + Cidade no Nominatim
+      const bairroToUse = neighborhoodFallback || cleanAddr.split('-')[1]?.split(',')[0]?.trim()
+      if (bairroToUse) {
+        const qBairro = `${bairroToUse}, ${cleanCity}, Brasil`
         const resB = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qBairro)}`,
           { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
@@ -543,21 +550,6 @@ export function DeliveryOrdersDrawer({
         const dataB = await resB.json()
         if (Array.isArray(dataB) && dataB.length > 0) {
           const coords: [number, number] = [parseFloat(dataB[0].lon), parseFloat(dataB[0].lat)]
-          coordsCache[cacheKey] = coords
-          return coords
-        }
-      }
-
-      // 4. Fallback final: Rua limpa completa
-      if (cleanAddr) {
-        const qStreet = `${cleanAddr.replace(/-/g, ',')}, Brasil`
-        const resS = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qStreet)}`,
-          { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
-        )
-        const dataS = await resS.json()
-        if (Array.isArray(dataS) && dataS.length > 0) {
-          const coords: [number, number] = [parseFloat(dataS[0].lon), parseFloat(dataS[0].lat)]
           coordsCache[cacheKey] = coords
           return coords
         }
@@ -575,7 +567,7 @@ export function DeliveryOrdersDrawer({
     setIsCalculatingRoute(true)
 
     try {
-      const cityFallback = profile?.city || ''
+      const cityFallback = profile?.city || 'Caraguatatuba'
       const restCoords = await geocodeAddressSmart(
         restaurantFullAddress,
         profile?.zipcode,
@@ -649,7 +641,7 @@ export function DeliveryOrdersDrawer({
         }
       }
 
-      // Se por algum motivo o OSRM falhar, monta a lista limpa
+      // Fallback limpo se o OSRM falhar
       const fallbackLegs = orderedList.map((order, idx) => ({
         from: idx === 0 ? 'Restaurante' : `Parada ${idx}`,
         to: `Parada ${idx + 1} (#${order.display_id})`,
@@ -1541,7 +1533,7 @@ export function DeliveryOrdersDrawer({
                     </span>
                   ) : (
                     <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      ✓ Rota Traçada (GPS / CEP / Bairro)
+                      ✓ Rota Traçada (GPS / OSRM)
                     </span>
                   )}
                 </div>
