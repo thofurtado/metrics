@@ -465,6 +465,21 @@ const DynamicHero = ({ profile }: { profile: any }) => {
 }
 
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
+  // Garante que o cardápio público esteja SEMPRE no modo Claro (Light), independente do tema da retaguarda
+  useEffect(() => {
+    const root = document.documentElement
+    const hadDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    root.classList.add('light')
+
+    return () => {
+      if (hadDark) {
+        root.classList.add('dark')
+        root.classList.remove('light')
+      }
+    }
+  }, [])
+
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [customizingProduct, setCustomizingProduct] = useState<ProductItem | null>(null)
@@ -1772,7 +1787,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       {/* Modal de Informações da Loja */}
       <Dialog open={isStoreInfoOpen} onOpenChange={setIsStoreInfoOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Store className="h-5 w-5 text-primary" />
@@ -1846,7 +1861,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       {/* Modal de Checkout Robusto em Etapas (Padrão iFood / Anota AI / Marujo Sliding Wizard) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-2 text-xl font-bold">
               <span className="flex items-center gap-2">
@@ -2696,7 +2711,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         open={isAddressesModalOpen}
         onOpenChange={setIsAddressesModalOpen}
       >
-        <DialogContent className="rounded-3xl p-6 sm:max-w-md">
+        <DialogContent className="rounded-3xl p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <MapPin className="h-5 w-5 text-primary" /> Meus Endereços

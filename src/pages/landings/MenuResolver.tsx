@@ -36,6 +36,18 @@ async function fetchCompanyProfile() {
 }
 
 export function MenuResolver() {
+  useEffect(() => {
+    const root = document.documentElement
+    const hadDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    root.classList.add('light')
+    return () => {
+      if (hadDark) {
+        root.classList.add('dark')
+        root.classList.remove('light')
+      }
+    }
+  }, [])
   const {
     data: tenant,
     isLoading: isLoadingTenant,

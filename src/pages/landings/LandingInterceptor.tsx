@@ -38,6 +38,18 @@ async function fetchCompanyProfile() {
 }
 
 export function LandingInterceptor() {
+  useEffect(() => {
+    const root = document.documentElement
+    const hadDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    root.classList.add('light')
+    return () => {
+      if (hadDark) {
+        root.classList.add('dark')
+        root.classList.remove('light')
+      }
+    }
+  }, [])
   if (isAuthenticated()) {
     return <Navigate to="/dashboard" replace />
   }

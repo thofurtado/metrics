@@ -40,6 +40,18 @@ interface Product {
 }
 
 function CardapioContent() {
+  useEffect(() => {
+    const root = document.documentElement
+    const hadDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    root.classList.add('light')
+    return () => {
+      if (hadDark) {
+        root.classList.add('dark')
+        root.classList.remove('light')
+      }
+    }
+  }, [])
   const isDev = import.meta.env.DEV
 
   if (!isDev && getCurrentTenant()?.id !== 'marujo') {

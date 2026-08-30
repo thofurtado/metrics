@@ -98,7 +98,7 @@ export function ItemCustomizerDialog({
   const [itemQuantity, setItemQuantity] = useState<number>(1)
   const [observation, setObservation] = useState<string>('')
 
-  // Reseta estado para os padrões sempre que abrir o modal ou mudar de produto
+  // Reset ao abrir novo produto
   useEffect(() => {
     if (open && product) {
       setFractionCount(1)
@@ -109,71 +109,61 @@ export function ItemCustomizerDialog({
       setItemQuantity(1)
       setObservation('')
     }
-  }, [open, product?.id])
+  }, [open, product])
 
-  // Lista de produtos irmãos da mesma categoria para montagem de sabores
+  // Lista de produtos irmãos (mesma subcategoria ou categoria para meio-a-meio)
   const siblingProducts = useMemo(() => {
-    const list = Array.isArray(allProducts) ? allProducts : []
-    return list
-      .filter((p) => p && p.category === product.category && (p.subcategory?.accepts_fractions ?? true))
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    if (!product) return []
+    return allProducts.filter((p) => {
+      if (product.subcategory?.id && p.subcategory?.id) {
+        return p.subcategory.id === product.subcategory.id
+      }
+      return p.category === product.category
+    })
   }, [allProducts, product])
 
-  // Troca a quantidade de frações (1, 2, 3, 4 sabores)
-  const handleSetFractions = (count: number) => {
-    setFractionCount(count)
-    if (count === 1) {
-      setSelectedFlavors([product])
-      setActiveFlavorStep(null)
-      setFlavorSearch('')
+  // Ajusta o array de sabores quando o usuário troca o número de frações (1, 2, 3...)
+  const handleSetFractions = (num: number) => {
+    setFractionCount(num)
+    const newFlavors: (ProductItem | null)[] = Array(num).fill(null)
+    newFlavors[0] = product // O primeiro sabor é sempre o produto clicado
+    setSelectedFlavors(newFlavors)
+
+    if (num > 1) {
+      setActiveFlavorStep(1) // Abre automaticamente a seleção do 2º sabor
     } else {
-      // Mantém o produto inicial como o 1º sabor e abre o 2º slot para seleção
-      const next: (ProductItem | null)[] = []
-      next.push(selectedFlavors[0] || product)
-      for (let i = 1; i < count; i++) {
-        next.push(selectedFlavors[i] || null)
-      }
-      setSelectedFlavors(next)
-      // Se o 2º slot estiver vazio (ou qualquer posterior), abre ele automaticamente para o cliente escolher
-      const firstEmpty = next.findIndex((f) => f === null)
-      setActiveFlavorStep(firstEmpty !== -1 ? firstEmpty : null)
-      setFlavorSearch('')
+      setActiveFlavorStep(null)
     }
   }
 
-  const handleSelectFlavor = (index: number, flavor: ProductItem) => {
-    const newFlavors = [...selectedFlavors]
-    newFlavors[index] = flavor
-    setSelectedFlavors(newFlavors)
+  // Seleciona um sabor para um slot fracionado
+  const handleSelectFlavor = (slotIndex: number, flavor: ProductItem) => {
+    const updated = [...selectedFlavors]
+    updated[slotIndex] = flavor
+    setSelectedFlavors(updated)
     setFlavorSearch('')
 
-    // Auto-avanço inteligente (estilo iFood):
-    // Se o próximo slot posterior estiver vazio, abre ele automaticamente
-    const nextEmptyIndex = newFlavors.findIndex((f, idx) => idx > index && f === null)
-    if (nextEmptyIndex !== -1) {
-      setActiveFlavorStep(nextEmptyIndex)
+    // Abre o próximo slot se ainda houver algum pendente
+    const nextPending = updated.findIndex((f, idx) => idx > slotIndex && f === null)
+    if (nextPending !== -1) {
+      setActiveFlavorStep(nextPending)
     } else {
-      // Se não há slots posteriores vazios, procura se há algum anterior vazio
-      const anyEmptyIndex = newFlavors.findIndex((f) => f === null)
-      if (anyEmptyIndex !== -1) {
-        setActiveFlavorStep(anyEmptyIndex)
-      } else {
-        // Se todos os sabores já foram definidos, fecha o acordeão
-        setActiveFlavorStep(null)
-      }
+      setActiveFlavorStep(null)
     }
   }
 
-  // Grupos de adicionais do produto
-  const groups = product.complementGroups || []
+  // Grupos de adicionais / complementos vinculados
+  const groups: ComplementGroup[] = useMemo(() => {
+    if (!product.complementGroups || !Array.isArray(product.complementGroups)) return []
+    return product.complementGroups
+  }, [product])
 
-  // Manipulação de Quantidade de Complemento (+ / -)
+  // Controle de Adicionais (Incremento / Decremento)
   const handleIncreaseOption = (group: ComplementGroup, option: ComplementOption) => {
     const currentTotalInGroup = group.options.reduce(
       (sum, opt) => sum + (selectedOptionsQty[opt.id] || 0),
-      0
+      0,
     )
-
     if (currentTotalInGroup >= group.max_quantity) return
 
     setSelectedOptionsQty((prev) => ({
@@ -187,90 +177,92 @@ export function ItemCustomizerDialog({
     if (current <= 0) return
 
     setSelectedOptionsQty((prev) => {
-      const updated = { ...prev }
+      const next = { ...prev }
       if (current === 1) {
-        delete updated[option.id]
+        delete next[option.id]
       } else {
-        updated[option.id] = current - 1
+        next[option.id] = current - 1
       }
-      return updated
+      return next
     })
   }
 
-  // Cálculo Comercial em Tempo Real
+  // Cálculo do Preço Unitário Total
   const { unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
-    // 1. Validação dos Sabores Escolhidos
-    const chosenFlavors = selectedFlavors.filter((f): f is ProductItem => Boolean(f))
-    if (fractionCount > 1 && chosenFlavors.length < fractionCount) {
-      return {
-        basePrice: product.price,
-        complementsExtraPrice: 0,
-        unitPrice: product.price,
-        isReadyToConfirm: false,
-        validationError: `Selecione todos os ${fractionCount} sabores da pizza (${chosenFlavors.length}/${fractionCount} escolhidos).`,
+    // 1. Preço Base dos Sabores: No Brasil, o padrão de pizzarias/delivery é cobrar pelo MAIOR preço entre as metades
+    let baseFlavorPrice = product.price
+    if (acceptsFractions && fractionCount > 1) {
+      const validSelected = selectedFlavors.filter((f): f is ProductItem => f !== null)
+      if (validSelected.length > 0) {
+        baseFlavorPrice = Math.max(...validSelected.map((f) => f.price))
       }
     }
 
-    // 2. Preço Base dos Sabores: REGRA COMERCIAL DE OURO (MAIOR PREÇO)
-    const flavorPrices = chosenFlavors.map((f) => f.price)
-    const base = flavorPrices.length > 0 ? Math.max(...flavorPrices) : product.price
+    // 2. Preço dos Complementos
+    let complementsTotal = 0
+    groups.forEach((group) => {
+      let groupChargedCount = 0
+      group.options.forEach((opt) => {
+        const qty = selectedOptionsQty[opt.id] || 0
+        for (let i = 0; i < qty; i++) {
+          groupChargedCount++
+          // Se ultrapassar a quantidade grátis configurada, cobra o valor
+          if (groupChargedCount > group.free_quantity) {
+            complementsTotal += opt.price
+          }
+        }
+      })
+    })
 
-    // 2. Cálculo dos Adicionais considerando Cotas Gratuitas (Estilo iFood)
-    let extra = 0
+    const finalUnitPrice = baseFlavorPrice + complementsTotal
+
+    // 3. Validações de Obrigatórios
     let error: string | null = null
 
-    for (const group of groups) {
-      const selectedInGroup = group.options
-        .map((opt) => ({ opt, qty: selectedOptionsQty[opt.id] || 0 }))
-        .filter((item) => item.qty > 0)
-
-      const totalQtyInGroup = selectedInGroup.reduce((sum, item) => sum + item.qty, 0)
-
-      if (totalQtyInGroup < group.min_quantity) {
-        error = 'O grupo "' + group.name + '" requer no mínimo ' + group.min_quantity + ' opção(ões).'
-      }
-
-      // Desconto de cotas grátis pelas opções de menor preço primeiro
-      let freeRemaining = group.free_quantity
-      const sortedByPrice = [...selectedInGroup].sort((a, b) => a.opt.price - b.opt.price)
-
-      for (const item of sortedByPrice) {
-        const paidQty = Math.max(0, item.qty - freeRemaining)
-        freeRemaining = Math.max(0, freeRemaining - item.qty)
-        extra += paidQty * item.opt.price
+    // Validação de Frações pendentes
+    if (acceptsFractions && fractionCount > 1) {
+      const hasMissingFlavor = selectedFlavors.some((f) => f === null)
+      if (hasMissingFlavor) {
+        error = `Por favor, selecione todos os ${fractionCount} sabores.`
       }
     }
 
-    const calculatedUnitPrice = base + extra
+    // Validação de Grupos Obrigatórios
+    if (!error) {
+      for (const group of groups) {
+        const totalInGroup = group.options.reduce(
+          (sum, opt) => sum + (selectedOptionsQty[opt.id] || 0),
+          0,
+        )
+        if (group.min_quantity > 0 && totalInGroup < group.min_quantity) {
+          error = `O grupo "${group.name}" requer no mínimo ${group.min_quantity} opção(ões).`
+          break
+        }
+      }
+    }
 
     return {
-      basePrice: base,
-      complementsExtraPrice: extra,
-      unitPrice: calculatedUnitPrice,
+      unitPrice: finalUnitPrice,
       isReadyToConfirm: !error,
       validationError: error,
     }
-  }, [selectedFlavors, selectedOptionsQty, groups, product])
+  }, [product, acceptsFractions, fractionCount, selectedFlavors, groups, selectedOptionsQty])
 
+  // Montagem e Confirmação do Pedido Customizado
   const handleConfirm = () => {
     if (!isReadyToConfirm) return
 
-    const validFlavors = selectedFlavors.filter((f): f is ProductItem => Boolean(f))
-    const flavorNames = validFlavors.map((f) => f.name)
-    const isFractioned = fractionCount > 1
-    const displayName = isFractioned
-      ? '1/' + fractionCount + ' ' + flavorNames.join(' + 1/' + fractionCount + ' ')
-      : product.name
-
-    const selectedOptionsPayload: SelectedOptionPayload[] = []
-    const obsList: string[] = []
-
-    if (isFractioned) {
-      obsList.push('[Meio-a-Meio: ' + flavorNames.join(' + ') + ']')
+    // Monta o nome de exibição
+    let displayName = product.name
+    const flavorNames = selectedFlavors.filter((f): f is ProductItem => f !== null).map((f) => f.name)
+    if (acceptsFractions && fractionCount > 1 && flavorNames.length > 1) {
+      displayName = `1/${fractionCount} ${flavorNames.join(` + 1/${fractionCount} `)}`
     }
 
-    for (const group of groups) {
-      for (const opt of group.options) {
+    // Monta o payload de complementos selecionados
+    const selectedOptionsPayload: SelectedOptionPayload[] = []
+    groups.forEach((group) => {
+      group.options.forEach((opt) => {
         const qty = selectedOptionsQty[opt.id] || 0
         if (qty > 0) {
           selectedOptionsPayload.push({
@@ -281,22 +273,20 @@ export function ItemCustomizerDialog({
             price: opt.price,
             quantity: qty,
           })
-          obsList.push(qty > 1 ? '+' + qty + 'x ' + opt.name : '+ ' + opt.name)
         }
-      }
-    }
+      })
+    })
 
-    if (observation.trim()) {
-      obsList.push('Obs: ' + observation.trim())
-    }
+    // Gera uma chave única determinística para identificar itens idênticos no carrinho
+    const optionsKeyPart = selectedOptionsPayload
+      .map((o) => `${o.optionId}x${o.quantity}`)
+      .sort()
+      .join(',')
+    const flavorsKeyPart = flavorNames.sort().join('|')
+    const customKey = `${product.id}_flavors:[${flavorsKeyPart}]_opts:[${optionsKeyPart}]_obs:[${observation.trim()}]`
 
-    const optionsKey = Object.entries(selectedOptionsQty)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([id, qty]) => id + ':' + qty)
-      .join('|')
-
-    const flavorsKey = validFlavors.map((f) => f.id).sort().join('-')
-    const customKey = product.id + '_' + fractionCount + '_' + flavorsKey + '_' + optionsKey + '_' + observation.trim()
+    const obsList: string[] = []
+    if (observation.trim()) obsList.push(observation.trim())
 
     onConfirm({
       product,
@@ -318,9 +308,9 @@ export function ItemCustomizerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-hidden p-0 sm:rounded-3xl">
-        {/* CABEÇALHO */}
-        <div className="border-b border-slate-100 bg-slate-50/80 p-5 backdrop-blur-md">
+      <DialogContent className="max-h-[90vh] max-w-xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl">
+        {/* CABEÇALHO 100% LIGHT */}
+        <div className="border-b border-slate-100 bg-slate-50/90 p-5 backdrop-blur-md">
           <div className="flex items-start justify-between gap-4">
             <div>
               <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-emerald-700">
@@ -344,8 +334,8 @@ export function ItemCustomizerDialog({
           </div>
         </div>
 
-        {/* CONTEÚDO SCROLLÁVEL */}
-        <div className="max-h-[55vh] space-y-6 overflow-y-auto p-5">
+        {/* CONTEÚDO SCROLLÁVEL 100% LIGHT */}
+        <div className="max-h-[55vh] space-y-6 overflow-y-auto p-5 bg-[#F8FAFC]">
           {/* SEÇÃO 1: FRACIONAMENTO / MEIO-A-MEIO */}
           {acceptsFractions && (
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
@@ -449,7 +439,7 @@ export function ItemCustomizerDialog({
                               placeholder="Buscar sabor (ex: calabresa, frango...)"
                               value={flavorSearch}
                               onChange={(e) => setFlavorSearch(e.target.value)}
-                              className="w-full h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                              className="w-full h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium text-slate-900"
                               autoFocus
                             />
                           </div>
@@ -482,18 +472,18 @@ export function ItemCustomizerDialog({
                                     {sp.name}
                                   </p>
                                   {sp.description && (
-                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-normal">
+                                    <p className="text-[11px] text-slate-500 line-clamp-1">
                                       {sp.description}
                                     </p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2.5 shrink-0">
-                                  <span className="text-xs font-black text-slate-900">
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-xs font-bold text-slate-600">
                                     {formatBRL(sp.price)}
                                   </span>
                                   <div
                                     className={
-                                      'h-5 w-5 rounded-full border flex items-center justify-center transition-all ' +
+                                      'flex h-5 w-5 items-center justify-center rounded-full border ' +
                                       (isCurrentSelected
                                         ? 'border-emerald-600 bg-emerald-600 text-white'
                                         : 'border-slate-300 bg-white')
@@ -673,14 +663,14 @@ export function ItemCustomizerDialog({
               placeholder="Ex: Tirar cebola, carne bem passada, enviar sachê..."
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
-              className="mt-2 text-xs border-slate-200"
+              className="mt-2 text-xs border-slate-200 bg-white text-slate-900"
               maxLength={200}
             />
           </div>
         </div>
 
-        {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO */}
-        <div className="border-t border-slate-100 bg-slate-50/80 p-5 backdrop-blur-md">
+        {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO 100% LIGHT */}
+        <div className="border-t border-slate-100 bg-slate-50/90 p-5 backdrop-blur-md">
           {validationError && (
             <p className="mb-3 text-center text-xs font-bold text-amber-700">
               ⚠️ {validationError}
