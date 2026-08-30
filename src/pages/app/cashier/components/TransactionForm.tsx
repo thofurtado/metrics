@@ -615,7 +615,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
   const formConfig = {
     venda: {
       title: 'Lançar Venda',
-      cardStyle: 'bg-white border-slate-200 dark:bg-slate-900/90 dark:border-slate-800 dark:shadow-xl',
+      cardStyle: 'bg-white border-slate-300 shadow-sm dark:bg-slate-900/90 dark:border-slate-800 dark:shadow-xl',
       btnStyle: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25',
       btnLabel: 'Adicionar',
       icon: <Plus size={18} />,
@@ -728,7 +728,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                 }
               }}
               placeholder="0,00"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/70 p-4 font-mono text-base font-bold text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
             />
           </div>
 
@@ -784,7 +784,7 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
                           ? 'Nº Balcão'
                           : 'Nº Delivery'
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50/70 p-4 text-base font-bold text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:p-3 md:text-sm"
                   />
                 </div>
               </div>
