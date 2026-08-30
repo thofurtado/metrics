@@ -9,7 +9,6 @@ import {
   VolumeX,
   Play,
   Check,
-  Bell,
   X
 } from 'lucide-react'
 import { api } from '@/lib/axios'
@@ -118,7 +117,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     }
   }, [queryClient])
 
-  // REGRA: Fica 100% invisível até a primeira entrega ser lançada/existir no turno
+  // Fica 100% invisível até a primeira entrega ser lançada no turno
   if (orders.length === 0) {
     return null
   }
@@ -150,11 +149,11 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
 
   return (
     <>
-      <div className="my-3 overflow-visible rounded-2xl border border-slate-700/80 bg-slate-900 p-3 text-white shadow-md transition-all dark:border-slate-800">
+      <div className="my-3 overflow-visible rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900/90">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Cabeçalho Limpo: GESTOR DE ENTREGAS / 3 pedidos hoje */}
+          {/* Cabeçalho Harmônico: GESTOR DE ENTREGAS / 5 pedidos hoje */}
           <div className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/30">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400 dark:ring-orange-500/30">
               <Bike className="h-4 w-4" />
               {pendingOrders.length > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
@@ -164,10 +163,10 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               )}
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">
                 Gestor de Entregas
               </span>
-              <p className="text-sm font-black tracking-tight text-white leading-tight">
+              <p className="text-sm font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                 {orders.length} {orders.length === 1 ? 'pedido hoje' : 'pedidos hoje'}
               </p>
             </div>
@@ -182,14 +181,14 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
                 onClick={() => setIsSoundDropdownOpen((prev) => !prev)}
                 className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-all active:scale-95 ${
                   isMuted
-                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'
                     : pendingOrders.length > 0
-                    ? 'border-amber-400/50 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 animate-pulse'
-                    : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                    ? 'border-amber-400/50 bg-amber-500/20 text-amber-600 dark:text-amber-300 animate-pulse'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
                 }`}
                 title={isMuted ? 'Áudio de pedidos silenciado (Clique para configurar)' : 'Configurar alerta sonoro'}
               >
-                {isMuted ? <VolumeX className="h-4 w-4 text-rose-400" /> : <Volume2 className="h-4 w-4" />}
+                {isMuted ? <VolumeX className="h-4 w-4 text-rose-500" /> : <Volume2 className="h-4 w-4" />}
               </button>
 
               {/* Dropdown Flutuante de Som */}
@@ -278,7 +277,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                 pendingOrders.length > 0
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400/50'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                  : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
               }`}
             >
               <Clock className="h-3.5 w-3.5" />
@@ -292,7 +291,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                 inPrepOrders.length > 0
                   ? 'bg-orange-600 text-white shadow-md shadow-orange-600/20'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                  : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
               }`}
             >
               <ChefHat className="h-3.5 w-3.5" />
@@ -306,7 +305,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                 dispatchedOrders.length > 0
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                  : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
               }`}
             >
               <Bike className="h-3.5 w-3.5" />
@@ -317,7 +316,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-white/20 active:scale-95"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-white active:scale-95"
             >
               <span>Abrir Painel</span>
               <ExternalLink className="h-3.5 w-3.5 opacity-70" />
