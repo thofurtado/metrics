@@ -1,43 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bike, ChefHat, Clock, ExternalLink, PackageCheck, Sparkles, Volume2 } from 'lucide-react'
+import { Bike, ChefHat, Clock, ExternalLink, PackageCheck, Sparkles, Volume2, VolumeX, BellRing } from 'lucide-react'
 import { api } from '@/lib/axios'
 import { DeliveryOrdersDrawer } from './DeliveryOrdersDrawer'
+import { deliveryAlertManager, unlockAudioContext } from '@/lib/delivery-sound'
+import { toast } from 'sonner'
 
 interface DeliveryOrdersBarProps {
   sessionId?: string
   onOrderCompleted?: () => void
 }
 
-// Gerador de Som Sutíl (Ding / Chime) via Web Audio API
-function playChimeSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
-    osc.frequency.exponentialRampToValueAtTime(880.00, ctx.currentTime + 0.15) // A5
-
-    gain.gain.setValueAtTime(0.2, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
-
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-
-    osc.start()
-    osc.stop(ctx.currentTime + 0.5)
-  } catch (e) {
-    console.warn('Audio Context não autorizado ou não suportado', e)
-  }
-}
-
 export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrdersBarProps) {
   const queryClient = useQueryClient()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'pending' | 'in_preparation' | 'dispatched' | 'delivered'>('pending')
-  const prevPendingCount = useRef<number | null>(null)
+  const [isMuted, setIsMuted] = useState<boolean>(() => deliveryAlertManager.getIsMuted())
 
   const { data, isLoading } = useQuery({
     queryKey: ['cashier-online-orders'],
@@ -56,12 +34,30 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
 
-  // Toca som suave quando entra um novo pedido pendente
+  // Desbloqueia contexto de áudio na primeira interação do usuário (compatibilidade Safari / iOS / Chrome)
   useEffect(() => {
-    if (prevPendingCount.current !== null && pendingOrders.length > prevPendingCount.current) {
-      playChimeSound()
+    const handleUserInteraction = () => {
+      unlockAudioContext()
     }
-    prevPendingCount.current = pendingOrders.length
+    window.addEventListener('click', handleUserInteraction, { once: true })
+    window.addEventListener('touchstart', handleUserInteraction, { once: true })
+    return () => {
+      window.removeEventListener('click', handleUserInteraction)
+      window.removeEventListener('touchstart', handleUserInteraction)
+    }
+  }, [])
+
+  // Alerta sonoro contínuo com Howler.js enquanto houver pedidos pendentes a aceitar
+  useEffect(() => {
+    if (pendingOrders.length > 0) {
+      deliveryAlertManager.startAlert()
+    } else {
+      deliveryAlertManager.stopAlert()
+    }
+
+    return () => {
+      // Não interrompe bruscamente se continuar tendo pedidos
+    }
   }, [pendingOrders.length])
 
   // Escuta SSE em tempo real para atualizar instantaneamente sem precisar de F5
@@ -73,7 +69,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       eventSource = new EventSource(sseUrl)
       eventSource.addEventListener('new_order', () => {
         queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
-        playChimeSound()
+        deliveryAlertManager.startAlert()
       })
       eventSource.addEventListener('order_status_updated', () => {
         queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
@@ -87,11 +83,23 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     }
   }, [queryClient])
 
-  // A barra fica sempre visível no turno para dar visibilidade operacional ao caixa
-
   const openTab = (tab: 'pending' | 'in_preparation' | 'dispatched' | 'delivered') => {
     setSelectedTab(tab)
     setIsDrawerOpen(true)
+  }
+
+  const handleToggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const nextMuted = deliveryAlertManager.toggleMute()
+    setIsMuted(nextMuted)
+    if (nextMuted) {
+      toast.info('Alerta sonoro de pedidos silenciado')
+    } else {
+      toast.success('Alerta sonoro ativado!')
+      if (pendingOrders.length > 0) {
+        deliveryAlertManager.startAlert()
+      }
+    }
   }
 
   return (
@@ -118,21 +126,44 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
                   {orders.length} pedidos hoje
                 </span>
               </div>
-              <p className="text-sm font-bold tracking-tight text-white">
-                Fluxo de Delivery do Turno
+              <p className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                <span>Fluxo de Delivery do Turno</span>
+                {pendingOrders.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-black text-amber-300 border border-amber-500/30 animate-pulse">
+                    <BellRing className="h-3 w-3" />
+                    {pendingOrders.length} aguardando aceite
+                  </span>
+                )}
               </p>
             </div>
           </div>
 
-          {/* Pills Centrais de Status */}
+          {/* Pills Centrais de Status e Controle de Som */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Botão de Silenciar / Ativar Som */}
+            <button
+              type="button"
+              onClick={handleToggleMute}
+              className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-bold transition-all active:scale-95 ${
+                isMuted
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                  : pendingOrders.length > 0
+                  ? 'border-amber-400/50 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 animate-pulse'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+              }`}
+              title={isMuted ? 'Ativar alerta sonoro de novos pedidos' : 'Silenciar alerta sonoro'}
+            >
+              {isMuted ? <VolumeX className="h-4 w-4 text-rose-400" /> : <Volume2 className="h-4 w-4 text-amber-400" />}
+              <span>{isMuted ? 'Mudo' : 'Som Ativo'}</span>
+            </button>
+
             {/* 1. Novos */}
             <button
               type="button"
               onClick={() => openTab('pending')}
               className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all active:scale-95 ${
                 pendingOrders.length > 0
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400/50'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400/50 animate-bounce'
                   : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
               }`}
             >
