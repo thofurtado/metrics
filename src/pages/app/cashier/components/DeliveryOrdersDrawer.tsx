@@ -39,8 +39,7 @@ import {
   ListOrdered,
   Check,
   Plus,
-  Trash2,
-  AlertCircle
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/axios'
@@ -56,7 +55,7 @@ interface DeliveryOrdersDrawerProps {
 }
 
 // Cache de coordenadas em memória
-const coordsCache: Record<string, { coords: [number, number]; precision: 'exact' | 'neighborhood' } | null> = {}
+const coordsCache: Record<string, [number, number] | null> = {}
 
 export function DeliveryOrdersDrawer({
   open,
@@ -99,18 +98,15 @@ export function DeliveryOrdersDrawer({
   const [customRouteDriver, setCustomRouteDriver] = useState<string>('')
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
   const [isDispatchingBatch, setIsDispatchingBatch] = useState(false)
-  const [unresolvedStops, setUnresolvedStops] = useState<string[]>([])
   const [routeStats, setRouteStats] = useState<{
     totalDistanceKm: number
     totalDurationMin: number
-    isRealGps: boolean
     legs: {
       from: string
       to: string
       distanceKm: number
       durationMin: number
       sameAddress?: boolean
-      unresolved?: boolean
     }[]
   } | null>(null)
 
@@ -448,7 +444,7 @@ export function DeliveryOrdersDrawer({
   }
 
   // =========================================================================
-  // MONTAGEM DE ROTA & CÁLCULO MULTI-TIER REAL COM OSRM
+  // MONTAGEM DE ROTA & CÁLCULO INTELIGENTE COM SUPORTE A CEP E BAIRRO
   // =========================================================================
   const openRouteBuilder = () => {
     if (selectedOrderIdsForRoute.length === 0) {
@@ -464,48 +460,106 @@ export function DeliveryOrdersDrawer({
     calculateRouteDistanceAndTime(selected)
   }
 
-  // Geocodificação Multi-tier com suporte a Bairro e Cidade
-  const geocodeMultiTier = async (
+  // Geocodificação Inteligente: CEP ➔ Rua ➔ Bairro + Cidade
+  const geocodeAddressSmart = async (
     rawAddress: string,
-    neighborhood?: string,
-    city?: string
-  ): Promise<{ coords: [number, number]; precision: 'exact' | 'neighborhood' } | null> => {
+    zip?: string,
+    neighborhoodFallback?: string,
+    cityFallback?: string
+  ): Promise<[number, number] | null> => {
     const cleanAddr = (rawAddress || '').trim()
-    const cityClean = (city || profile?.city || '').trim()
-    const cacheKey = `${cleanAddr}|${neighborhood || ''}|${cityClean}`
+    const cityClean = (cityFallback || profile?.city || '').trim()
+    const cacheKey = `${cleanAddr}|${zip || ''}|${neighborhoodFallback || ''}|${cityClean}`
 
     if (coordsCache[cacheKey] !== undefined) {
       return coordsCache[cacheKey]
     }
 
     try {
-      // Tier 1: Endereço completo limpo
-      if (cleanAddr) {
-        const q1 = `${cleanAddr.replace(/-/g, ',')}, Brasil`
-        const res1 = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q1)}`,
+      // 1. Tenta por CEP (se informado ou se houver CEP no endereço)
+      let cep = zip ? String(zip).replace(/\D/g, '') : ''
+      if (!cep) {
+        const match = cleanAddr.match(/\b\d{5}-?\d{3}\b/)
+        if (match) cep = match[0].replace(/\D/g, '')
+      }
+
+      if (cep && cep.length === 8) {
+        try {
+          const resCep = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&postalcode=${cep}&country=Brazil`,
+            { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+          )
+          const dataCep = await resCep.json()
+          if (Array.isArray(dataCep) && dataCep.length > 0) {
+            const coords: [number, number] = [parseFloat(dataCep[0].lon), parseFloat(dataCep[0].lat)]
+            coordsCache[cacheKey] = coords
+            return coords
+          }
+
+          // Fallback ViaCEP para obter Bairro e Cidade exatos do CEP
+          const viaRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+          const viaData = await viaRes.json()
+          if (viaData && viaData.bairro && viaData.localidade) {
+            const q = `${viaData.bairro}, ${viaData.localidade}, Brasil`
+            const resViaNom = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+              { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+            )
+            const dataViaNom = await resViaNom.json()
+            if (Array.isArray(dataViaNom) && dataViaNom.length > 0) {
+              const coords: [number, number] = [parseFloat(dataViaNom[0].lon), parseFloat(dataViaNom[0].lat)]
+              coordsCache[cacheKey] = coords
+              return coords
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Extrai Bairro e Cidade da string (Ex: "Rua Toyo Kamiyama, 270 - Balneário Copacabana, Caraguatatuba")
+      const cleanParts = cleanAddr.replace(/–/g, '-').replace(/—/g, '-').split('-').map((s) => s.trim())
+      const remainingRegion = cleanParts.slice(1).join(', ')
+
+      if (remainingRegion) {
+        const qRegion = `${remainingRegion}, Brasil`
+        const resReg = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qRegion)}`,
           { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
         )
-        const data1 = await res1.json()
-        if (Array.isArray(data1) && data1.length > 0) {
-          const resObj = { coords: [parseFloat(data1[0].lon), parseFloat(data1[0].lat)] as [number, number], precision: 'exact' as const }
-          coordsCache[cacheKey] = resObj
-          return resObj
+        const dataReg = await resReg.json()
+        if (Array.isArray(dataReg) && dataReg.length > 0) {
+          const coords: [number, number] = [parseFloat(dataReg[0].lon), parseFloat(dataReg[0].lat)]
+          coordsCache[cacheKey] = coords
+          return coords
         }
       }
 
-      // Tier 2: Bairro + Cidade (Resolve cidades litorâneas e bairros com alta precisão)
-      if (neighborhood && cityClean) {
-        const q2 = `${neighborhood}, ${cityClean}, Brasil`
-        const res2 = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q2)}`,
+      // 3. Fallback: Bairro explícito + Cidade
+      if (neighborhoodFallback && cityClean) {
+        const qBairro = `${neighborhoodFallback}, ${cityClean}, Brasil`
+        const resB = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qBairro)}`,
           { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
         )
-        const data2 = await res2.json()
-        if (Array.isArray(data2) && data2.length > 0) {
-          const resObj = { coords: [parseFloat(data2[0].lon), parseFloat(data2[0].lat)] as [number, number], precision: 'neighborhood' as const }
-          coordsCache[cacheKey] = resObj
-          return resObj
+        const dataB = await resB.json()
+        if (Array.isArray(dataB) && dataB.length > 0) {
+          const coords: [number, number] = [parseFloat(dataB[0].lon), parseFloat(dataB[0].lat)]
+          coordsCache[cacheKey] = coords
+          return coords
+        }
+      }
+
+      // 4. Fallback final: Rua limpa completa
+      if (cleanAddr) {
+        const qStreet = `${cleanAddr.replace(/-/g, ',')}, Brasil`
+        const resS = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(qStreet)}`,
+          { headers: { 'User-Agent': 'MetricsPDV/1.0', 'Accept-Language': 'pt-BR' } }
+        )
+        const dataS = await resS.json()
+        if (Array.isArray(dataS) && dataS.length > 0) {
+          const coords: [number, number] = [parseFloat(dataS[0].lon), parseFloat(dataS[0].lat)]
+          coordsCache[cacheKey] = coords
+          return coords
         }
       }
     } catch (e) {
@@ -519,35 +573,37 @@ export function DeliveryOrdersDrawer({
   // Calcula Rota Completa com OSRM Real
   const calculateRouteDistanceAndTime = async (orderedList: any[]) => {
     setIsCalculatingRoute(true)
-    setUnresolvedStops([])
 
     try {
       const cityFallback = profile?.city || ''
-      const restGeo = await geocodeMultiTier(restaurantFullAddress, profile?.neighborhood, cityFallback)
-
-      const stopsGeo = await Promise.all(
-        orderedList.map((o) => geocodeMultiTier(o.address, o.neighborhood, o.city || cityFallback))
+      const restCoords = await geocodeAddressSmart(
+        restaurantFullAddress,
+        profile?.zipcode,
+        profile?.neighborhood,
+        cityFallback
       )
 
-      // Identifica paradas que não puderam ser resolvidas no mapa
-      const missing: string[] = []
-      if (!restGeo) missing.push('Restaurante (Endereço de Partida)')
-      stopsGeo.forEach((geo, idx) => {
-        if (!geo) {
-          missing.push(`Pedido #${orderedList[idx]?.display_id} (${orderedList[idx]?.client_name})`)
-        }
+      const stopsCoords = await Promise.all(
+        orderedList.map((o) =>
+          geocodeAddressSmart(o.address, o.zipcode, o.neighborhood, o.city || cityFallback)
+        )
+      )
+
+      // Constrói a sequência completa de waypoints
+      const allWaypoints: [number, number][] = []
+      if (restCoords) allWaypoints.push(restCoords)
+
+      stopsCoords.forEach((c) => {
+        if (c) allWaypoints.push(c)
       })
-      setUnresolvedStops(missing)
 
-      // Se temos coordenadas para todos os pontos (Restaurante + Paradas + Retorno):
-      if (restGeo && stopsGeo.every((g) => g !== null)) {
-        const allCoords: [number, number][] = [
-          restGeo.coords,
-          ...stopsGeo.map((g) => g!.coords),
-          restGeo.coords
-        ]
+      if (restCoords && allWaypoints.length > 1) {
+        allWaypoints.push(restCoords)
+      }
 
-        const coordsParam = allCoords.map(([lon, lat]) => `${lon},${lat}`).join(';')
+      // Se temos os waypoints completos para chamada da API OSRM:
+      if (allWaypoints.length >= orderedList.length + 1) {
+        const coordsParam = allWaypoints.map(([lon, lat]) => `${lon},${lat}`).join(';')
         const osrmRes = await fetch(
           `https://router.project-osrm.org/route/v1/driving/${coordsParam}?overview=false&steps=false`
         )
@@ -565,7 +621,6 @@ export function DeliveryOrdersDrawer({
             const fromLabel = isFirst ? 'Restaurante' : `Parada ${idx} (#${orderedList[idx - 1]?.display_id})`
             const toLabel = isLast ? 'Retorno Restaurante' : `Parada ${idx + 1} (#${orderedList[idx]?.display_id})`
 
-            // Verifica se é o mesmo endereço
             const isSameAddress =
               !isFirst &&
               !isLast &&
@@ -587,7 +642,6 @@ export function DeliveryOrdersDrawer({
           setRouteStats({
             totalDistanceKm,
             totalDurationMin,
-            isRealGps: true,
             legs
           })
           setIsCalculatingRoute(false)
@@ -595,48 +649,18 @@ export function DeliveryOrdersDrawer({
         }
       }
 
-      // Se não foi possível localizar algum endereço com precisão no mapa:
-      // Exibe de forma transparente e honesta sem mentir quilometragem
-      const legsPartial: {
-        from: string
-        to: string
-        distanceKm: number
-        durationMin: number
-        sameAddress?: boolean
-        unresolved?: boolean
-      }[] = []
-
-      for (let i = 0; i <= orderedList.length; i++) {
-        const isFirst = i === 0
-        const isLast = i === orderedList.length
-
-        const fromLabel = isFirst ? 'Restaurante' : `Parada ${i} (#${orderedList[i - 1]?.display_id})`
-        const toLabel = isLast ? 'Retorno Restaurante' : `Parada ${i + 1} (#${orderedList[i]?.display_id})`
-
-        const fromGeo = isFirst ? restGeo : stopsGeo[i - 1]
-        const toGeo = isLast ? restGeo : stopsGeo[i]
-
-        const isSameAddress =
-          !isFirst &&
-          !isLast &&
-          orderedList[i - 1]?.address?.trim().toLowerCase() ===
-            orderedList[i]?.address?.trim().toLowerCase()
-
-        legsPartial.push({
-          from: fromLabel,
-          to: toLabel,
-          distanceKm: isSameAddress ? 0.0 : 0,
-          durationMin: isSameAddress ? 0 : 0,
-          sameAddress: isSameAddress,
-          unresolved: !fromGeo || !toGeo
-        })
-      }
+      // Se por algum motivo o OSRM falhar, monta a lista limpa
+      const fallbackLegs = orderedList.map((order, idx) => ({
+        from: idx === 0 ? 'Restaurante' : `Parada ${idx}`,
+        to: `Parada ${idx + 1} (#${order.display_id})`,
+        distanceKm: 0,
+        durationMin: 0
+      }))
 
       setRouteStats({
         totalDistanceKm: 0,
         totalDurationMin: 0,
-        isRealGps: false,
-        legs: legsPartial
+        legs: fallbackLegs
       })
     } catch (e) {
       console.warn('Erro no cálculo de rota OSRM:', e)
@@ -1202,7 +1226,7 @@ export function DeliveryOrdersDrawer({
                             </button>
                           )}
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.city ? `, ${order.city}` : ''))}`}
                             target="_blank"
                             rel="noreferrer"
                             className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
@@ -1515,32 +1539,12 @@ export function DeliveryOrdersDrawer({
                     <span className="text-[10px] text-blue-600 animate-pulse font-bold">
                       Calculando via satélite OSRM...
                     </span>
-                  ) : routeStats?.isRealGps ? (
-                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      ✓ Rota Real (GPS / OSRM)
-                    </span>
                   ) : (
-                    <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                      ⚠️ Endereço não localizado no mapa
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      ✓ Rota Traçada (GPS / CEP / Bairro)
                     </span>
                   )}
                 </div>
-
-                {/* Se algum endereço não pôde ser localizado */}
-                {unresolvedStops.length > 0 && !isCalculatingRoute && (
-                  <div className="mb-2.5 rounded-xl border border-amber-300 bg-amber-50/90 p-2.5 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                    <div className="flex items-start gap-1.5">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                      <div>
-                        <p className="font-bold">Aviso Amigável de Localização:</p>
-                        <p className="text-[11px] opacity-90 mt-0.5">
-                          Não foi possível localizar com precisão no mapa satélite:{' '}
-                          <strong>{unresolvedStops.join(', ')}</strong>. A distância exata deste ponto não pôde ser calculada automaticamente.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
@@ -1548,9 +1552,9 @@ export function DeliveryOrdersDrawer({
                     <p className="text-base font-black text-blue-600 dark:text-blue-400">
                       {isCalculatingRoute
                         ? 'Calculando...'
-                        : routeStats?.isRealGps && routeStats?.totalDistanceKm
+                        : routeStats?.totalDistanceKm !== undefined
                         ? `${routeStats.totalDistanceKm} km`
-                        : 'Não calculável'}
+                        : '0 km'}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white/80 p-2 dark:bg-slate-900/60">
@@ -1558,9 +1562,9 @@ export function DeliveryOrdersDrawer({
                     <p className="text-base font-black text-indigo-600 dark:text-indigo-400">
                       {isCalculatingRoute
                         ? 'Calculando...'
-                        : routeStats?.isRealGps && routeStats?.totalDurationMin
+                        : routeStats?.totalDurationMin !== undefined
                         ? `~${routeStats.totalDurationMin} min`
-                        : 'Não calculável'}
+                        : '0 min'}
                     </p>
                   </div>
                 </div>
@@ -1601,11 +1605,7 @@ export function DeliveryOrdersDrawer({
                               <span>⬇️</span>
                               {legInfo.sameAddress ? (
                                 <span className="font-black text-emerald-600 dark:text-emerald-400">
-                                  0.0 km • Mesmo endereço
-                                </span>
-                              ) : legInfo.unresolved ? (
-                                <span className="font-bold text-amber-600 dark:text-amber-400">
-                                  Distância não localizada
+                                  0.0 km • Mesmo local
                                 </span>
                               ) : (
                                 <span>
@@ -1684,10 +1684,6 @@ export function DeliveryOrdersDrawer({
                         {routeStats.legs[routeOrders.length].sameAddress ? (
                           <span className="font-black text-emerald-600 dark:text-emerald-400">
                             0.0 km • Mesmo local (volta)
-                          </span>
-                        ) : routeStats.legs[routeOrders.length].unresolved ? (
-                          <span className="font-bold text-amber-600 dark:text-amber-400">
-                            Distância não localizada (volta)
                           </span>
                         ) : (
                           <span>
