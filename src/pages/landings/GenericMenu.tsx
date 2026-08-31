@@ -24,6 +24,7 @@ import {
   FileText,
   Info,
   MapPin,
+  MessageCircle,
   Minus,
   Plus,
   QrCode,
@@ -538,6 +539,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     type: 'success' | 'info' | 'error'
     message: string
   } | null>(null)
+  const [unsupportedNeighborhoodModal, setUnsupportedNeighborhoodModal] = useState<{
+    isOpen: boolean
+    neighborhoodName: string
+  } | null>(null)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -594,9 +599,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           )
           setStreet(addr.street || '')
           setNumber(addr.number ? addr.number.toString() : '')
-          setNeighborhood(addr.neighborhood || '')
           setCity(addr.city || '')
           setState(addr.state || '')
+
+          if (fulfillmentType === 'DELIVERY' && availableNeighborhoodsList.length > 0) {
+            const isAllowed = availableNeighborhoodsList.some(
+              (n) => normalizeText(n) === normalizeText(addr.neighborhood)
+            )
+            if (!isAllowed) {
+              setNeighborhood('')
+              setAddressReadonly(false)
+              setIsNewAddress(true)
+              setUnsupportedNeighborhoodModal({
+                isOpen: true,
+                neighborhoodName: addr.neighborhood || '',
+              })
+              setPhoneSearchToast({
+                type: 'info',
+                message: `Seu endereço cadastrado (${addr.neighborhood || ''}) não está na nossa área de entrega padrão.`,
+              })
+              return
+            }
+          }
+
+          setNeighborhood(addr.neighborhood || '')
           setAddressReadonly(true)
           setIsNewAddress(false)
         } else {
@@ -647,9 +673,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         (n) => normalizeText(n) === normalizeText(addr.neighborhood)
       )
       if (!isAllowed) {
-        alert(
-          `Atenção: O endereço salvo no bairro "${addr.neighborhood}" não está na área de entrega atendida no momento. Por favor, escolha outro endereço ou opte por Retirada no Balcão.`
-        )
+        setUnsupportedNeighborhoodModal({
+          isOpen: true,
+          neighborhoodName: addr.neighborhood || '',
+        })
         return
       }
     }
@@ -700,9 +727,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         } else {
           setNeighborhood('')
           if (availableNeighborhoodsList.length > 0) {
-            alert(
-              `Atenção: O bairro "${data.neighborhood || ''}" deste CEP não está na área de entrega atendida pela loja. Por favor, selecione um bairro atendido ou escolha Retirada no Balcão.`
-            )
+            setUnsupportedNeighborhoodModal({
+              isOpen: true,
+              neighborhoodName: data.neighborhood || '',
+            })
           }
         }
 
@@ -740,11 +768,29 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const availableNeighborhoodsList = useMemo(() => {
-    const sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    if (typeof sectors === 'string') {
+      try {
+        sectors = JSON.parse(sectors)
+      } catch {
+        sectors = []
+      }
+    }
+    if (!Array.isArray(sectors)) sectors = []
+
+    let available = profile?.availableNeighborhoods || profile?.available_neighborhoods || []
+    if (typeof available === 'string') {
+      try {
+        available = JSON.parse(available)
+      } catch {
+        available = []
+      }
+    }
+    if (!Array.isArray(available)) available = []
+
     const fromSectors = sectors.flatMap((s: any) => s.neighborhoods || [])
-    const fromAvailable = profile?.availableNeighborhoods || profile?.available_neighborhoods || []
     const unique = Array.from(
-      new Set([...fromSectors, ...fromAvailable]),
+      new Set([...fromSectors, ...available]),
     ).filter(Boolean) as string[]
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
@@ -1048,9 +1094,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           (n) => normalizeText(n) === normalizeText(neighborhood)
         )
         if (!isAllowed) {
-          alert(
-            `Desculpe, realizamos entregas apenas nos bairros cadastrados nos setores da loja. O bairro "${neighborhood}" não está na nossa área atendida.`
-          )
+          setUnsupportedNeighborhoodModal({
+            isOpen: true,
+            neighborhoodName: neighborhood,
+          })
           setCheckoutWizardStep(2)
           return
         }
@@ -1104,8 +1151,20 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             })),
           })),
         })
-      } catch (orderApiErr) {
-        console.warn('Aviso: envio direto ao PDV falhou, continuando para WhatsApp:', orderApiErr)
+      } catch (orderApiErr: any) {
+        console.error('Erro ao enviar pedido para o caixa (PDV):', orderApiErr)
+        setIsProcessingOrder(false)
+        const errorMsg = orderApiErr?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
+        if (errorMsg.toLowerCase().includes('área de entrega') || errorMsg.toLowerCase().includes('bairro')) {
+          setUnsupportedNeighborhoodModal({
+            isOpen: true,
+            neighborhoodName: neighborhood,
+          })
+          setCheckoutWizardStep(2)
+        } else {
+          alert(`Não foi possível registrar o pedido no caixa: ${errorMsg}`)
+        }
+        return
       }
 
       // 3. Formata mensagem estruturada ultra-profissional para o WhatsApp
@@ -2253,7 +2312,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               >
                                 <option value="">Selecione o Bairro...</option>
                                 {availableNeighborhoodsList.map((b) => {
-                                  const sectors = profile?.deliverySectors || []
+                                  let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+                                  if (typeof sectors === 'string') {
+                                    try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+                                  }
+                                  if (!Array.isArray(sectors)) sectors = []
                                   const foundSec = sectors.find((s: any) =>
                                     (s.neighborhoods || []).some(
                                       (nb: string) => normalizeText(nb) === normalizeText(b),
@@ -2359,15 +2422,28 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           (n) => normalizeText(n) === normalizeText(neighborhood)
                         )
                         if (!isAllowed) {
-                          alert(
-                            `Desculpe, realizamos entregas apenas nos bairros cadastrados nos setores da loja. O bairro "${neighborhood}" não está na nossa área atendida.`
-                          )
+                          setUnsupportedNeighborhoodModal({
+                            isOpen: true,
+                            neighborhoodName: neighborhood,
+                          })
                           return
                         }
                       }
                     }
-                    await registerClientInBackend()
-                    setCheckoutWizardStep(3)
+                    try {
+                      await registerClientInBackend()
+                      setCheckoutWizardStep(3)
+                    } catch (err: any) {
+                      const msg = err?.response?.data?.message || 'Erro ao cadastrar cliente.'
+                      if (msg.toLowerCase().includes('área de entrega') || msg.toLowerCase().includes('bairro')) {
+                        setUnsupportedNeighborhoodModal({
+                          isOpen: true,
+                          neighborhoodName: neighborhood,
+                        })
+                      } else {
+                        alert(msg)
+                      }
+                    }
                   }}
                   className="rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary/90"
                 >
@@ -2746,6 +2822,89 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               </button>
             </motion.div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog: Bairro Não Atendido com Redirecionamento Amigável para WhatsApp ou Balcão */}
+      <Dialog
+        open={!!unsupportedNeighborhoodModal?.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setUnsupportedNeighborhoodModal(null)
+        }}
+      >
+        <DialogContent className="rounded-3xl p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl">
+          <DialogHeader className="text-center sm:text-left space-y-2">
+            <div className="mx-auto sm:mx-0 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+              <MapPin className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
+              Bairro fora da área de entrega direta 🛵
+            </DialogTitle>
+            <DialogDescription className="text-xs font-medium text-slate-600 leading-relaxed">
+              O bairro{' '}
+              <strong className="text-slate-900 font-bold">
+                "{unsupportedNeighborhoodModal?.neighborhoodName || 'informado'}"
+              </strong>{' '}
+              ainda não faz parte da rota padrão atendida pelo nosso delivery online.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900 space-y-1.5">
+            <p className="font-bold flex items-center gap-1.5 text-amber-950">
+              <span>💬</span> Deseja confirmar a entrega pelo WhatsApp?
+            </p>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Você pode conversar diretamente conosco para verificar a possibilidade e taxa de um entregador especial para sua região, ou optar por retirar no balcão.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                const storePhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
+                const clientText = `Olá! Estou montando um pedido no cardápio online e gostaria de saber se vocês conseguem entregar no bairro ${unsupportedNeighborhoodModal?.neighborhoodName || ''}?`
+                const link = `https://wa.me/55${storePhone}?text=${encodeURIComponent(clientText)}`
+                window.open(link, '_blank')
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Confirmar entrega com a loja no WhatsApp
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFulfillmentType('TAKEOUT')
+                setUnsupportedNeighborhoodModal(null)
+                setNeighborhood('Balcão')
+                setStreet('Retirada no Balcão')
+                setNumber('0')
+                setComplement('')
+                setZipcode('')
+                setCheckoutWizardStep(3)
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              <Store className="h-4 w-4 text-primary" />
+              Prefiro Retirar no Balcão (Avançar)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setUnsupportedNeighborhoodModal(null)
+                setNeighborhood('')
+                setTimeout(() => {
+                  document.getElementById('neighborhood')?.focus()
+                }, 150)
+              }}
+              className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-700 pt-1"
+            >
+              Voltar e escolher outro endereço
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
 
