@@ -1062,13 +1062,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleFinalizeOrder = async () => {
-    // Tenta solicitar permissão no momento exato do clique do usuário (User Gesture)
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      try {
-        Notification.requestPermission().then((p) => {
-          if (p === 'granted') setPushNotificationEnabled(true)
-        }).catch(() => {})
-      } catch (e) {}
+    // CRITICAL: Solicitar permissão com AWAIT no momento exato do clique (User Gesture).
+    // No Chrome Android, se não for awaited dentro do handler síncrono do clique,
+    // o browser considera o user gesture expirado e bloqueia silenciosamente o prompt nativo.
+    let notifPermission: NotificationPermission = 'default';
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      notifPermission = Notification.permission;
+      if (notifPermission === 'default') {
+        try {
+          notifPermission = await requestNotificationPermission();
+          if (notifPermission === 'granted') {
+            setPushNotificationEnabled(true);
+          }
+        } catch (e) {
+          console.warn('[Push] Erro ao solicitar permissão:', e);
+        }
+      }
     }
 
     if (!customerName.trim() || !customerPhone.trim()) {
@@ -1251,8 +1260,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         if (newDisplayId) setCreatedDisplayId(newDisplayId);
         setLiveOrderStatus('pending');
 
-        // Inscreve automaticamente nas Notificações Push do celular/navegador
-        registerPushSubscription(newOrderId);
+        // Inscreve no FCM Push somente se a permissão já foi concedida no clique acima
+        if (notifPermission === 'granted') {
+          registerPushSubscription(newOrderId);
+        }
       }
 
       setLastOrderText(text);
@@ -1265,7 +1276,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   
-  // Inscreve automaticamente o cliente para receber notificações do pedido no celular/desktop
+  // Inscreve o cliente no FCM Web Push para receber notificações em background.
+  // IMPORTANTE: Esta função NÃO solicita permissão (isso deve ser feito antes, dentro de um user gesture).
+  // Ela apenas faz o subscribe no Push Manager e registra no backend se a permissão já estiver granted.
   const registerPushSubscription = async (orderIdToSubscribe?: string) => {
     const targetId = orderIdToSubscribe || createdOrderId;
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) {
@@ -1273,37 +1286,45 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     try {
-      let perm = Notification.permission;
-      if (perm === 'default') {
-        perm = await requestNotificationPermission();
+      // Não tenta pedir permissão aqui — isso falha fora de user gesture no Chrome Android.
+      // Apenas verifica se já está granted.
+      if (Notification.permission !== 'granted') {
+        console.log('[Push] Permissão não concedida, pulando inscrição FCM.');
+        return;
       }
 
-      if (perm === 'granted') {
-        setPushNotificationEnabled(true);
-        const reg = await navigator.serviceWorker.ready;
-        if (reg && reg.pushManager) {
-          let sub = await reg.pushManager.getSubscription();
-          if (!sub) {
-            sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array('BGQradO0xULQAgILyiblpRWIplGvISWCmwpeOEDmxQVicz3fg78eqkFRw-TknarkuLhLYiBq9RyL-94CPYpfb-k')
-            });
-          }
-
-          if (sub && targetId) {
-            await api.post('/public/orders/' + targetId + '/push-subscription', {
-              subscription: sub
-            });
-            console.log('[Push] Inscrito no FCM com sucesso para o pedido:', targetId);
-          }
+      setPushNotificationEnabled(true);
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.pushManager) {
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array('BGQradO0xULQAgILyiblpRWIplGvISWCmwpeOEDmxQVicz3fg78eqkFRw-TknarkuLhLYiBq9RyL-94CPYpfb-k')
+          });
         }
+
+        if (sub && targetId) {
+          await api.post('/public/orders/' + targetId + '/push-subscription', {
+            subscription: sub
+          });
+          console.log('[Push] Inscrito no FCM com sucesso para o pedido:', targetId);
+        }
+
+        // Notificação de confirmação visual para o cliente
+        showBrowserNotification('🔔 Notificações Ativadas!', {
+          body: 'Você será avisado em tempo real quando seu pedido sair para entrega!',
+          icon: '/favicon.svg'
+        });
       }
     } catch (e) {
-      console.warn('[Push] Registro de push:', e);
+      console.warn('[Push] Erro no registro de push:', e);
     }
   };
 
-  // Solicita permissão de Notificação Nativa do Celular / Navegador
+  // Solicita permissão de Notificação Nativa do Celular / Navegador (botão manual no Step 4).
+  // IMPORTANTE: Este handler é acionado diretamente pelo onClick do botão, então
+  // o await requestNotificationPermission() está dentro do user gesture e FUNCIONA no Chrome Android.
   const handleRequestPushNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       alert('Seu navegador não suporta notificações nativas.');
@@ -1313,7 +1334,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     const currentPerm = Notification.permission;
 
     if (currentPerm === 'denied') {
-      // Se já estiver bloqueado pelo Chrome, aciona alerta sonoro e vibração sem travar a tela
       playChimeAlert();
       if ('vibrate' in navigator) {
         try { navigator.vibrate([100, 50, 100]); } catch (e) {}
@@ -1323,15 +1343,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     try {
+      // O await aqui é DENTRO do user gesture (onClick) — Chrome Android exibirá o prompt nativo.
       const permission = await requestNotificationPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
+        // Agora que a permissão foi concedida, inscreve no FCM
         await registerPushSubscription(createdOrderId || undefined);
-
-        await showBrowserNotification('🔔 Notificações Ativadas!', {
-          body: 'Você será avisado em tempo real quando seu pedido sair para entrega!',
-          icon: '/favicon.svg'
-        });
       }
     } catch (err) {
       console.warn('Erro ao solicitar permissão de notificação:', err);
