@@ -68,42 +68,14 @@ function playChimeAlert() {
   } catch (e) {}
 }
 
-function requestNotificationPermission(): Promise<NotificationPermission> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      return resolve('denied');
-    }
-    try {
-      // Callback support (older mobile safari/chrome engines)
-      let resolved = false;
-      const result = Notification.requestPermission((p) => {
-        if (!resolved) {
-          resolved = true;
-          resolve(p);
-        }
-      });
-      // Promise support
-      if (result && typeof result.then === 'function') {
-        result.then((p) => {
-          if (!resolved) {
-            resolved = true;
-            resolve(p);
-          }
-        }).catch(() => {
-          if (!resolved) {
-            resolved = true;
-            resolve('denied');
-          }
-        });
-      }
-    } catch (err) {
-      try {
-        Notification.requestPermission().then(resolve).catch(() => resolve('denied'));
-      } catch (e) {
-        resolve('denied');
-      }
-    }
-  });
+async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
+  if (Notification.permission !== 'default') return Notification.permission;
+  try {
+    return await Notification.requestPermission();
+  } catch (e) {
+    return 'denied';
+  }
 }
 
 // Registra o Service Worker para Notificações no Android / Mobile
@@ -116,38 +88,41 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 async function showBrowserNotification(title: string, options?: NotificationOptions) {
   if (typeof window === 'undefined') return;
 
-  // Toca alerta sonoro
+  // Toca alerta sonoro e vibração (sempre, independente de permissão)
   playChimeAlert();
-
-  // Vibração tátil no celular (2 pulsos fortes)
   if ('vibrate' in navigator) {
-    try {
-      navigator.vibrate([200, 100, 200, 100, 300]);
-    } catch (e) {}
+    try { navigator.vibrate([200, 100, 200, 100, 300]); } catch (e) {}
   }
 
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
+  const notifOptions = {
+    ...options,
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    tag: 'order-status-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
+  };
+
   try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.ready;
+    // Tenta via Service Worker (obrigatório no Chrome Android)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      // Usa getRegistration com timeout para não travar se o SW não estiver pronto
+      const reg = await Promise.race([
+        navigator.serviceWorker.getRegistration(),
+        new Promise<undefined>((r) => setTimeout(() => r(undefined), 3000))
+      ]);
       if (reg && typeof reg.showNotification === 'function') {
-        return reg.showNotification(title, {
-          ...options,
-          icon: '/favicon.svg',
-          badge: '/favicon.svg',
-          tag: 'order-status-update',
-          renotify: true,
-          requireInteraction: true,
-          vibrate: [200, 100, 200]
-        } as any);
+        await reg.showNotification(title, notifOptions as any);
+        return;
       }
     }
-    new Notification(title, options);
+    // Fallback: tenta new Notification (funciona no desktop, falha no mobile)
+    try { new Notification(title, options); } catch (e) {}
   } catch (e) {
-    try {
-      new Notification(title, options);
-    } catch (err) {}
+    try { new Notification(title, options); } catch (err) {}
   }
 }
 
@@ -1062,22 +1037,19 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleFinalizeOrder = async () => {
-    // CRITICAL: Solicitar permissão com AWAIT no momento exato do clique (User Gesture).
-    // No Chrome Android, se não for awaited dentro do handler síncrono do clique,
-    // o browser considera o user gesture expirado e bloqueia silenciosamente o prompt nativo.
-    let notifPermission: NotificationPermission = 'default';
+    // PASSO 1: Pedir permissão IMEDIATAMENTE no clique do usuário (User Gesture obrigatório).
+    // await Notification.requestPermission() DEVE ser a primeiríssima coisa no onClick.
+    let pushGranted = false;
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      notifPermission = Notification.permission;
-      if (notifPermission === 'default') {
+      if (Notification.permission === 'granted') {
+        pushGranted = true;
+      } else if (Notification.permission === 'default') {
         try {
-          notifPermission = await requestNotificationPermission();
-          if (notifPermission === 'granted') {
-            setPushNotificationEnabled(true);
-          }
-        } catch (e) {
-          console.warn('[Push] Erro ao solicitar permissão:', e);
-        }
+          const perm = await Notification.requestPermission();
+          pushGranted = (perm === 'granted');
+        } catch (e) {}
       }
+      if (pushGranted) setPushNotificationEnabled(true);
     }
 
     if (!customerName.trim() || !customerPhone.trim()) {
@@ -1260,8 +1232,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         if (newDisplayId) setCreatedDisplayId(newDisplayId);
         setLiveOrderStatus('pending');
 
-        // Inscreve no FCM Push somente se a permissão já foi concedida no clique acima
-        if (notifPermission === 'granted') {
+        // Inscreve no FCM Push somente se a permissão foi concedida
+        if (pushGranted) {
           registerPushSubscription(newOrderId);
         }
       }
@@ -1322,32 +1294,24 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
   };
 
-  // Solicita permissão de Notificação Nativa do Celular / Navegador (botão manual no Step 4).
-  // IMPORTANTE: Este handler é acionado diretamente pelo onClick do botão, então
-  // o await requestNotificationPermission() está dentro do user gesture e FUNCIONA no Chrome Android.
+  // Botão manual de ativação de notificações no Step 4 (dentro de onClick = User Gesture)
   const handleRequestPushNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       alert('Seu navegador não suporta notificações nativas.');
       return;
     }
 
-    const currentPerm = Notification.permission;
-
-    if (currentPerm === 'denied') {
+    if (Notification.permission === 'denied') {
       playChimeAlert();
-      if ('vibrate' in navigator) {
-        try { navigator.vibrate([100, 50, 100]); } catch (e) {}
-      }
       alert('As notificações do navegador estão desativadas. Você continuará acompanhando o status do seu pedido ao vivo nesta tela e pelo WhatsApp!');
       return;
     }
 
     try {
-      // O await aqui é DENTRO do user gesture (onClick) — Chrome Android exibirá o prompt nativo.
-      const permission = await requestNotificationPermission();
+      // await direto no onClick = Chrome Android DEVE exibir o prompt nativo
+      const permission = await Notification.requestPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
-        // Agora que a permissão foi concedida, inscreve no FCM
         await registerPushSubscription(createdOrderId || undefined);
       }
     } catch (err) {
