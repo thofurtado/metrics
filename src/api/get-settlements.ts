@@ -1,5 +1,12 @@
 import { api } from '@/lib/axios'
 
+export interface SettlementSummary {
+  totalGross: number
+  totalNet: number
+  totalFees: number
+  count: number
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   meta: {
@@ -8,6 +15,7 @@ export interface PaginatedResponse<T> {
     limit: number
     totalPages: number
   }
+  summary?: SettlementSummary
 }
 
 export interface HistorySettlement {
@@ -29,10 +37,16 @@ export async function getSettlements({
   pageIndex = 0,
   sortBy = 'data_vencimento',
   sortDir = 'desc',
+  month,
+  year,
+  type = 'automatic',
 }: {
   pageIndex?: number
   sortBy?: string
   sortDir?: string
+  month?: number
+  year?: number
+  type?: 'automatic' | 'term' | 'all'
 } = {}) {
   const response = await api.get<PaginatedResponse<HistorySettlement>>(
     '/settlements',
@@ -41,6 +55,9 @@ export async function getSettlements({
         page: pageIndex + 1,
         sortBy,
         sortDir,
+        month,
+        year,
+        type,
       },
     },
   )
