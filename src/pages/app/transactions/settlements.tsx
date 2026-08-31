@@ -115,7 +115,7 @@ export function Settlements() {
   // Search filter inside Term tab
   const [termSearchQuery, setTermSearchQuery] = useState('')
 
-  // 1. Query: Cartões à Receber no Mês Selecionado
+  // 1. Query: Cartões à Receber no Mês Selecionado (Vendas do mês ou com vencimento no mês)
   const { data: pendingCardsResult, isLoading: isLoadingPendingCards } = useQuery({
     queryKey: [
       'pending-settlements-cards',
@@ -393,19 +393,13 @@ export function Settlements() {
     <>
       <Helmet title="Recebíveis & Liquidações" />
 
-      <div className="mx-auto max-w-7xl space-y-4 pb-8 text-slate-900 dark:text-slate-100">
-        {/* HEADER PRINCIPAL COM SELETOR DE MÊS */}
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-              Recebíveis & Liquidações
-            </h1>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Gestão de recebimentos de cartões, liquidações de adquirentes e controle de contas a prazo.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-6 px-5 font-manrope md:px-0">
+        {/* HEADER PRINCIPAL PADRÃO COM SELETOR DE MÊS */}
+        <PageHeader
+          title="Recebíveis & Liquidações"
+          description="Gestão de recebimentos de cartões, liquidações de adquirentes e controle de contas a prazo."
+        >
+          <div className="mb-8 flex w-full flex-row items-center justify-between gap-2 md:mb-0 md:w-auto md:justify-end md:gap-3">
             <MonthPicker date={selectedMonthDate} setDate={setSelectedMonthDate} />
 
             <Button
@@ -426,7 +420,7 @@ export function Settlements() {
               <span>Atualizar</span>
             </Button>
           </div>
-        </div>
+        </PageHeader>
 
         {/* 4 ABAS DA TELA DE RECEBÍVEIS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
@@ -473,7 +467,7 @@ export function Settlements() {
               <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-white p-4 shadow-xs dark:border-blue-900/40 dark:from-slate-900 dark:to-slate-900">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                    A Receber em {monthNames[selectedMonth - 1]}
+                    A Receber (Vendas de {monthNames[selectedMonth - 1]})
                   </span>
                   <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
                     <CreditCard size={15} />
@@ -541,6 +535,7 @@ export function Settlements() {
                   <SelectContent>
                     <SelectItem value="data_vencimento-asc">Vencimento (Próximos)</SelectItem>
                     <SelectItem value="data_vencimento-desc">Vencimento (Distantes)</SelectItem>
+                    <SelectItem value="data_emissao-desc">Venda Mais Recente</SelectItem>
                     <SelectItem value="amount-desc">Maior Valor</SelectItem>
                     <SelectItem value="amount-asc">Menor Valor</SelectItem>
                   </SelectContent>
@@ -575,6 +570,7 @@ export function Settlements() {
                       />
                     </TableHead>
                     <TableHead className="text-xs font-black uppercase">Vencimento Previsto</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Data da Venda</TableHead>
                     <TableHead className="text-xs font-black uppercase">Venda / Descrição</TableHead>
                     <TableHead className="text-xs font-black uppercase">Forma / Bandeira</TableHead>
                     <TableHead className="text-right text-xs font-black uppercase">Bruto (R$)</TableHead>
@@ -585,15 +581,15 @@ export function Settlements() {
                 <TableBody>
                   {isLoadingPendingCards ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-28 text-center text-xs font-bold text-slate-500">
+                      <TableCell colSpan={8} className="h-28 text-center text-xs font-bold text-slate-500">
                         Carregando recebíveis de cartões...
                       </TableCell>
                     </TableRow>
                   ) : pendingCards.length > 0 ? (
                     pendingCards.map((tx) => {
                       const taxPerc = tx.interest || 0
-                      const bruto = tx.totalValue || tx.amount
-                      const liquido = tx.amount
+                      const bruto = tx.amount
+                      const liquido = tx.totalValue || tx.amount
 
                       return (
                         <TableRow key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
@@ -605,6 +601,9 @@ export function Settlements() {
                           </TableCell>
                           <TableCell className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
                             {format(new Date(tx.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-medium text-slate-500">
+                            {format(new Date(tx.data_emissao), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                             {tx.description}
@@ -628,7 +627,7 @@ export function Settlements() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-28 text-center text-xs font-semibold text-slate-400">
+                      <TableCell colSpan={8} className="h-28 text-center text-xs font-semibold text-slate-400">
                         Nenhum cartão ou voucher aguardando liquidação para o mês de {monthNames[selectedMonth - 1]}.
                       </TableCell>
                     </TableRow>
@@ -758,13 +757,13 @@ export function Settlements() {
                           {settlement.accounts?.name || 'Conta Padrão'}
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs font-medium text-slate-600 dark:text-slate-400">
-                          {(settlement.totalValue || settlement.amount).toLocaleString('pt-BR', {
+                          {(settlement.amount || settlement.totalValue).toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
                           })}
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
-                          {settlement.amount.toLocaleString('pt-BR', {
+                          {(settlement.totalValue || settlement.amount).toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
                           })}
