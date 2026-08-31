@@ -1242,23 +1242,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
       const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(text)}`
-      if (orderApiRes?.data?.order_id) {
-        setCreatedOrderId(orderApiRes.data.order_id);
-        setCreatedDisplayId(orderApiRes.data.display_id);
+      const orderData = orderApiRes?.data?.order || orderApiRes?.data;
+      const newOrderId = orderData?.id || orderData?.order_id || null;
+      const newDisplayId = orderData?.display_id || null;
+
+      if (newOrderId) {
+        setCreatedOrderId(newOrderId);
+        if (newDisplayId) setCreatedDisplayId(newDisplayId);
         setLiveOrderStatus('pending');
+
+        // Inscreve automaticamente nas Notificações Push do celular/navegador
+        registerPushSubscription(newOrderId);
       }
 
-      setLastOrderText(text)
-      setCheckoutWizardStep(4)
-
-      // Solicita permissão de notificação push imediatamente no clique
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            setPushNotificationEnabled(true)
-          }
-        }).catch(() => {})
-      }
+      setLastOrderText(text);
+      setCheckoutWizardStep(4);
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
@@ -1266,6 +1264,44 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   
+  // Inscreve automaticamente o cliente para receber notificações do pedido no celular/desktop
+  const registerPushSubscription = async (orderIdToSubscribe?: string) => {
+    const targetId = orderIdToSubscribe || createdOrderId;
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) {
+      return;
+    }
+
+    try {
+      let perm = Notification.permission;
+      if (perm === 'default') {
+        perm = await requestNotificationPermission();
+      }
+
+      if (perm === 'granted') {
+        setPushNotificationEnabled(true);
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.pushManager) {
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array('BGQradO0xULQAgILyiblpRWIplGvISWCmwpeOEDmxQVicz3fg78eqkFRw-TknarkuLhLYiBq9RyL-94CPYpfb-k')
+            });
+          }
+
+          if (sub && targetId) {
+            await api.post('/public/orders/' + targetId + '/push-subscription', {
+              subscription: sub
+            });
+            console.log('[Push] Inscrito no FCM com sucesso para o pedido:', targetId);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Push] Registro de push:', e);
+    }
+  };
+
   // Solicita permissão de Notificação Nativa do Celular / Navegador
   const handleRequestPushNotification = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -1276,13 +1312,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     const currentPerm = Notification.permission;
 
     if (currentPerm === 'denied') {
-      alert(
-        '⚠️ As notificações estão bloqueadas no seu navegador para este site.\n\n' +
-        'Para ativar no celular:\n' +
-        '1. Toque no ícone de configurações / cadeado (🔒) ao lado do endereço no topo do navegador\n' +
-        '2. Toque em "Permissões" ou "Configurações do site"\n' +
-        '3. Ative "Notificações" para "Permitir" e recarregue a página.'
-      );
+      // Se já estiver bloqueado pelo Chrome, aciona alerta sonoro e vibração sem travar a tela
+      playChimeAlert();
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([100, 50, 100]); } catch (e) {}
+      }
+      alert('As notificações do navegador estão desativadas. Você continuará acompanhando o status do seu pedido ao vivo nesta tela e pelo WhatsApp!');
       return;
     }
 
@@ -1290,35 +1325,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const permission = await requestNotificationPermission();
       if (permission === 'granted') {
         setPushNotificationEnabled(true);
+        await registerPushSubscription(createdOrderId || undefined);
 
-        // Inscreve no Google FCM Web Push nativo
-        try {
-          if ('serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array('BGQradO0xULQAgILyiblpRWIplGvISWCmwpeOEDmxQVicz3fg78eqkFRw-TknarkuLhLYiBq9RyL-94CPYpfb-k')
-            });
-
-            if (createdOrderId) {
-              await api.post('/public/orders/' + createdOrderId + '/push-subscription', {
-                subscription: sub
-              });
-            }
-          }
-        } catch (subErr) {
-          console.warn('Erro ao registrar assinatura WebPush:', subErr);
-        }
-
-        await showBrowserNotification('🔔 Notificações Ativadas com Sucesso!', {
-          body: 'Você será avisado em tempo real mesmo com a tela apagada!',
+        await showBrowserNotification('🔔 Notificações Ativadas!', {
+          body: 'Você será avisado em tempo real quando seu pedido sair para entrega!',
           icon: '/favicon.svg'
         });
-      } else if (permission === 'denied') {
-        alert(
-          '⚠️ Você selecionou bloquear notificações.\n\n' +
-          'Se mudar de ideia, toque no cadeado ao lado do endereço web no topo do navegador para permitir.'
-        );
       }
     } catch (err) {
       console.warn('Erro ao solicitar permissão de notificação:', err);
@@ -2646,32 +2658,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 Seu pedido foi registrado com sucesso! Acompanhe o status ao vivo:
               </p>
 
-              {/* CARD DESTACADO PARA ATIVAR NOTIFICAÇÕES (SOFT PROMPT) */}
-              {!pushNotificationEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
-                <div className="mt-4 w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-3.5 text-left shadow-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-                      <Bell className="h-5 w-5 animate-bounce" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-black text-slate-900">Deseja ser avisado no celular?</p>
-                      <p className="text-[11px] text-slate-600">Seu celular vai vibrar e apitar quando o motoboy sair!</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRequestPushNotification}
-                    className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow transition-transform active:scale-95 hover:bg-slate-800"
-                  >
-                    <span>🔔 Ativar Avisos no Celular</span>
-                  </button>
-                </div>
-              )}
-
               {/* CARD DE STATUS EM TEMPO REAL (LIVE TRACKER) */}
               <div className="mt-4 w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md text-left">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700">
                     Acompanhamento do Pedido #{createdDisplayId || ''}
                   </span>
                   <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
@@ -2730,16 +2720,23 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   )}
                 </div>
 
-                {/* Botão de Ativar Notificação Push */}
-                {!pushNotificationEnabled && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
-                  <button
-                    type="button"
-                    onClick={handleRequestPushNotification}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow transition-transform active:scale-98 hover:bg-slate-800"
-                  >
-                    <Bell className="h-4 w-4 text-amber-400" />
-                    <span>Avisar no meu celular quando o motoboy sair 🔔</span>
-                  </button>
+                {/* Status da Notificação Push no Celular: Selo de Sucesso ou Botão Único */}
+                {(pushNotificationEnabled || (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')) ? (
+                  <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 py-2.5 px-3 text-xs font-bold text-emerald-800">
+                    <span className="text-sm">🔔</span>
+                    <span>Avisos no celular ativados para este pedido</span>
+                  </div>
+                ) : (
+                  typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'denied' && (
+                    <button
+                      type="button"
+                      onClick={handleRequestPushNotification}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow transition-transform active:scale-98 hover:bg-slate-800"
+                    >
+                      <Bell className="h-4 w-4 text-amber-400" />
+                      <span>Avisar no meu celular quando o motoboy sair 🔔</span>
+                    </button>
+                  )
                 )}
               </div>
 
