@@ -464,6 +464,18 @@ const DynamicHero = ({ profile }: { profile: any }) => {
   )
 }
 
+function formatMeasureUnit(unit?: string) {
+  if (!unit) return ''
+  const u = unit.trim().toUpperCase()
+  if (u === 'UNITARY' || u === 'UN') return 'Unitário'
+  if (u === 'FRACTIONAL') return 'Fracionado'
+  if (u === 'KG') return 'Kg'
+  if (u === 'G') return 'g'
+  if (u === 'L') return 'L'
+  if (u === 'ML') return 'ml'
+  return unit
+}
+
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   // Garante que o cardápio público esteja SEMPRE no modo Claro (Light), independente do tema da retaguarda
   useEffect(() => {
@@ -1598,10 +1610,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                           <div className="mt-6 flex items-end justify-between gap-4">
                             <div className="flex flex-col">
-                              {product.measureUnit &&
-                                product.measureUnit !== 'UN' && (
+                              {product.measureUnit && (
                                   <span className="mb-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                    {product.measureUnit}
+                                    {formatMeasureUnit(product.measureUnit)}
                                   </span>
                                 )}
                               <p className="text-lg font-black tracking-tight text-slate-900">
