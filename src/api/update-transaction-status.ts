@@ -4,6 +4,7 @@ export interface UpdateStatusTransactionParams {
   id: string
   amount: number
   interest?: number
+  fine?: number
   discount?: number
   data_vencimento: Date
   remainingDate?: Date
@@ -14,6 +15,7 @@ export async function updateStatusTransaction({
   id,
   amount,
   interest,
+  fine,
   discount,
   data_vencimento,
   remainingDate,
@@ -22,8 +24,9 @@ export async function updateStatusTransaction({
   // CORREÇÃO: Converter as datas para ISO string
   const payload = {
     amount,
-    interest,
-    discount,
+  interest,
+  fine,
+  discount,
     data_vencimento: data_vencimento.toISOString(),
     remainingDate: remainingDate ? remainingDate.toISOString() : undefined,
     account_id: accountId, // Map accountId to account_id for backend
