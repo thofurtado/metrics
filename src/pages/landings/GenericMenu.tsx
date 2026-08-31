@@ -642,6 +642,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleSelectSavedAddress = (addr: any) => {
+    if (fulfillmentType === 'DELIVERY' && availableNeighborhoodsList.length > 0) {
+      const isAllowed = availableNeighborhoodsList.some(
+        (n) => normalizeText(n) === normalizeText(addr.neighborhood)
+      )
+      if (!isAllowed) {
+        alert(
+          `Atenção: O endereço salvo no bairro "${addr.neighborhood}" não está na área de entrega atendida no momento. Por favor, escolha outro endereço ou opte por Retirada no Balcão.`
+        )
+        return
+      }
+    }
     setZipcode(
       addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '',
     )
@@ -681,10 +692,19 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
         const data = await res.json()
         setStreet(data.street || '')
-        const matched = matchNeighborhoodWithConfig(data.neighborhood || '')
-        setNeighborhood(matched)
         setCity(data.city || '')
         setState(data.state || '')
+        const matched = matchNeighborhoodWithConfig(data.neighborhood || '')
+        if (matched) {
+          setNeighborhood(matched)
+        } else {
+          setNeighborhood('')
+          if (availableNeighborhoodsList.length > 0) {
+            alert(
+              `Atenção: O bairro "${data.neighborhood || ''}" deste CEP não está na área de entrega atendida pela loja. Por favor, selecione um bairro atendido ou escolha Retirada no Balcão.`
+            )
+          }
+        }
 
         setTimeout(() => {
           document.getElementById('number-input')?.focus()
@@ -720,9 +740,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const availableNeighborhoodsList = useMemo(() => {
-    const sectors = profile?.deliverySectors || []
+    const sectors = profile?.deliverySectors || profile?.delivery_sectors || []
     const fromSectors = sectors.flatMap((s: any) => s.neighborhoods || [])
-    const fromAvailable = profile?.availableNeighborhoods || []
+    const fromAvailable = profile?.availableNeighborhoods || profile?.available_neighborhoods || []
     const unique = Array.from(
       new Set([...fromSectors, ...fromAvailable]),
     ).filter(Boolean) as string[]
@@ -731,7 +751,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const matchNeighborhoodWithConfig = (cepNeighborhood: string) => {
     if (!cepNeighborhood || !availableNeighborhoodsList.length) {
-      return cepNeighborhood || ''
+      return ''
     }
     const target = normalizeText(cepNeighborhood)
     const exact = availableNeighborhoodsList.find(
@@ -745,7 +765,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     })
     if (partial) return partial
 
-    return cepNeighborhood
+    return ''
   }
 
   const rawProducts = useMemo(() => {
@@ -1017,13 +1037,24 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       return
     }
 
-    if (
-      fulfillmentType === 'DELIVERY' &&
-      (!street.trim() || !number.trim() || !neighborhood.trim())
-    ) {
-      alert('Por favor, preencha o endereço completo de entrega.')
-      setCheckoutWizardStep(2)
-      return
+    if (fulfillmentType === 'DELIVERY') {
+      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
+        alert('Por favor, preencha o endereço completo de entrega.')
+        setCheckoutWizardStep(2)
+        return
+      }
+      if (availableNeighborhoodsList.length > 0) {
+        const isAllowed = availableNeighborhoodsList.some(
+          (n) => normalizeText(n) === normalizeText(neighborhood)
+        )
+        if (!isAllowed) {
+          alert(
+            `Desculpe, realizamos entregas apenas nos bairros cadastrados nos setores da loja. O bairro "${neighborhood}" não está na nossa área atendida.`
+          )
+          setCheckoutWizardStep(2)
+          return
+        }
+      }
     }
 
     try {
@@ -2239,14 +2270,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                     </option>
                                   )
                                 })}
-                                {neighborhood &&
-                                  !availableNeighborhoodsList.some(
-                                    (n) => normalizeText(n) === normalizeText(neighborhood),
-                                  ) && (
-                                    <option value={neighborhood}>
-                                      {neighborhood} (Não tabelado)
-                                    </option>
-                                  )}
+                                
                               </select>
                             ) : (
                               <Input
@@ -2325,14 +2349,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       alert('Por favor, preencha seu nome e telefone.')
                       return
                     }
-                    if (
-                      fulfillmentType === 'DELIVERY' &&
-                      (!street.trim() || !number.trim() || !neighborhood.trim())
-                    ) {
-                      alert(
-                        'Por favor, preencha o endereço completo de entrega.',
-                      )
-                      return
+                    if (fulfillmentType === 'DELIVERY') {
+                      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
+                        alert('Por favor, preencha o endereço completo de entrega.')
+                        return
+                      }
+                      if (availableNeighborhoodsList.length > 0) {
+                        const isAllowed = availableNeighborhoodsList.some(
+                          (n) => normalizeText(n) === normalizeText(neighborhood)
+                        )
+                        if (!isAllowed) {
+                          alert(
+                            `Desculpe, realizamos entregas apenas nos bairros cadastrados nos setores da loja. O bairro "${neighborhood}" não está na nossa área atendida.`
+                          )
+                          return
+                        }
+                      }
                     }
                     await registerClientInBackend()
                     setCheckoutWizardStep(3)
