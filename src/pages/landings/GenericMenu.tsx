@@ -483,6 +483,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
   const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
   const [pushNotificationEnabled, setPushNotificationEnabled] = useState(false)
   const [fulfillmentType, setFulfillmentType] = useState<
     'DELIVERY' | 'TAKEOUT'
@@ -1037,6 +1038,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleFinalizeOrder = async () => {
+    if (isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
+
     // PASSO 1: Pedir permissão IMEDIATAMENTE no clique do usuário (User Gesture obrigatório).
     // await Notification.requestPermission() DEVE ser a primeiríssima coisa no onClick.
     let pushGranted = false;
@@ -1244,6 +1248,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
+    } finally {
+      setIsSubmittingOrder(false);
     }
   }
 
@@ -2610,11 +2616,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 <button
                   type="button"
+                  disabled={isSubmittingOrder}
                   onClick={handleFinalizeOrder}
-                  className="active:scale-98 flex-1 rounded-xl py-3.5 text-sm font-black text-white shadow-lg transition-transform"
+                  className={`active:scale-98 flex-1 rounded-xl py-3.5 text-sm font-black text-white shadow-lg transition-transform ${isSubmittingOrder ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={{ backgroundColor: 'var(--primary-color)' }}
                 >
-                  Confirmar e Enviar Pedido via WhatsApp 🚀
+                  {isSubmittingOrder ? 'Enviando seu Pedido... ⏳' : 'Confirmar e Enviar Pedido via WhatsApp 🚀'}
                 </button>
               </div>
             </motion.div>
