@@ -234,6 +234,131 @@ export function DeliveryOrdersDrawer({
     return parts.length > 0 ? parts.join(' - ') : 'Restaurante'
   }, [profile])
 
+  // Badges rápidos operacionais para a etapa de Produção (colapsada ou expandida)
+  const renderQuickProductionBadges = (order: any) => {
+    const obs = (order.observations || '').trim().toLowerCase()
+    const total = order.total_amount || 0
+    const totalFmt = formatBRL(total)
+
+    // 1. Detecção do Pagamento
+    const isCartao = obs.includes('cartão') || obs.includes('cartao') || obs.includes('débito') || obs.includes('debito') || obs.includes('crédito') || obs.includes('credito')
+    const isPix = obs.includes('pix')
+    const isDinheiro = obs.includes('dinheiro') || (!isCartao && !isPix)
+
+    let paymentBadge = null
+
+    if (isPix) {
+      paymentBadge = (
+        <span
+          className="inline-flex items-center gap-1 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-black text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800 shrink-0"
+          title="Pagamento via Pix: confirmar recebimento no extrato bancário"
+        >
+          <Sparkles className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+          <span>⚡ Pix (Confirmar)</span>
+        </span>
+      )
+    } else if (isCartao) {
+      const tipo = (obs.includes('débito') || obs.includes('debito'))
+        ? 'Débito'
+        : (obs.includes('crédito') || obs.includes('credito'))
+          ? 'Crédito'
+          : 'Cartão'
+      paymentBadge = (
+        <span
+          className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-black text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800 shrink-0"
+          title={`Cobrar na entrega com a maquininha (${tipo})`}
+        >
+          <CreditCard className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+          <span>💳 Maquininha ({tipo})</span>
+        </span>
+      )
+    } else if (isDinheiro) {
+      let valorTrocoPara = null
+      if (typeof order.change_for === 'number' && order.change_for > 0) {
+        valorTrocoPara = order.change_for
+      } else if (typeof order.valor_troco === 'number' && order.valor_troco > 0) {
+        valorTrocoPara = order.valor_troco
+      } else {
+        const matchTroco = obs.match(/troco\s*(?:para|de|:)?\s*(?:r\$\s*)?([\d.,]+)/i)
+        if (matchTroco && matchTroco[1]) {
+          const raw = matchTroco[1].trim()
+          if (!obs.includes('sem troco') || obs.includes('troco para') || obs.includes('troco de')) {
+            const parsed = parseFloat(raw.replace(/\./g, '').replace(',', '.'))
+            if (!isNaN(parsed) && parsed > 0) valorTrocoPara = parsed
+          }
+        }
+      }
+
+      if (valorTrocoPara !== null && valorTrocoPara > total) {
+        const trocoDevolver = valorTrocoPara - total
+        paymentBadge = (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 shrink-0"
+            title={`Cliente pagará com ${formatBRL(valorTrocoPara)}. Separar ${formatBRL(trocoDevolver)} de troco!`}
+          >
+            <Banknote className="h-3 w-3 text-amber-700 dark:text-amber-400" />
+            <span>💵 Troco: {formatBRL(trocoDevolver)} (p/ {formatBRL(valorTrocoPara)})</span>
+          </span>
+        )
+      } else {
+        paymentBadge = (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 shrink-0"
+            title="Pagamento em dinheiro sem troco"
+          >
+            <Banknote className="h-3 w-3 text-amber-700 dark:text-amber-400" />
+            <span>💵 Dinheiro (Sem troco)</span>
+          </span>
+        )
+      }
+    }
+
+    // 2. Bebidas de geladeira
+    const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
+    const drinkCount = drinkItems.reduce((acc: number, d: any) => acc + (d.quantity || 1), 0)
+
+    // 3. Observações especiais
+    const hasCustomObs = (order.observations || '')
+      .split('|')
+      .some((part: string) => {
+        const trimmed = part.trim().toLowerCase()
+        return (trimmed.startsWith('obs:') || trimmed.startsWith('ref:')) && !trimmed.includes('entrega (delivery)') && !trimmed.includes('retirada no balcão')
+      }) || (order.items || []).some((i: any) => i.observation && i.observation.trim().length > 0)
+
+    return (
+      <>
+        {/* Valor Total do Pedido */}
+        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0">
+          💰 {totalFmt}
+        </span>
+
+        {/* Badge de Pagamento / Ação Operacional */}
+        {paymentBadge}
+
+        {/* Alerta de Geladeira */}
+        {drinkCount > 0 && (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-black text-cyan-950 border border-cyan-300 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800 shrink-0"
+            title="Contém bebidas! Pegar na geladeira ao embalar."
+          >
+            <CupSoda className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
+            <span>🥤 {drinkCount} Geladeira</span>
+          </span>
+        )}
+
+        {/* Alerta de Obs */}
+        {hasCustomObs && (
+          <span
+            className="inline-flex items-center gap-1 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-black text-rose-950 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800 shrink-0"
+            title="O pedido possui observações personalizadas!"
+          >
+            💬 Com Obs
+          </span>
+        )}
+      </>
+    )
+  }
+
   // Cálculo de SLA
   const getSlaInfo = (order: any) => {
     const createdMs = order.created_at ? new Date(order.created_at).getTime() : Date.now()
@@ -1063,9 +1188,10 @@ export function DeliveryOrdersDrawer({
                                 📍 {bairro}
                               </span>
                             )}
-                            <span className="rounded bg-orange-100 px-1.5 py-0.2 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
+                            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
                               📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
                             </span>
+                            {renderQuickProductionBadges(order)}
                           </div>
 
                           <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">

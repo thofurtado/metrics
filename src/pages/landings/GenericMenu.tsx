@@ -1256,6 +1256,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       }
 
       setLastOrderText(text);
+      setCart({});
       setCheckoutWizardStep(4);
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
