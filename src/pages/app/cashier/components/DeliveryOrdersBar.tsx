@@ -41,7 +41,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       const res = await api.get('/public/orders/pending')
       return res.data || { orders: [], profile: null }
     },
-    refetchInterval: 3000
+    refetchInterval: 60000
   })
 
   const orders: any[] = Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : []
