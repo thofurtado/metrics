@@ -778,19 +778,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
     if (!Array.isArray(sectors)) sectors = []
 
-    let available = profile?.availableNeighborhoods || profile?.available_neighborhoods || []
-    if (typeof available === 'string') {
-      try {
-        available = JSON.parse(available)
-      } catch {
-        available = []
-      }
-    }
-    if (!Array.isArray(available)) available = []
-
+    // Restringe estritamente aos bairros associados a um setor de entrega cadastrado
     const fromSectors = sectors.flatMap((s: any) => s.neighborhoods || [])
     const unique = Array.from(
-      new Set([...fromSectors, ...available]),
+      new Set(fromSectors),
     ).filter(Boolean) as string[]
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
@@ -978,11 +969,14 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     if (fulfillmentType !== 'DELIVERY') return 0
 
     if (neighborhood && neighborhood.trim()) {
-      const cleanNeighborhood = neighborhood.trim().toLowerCase()
-      const sectors = profile?.deliverySectors || []
+      let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+      if (typeof sectors === 'string') {
+        try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+      }
+      if (!Array.isArray(sectors)) sectors = []
       const foundSector = sectors.find((s: any) =>
         (s.neighborhoods || []).some(
-          (n: string) => n.trim().toLowerCase() === cleanNeighborhood,
+          (n: string) => normalizeText(n) === normalizeText(neighborhood),
         ),
       )
       if (foundSector) {
