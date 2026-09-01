@@ -165,10 +165,7 @@ export function PaymentModal({
     }
   }, [isPartialActive, form])
 
-  // Sincronização: se o usuário altera juros/multa/desconto, o valor pago acompanha o calculado
-  useEffect(() => {
-    form.setValue('paidAmount', calculatedTotal.toFixed(2))
-  }, [calculatedTotal, form])
+
 
   const onSubmit = async (data: PaymentFormData) => {
     if (paidAmountNum <= 0.01) {
@@ -493,6 +490,14 @@ export function PaymentModal({
                           <FormControl>
                             <Input
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                const valStr = e.target.value.replace(',', '.')
+                                if (valStr.endsWith('.')) return
+                                const val = parseFloat(valStr || '0')
+                                const newTotal = Math.max(0, transactionAmount + val + fineNum - discountsNum)
+                                form.setValue('paidAmount', newTotal.toFixed(2))
+                              }}
                               placeholder="0,00"
                               className="h-10 rounded-xl border-slate-200 bg-white px-3 text-center font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                             />
@@ -513,6 +518,14 @@ export function PaymentModal({
                           <FormControl>
                             <Input
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                const valStr = e.target.value.replace(',', '.')
+                                if (valStr.endsWith('.')) return
+                                const val = parseFloat(valStr || '0')
+                                const newTotal = Math.max(0, transactionAmount + interestNum + val - discountsNum)
+                                form.setValue('paidAmount', newTotal.toFixed(2))
+                              }}
                               placeholder="0,00"
                               className="h-10 rounded-xl border-slate-200 bg-white px-3 text-center font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                             />
@@ -533,6 +546,14 @@ export function PaymentModal({
                           <FormControl>
                             <Input
                               {...field}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                const valStr = e.target.value.replace(',', '.')
+                                if (valStr.endsWith('.')) return
+                                const val = parseFloat(valStr || '0')
+                                const newTotal = Math.max(0, transactionAmount + interestNum + fineNum - val)
+                                form.setValue('paidAmount', newTotal.toFixed(2))
+                              }}
                               placeholder="0,00"
                               className="h-10 rounded-xl border-slate-200 bg-white px-3 text-center font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                             />
@@ -566,6 +587,24 @@ export function PaymentModal({
                               </span>
                               <Input
                                 {...field}
+                                onChange={(e) => {
+                                  field.onChange(e)
+                                  const valStr = e.target.value.replace(',', '.')
+                                  if (valStr === '' || valStr.endsWith('.')) return
+                                  const typedVal = parseFloat(valStr || '0')
+                                  const basePlusFine = transactionAmount + fineNum
+                                  
+                                  if (typedVal > basePlusFine) {
+                                    form.setValue('interest', (typedVal - basePlusFine).toFixed(2))
+                                    form.setValue('discounts', '')
+                                  } else if (typedVal < basePlusFine && typedVal >= 0) {
+                                    form.setValue('discounts', (basePlusFine - typedVal).toFixed(2))
+                                    form.setValue('interest', '')
+                                  } else if (typedVal === basePlusFine) {
+                                    form.setValue('interest', '')
+                                    form.setValue('discounts', '')
+                                  }
+                                }}
                                 className="h-13 rounded-2xl border-2 border-slate-200 bg-white pl-12 font-mono text-2xl font-black text-slate-900 transition-colors focus:border-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-blue-400"
                               />
                             </div>
