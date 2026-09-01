@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowDownRight,
   ArrowRight,
+  ArrowUpRight,
   Banknote,
   Calendar,
   CheckCircle2,
@@ -1364,18 +1366,18 @@ export function CashierDashboard() {
                     <tr>
                       <th className="p-3">Data / Turno</th>
                       <th className="p-3">Operador</th>
-                      <th className="p-3 text-right">Abertura</th>
+                      <th className="p-3 text-right">Troco Inicial</th>
                       <th className="p-3 text-right text-emerald-600">
                         + Vendas Dinheiro
                       </th>
-                      <th className="p-3 text-right text-red-500">
-                        - Sangrias Depósito
+                      <th className="p-3 text-right text-rose-500">
+                        - Saídas Gaveta
                       </th>
-                      <th className="p-3 text-right text-blue-600">
-                        Saldo Físico Final
+                      <th className="p-3 text-right text-blue-600" title="Saldo físico total apurado na gaveta antes do recolhimento ao Caixa Central">
+                        Saldo Gaveta
                       </th>
-                      <th className="p-3 text-right">Próxima Abertura</th>
-                      <th className="p-3 text-center">Conferência</th>
+                      <th className="p-3 text-right">Próximo Troco</th>
+                      <th className="p-3 text-center">Auditoria do Troco</th>
                       <th className="p-3 text-center">Ação</th>
                     </tr>
                   </thead>
@@ -1432,24 +1434,28 @@ export function CashierDashboard() {
                                       ? `Depositado ${item.resolutionDetails.bank ? `na ${item.resolutionDetails.bank}` : ''}`
                                       : 'Justificado'}
                                   </button>
-                                ) : isDivergent ? (
-                                  <button
-                                    onClick={() =>
-                                      setDivergenceModalSession(item)
-                                    }
-                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 transition-colors hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400"
+                                ) : item.statusComparacao === 'SUPRIMENTO' ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-black text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                    title="Aumento de troco suprido do Caixa Central"
                                   >
-                                    <AlertTriangle size={11} /> Dif: R${' '}
-                                    {item.divergencia.toFixed(2)}
-                                  </button>
+                                    <ArrowUpRight size={11} /> Troco (+R$ {Number(item.variacaoTroco || item.divergencia || 0).toFixed(2)})
+                                  </span>
+                                ) : item.statusComparacao === 'SANGRIA_TROCO' ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-black text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                                    title="Redução de troco recolhido para o Caixa Central"
+                                  >
+                                    <ArrowDownRight size={11} /> Troco (-R$ {Math.abs(Number(item.variacaoTroco || item.divergencia || 0)).toFixed(2)})
+                                  </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                    <CheckCircle2 size={11} /> Batendo
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                    <CheckCircle2 size={11} /> Troco Batendo
                                   </span>
                                 )
                               ) : (
                                 <span className="text-[10px] font-bold text-slate-400">
-                                  Último do Mês
+                                  Caixa Vigente
                                 </span>
                               )}
                             </td>
