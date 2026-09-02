@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,15 +9,29 @@ interface SimpleCalendarProps {
   selected: Date | undefined
   onSelect: (date: Date) => void
   disabledDays?: (date: Date) => boolean
+  className?: string
+  placeholder?: string
 }
 
 export function SimpleCalendar({
   selected,
   onSelect,
   disabledDays,
+  className,
+  placeholder = 'DD/MM/AAAA',
 }: SimpleCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date>(selected || new Date())
   const [isOpen, setIsOpen] = useState(false)
+  const [inputValue, setInputValue] = useState(selected ? format(selected, 'dd/MM/yyyy') : '')
+
+  useEffect(() => {
+    if (selected) {
+      setInputValue(format(selected, 'dd/MM/yyyy'))
+      setCurrentDate(selected)
+    } else {
+      setInputValue('')
+    }
+  }, [selected])
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -26,7 +40,6 @@ export function SimpleCalendar({
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   }
   const getFirstDayOfMonth = (date: Date) => {
-    // Retorna o dia da semana: 0=Domingo, 1=Segunda, etc.
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
   }
 
@@ -50,7 +63,43 @@ export function SimpleCalendar({
     )
     selectedDate.setHours(0, 0, 0, 0)
     onSelect(selectedDate)
+    setInputValue(format(selectedDate, 'dd/MM/yyyy'))
     setIsOpen(false)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '')
+    if (val.length > 8) val = val.slice(0, 8)
+
+    let formatted = val
+    if (val.length >= 5) {
+      formatted = `${val.slice(0, 2)}/${val.slice(2, 4)}/${val.slice(4)}`
+    } else if (val.length >= 3) {
+      formatted = `${val.slice(0, 2)}/${val.slice(2)}`
+    }
+    setInputValue(formatted)
+
+    if (val.length === 8) {
+      const day = parseInt(val.slice(0, 2), 10)
+      const month = parseInt(val.slice(2, 4), 10) - 1
+      const year = parseInt(val.slice(4, 8), 10)
+
+      if (month >= 0 && month <= 11 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+        const newDate = new Date(year, month, day)
+        newDate.setHours(0, 0, 0, 0)
+        if (!isNaN(newDate.getTime()) && newDate.getDate() === day) {
+          onSelect(newDate)
+          setCurrentDate(newDate)
+        }
+      }
+    }
+  }
+
+  const handleBlur = () => {
+    const digits = inputValue.replace(/\D/g, '')
+    if (digits.length !== 8) {
+      setInputValue(selected ? format(selected, 'dd/MM/yyyy') : '')
+    }
   }
 
   const isToday = (day: number) => {
@@ -107,28 +156,40 @@ export function SimpleCalendar({
 
   return (
     <div className="relative w-full">
-      {/* Botão para abrir o calendário */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          'w-full justify-start border-2 py-6 text-left text-base font-normal',
-          !selected && 'text-muted-foreground',
-        )}
-      >
-        {selected ? format(selected, 'dd/MM/yyyy') : 'Selecione a Data'}
-        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-      </Button>
+      {/* Campo de Entrada Digitavel com Icone para Abrir o Calendario */}
+      <div className="relative flex items-center w-full">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          className={cn(
+            'w-full rounded-md border-2 border-input bg-background px-3 py-2 text-base font-normal ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-14 md:h-12 pr-11 tracking-wider',
+            className,
+          )}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute right-1.5 h-9 w-9 p-0 hover:bg-muted text-muted-foreground hover:text-foreground"
+          title="Abrir calendário visual"
+        >
+          <CalendarIcon className="h-5 w-5 opacity-70" />
+        </Button>
+      </div>
 
-      {/* Calendário Dropdown */}
+      {/* Calendario Dropdown */}
       {isOpen && (
         <div
           className="absolute z-50 mt-2 w-64 rounded-lg border bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-800"
           style={{ right: 0 }}
         >
           <div className="space-y-4">
-            {/* Header do Calendário */}
+            {/* Header do Calendario */}
             <div className="flex items-center justify-between">
               <Button
                 type="button"
@@ -167,14 +228,12 @@ export function SimpleCalendar({
               ))}
             </div>
 
-            {/* Dias do mês */}
+            {/* Dias do mes */}
             <div className="grid grid-cols-7 gap-1">
-              {/* Espaços vazios antes do primeiro dia */}
               {Array.from({ length: firstDay }).map((_, index) => (
                 <div key={`empty-${index}`} className="h-8" />
               ))}
 
-              {/* Dias do mês */}
               {Array.from({ length: daysInMonth }).map((_, index) => {
                 const day = index + 1
                 const isTodayDate = isToday(day)
@@ -206,7 +265,7 @@ export function SimpleCalendar({
               })}
             </div>
 
-            {/* Botões de ação */}
+            {/* Botoes de acao */}
             <div className="flex justify-between border-t pt-2">
               <Button
                 type="button"
@@ -214,6 +273,7 @@ export function SimpleCalendar({
                 size="sm"
                 onClick={() => {
                   onSelect(today)
+                  setInputValue(format(today, 'dd/MM/yyyy'))
                   setIsOpen(false)
                 }}
                 className="text-xs"

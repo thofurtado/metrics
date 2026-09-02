@@ -1,3 +1,4 @@
+import { getTenantDisplayName } from './tenantHelper'
 export function exportarParaCSV(
   lotes: any[],
   filename = 'relatorio-caixas.csv',
@@ -47,8 +48,9 @@ export function exportarParaCSV(
         ?.filter((i: any) => i.isSaida)
         .reduce((acc: number, i: any) => acc + i.valor, 0) || 0
 
+    const tenantName = getTenantDisplayName()
     const resumo = [
-      [`RELATÓRIO DE MOVIMENTAÇÃO - MARUJO`],
+      [`RELATÓRIO DE MOVIMENTAÇÃO - ${tenantName}`],
       [
         `DATA: ${new Date(l.dataReferencia).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} | PERÍODO: ${l.periodo}`,
       ],

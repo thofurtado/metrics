@@ -1,3 +1,4 @@
+import { getTenantDisplayName } from './tenantHelper'
 export function exportarGeralCSV(lotes: any[]) {
   if (lotes.length === 0) return
 
@@ -83,6 +84,7 @@ export function exportarGeralCSV(lotes: any[]) {
   })
   const link = document.createElement('a')
   link.setAttribute('href', URL.createObjectURL(blob))
-  link.setAttribute('download', 'marujo_relatorio_geral.csv')
+  const tenantName = getTenantDisplayName()
+  link.setAttribute('download', `${tenantName.toLowerCase()}_relatorio_geral.csv`)
   link.click()
 }

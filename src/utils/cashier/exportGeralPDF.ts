@@ -1,3 +1,4 @@
+import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
 
@@ -40,7 +41,8 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
   doc.setFontSize(16)
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.text('MARUJO - RELATÓRIO GERENCIAL CONSOLIDADO', 14, 12)
+  const tenantName = getTenantDisplayName()
+  doc.text(`${tenantName} - RELATÓRIO GERENCIAL CONSOLIDADO`, 14, 12)
 
   doc.setFontSize(9)
   doc.setTextColor(148, 163, 184) // Cinza azulado
@@ -233,5 +235,5 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
     finalY + 10,
   )
 
-  doc.save(`MARUJO_GERENCIAL_${new Date().getTime()}.pdf`)
+  doc.save(`${tenantName}_GERENCIAL_${new Date().getTime()}.pdf`)
 }

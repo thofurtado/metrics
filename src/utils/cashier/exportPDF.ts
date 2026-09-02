@@ -1,3 +1,4 @@
+import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
 
@@ -129,7 +130,8 @@ export const exportarLotePDF = (lote: any, resumoParam?: any) => {
   doc.setFontSize(22)
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.text(`MARUJO - ${periodoStr}`, 14, 28)
+  const tenantName = lote?.companyName || getTenantDisplayName()
+  doc.text(`${tenantName} - ${periodoStr}`, 14, 28)
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
@@ -334,7 +336,7 @@ export const exportarLotePDF = (lote: any, resumoParam?: any) => {
     doc.setFontSize(7)
     doc.setTextColor(150)
     doc.text(
-      `Marujo - Página ${i} de ${totalPages} - Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      `${tenantName} - Página ${i} de ${totalPages} - Gerado em: ${new Date().toLocaleString('pt-BR')}`,
       105,
       288,
       { align: 'center' },
