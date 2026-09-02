@@ -15,6 +15,7 @@ export interface UpdateItemBody {
   estimated_time?: string | null
   unit?: string | null
   measureUnit?: 'UNITARY' | 'FRACTIONAL'
+  show_on_menu?: boolean | null
 }
 
 export async function updateItem({ id, ...body }: UpdateItemBody) {

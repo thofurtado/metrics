@@ -88,7 +88,8 @@ function CardapioContent() {
     },
   )
 
-  const products = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : [])
+  const rawProducts = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : [])
+  const products = rawProducts.filter((p: any) => p.show_on_menu !== false)
 
   const groupedProducts = products.reduce(
     (acc, product) => {

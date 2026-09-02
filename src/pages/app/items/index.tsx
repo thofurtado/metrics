@@ -347,6 +347,12 @@ export function Items() {
                           </>
                         )}
 
+                        {activeTabType === 'PRODUCT' && (
+                          <TableHead className="w-[110px] text-center text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                            Cardápio
+                          </TableHead>
+                        )}
+
                         <TableHead className="w-[100px] text-center text-[11px] font-bold uppercase tracking-widest text-slate-500">
                           Status
                         </TableHead>
@@ -368,7 +374,7 @@ export function Items() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={8} className="h-64 text-center">
+                          <TableCell colSpan={activeTabType === 'PRODUCT' ? 9 : 8} className="h-64 text-center">
                             <EmptyState
                               title="Nenhum item encontrado"
                               description="Tente ajustar os filtros ou adicione um novo item."

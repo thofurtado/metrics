@@ -67,6 +67,7 @@ const productSchema = z.object({
   ncm: z.string().regex(/^\d*$/, 'Apenas números').optional(),
 
   active: z.boolean().default(true),
+  show_on_menu: z.boolean().default(true),
   is_priority: z.boolean().default(false),
 
   display_id: z.preprocess((val) => {
@@ -124,6 +125,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       barcode: initialData?.barcode ?? '',
       ncm: initialData?.ncm ?? '',
       active: initialData?.active ?? true,
+      show_on_menu: initialData?.show_on_menu ?? initialData?.product?.show_on_menu ?? true,
       is_priority: initialData?.is_priority ?? false,
       display_id: initialData?.display_id ?? undefined,
       measureUnit: initialData?.measureUnit ?? 'UNITARY',
@@ -195,6 +197,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           ...data,
           subcategory_id: data.subcategory_id || null,
           is_priority: data.is_priority,
+          show_on_menu: data.show_on_menu,
         } as any)
         toast.success('Produto atualizado!')
       } else {
@@ -210,6 +213,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           subcategory_id: data.subcategory_id || null,
           is_priority: data.is_priority,
           active: data.active,
+          show_on_menu: data.show_on_menu,
           display_id: data.display_id,
           measureUnit: data.measureUnit,
           cost: data.cost || 0,
@@ -241,7 +245,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           <div className="flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8">
             {/* Header: Nome, Prioridade KDS e Status */}
             <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-12 space-y-2 sm:col-span-7">
+              <div className="col-span-12 space-y-2 sm:col-span-6 lg:col-span-7">
                 <FormField
                   control={form.control}
                   name="name"
@@ -264,8 +268,27 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 />
               </div>
 
-              {/* Switches de KDS e Ativo */}
-              <div className="col-span-12 flex flex-wrap items-center gap-3 sm:col-span-5">
+              {/* Switches de Cardápio, KDS e Ativo */}
+              <div className="col-span-12 flex flex-wrap items-end gap-2.5 sm:col-span-6 lg:col-span-5">
+                <FormField
+                  control={form.control}
+                  name="show_on_menu"
+                  render={({ field }) => (
+                    <FormItem className="flex h-12 flex-1 min-w-[130px] items-center space-x-2.5 space-y-0 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 dark:border-emerald-900/30">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-emerald-500"
+                        />
+                      </FormControl>
+                      <FormLabel className="cursor-pointer text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        Cardápio
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="is_priority"

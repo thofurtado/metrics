@@ -19,6 +19,7 @@ export interface GetProductsResponse {
     barcode: string | null
     ncm: string | null
     is_composite: boolean
+    show_on_menu?: boolean
     compositions?: {
       id: string
       quantity: number

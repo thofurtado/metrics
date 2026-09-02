@@ -14,6 +14,7 @@ export interface CreateProductBody {
   is_composite?: boolean
   measureUnit?: 'UNITARY' | 'FRACTIONAL'
   cost?: number | null
+  show_on_menu?: boolean | null
   compositions?: {
     supply_id: string
     quantity: number

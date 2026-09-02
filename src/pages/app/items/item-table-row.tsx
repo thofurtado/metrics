@@ -1,5 +1,10 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { MoreHorizontal, Package2, Pencil, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+
+import { updateItem } from '@/api/update-item'
+import { Switch } from '@/components/ui/switch'
 
 import { GetItemsResponse } from '@/api/get-items'
 import { AlertDialog } from '@/components/ui/alert-dialog'
@@ -31,9 +36,66 @@ interface ItemTableRowProps {
 }
 
 export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
+  const queryClient = useQueryClient()
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isAdjustStockOpen, setIsAdjustStockOpen] = useState(false)
+
+  const initialActive = item.active ?? (item.product as any)?.active ?? true
+  const initialShowOnMenu = (item.product as any)?.show_on_menu ?? (item as any)?.show_on_menu ?? true
+
+  const [active, setActive] = useState<boolean>(initialActive)
+  const [showOnMenu, setShowOnMenu] = useState<boolean>(initialShowOnMenu)
+
+  useEffect(() => {
+    setActive(item.active ?? (item.product as any)?.active ?? true)
+  }, [item.active, (item.product as any)?.active])
+
+  useEffect(() => {
+    setShowOnMenu((item.product as any)?.show_on_menu ?? (item as any)?.show_on_menu ?? true)
+  }, [(item.product as any)?.show_on_menu, (item as any)?.show_on_menu])
+
+  const { mutate: toggleStatus, isPending: isUpdatingStatus } = useMutation({
+    mutationFn: async (newStatus: boolean) => {
+      await updateItem({
+        id: item.id,
+        active: newStatus,
+      })
+    },
+    onMutate: (newStatus) => {
+      setActive(newStatus)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Status atualizado com sucesso!')
+    },
+    onError: () => {
+      setActive(!active)
+      toast.error('Erro ao atualizar status.')
+    },
+  })
+
+  const { mutate: toggleShowOnMenu, isPending: isUpdatingMenu } = useMutation({
+    mutationFn: async (newVal: boolean) => {
+      await updateItem({
+        id: item.id,
+        show_on_menu: newVal,
+      })
+    },
+    onMutate: (newVal) => {
+      setShowOnMenu(newVal)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Exibição no cardápio atualizada!')
+    },
+    onError: () => {
+      setShowOnMenu(!showOnMenu)
+      toast.error('Erro ao atualizar cardápio.')
+    },
+  })
 
   const isStockable = activeTabType === 'PRODUCT' || activeTabType === 'SUPPLY'
   const displayId =
@@ -187,6 +249,32 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
           </TableCell>
         </>
       )}
+
+      {activeTabType === 'PRODUCT' && (
+        <TableCell className="py-5 text-center">
+          <div className="flex items-center justify-center">
+            <Switch
+              checked={showOnMenu}
+              disabled={isUpdatingMenu}
+              onCheckedChange={(checked) => toggleShowOnMenu(checked)}
+              aria-label="Exibir no cardápio"
+              className="data-[state=checked]:bg-emerald-500"
+            />
+          </div>
+        </TableCell>
+      )}
+
+      <TableCell className="py-5 text-center">
+        <div className="flex items-center justify-center">
+          <Switch
+            checked={active}
+            disabled={isUpdatingStatus}
+            onCheckedChange={(checked) => toggleStatus(checked)}
+            aria-label="Status do item"
+            className="data-[state=checked]:bg-blue-600"
+          />
+        </div>
+      </TableCell>
 
       <TableCell className="text-right">
         <DropdownMenu>

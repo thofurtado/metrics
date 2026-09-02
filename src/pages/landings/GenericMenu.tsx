@@ -142,6 +142,7 @@ interface Product {
   category: string
   imageUrl?: string
   is_priority?: boolean
+  show_on_menu?: boolean
   subcategory?: {
     id: string
     name: string
@@ -193,13 +194,14 @@ const DAYS_OF_WEEK = [
 async function fetchMenu() {
   try {
     const response = await api.get<any>('/public/menu')
+    let items: any[] = []
     if (Array.isArray(response.data)) {
-      return response.data
+      items = response.data
+    } else if (response.data && Array.isArray(response.data.products)) {
+      items = response.data.products
     }
-    if (response.data && Array.isArray(response.data.products)) {
-      return response.data.products
-    }
-    return []
+    // Failsafe: garante que apenas itens marcados com show_on_menu (ou padrão true) apareçam no cardápio
+    return items.filter((p: any) => p.show_on_menu !== false)
   } catch (error) {
     console.error('Erro ao buscar cardápio público:', error)
     return []

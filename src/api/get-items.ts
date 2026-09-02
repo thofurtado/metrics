@@ -7,6 +7,7 @@ export interface GetItemsResponse {
     description: string | null
     category: string | { id: string; name: string } | null
     active: boolean
+    show_on_menu?: boolean
     type: 'PRODUCT' | 'SERVICE' | 'SUPPLY'
     product: {
       display_id: number
@@ -17,6 +18,7 @@ export interface GetItemsResponse {
       barcode: string | null
       ncm: string | null
       is_composite: boolean
+      show_on_menu?: boolean
       compositions: {
         quantity: number
         supply: {
