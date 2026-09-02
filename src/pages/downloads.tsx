@@ -34,7 +34,7 @@ const downloadFiles: DownloadItem[] = [
     id: 'metrics-windy',
     name: 'Metrics Windy - Agente de Telemetria & Suporte',
     fileName: 'Metrics_Windy_Setup.exe',
-    version: 'v2.2.2.5 (Oficial)',
+    version: 'v2.3.1.0 (Oficial)',
     size: '60 MB',
     description: 'Agente inteligente para monitoramento contínuo em tempo real (CPU, RAM, Atividade de Leitura/Escrita de Disco e Sensores Térmicos), suporte remoto integrado e manutenção preventiva do Windows.',
     tag: 'Oficial',
