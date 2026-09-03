@@ -202,7 +202,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
                 Gestor de Entregas
               </span>
               <p className="text-sm font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-                {orders.length} {orders.length === 1 ? 'pedido hoje' : 'pedidos hoje'}
+                {orders.length} {orders.length === 1 ? 'pedido nesta sessão' : 'pedidos nesta sessão'}
               </p>
             </div>
           </div>
