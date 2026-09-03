@@ -13,8 +13,8 @@ export interface NeighborhoodGeo {
 
 export const CARAGUATATUBA_NEIGHBORHOODS: NeighborhoodGeo[] = [
   // ─── REGIÃO NORTE (Massaguaçu / Capricórnio / Tabatinga) ───
-  { name: 'Balneário Copacabana', lat: -23.5852, lng: -45.3481, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
-  { name: 'Balneário Delfim Verde', lat: -23.5815, lng: -45.3423, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
+  { name: 'Balneário Copacabana', lat: -23.6047, lng: -45.3497, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
+  { name: 'Balneário Delfim Verde', lat: -23.5980, lng: -45.3450, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
   { name: 'Balneário Garden Mar', lat: -23.5791, lng: -45.3385, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
   { name: 'Balneário Mar Azul', lat: -23.5768, lng: -45.3340, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
   { name: 'Balneário Parnaso', lat: -23.5830, lng: -45.3450, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },
@@ -24,7 +24,7 @@ export const CARAGUATATUBA_NEIGHBORHOODS: NeighborhoodGeo[] = [
   { name: 'Capricórnio I', lat: -23.5930, lng: -45.3625, region: 'Norte', popularAnchor: 'Capricórnio' },
   { name: 'Capricórnio III', lat: -23.5975, lng: -45.3680, region: 'Norte', popularAnchor: 'Capricórnio' },
   { name: 'Costa Verde', lat: -23.5680, lng: -45.3180, region: 'Norte', popularAnchor: 'Mocóca' },
-  { name: 'Jetuba', lat: -23.6012, lng: -45.3750, region: 'Norte', popularAnchor: 'Jetuba' },
+  { name: 'Jetuba', lat: -23.6080, lng: -45.3580, region: 'Norte', popularAnchor: 'Jetuba' },
   { name: 'Massaguaçú', lat: -23.5820, lng: -45.3400, region: 'Norte', popularAnchor: 'Massaguaçu' },
   { name: 'Mocóca', lat: -23.5620, lng: -45.3080, region: 'Norte', popularAnchor: 'Mocóca / Cocanha' },
   { name: 'Oceanica', lat: -23.5720, lng: -45.3240, region: 'Norte', popularAnchor: 'Massaguaçu / Norte' },

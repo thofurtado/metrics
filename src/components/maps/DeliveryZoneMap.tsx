@@ -75,8 +75,8 @@ export function DeliveryZoneMap({
 
   // Coordenada base do Restaurante (Padrão Caraguatatuba / Balneário Copacabana ou Centro)
   const [storeCoords, setStoreCoords] = useState<{ lat: number; lng: number }>({
-    lat: -23.5852,
-    lng: -45.3481, // Copacabana / Massaguaçu (Giardinetto)
+    lat: -23.6047,
+    lng: -45.3497, // Balneário Copacabana (Rua Toyo Kamiyama, 40)
   })
 
   // Setor Ativo Selecionado
@@ -84,17 +84,52 @@ export function DeliveryZoneMap({
     return sectors.find((s) => s.id === activeSectorId) || sectors[0] || null
   }, [sectors, activeSectorId])
 
-  // Geocodificação inicial baseada no endereço da loja se houver
+  // Geocodificação inteligente do endereço da loja (Toyo Kamiyama, Copacabana, etc.)
   useEffect(() => {
-    if (restaurantAddress?.neighborhood) {
-      const match = CARAGUATATUBA_NEIGHBORHOODS.find(
-        (n) => n.name.toLowerCase() === restaurantAddress.neighborhood?.toLowerCase(),
-      )
-      if (match) {
-        setStoreCoords({ lat: match.lat, lng: match.lng })
+    let isMounted = true
+
+    async function resolveCoords() {
+      // 1. Tenta buscar pelo endereço exato na OpenStreetMap
+      if (restaurantAddress?.street && restaurantAddress?.city) {
+        try {
+          const streetClean = restaurantAddress.street.replace(/^(Rua|Avenida|Av\.?|R\.?)\s+/i, '').trim()
+          const q = `${streetClean}, ${restaurantAddress.city}, SP, Brasil`
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+          )
+          const data = await res.json()
+          if (isMounted && Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
+            const lat = parseFloat(data[0].lat)
+            const lng = parseFloat(data[0].lon)
+            setStoreCoords({ lat, lng })
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setView([lat, lng], 14)
+            }
+            return
+          }
+        } catch (err) {
+          console.warn('Geocodificação externa indisponível, usando catálogo local:', err)
+        }
+      }
+
+      // 2. Fallback: Base local dos bairros
+      if (restaurantAddress?.neighborhood) {
+        const match = CARAGUATATUBA_NEIGHBORHOODS.find(
+          (n) => n.name.toLowerCase().trim() === restaurantAddress.neighborhood?.toLowerCase().trim(),
+        )
+        if (match && isMounted) {
+          setStoreCoords({ lat: match.lat, lng: match.lng })
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setView([match.lat, match.lng], 14)
+          }
+        }
       }
     }
-  }, [restaurantAddress])
+
+    resolveCoords()
+    return () => { isMounted = false }
+  }, [restaurantAddress?.street, restaurantAddress?.neighborhood, restaurantAddress?.city])
 
   // 1. Inicialização do Mapa Leaflet
   useEffect(() => {
@@ -113,11 +148,11 @@ export function DeliveryZoneMap({
       // Adiciona controle de zoom no canto superior direito
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      // Tile Layer: CartoDB Voyager (Design super limpo, elegante e leve)
+      // Tile Layer: OpenStreetMap Oficial (100% Livre de API Key e sem marcas d'água)
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         {
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
         },
       ).addTo(map)
