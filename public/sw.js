@@ -13,18 +13,18 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
-    data = { title: '🔔 Atualização do seu Pedido!', body: event.data ? event.data.text() : 'Seu pedido foi atualizado.' };
+    data = { title: '⭐ Gostou do nosso atendimento?', body: event.data ? event.data.text() : 'Toque para avaliar.' };
   }
 
   const orderId = data.order_id || 'update';
   const status = data.status || 'status';
-  const title = data.title || '🔔 Atualização do seu Pedido!';
+  const title = data.title || '⭐ Gostou do nosso atendimento?';
   const options = {
-    body: data.body || 'O status do seu pedido foi atualizado.',
+    body: data.body || 'Faça uma avaliação e nos ajude a crescer!',
     icon: '/favicon.svg',
     badge: '/favicon.svg',
     tag: 'order-' + orderId + '-' + status,
-    renotify: false,
+    renotify: true,
     requireInteraction: true,
     vibrate: [200, 100, 200, 100, 300],
     data: {
@@ -32,33 +32,36 @@ self.addEventListener('push', (event) => {
     }
   };
 
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Se o usuário estiver ativo e com foco na página, a própria página já exibe o status ao vivo
-      const isFocused = clientList.some((c) => c.focused);
-      if (isFocused) {
-        return;
-      }
-      return self.registration.showNotification(title, options);
-    })
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Ao clicar na notificação, foca ou abre a tela do pedido
+// Ao clicar na notificação, abre o link de avaliação ou foca a tela do pedido
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/cardapio';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    (async () => {
+      // Se for link externo (Google Reviews, Maps, busca externa), abre direto em nova janela
+      if (targetUrl.startsWith('http') && !targetUrl.includes(self.location.host)) {
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      }
+
+      // Se for link interno da loja
+      const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of clientList) {
         if (client.url && 'focus' in client) {
+          if (targetUrl && targetUrl !== '/cardapio' && client.navigate) {
+            client.navigate(targetUrl);
+          }
           return client.focus();
         }
       }
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
-    })
+    })()
   );
 });

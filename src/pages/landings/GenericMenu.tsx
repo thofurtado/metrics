@@ -112,9 +112,10 @@ async function showBrowserNotification(title: string, options?: NotificationOpti
     icon: '/favicon.svg',
     badge: '/favicon.svg',
     tag: options?.tag || ('order-status-' + (options?.data?.order_id || 'live')),
-    renotify: false,
+    renotify: true,
     requireInteraction: true,
-    vibrate: [200, 100, 200]
+    vibrate: [200, 100, 200],
+    data: options?.data || {}
   };
 
   try {
@@ -131,7 +132,14 @@ async function showBrowserNotification(title: string, options?: NotificationOpti
       }
     }
     // Fallback: tenta new Notification (funciona no desktop, falha no mobile)
-    try { new Notification(title, options); } catch (e) {}
+    try {
+      const n = new Notification(title, notifOptions as any);
+      if (notifOptions?.data?.url) {
+        n.onclick = () => {
+          window.open(notifOptions.data.url, '_blank');
+        };
+      }
+    } catch (e) {}
   } catch (e) {
     try { new Notification(title, options); } catch (err) {}
   }
@@ -1419,10 +1427,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   tag: notifTag,
                 });
               } else if (newStatus === 'delivered') {
-                showBrowserNotification(`🎉 Pedido #${res.data.display_id || ''} Entregue!`, {
-                  body: 'Seu pedido foi entregue. Tenha um excelente apetite!',
+                const storeName = profile?.tradeName || 'Restaurante';
+                const reviewUrl = (profile as any)?.googleReviewUrl || 
+                  `https://www.google.com/search?q=${encodeURIComponent(storeName + ' avaliações')}`;
+
+                showBrowserNotification('⭐ Gostou do nosso atendimento?', {
+                  body: 'Faça uma avaliação e nos ajude a crescer! Toque aqui para avaliar no Google.',
                   icon: '/favicon.svg',
                   tag: notifTag,
+                  data: {
+                    url: reviewUrl
+                  }
                 });
               }
             }
