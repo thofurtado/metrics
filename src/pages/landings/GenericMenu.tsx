@@ -1157,7 +1157,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         })
       } catch (orderApiErr: any) {
         console.error('Erro ao enviar pedido para o caixa (PDV):', orderApiErr)
-        setIsProcessingOrder(false)
+        setIsSubmittingOrder(false)
         const errorMsg = orderApiErr?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
         if (errorMsg.toLowerCase().includes('área de entrega') || errorMsg.toLowerCase().includes('bairro')) {
           setUnsupportedNeighborhoodModal({
