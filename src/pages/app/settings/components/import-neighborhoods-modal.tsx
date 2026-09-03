@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
+import { CARAGUATATUBA_NEIGHBORHOODS } from '@/data/geo/caraguatatuba-neighborhoods'
 
 // Lista das 27 UFs do Brasil
 const BRAZILIAN_UFS = [
@@ -166,6 +167,7 @@ export function ImportNeighborhoodsModal({
   const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([])
   const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<Set<string>>(new Set())
   const [searchFilter, setSearchFilter] = useState('')
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>('ALL')
 
   // 1. Carrega cidades via BrasilAPI (com fallback IBGE)
   useEffect(() => {
@@ -325,6 +327,33 @@ export function ImportNeighborhoodsModal({
             </div>
           </div>
 
+          {/* Filtro Rápido por Região Popular (Caraguatatuba e Região) */}
+          {selectedCity.toLowerCase().includes('caragua') && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+              <span className="text-slate-400 font-semibold shrink-0">Regiões:</span>
+              {[
+                { id: 'ALL', label: 'Todas as Regiões' },
+                { id: 'Norte', label: '🌊 Norte (Massaguaçu/Mococa)' },
+                { id: 'Centro-Norte', label: '🏖️ Martim de Sá / Prainha' },
+                { id: 'Centro', label: '🏙️ Centro / Tinga' },
+                { id: 'Sul', label: '🌴 Sul (Porto Novo/Indaiá)' },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSelectedRegionFilter(r.id)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer ${
+                    selectedRegionFilter === r.id
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Linha 2: Barra de Filtro & Ações de Seleção */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 flex-wrap">
@@ -398,8 +427,13 @@ export function ImportNeighborhoodsModal({
                         onCheckedChange={() => handleToggleNeighborhood(name)}
                         className="data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                       />
-                      <span className="truncate text-[11px]" title={name}>
-                        {name}
+                      <span className="truncate text-[11px] flex items-center justify-between gap-1 w-full" title={name}>
+                        <span className="truncate">{name}</span>
+                        {caraguaGeoMap.get(name.toLowerCase().trim()) && (
+                          <span className="text-[9px] font-normal text-slate-400 dark:text-slate-500 shrink-0">
+                            ({caraguaGeoMap.get(name.toLowerCase().trim())?.anchor})
+                          </span>
+                        )}
                       </span>
                     </label>
                   )

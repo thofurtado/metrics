@@ -12,6 +12,8 @@ import {
   Layers,
   Loader2,
   MapPin,
+  Map,
+  List,
   Palette,
   Plus,
   Search,
@@ -50,6 +52,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
 import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
+import { DeliveryZoneMap } from '@/components/maps/DeliveryZoneMap'
+import { cn } from '@/lib/utils'
 import { getPayments } from '@/api/get-payments'
 import { updatePayment } from '@/api/update-payment'
 
@@ -66,6 +70,7 @@ const deliverySectorSchema = z.object({
   fee: z.coerce.number().min(0),
   estimatedTimeMin: z.coerce.number().default(30),
   estimatedTimeMax: z.coerce.number().default(60),
+  radiusKm: z.coerce.number().optional().default(3),
   neighborhoods: z.array(z.string()),
 })
 
@@ -369,6 +374,8 @@ export function MenuSettings() {
   const [newNeighborhoodInputs, setNewNeighborhoodInputs] = useState<Record<string, string>>({})
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [unassignedSearch, setUnassignedSearch] = useState('')
+  const [sectorViewMode, setSectorViewMode] = useState<'map' | 'list'>('map')
+  const [activeMapSectorId, setActiveMapSectorId] = useState<string | null>(null)
 
   // Calcula quais bairros estão vinculados e quais estão disponíveis no banco
   const rawDeliverySectors = watch('deliverySectors')
@@ -505,10 +512,35 @@ export function MenuSettings() {
       fee: 5.0,
       estimatedTimeMin: 30,
       estimatedTimeMax: 50,
+      radiusKm: current.length === 0 ? 3 : current.length === 1 ? 6 : (current.length + 1) * 3,
       neighborhoods: [],
     }
     setValue('deliverySectors', [...current, newSector], { shouldDirty: true })
     toast.success('Novo setor de entrega criado!')
+  }
+
+  const handleUpdateSectorRadius = (sectorId: string, radiusKm: number) => {
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
+    const updated = current.map((s: any) => {
+      if (s.id === sectorId) {
+        return { ...s, radiusKm }
+      }
+      return s
+    })
+    setValue('deliverySectors', updated, { shouldDirty: true })
+  }
+
+  const handleUpdateSectorNeighborhoods = (sectorId: string, neighborhoods: string[]) => {
+    const rawCurrent = getValues('deliverySectors')
+    const current = Array.isArray(rawCurrent) ? rawCurrent : []
+    const updated = current.map((s: any) => {
+      if (s.id === sectorId) {
+        return { ...s, neighborhoods }
+      }
+      return s
+    })
+    setValue('deliverySectors', updated, { shouldDirty: true })
   }
 
   const handleRemoveSector = (id: string) => {
@@ -1250,19 +1282,68 @@ export function MenuSettings() {
                     Zonas de Entrega & Taxas por Setor
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Cada setor agrupa bairros com a mesma taxa de frete e tempo de entrega.
+                    Defina raios concêntricos no mapa ou agrupe bairros com a mesma taxa de frete e tempo de entrega.
                   </CardDescription>
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleAddSector}
-                  size="sm"
-                  className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20 shrink-0"
-                >
-                  <Plus className="h-4 w-4" /> Novo Setor
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSectorViewMode('map')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
+                        sectorViewMode === 'map'
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200',
+                      )}
+                    >
+                      <Map className="h-3.5 w-3.5" /> Mapa Visual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSectorViewMode('list')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
+                        sectorViewMode === 'list'
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200',
+                      )}
+                    >
+                      <List className="h-3.5 w-3.5" /> Modo Lista
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddSector}
+                    size="sm"
+                    className="gap-1.5 bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20 shrink-0"
+                  >
+                    <Plus className="h-4 w-4" /> Novo Setor
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Visualizador de Mapa Interativo com Círculos Concêntricos */}
+                {sectorViewMode === 'map' && deliverySectors.length > 0 && (
+                  <div className="pb-2">
+                    <DeliveryZoneMap
+                      sectors={deliverySectors}
+                      activeSectorId={activeMapSectorId || deliverySectors[0]?.id}
+                      onSelectSector={setActiveMapSectorId}
+                      onUpdateSectorNeighborhoods={handleUpdateSectorNeighborhoods}
+                      onUpdateSectorRadius={handleUpdateSectorRadius}
+                      restaurantAddress={{
+                        street: watch('street'),
+                        number: watch('number'),
+                        neighborhood: watch('neighborhood'),
+                        city: watch('city'),
+                        state: watch('state'),
+                        zipcode: watch('zipcode'),
+                      }}
+                    />
+                  </div>
+                )}
+
                 {deliverySectors.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/30">
                     <MapPin className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
