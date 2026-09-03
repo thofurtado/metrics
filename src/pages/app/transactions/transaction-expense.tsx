@@ -120,6 +120,8 @@ const formSchema = z.object({
     .optional(),
   credit_card_id: z.string().optional(),
   interest: z.string().optional(),
+  fine: z.string().optional(),
+  discount: z.string().optional(),
 })
 
 type FormSchemaType = z.infer<typeof formSchema>
@@ -672,7 +674,12 @@ export function TransactionExpense({
                 const index = inputs.indexOf(e.target as HTMLElement)
                 if (index > -1 && index < inputs.length - 1) {
                   const nextElement = inputs[index + 1]
-                  if (nextElement) nextElement.focus()
+                  if (nextElement) {
+                    nextElement.focus()
+                    if (nextElement instanceof HTMLInputElement) {
+                      nextElement.select()
+                    }
+                  }
                 }
               }
             }}
@@ -705,6 +712,7 @@ export function TransactionExpense({
                         <FormControl>
                           <input
                             {...field}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
                               const val = parseFloat(e.target.value) || 0
@@ -807,6 +815,7 @@ export function TransactionExpense({
                   Condição de Pagamento
                 </span>
 
+                {/* 1º: VALOR TOTAL */}
                 <FormField
                   control={form.control}
                   name="amount"
@@ -827,6 +836,7 @@ export function TransactionExpense({
                             step="0.01"
                             placeholder="0.00"
                             className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
                               const val = parseFloat(e.target.value) || 0
@@ -834,9 +844,9 @@ export function TransactionExpense({
                                 parseInt(
                                   form.getValues('installments_count') || '1',
                                 ) || 1
-                              if (!isNaN(val) && !isNaN(count) && count > 0) {
+                              if (!isNaN(val) && val > 0 && !isNaN(count) && count > 0) {
                                 setInstallmentValue((val / count).toFixed(2))
-                              } else {
+                              } else if (val === 0) {
                                 setInstallmentValue('')
                               }
                             }}
@@ -847,9 +857,42 @@ export function TransactionExpense({
                   )}
                 />
 
+                {/* 2º: NÚMERO DE PARCELAS */}
+                <FormField
+                  control={form.control}
+                  name="installments_count"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                        Nº de Parcelas <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="12"
+                          className="h-12 rounded-xl border-border/70 bg-background text-center text-base font-medium"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            const count = parseInt(e.target.value) || 1
+                            const total =
+                              parseFloat(form.getValues('amount') || '0') || 0
+                            if (!isNaN(total) && total > 0 && !isNaN(count) && count > 0) {
+                              setInstallmentValue((total / count).toFixed(2))
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* 3º: VALOR DA PARCELA */}
                 <FormItem className="space-y-1.5">
                   <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                    Valor / Parcela
+                    Valor da Parcela
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
@@ -863,6 +906,7 @@ export function TransactionExpense({
                         placeholder="0.00"
                         value={installmentValue}
                         className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => {
                           const val = e.target.value
                           setInstallmentValue(val)
@@ -871,7 +915,7 @@ export function TransactionExpense({
                             parseInt(
                               form.getValues('installments_count') || '1',
                             ) || 1
-                          if (!isNaN(instVal) && !isNaN(count) && count > 0) {
+                          if (!isNaN(instVal) && instVal > 0 && !isNaN(count) && count > 0) {
                             form.setValue(
                               'amount',
                               (instVal * count).toFixed(2),
@@ -883,36 +927,6 @@ export function TransactionExpense({
                     </div>
                   </FormControl>
                 </FormItem>
-
-                <FormField
-                  control={form.control}
-                  name="installments_count"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                        Repetições
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="12"
-                          className="h-12 rounded-xl border-border/70 bg-background text-center text-base font-medium"
-                          onChange={(e) => {
-                            field.onChange(e)
-                            const count = parseInt(e.target.value) || 1
-                            const total =
-                              parseFloat(form.getValues('amount') || '0') || 0
-                            if (!isNaN(total) && !isNaN(count) && count > 0) {
-                              setInstallmentValue((total / count).toFixed(2))
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -981,6 +995,7 @@ export function TransactionExpense({
                   <FormControl>
                     <Input
                       {...field}
+                      onFocus={(e) => e.target.select()}
                       placeholder="Ex: Aluguel do escritório..."
                       className="h-14 rounded-2xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:border-red-500 focus-visible:ring-red-500/30 md:h-12 md:rounded-xl"
                     />

@@ -23,6 +23,7 @@ export interface CreateTransactionBody {
     | null
   credit_card_id?: string | null
   interest?: number | null
+  fine?: number | null
   discount?: number | null
 }
 
@@ -43,6 +44,7 @@ export async function createTransaction({
   custom_installments,
   credit_card_id,
   interest,
+  fine,
   discount,
 }: CreateTransactionBody) {
   const response = await api.post('/transaction', {
@@ -62,6 +64,7 @@ export async function createTransaction({
     custom_installments,
     credit_card_id: credit_card_id || null,
     interest: interest || null,
+    fine: fine || null,
     discount: discount || null,
   })
   return response
