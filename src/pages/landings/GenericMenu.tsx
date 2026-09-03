@@ -2813,23 +2813,27 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   )}
 
                   {liveOrderStatus === 'delivered' && (
-                    <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-3 text-emerald-900 border border-emerald-200/60 animate-fade-in">
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 text-amber-950 border border-amber-200/70 animate-fade-in">
+                      <span className="text-xl shrink-0 mt-0.5">⭐</span>
                       <div className="flex-1">
-                        <p className="text-sm font-bold">🎉 Pedido Entregue!</p>
-                        <p className="text-xs text-emerald-800/80 mt-0.5">
-                          Seu pedido foi finalizado com sucesso. Tenha um excelente apetite!
+                        <p className="text-sm font-black text-amber-950">Gostou do nosso atendimento?</p>
+                        <p className="text-xs text-amber-900/90 mt-0.5">
+                          Faça uma avaliação e nos ajude a crescer! Sua opinião é fundamental.
                         </p>
-                        {Boolean((profile as any)?.googleReviewUrl || (profile?.deliverySectors as any)?.googleReviewUrl) && (
-                          <a
-                            href={(profile as any)?.googleReviewUrl || (profile?.deliverySectors as any)?.googleReviewUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs py-2.5 px-3 shadow transition-all active:scale-98"
-                          >
-                            <span>⭐ Avaliar no Google com 5 Estrelas ⭐</span>
-                          </a>
-                        )}
+                        {(() => {
+                          const reviewUrl = (profile as any)?.googleReviewUrl || 
+                            `https://www.google.com/search?q=${encodeURIComponent(((profile?.tradeName || 'Restaurante') + ' avaliações'))}`;
+                          return (
+                            <a
+                              href={reviewUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2.5 flex items-center justify-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs py-2.5 px-3 shadow transition-all active:scale-98"
+                            >
+                              <span>⭐ Deixar Avaliação no Google ⭐</span>
+                            </a>
+                          )
+                        })()}
                       </div>
                     </div>
                   )}
