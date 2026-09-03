@@ -51,6 +51,26 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
+  const orphanOrders = orders.filter((o) => !o.caixa_id && !o.cashier_session_id)
+  const [associatingOrphans, setAssociatingOrphans] = useState(false)
+
+  const handleAssociateOrphans = async () => {
+    if (!sessionId) return
+    setAssociatingOrphans(true)
+    try {
+      const res = await api.post('/public/orders/associate-orphans', {
+        cashier_session_id: sessionId
+      })
+      toast.success(res.data.message || 'Pedidos vinculados com sucesso ao caixa!')
+      queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['cashier-session', sessionId] })
+      if (onOrderCompleted) onOrderCompleted()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Erro ao vincular pedidos órfãos.')
+    } finally {
+      setAssociatingOrphans(false)
+    }
+  }
 
   // Sincroniza o alerta sonoro: toca APENAS enquanto houver pedidos pendentes (Novos)
   // Se a contagem for 0, silencia e limpa o timer imediatamente.

@@ -42,6 +42,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getPOSMachines } from '@/api/pos-machines'
 import { api } from '@/lib/axios'
 
 interface DeliveryOrdersDrawerProps {
@@ -178,7 +179,7 @@ export function DeliveryOrdersDrawer({
       ? inPrepOrders
       : activeTab === 'dispatched'
       ? dispatchedOrders
-      : deliveredOrders
+      : deliveredOrders.slice().sort((a: any, b: any) => (b.display_id || 0) - (a.display_id || 0))
 
   // Detecta se um item é bebida/geladeira por palavras-chave
   const isDrinkItem = (name: string) => {
@@ -269,7 +270,7 @@ export function DeliveryOrdersDrawer({
           title={`Cobrar na entrega com a maquininha (${tipo})`}
         >
           <CreditCard className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-          <span>💳 Maquininha ({tipo})</span>
+          <span>Maquininha ({tipo})</span>
         </span>
       )
     } else if (isDinheiro) {
@@ -297,7 +298,7 @@ export function DeliveryOrdersDrawer({
             title={`Cliente pagará com ${formatBRL(valorTrocoPara)}. Separar ${formatBRL(trocoDevolver)} de troco!`}
           >
             <Banknote className="h-3 w-3 text-amber-700 dark:text-amber-400" />
-            <span>💵 Troco: {formatBRL(trocoDevolver)} (p/ {formatBRL(valorTrocoPara)})</span>
+            <span>Troco: {formatBRL(trocoDevolver)} (p/ {formatBRL(valorTrocoPara).replace(',00', '')})</span>
           </span>
         )
       } else {
@@ -307,7 +308,7 @@ export function DeliveryOrdersDrawer({
             title="Pagamento em dinheiro sem troco"
           >
             <Banknote className="h-3 w-3 text-amber-700 dark:text-amber-400" />
-            <span>💵 Dinheiro (Sem troco)</span>
+            <span>Dinheiro (Sem troco)</span>
           </span>
         )
       }
@@ -327,11 +328,6 @@ export function DeliveryOrdersDrawer({
 
     return (
       <>
-        {/* Valor Total do Pedido */}
-        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0">
-          💰 {totalFmt}
-        </span>
-
         {/* Badge de Pagamento / Ação Operacional */}
         {paymentBadge}
 
@@ -342,7 +338,7 @@ export function DeliveryOrdersDrawer({
             title="Contém bebidas! Pegar na geladeira ao embalar."
           >
             <CupSoda className="h-3 w-3 text-cyan-700 dark:text-cyan-400" />
-            <span>🥤 {drinkCount} Geladeira</span>
+            <span>{drinkCount} Geladeira</span>
           </span>
         )}
 
@@ -532,13 +528,21 @@ export function DeliveryOrdersDrawer({
     }
   }
 
-  const handleUpdateStatus = async (orderId: string, nextStatus: string, deliveryMan?: string) => {
+  const handleUpdateStatus = async (
+    orderId: string,
+    nextStatus: string,
+    deliveryMan?: string,
+    paymentMethod?: string,
+    cardMachine?: string
+  ) => {
     setLoadingOrderId(orderId)
     try {
       await api.patch(`/public/orders/${orderId}/status`, {
         status: nextStatus,
         cashier_session_id: nextStatus === 'delivered' ? sessionId : undefined,
-        delivery_man: deliveryMan
+        delivery_man: deliveryMan,
+        payment_method: paymentMethod,
+        card_machine: cardMachine
       })
 
       if (nextStatus === 'in_preparation') {
@@ -558,6 +562,24 @@ export function DeliveryOrdersDrawer({
     } finally {
       setLoadingOrderId(null)
     }
+  }
+
+  const openFinalizeModal = (order: any) => {
+    setOrderToFinalize(order)
+    const obs = (order.observations || '').toLowerCase()
+    let initialMethod = 'PIX'
+    if (obs.includes('dinheiro')) initialMethod = 'Dinheiro'
+    else if (obs.includes('débito') || obs.includes('debito')) initialMethod = 'Cartão de Débito'
+    else if (obs.includes('crédito') || obs.includes('credito') || obs.includes('cartão') || obs.includes('cartao')) initialMethod = 'Cartão de Crédito'
+    setFinalizePaymentMethod(initialMethod)
+
+    const activeMachines = Array.isArray(posMachines) ? posMachines.filter((m: any) => m.active !== false) : []
+    if (activeMachines.length > 0) {
+      setFinalizeCardMachine(activeMachines[0].name)
+    } else {
+      setFinalizeCardMachine('')
+    }
+    setFinalizeModalOpen(true)
   }
 
   const openDispatch = (order: any) => {
@@ -878,6 +900,143 @@ export function DeliveryOrdersDrawer({
 
   return (
     <>
+
+      {/* ========================================================================= */}
+      {/* MODAL DE BAIXA COM ALTERAÇÃO DE PAGAMENTO & MAQUININHA (CONFERÊNCIA CAIXA) */}
+      {/* ========================================================================= */}
+      {finalizeModalOpen && orderToFinalize && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Baixa de Entrega #{orderToFinalize.display_id || ''}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-[240px]">
+                    {orderToFinalize.client_name} • {orderToFinalize.address}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFinalizeModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="my-4 space-y-4">
+              {/* Card de Valor Total */}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-center dark:border-emerald-900/40 dark:bg-emerald-950/30">
+                <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Valor Total a Lançar no Caixa</p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  {formatBRL(orderToFinalize.total_amount || 0)}
+                </p>
+                {orderToFinalize.delivery_man && (
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Entregador: <strong>{orderToFinalize.delivery_man}</strong>
+                  </p>
+                )}
+              </div>
+
+              {/* Seletor de Forma de Pagamento Real */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Forma de Pagamento Recebida:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'PIX', label: '⚡ Pix', icon: Sparkles },
+                    { id: 'Dinheiro', label: '💵 Dinheiro', icon: Banknote },
+                    { id: 'Cartão de Crédito', label: '💳 Cartão Crédito', icon: CreditCard },
+                    { id: 'Cartão de Débito', label: '💳 Cartão Débito', icon: CreditCard },
+                  ].map((method) => {
+                    const isSelected = finalizePaymentMethod === method.id
+                    return (
+                      <button
+                        key={method.id}
+                        type="button"
+                        onClick={() => setFinalizePaymentMethod(method.id)}
+                        className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-black transition-all ${
+                          isSelected
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                        }`}
+                      >
+                        <span>{method.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Se for Cartão: Seleção da Maquininha */}
+              {(finalizePaymentMethod === 'Cartão de Crédito' || finalizePaymentMethod === 'Cartão de Débito') && (
+                <div className="space-y-1.5 rounded-xl border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/30">
+                  <label className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                    Maquininha Utilizada (Conferência de Caixa):
+                  </label>
+                  <select
+                    value={finalizeCardMachine}
+                    onChange={(e) => setFinalizeCardMachine(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs font-bold text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <option value="">-- Selecione a Maquininha --</option>
+                    {Array.isArray(posMachines) && posMachines.map((m: any) => (
+                      <option key={m.id} value={m.name}>
+                        {m.name}
+                      </option>
+                    ))}
+                    <option value="Safra">Safra Pay</option>
+                    <option value="Stone">Stone</option>
+                    <option value="PagBank">PagBank / Moderninha</option>
+                    <option value="Cielo">Cielo</option>
+                    <option value="Rede">Rede</option>
+                    <option value="Mercado Pago">Mercado Pago Point</option>
+                  </select>
+                  <p className="text-[11px] text-blue-700 dark:text-blue-400">
+                    💡 O valor entrará direto no relatório da maquininha para conferência do caixa.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 border-t pt-3 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setFinalizeModalOpen(false)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-400"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={loadingOrderId === orderToFinalize.id}
+                onClick={async () => {
+                  await handleUpdateStatus(
+                    orderToFinalize.id,
+                    'delivered',
+                    orderToFinalize.delivery_man,
+                    finalizePaymentMethod,
+                    finalizeCardMachine
+                  )
+                  setFinalizeModalOpen(false)
+                  setOrderToFinalize(null)
+                }}
+                className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md hover:bg-emerald-500 active:scale-98"
+              >
+                {loadingOrderId === orderToFinalize.id ? 'Gravando...' : 'Confirmar & Lançar Caixa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* GAVETA / DRAWER LATERAL (Z-INDEX 50)                                      */}
       {/* ========================================================================= */}
@@ -1173,49 +1332,54 @@ export function DeliveryOrdersDrawer({
 
                         <div
                           onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                          className="flex-1 min-w-0 cursor-pointer space-y-0.5"
+                          className="flex-1 min-w-0 cursor-pointer space-y-1"
                           title="Clique para ver pratos e detalhes"
                         >
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
-                              #{order.display_id || '0'}
-                            </span>
-                            <span className="text-xs font-black text-slate-900 dark:text-white truncate">
-                              {order.client_name}
-                            </span>
-                            {bairro && (
-                              <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
-                                📍 {bairro}
+                          {/* LINHA 1: #1 Nome do Cliente + 📍 Bairro (esq) | 💰 Total (dir) */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
+                              <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
+                                #{order.display_id || '0'}
                               </span>
-                            )}
-                            <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
-                              📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
+                              <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                {order.client_name}
+                              </span>
+                              {bairro && (
+                                <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                  📍 {bairro}
+                                </span>
+                              )}
+                            </div>
+                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0">
+                              💰 {formatBRL(order.total_amount || 0)}
                             </span>
-                            {renderQuickProductionBadges(order)}
                           </div>
 
+                          {/* LINHA 2: 📦 Itens + 💳 Maquininha + 🥤 Geladeira + 💬 Obs (esq) | ⏱️ Tempo + ▾ (dir) */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                              <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
+                                📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
+                              </span>
+                              {renderQuickProductionBadges(order)}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                                <Clock className="h-2.5 w-2.5" />
+                                <span>{sla.minutes}m</span>
+                              </div>
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            </div>
+                          </div>
+
+                          {/* LINHA 3: Endereço completo */}
                           <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
                             <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
                             <span className="truncate">
                               {order.address}{order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
                             </span>
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
-                            <Clock className="h-2.5 w-2.5" />
-                            <span>{sla.minutes}m</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 transition-colors"
-                            title="Ver pratos e detalhes"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -1409,11 +1573,33 @@ export function DeliveryOrdersDrawer({
                       </div>
                     )}
 
-                    {/* ITENS */}
-                    <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
-                        {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
-                      </p>
+                    {/* ITENS (COLAPSÁVEL NA ABA NA RUA) */}
+                    {activeTab === 'dispatched' ? (
+                      <div className="mt-2.5 border-t border-slate-100 pt-2 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setDispatchedExpandedItems((prev) => ({ ...prev, [order.id]: !prev[order.id] }))}
+                          className="flex w-full items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                          <span>Ver {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'} do pedido</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${dispatchedExpandedItems[order.id] ? 'rotate-180' : ''}`} />
+                        </button>
+                        {dispatchedExpandedItems[order.id] && (
+                          <div className="mt-2 space-y-1.5 pl-1">
+                            {order.items?.map((item: any) => (
+                              <div key={item.id} className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
+                                <span>{item.quantity}x {item.name}</span>
+                                <span className="font-bold">{formatBRL(item.price * item.quantity)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
+                          {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
+                        </p>
 
                       {(isProducaoTab ? foodItems : order.items)?.map((item: any) => {
                         const itemName = item.name || 'Item'
@@ -1482,6 +1668,7 @@ export function DeliveryOrdersDrawer({
                         )
                       })}
                     </div>
+                    )}
 
                     {/* Na Rua */}
                     {activeTab === 'dispatched' && (
@@ -1525,11 +1712,11 @@ export function DeliveryOrdersDrawer({
                       {order.status === 'dispatched' && (
                         <button
                           disabled={loadingOrderId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                          onClick={() => openFinalizeModal(order)}
                           className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-emerald-500 active:scale-98"
                         >
                           <DollarSign className="h-4 w-4" />
-                          <span>Confirmar Retorno & Dar Baixa no Caixa</span>
+                          <span>Confirmar Retorno & Dar Baixa no Caixa 🛵</span>
                         </button>
                       )}
 

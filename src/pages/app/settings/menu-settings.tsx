@@ -1126,8 +1126,8 @@ export function MenuSettings() {
                     {...register('deliveryFee')}
                     placeholder="0.00"
                   />
-                  <p className="text-[11px] text-muted-foreground">
-                    Aplicada para bairros fora dos setores cadastrados
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                    ⚠️ Taxa de fallback: usada apenas para bairros que não estiverem vinculados a nenhum setor específico abaixo.
                   </p>
                 </div>
 
@@ -1140,6 +1140,9 @@ export function MenuSettings() {
                     {...register('minOrderValue')}
                     placeholder="0.00"
                   />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    💡 Regra geral obrigatória. Se o valor for <strong>0</strong>, o cardápio não exigirá pedido mínimo para entrega.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -1159,8 +1162,8 @@ export function MenuSettings() {
                       className="w-1/2"
                     />
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Ex: 30 a 60 minutos
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    ⚠️ Tempo padrão de fallback. Para bairros com setores de entrega configurados, valerá o prazo de cada setor.
                   </p>
                 </div>
               </CardContent>

@@ -1,3 +1,13 @@
+function sectorsMinTime(profile: any): number | null {
+  let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+  if (typeof sectors === 'string') {
+    try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+  }
+  if (!Array.isArray(sectors) || sectors.length === 0) return null
+  const times = sectors.map((s: any) => Number(s.estimatedTimeMin) || 0).filter((t: number) => t > 0)
+  return times.length ? Math.min(...times) : null
+}
+
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -101,8 +111,8 @@ async function showBrowserNotification(title: string, options?: NotificationOpti
     ...options,
     icon: '/favicon.svg',
     badge: '/favicon.svg',
-    tag: 'order-status-' + Date.now(),
-    renotify: true,
+    tag: options?.tag || ('order-status-' + (options?.data?.order_id || 'live')),
+    renotify: false,
     requireInteraction: true,
     vibrate: [200, 100, 200]
   };
@@ -768,6 +778,34 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
 
+  const resolvedDeliveryTime = useMemo(() => {
+    if (fulfillmentType !== 'DELIVERY' || !neighborhood) return null
+    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    if (typeof sectors === 'string') {
+      try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+    }
+    if (Array.isArray(sectors)) {
+      const foundSec = sectors.find((s: any) =>
+        (s.neighborhoods || []).some(
+          (n: string) => normalizeText(n) === normalizeText(neighborhood)
+        )
+      )
+      if (foundSec && (foundSec.estimatedTimeMin || foundSec.estimatedTimeMax)) {
+        return {
+          min: Number(foundSec.estimatedTimeMin) || 30,
+          max: Number(foundSec.estimatedTimeMax) || 60,
+        }
+      }
+    }
+    if (profile?.deliveryTimeMin) {
+      return {
+        min: Number(profile.deliveryTimeMin),
+        max: Number(profile.deliveryTimeMax || 60),
+      }
+    }
+    return null
+  }, [fulfillmentType, neighborhood, profile])
+
   const deliverySectorInfo = useMemo(() => {
     let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
     if (typeof sectors === 'string') {
@@ -1270,6 +1308,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         }
       }
 
+      setLastOrderTotal(cartTotal);
       setLastOrderText(text);
       setCart({});
       setCheckoutWizardStep(4);
@@ -1365,20 +1404,24 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           setLiveOrderStatus((prev) => {
             if (prev !== newStatus) {
               // Dispara notificação via Service Worker nativo (seguro em Android, iOS e PC)
+              const notifTag = 'order-' + (res.data.id || createdOrderId) + '-' + newStatus;
               if (newStatus === 'in_preparation') {
                 showBrowserNotification(`👨‍🍳 Pedido #${res.data.display_id || ''} Confirmado!`, {
                   body: 'O restaurante aceitou seu pedido e já está preparando tudo com carinho!',
-                  icon: '/favicon.svg'
+                  icon: '/favicon.svg',
+                  tag: notifTag,
                 });
               } else if (newStatus === 'dispatched') {
                 showBrowserNotification(`🛵 Pedido #${res.data.display_id || ''} a Caminho!`, {
                   body: 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
-                  icon: '/favicon.svg'
+                  icon: '/favicon.svg',
+                  tag: notifTag,
                 });
               } else if (newStatus === 'delivered') {
                 showBrowserNotification(`🎉 Pedido #${res.data.display_id || ''} Entregue!`, {
                   body: 'Seu pedido foi entregue. Tenha um excelente apetite!',
-                  icon: '/favicon.svg'
+                  icon: '/favicon.svg',
+                  tag: notifTag,
                 });
               }
             }
@@ -1590,8 +1633,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   {profile?.deliveryTimeMin && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md">
                       <Clock className="h-3.5 w-3.5 text-indigo-300" />
-                      {profile.deliveryTimeMin}-{profile.deliveryTimeMax || 60}{' '}
-                      min
+                      {resolvedDeliveryTime ? (
+                        <span>{resolvedDeliveryTime.min}-{resolvedDeliveryTime.max} min</span>
+                      ) : deliverySectorInfo.hasSectors ? (
+                        <span>A partir de {deliverySectorInfo.minFee > 0 ? (sectorsMinTime(profile) || profile.deliveryTimeMin) : profile.deliveryTimeMin} min</span>
+                      ) : (
+                        <span>{profile.deliveryTimeMin}-{profile.deliveryTimeMax || 60} min</span>
+                      )}
                     </span>
                   )}
 
@@ -2835,7 +2883,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm">
                   <span className="font-bold text-slate-800">Total:</span>
                   <span className="text-base font-black text-emerald-600">
-                    {formatCurrency(cartTotal)}
+                    {formatCurrency(lastOrderTotal || cartTotal)}
                   </span>
                 </div>
               </div>
