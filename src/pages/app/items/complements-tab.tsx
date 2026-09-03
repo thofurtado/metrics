@@ -61,19 +61,31 @@ export function ComplementsTab() {
   const supplies = suppliesData?.data?.supplies || []
 
   // Fetch products for group assignment
-  const { data: productsData } = useQuery({
+  const [onlySelectedProducts, setOnlySelectedProducts] = useState(false)
+
+  const { data: productsData, isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products-for-complements'],
-    queryFn: () => getProducts({ perPage: 500 }),
+    queryFn: () => getProducts({ perPage: 1000 }),
   })
-  const allProducts = productsData?.products || []
+  const allProducts: any[] =
+    productsData?.data?.products ||
+    (productsData as any)?.products ||
+    (Array.isArray(productsData?.data) ? (productsData.data as any) : []) ||
+    []
 
   const groups = (groupsData?.groups || []).filter((g) =>
-    g.name.toLowerCase().includes(search.toLowerCase()),
+    (g.name || '').toLowerCase().includes(search.toLowerCase()),
   )
 
-  const filteredProducts = allProducts.filter((p) =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase()),
-  )
+  const filteredProducts = allProducts.filter((p: any) => {
+    const matchesSearch = (p.name || '').toLowerCase().includes(productSearch.toLowerCase()) ||
+      String(p.display_id || '').includes(productSearch)
+    if (!matchesSearch) return false
+    if (onlySelectedProducts) {
+      return linkedProductIds.includes(p.id)
+    }
+    return true
+  })
 
   const handleSelectGroup = (group: ComplementGroup) => {
     setIsCreatingNew(false)
@@ -472,39 +484,63 @@ export function ComplementsTab() {
                     Selecione quais produtos terão estas opções disponíveis no PDV e Cardápio.
                   </p>
                 </div>
-                <div className="w-full sm:w-48">
-                  <Input
-                    placeholder="Buscar produto..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="h-8 rounded-xl text-xs bg-white dark:bg-slate-900"
-                  />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    variant={onlySelectedProducts ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setOnlySelectedProducts(!onlySelectedProducts)}
+                    className="h-8 rounded-xl text-xs font-bold shrink-0"
+                  >
+                    {onlySelectedProducts ? 'Ver Todos' : `Apenas Selecionados (${linkedProductIds.length})`}
+                  </Button>
+                  <div className="w-full sm:w-48">
+                    <Input
+                      placeholder="Buscar produto por nome ou código..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="h-8 rounded-xl text-xs bg-white dark:bg-slate-900"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                {filteredProducts.map((p) => {
-                  const isChecked = linkedProductIds.includes(p.id)
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => toggleProductLink(p.id)}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-2.5 rounded-xl border p-2.5 transition-all text-xs',
-                        isChecked
-                          ? 'border-orange-500/50 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-950/30 dark:text-orange-100 font-bold'
-                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 text-slate-700 dark:text-slate-300',
-                      )}
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={() => {}}
-                        className="pointer-events-none"
-                      />
-                      <span className="truncate flex-1">{p.name}</span>
-                    </div>
-                  )
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                {isLoadingProducts ? (
+                  <div className="col-span-full py-8 text-center text-xs text-slate-400 font-medium">
+                    Carregando catálogo de produtos...
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="col-span-full py-8 text-center text-xs text-slate-400">
+                    {productSearch ? `Nenhum produto encontrado para "${productSearch}".` : onlySelectedProducts ? 'Nenhum produto vinculado ainda neste grupo.' : 'Nenhum produto cadastrado no sistema.'}
+                  </div>
+                ) : (
+                  filteredProducts.map((p: any) => {
+                    const isChecked = linkedProductIds.includes(p.id)
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => toggleProductLink(p.id)}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-2.5 rounded-xl border p-2.5 transition-all text-xs select-none',
+                          isChecked
+                            ? 'border-orange-500/50 bg-orange-50 text-orange-950 dark:border-orange-500/40 dark:bg-orange-950/30 dark:text-orange-100 font-bold shadow-sm'
+                            : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50/50',
+                        )}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <span className="truncate flex-1">{p.name}</span>
+                        {p.display_id && (
+                          <span className="text-[10px] text-slate-400 font-mono">#{p.display_id}</span>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
 
