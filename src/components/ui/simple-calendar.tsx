@@ -5,6 +5,88 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+function validateAndCreateDate(year: number, month: number, day: number): Date | null {
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+  if (month < 0 || month > 11) return null
+  if (day < 1 || day > 31) return null
+  if (year < 1900 || year > 2100) return null
+
+  const d = new Date(year, month, day, 12, 0, 0, 0)
+  if (!isNaN(d.getTime()) && d.getDate() === day && d.getMonth() === month) {
+    d.setHours(0, 0, 0, 0)
+    return d
+  }
+  return null
+}
+
+function parseFlexibleDate(input: string, referenceDate: Date = new Date()): Date | null {
+  if (!input || !input.trim()) return null
+  const trimmed = input.trim()
+
+  // 1. Formato com separadores (/, - ou .)
+  if (trimmed.includes('/') || trimmed.includes('-') || trimmed.includes('.')) {
+    const separator = trimmed.includes('/') ? '/' : trimmed.includes('-') ? '-' : '.'
+    const parts = trimmed.split(separator).map((p) => p.trim())
+
+    // Se for ISO YYYY-MM-DD
+    if (parts.length === 3 && parts[0].length === 4) {
+      const year = parseInt(parts[0], 10)
+      const month = parseInt(parts[1], 10) - 1
+      const day = parseInt(parts[2], 10)
+      return validateAndCreateDate(year, month, day)
+    }
+
+    // Se for DD/MM/YYYY ou DD/MM/YY ou DD/MM
+    if (parts.length >= 2) {
+      const day = parseInt(parts[0], 10)
+      const month = parseInt(parts[1], 10) - 1
+      let year = referenceDate.getFullYear()
+
+      if (parts.length >= 3 && parts[2]) {
+        const y = parseInt(parts[2], 10)
+        year = y < 100 ? (y < 70 ? 2000 + y : 1900 + y) : y
+      }
+
+      return validateAndCreateDate(year, month, day)
+    }
+  }
+
+  // 2. Extrair apenas os dígitos
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return null
+
+  let day = 0
+  let month = referenceDate.getMonth()
+  let year = referenceDate.getFullYear()
+
+  if (digits.length === 8) {
+    // DDMMAAAA
+    day = parseInt(digits.slice(0, 2), 10)
+    month = parseInt(digits.slice(2, 4), 10) - 1
+    year = parseInt(digits.slice(4, 8), 10)
+  } else if (digits.length === 6) {
+    // DDMMAA
+    day = parseInt(digits.slice(0, 2), 10)
+    month = parseInt(digits.slice(2, 4), 10) - 1
+    const y = parseInt(digits.slice(4, 6), 10)
+    year = y < 70 ? 2000 + y : 1900 + y
+  } else if (digits.length === 4) {
+    // DDMM
+    day = parseInt(digits.slice(0, 2), 10)
+    month = parseInt(digits.slice(2, 4), 10) - 1
+    year = referenceDate.getFullYear()
+  } else if (digits.length === 1 || digits.length === 2) {
+    // DD
+    day = parseInt(digits, 10)
+    month = referenceDate.getMonth()
+    year = referenceDate.getFullYear()
+  } else {
+    return null
+  }
+
+  return validateAndCreateDate(year, month, day)
+}
+
 interface SimpleCalendarProps {
   selected: Date | undefined
   onSelect: (date: Date) => void
@@ -79,27 +161,31 @@ export function SimpleCalendar({
     }
     setInputValue(formatted)
 
+    // Se completou 8 dígitos (DDMMAAAA), comita imediatamente
     if (val.length === 8) {
-      const day = parseInt(val.slice(0, 2), 10)
-      const month = parseInt(val.slice(2, 4), 10) - 1
-      const year = parseInt(val.slice(4, 8), 10)
-
-      if (month >= 0 && month <= 11 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
-        const newDate = new Date(year, month, day)
-        newDate.setHours(0, 0, 0, 0)
-        if (!isNaN(newDate.getTime()) && newDate.getDate() === day) {
-          onSelect(newDate)
-          setCurrentDate(newDate)
-        }
+      const parsed = parseFlexibleDate(formatted, selected || currentDate)
+      if (parsed) {
+        onSelect(parsed)
+        setCurrentDate(parsed)
       }
     }
   }
 
-  const handleBlur = () => {
-    const digits = inputValue.replace(/\D/g, '')
-    if (digits.length !== 8) {
-      setInputValue(selected ? format(selected, 'dd/MM/yyyy') : '')
+  const commitDate = () => {
+    const parsed = parseFlexibleDate(inputValue, selected || currentDate)
+    if (parsed) {
+      onSelect(parsed)
+      setCurrentDate(parsed)
+      setInputValue(format(parsed, 'dd/MM/yyyy'))
+    } else if (selected) {
+      setInputValue(format(selected, 'dd/MM/yyyy'))
+    } else {
+      setInputValue('')
     }
+  }
+
+  const handleBlur = () => {
+    commitDate()
   }
 
   const isToday = (day: number) => {
@@ -165,6 +251,12 @@ export function SimpleCalendar({
           value={inputValue}
           onChange={handleInputChange}
           onBlur={handleBlur}
+          onFocus={(e) => e.target.select()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitDate()
+            }
+          }}
           className={cn(
             'w-full rounded-md border-2 border-input bg-background px-3 py-2 text-base font-normal ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-14 md:h-12 pr-11 tracking-wider',
             className,
