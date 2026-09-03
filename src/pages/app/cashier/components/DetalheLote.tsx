@@ -39,6 +39,7 @@ interface DetalheLoteProps {
   onConferirECaixaConferido?: () => void
   onEnviarParaConferencia?: () => void
   isAdmin?: boolean
+  onOrderCompleted?: () => void
 }
 
 export function DetalheLote({
@@ -53,6 +54,7 @@ export function DetalheLote({
   onConferirECaixaConferido,
   onEnviarParaConferencia,
   isAdmin = true,
+  onOrderCompleted,
 }: DetalheLoteProps) {
   const [filtro, setFiltro] = useState({ mesa: '', banco: '', forma: '' })
   const [sortConfig] = useState<{
