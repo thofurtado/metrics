@@ -325,11 +325,10 @@ export function ItemCustomizerDialog({
                 </p>
               )}
             </div>
-            <div className="text-right">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Preço Base
+            <div className="text-right shrink-0">
+              <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                A partir de {formatBRL(product.price)}
               </span>
-              <p className="text-lg font-black text-slate-900">{formatBRL(product.price)}</p>
             </div>
           </div>
         </div>
