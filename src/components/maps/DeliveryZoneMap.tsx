@@ -101,6 +101,9 @@ export function DeliveryZoneMap({
     if (!mapContainerRef.current) return
 
     if (!mapInstanceRef.current) {
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        (mapContainerRef.current as any)._leaflet_id = null
+      }
       const map = L.map(mapContainerRef.current, {
         center: [storeCoords.lat, storeCoords.lng],
         zoom: 13,
@@ -278,10 +281,10 @@ export function DeliveryZoneMap({
         } else {
           // Remove de qualquer outro setor para não duplicar
           sectors.forEach((sec) => {
-            if (sec.id !== activeSector.id && (sec.neighborhoods || []).includes(neighborhood.name)) {
+            if (sec.id !== activeSector.id && (sec.neighborhoods || []).some((n: string) => n.toLowerCase() === neighborhood.name.toLowerCase())) {
               onUpdateSectorNeighborhoods(
                 sec.id,
-                sec.neighborhoods.filter((n) => n.toLowerCase() !== neighborhood.name.toLowerCase()),
+                sec.neighborhoods.filter((n: string) => n.toLowerCase() !== neighborhood.name.toLowerCase()),
               )
             }
           })

@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { CARAGUATATUBA_NEIGHBORHOODS } from '@/data/geo/caraguatatuba-neighborhoods'
+import { CARAGUATATUBA_NEIGHBORHOODS, CARAGUATATUBA_GEO_MAP } from '@/data/geo/caraguatatuba-neighborhoods'
 
 // Lista das 27 UFs do Brasil
 const BRAZILIAN_UFS = [
@@ -253,12 +253,22 @@ export function ImportNeighborhoodsModal({
     setSelectedNeighborhoods(new Set())
   }
 
+  const caraguaGeoMap = CARAGUATATUBA_GEO_MAP
+
   const filteredList = useMemo(() => {
-    if (!searchFilter.trim()) return availableNeighborhoods
-    return availableNeighborhoods.filter((n) =>
-      n.toLowerCase().includes(searchFilter.toLowerCase())
-    )
-  }, [availableNeighborhoods, searchFilter])
+    let list = availableNeighborhoods
+    if (searchFilter.trim()) {
+      const q = searchFilter.toLowerCase().trim()
+      list = list.filter((name) => name.toLowerCase().includes(q))
+    }
+    if (selectedRegionFilter !== 'ALL') {
+      list = list.filter((name) => {
+        const geo = caraguaGeoMap.get(name.toLowerCase().trim())
+        return geo && geo.region === selectedRegionFilter
+      })
+    }
+    return list
+  }, [availableNeighborhoods, searchFilter, selectedRegionFilter])
 
   const handleConfirmImport = () => {
     const list = Array.from(selectedNeighborhoods)

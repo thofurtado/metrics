@@ -149,3 +149,10 @@ export function findNearestNeighborhood(
 
   return { neighborhood: nearest, distanceKm: minDistance }
 }
+
+export const CARAGUATATUBA_GEO_MAP = new Map<string, { region: string; anchor: string }>(
+  CARAGUATATUBA_NEIGHBORHOODS.map((n) => [
+    n.name.toLowerCase().trim(),
+    { region: n.region, anchor: n.popularAnchor },
+  ])
+);
