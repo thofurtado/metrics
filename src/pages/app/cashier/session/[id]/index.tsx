@@ -217,6 +217,7 @@ export function CashierSessionDetails() {
     })
 
   const loteAtivo = {
+    id: session.id,
     dataReferencia: session.opened_at,
     periodo: getPeriodo(session.opened_at),
     valorAbertura: session.initial_balance,
@@ -541,6 +542,9 @@ export function CashierSessionDetails() {
             : undefined
         }
         isAdmin={isAdmin}
+        onOrderCompleted={() => {
+          queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+        }}
       />
     </div>
   )

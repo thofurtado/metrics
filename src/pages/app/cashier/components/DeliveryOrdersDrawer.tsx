@@ -122,6 +122,9 @@ export function DeliveryOrdersDrawer({
   const [finalizePaymentMethod, setFinalizePaymentMethod] = useState<string>('PIX')
   const [finalizeCardMachine, setFinalizeCardMachine] = useState<string>('')
   const [dispatchedExpandedItems, setDispatchedExpandedItems] = useState<Record<string, boolean>>({})
+  const [expandedDeliveredOrderIds, setExpandedDeliveredOrderIds] = useState<Record<string, boolean>>({})
+
+
 
   const { data: posMachines = [] } = useQuery({
     queryKey: ['pos-machines'],
@@ -182,6 +185,16 @@ export function DeliveryOrdersDrawer({
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
+
+  const dispatchedGroupedByDriver = useMemo(() => {
+    const groups: Record<string, any[]> = {}
+    dispatchedOrders.forEach((o) => {
+      const driver = o.delivery_man || 'Motoboy Padrão'
+      if (!groups[driver]) groups[driver] = []
+      groups[driver].push(o)
+    })
+    return groups
+  }, [dispatchedOrders])
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
 
   const currentList =
@@ -1289,251 +1302,441 @@ export function DeliveryOrdersDrawer({
               </div>
             )}
 
-            {/* LISTAGEM DE PEDIDOS */}
-            {currentList.length === 0 ? (
-              <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
-                <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
-                <p className="text-sm font-bold">Nenhum pedido nesta etapa</p>
-                <p className="text-xs">Os novos pedidos aparecerão aqui automaticamente.</p>
-              </div>
-            ) : (
-              currentList.map((order) => {
-                const sla = getSlaInfo(order)
-                const paymentBanner = getUnifiedPaymentBanner(order)
-                const bairro = (order.neighborhood || '').trim()
-                const hasSharedRegion = activeTab === 'in_preparation' && bairro && neighborhoodCountInPrep[bairro.toLowerCase()] > 1
+            {/* ========================================================================= */}
+            {/* ABA NA RUA: AGRUPAMENTO INTELIGENTE POR MOTOBOY / ROTA                    */}
+            {/* ========================================================================= */}
+            {activeTab === 'dispatched' && (
+              dispatchedOrders.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
+                  <Bike className="mb-2 h-12 w-12 opacity-30" />
+                  <p className="text-sm font-bold">Nenhum motoboy na rua no momento</p>
+                  <p className="text-xs">Os pedidos despachados para entrega aparecerão aqui agrupados por entregador.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(dispatchedGroupedByDriver).map(([driverName, groupOrders]) => {
+                    const firstOrder = groupOrders[0]
+                    const saidaTime = firstOrder?.hora_saida_rota || firstOrder?.updated_at || firstOrder?.created_at
+                    const diffMin = Math.max(0, Math.floor((currentTime - new Date(saidaTime).getTime()) / 60000))
+                    const totalValorViagem = groupOrders.reduce((acc: number, o: any) => acc + (o.total_amount || 0), 0)
+                    const prevRetornoDate = new Date(new Date(saidaTime).getTime() + (25 + groupOrders.length * 8) * 60000)
+                    const prevRetornoStr = prevRetornoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    const saidaStr = new Date(saidaTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
-                const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
-                const foodItems = (order.items || []).filter((i: any) => !isDrinkItem(i.name || ''))
-                const totalItemCount = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
+                    return (
+                      <div key={driverName} className="rounded-2xl border-2 border-blue-200 bg-white p-3.5 shadow-sm dark:border-blue-900/50 dark:bg-slate-950">
+                        {/* CABEÇALHO DO MOTOBOY / ROTA */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-100 pb-3 dark:border-blue-900/30">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                              <Bike className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-slate-900 dark:text-white">
+                                  🛵 {driverName}
+                                </span>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                                  {groupOrders.length} {groupOrders.length === 1 ? 'pedido em rota' : 'pedidos em rota'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                Saída às <strong>{saidaStr}</strong> ({diffMin}m atrás) • Previsão de Retorno: ~<strong>{prevRetornoStr}</strong>
+                              </p>
+                            </div>
+                          </div>
 
-                const isProducaoTab = activeTab === 'in_preparation'
-                const isNovosTab = activeTab === 'pending'
-                const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
-                const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Total a Cobrar</span>
+                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                              {formatBRL(totalValorViagem)}
+                            </span>
+                          </div>
+                        </div>
 
-                // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (2 LINHAS)
-                if (isProducaoTab && !isExpanded) {
+                        {/* LISTA DE PEDIDOS DO MOTOBOY */}
+                        <div className="mt-3 space-y-2.5">
+                          {groupOrders.map((order: any) => {
+                            const isItemsOpen = !!dispatchedExpandedItems[order.id]
+                            const paymentBadge = getUnifiedPaymentBanner(order)
+
+                            return (
+                              <div key={order.id} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/60 shadow-xs">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="min-w-0 flex-1 truncate">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="rounded bg-slate-900 px-1.5 py-0.5 text-xs font-black text-white shrink-0">
+                                        #{order.display_id}
+                                      </span>
+                                      <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                        {order.client_name}
+                                      </span>
+                                      {order.neighborhood && (
+                                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                          📍 {order.neighborhood}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400 truncate">
+                                      <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                                      <span className="truncate">{order.address}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2.5 shrink-0">
+                                    <div className="text-right">
+                                      <span className="text-xs font-black text-slate-900 dark:text-white block">
+                                        {formatBRL(order.total_amount || 0)}
+                                      </span>
+                                      <span className="text-[10px] font-semibold text-slate-500 block">
+                                        {paymentBadge.mainText.split('—')[1] || paymentBadge.mainText}
+                                      </span>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => openFinalizeModal(order)}
+                                      className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-black text-white hover:bg-emerald-500 transition-all shadow active:scale-98"
+                                    >
+                                      <DollarSign className="h-3.5 w-3.5" />
+                                      <span>Dar Baixa 🛵</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Toggle Ver Itens */}
+                                <div className="mt-2 border-t border-slate-200/60 pt-1.5 dark:border-slate-800">
+                                  <button
+                                    type="button"
+                                    onClick={() => setDispatchedExpandedItems(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                                    className="flex w-full items-center justify-between text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                  >
+                                    <span>Ver itens do pedido ({(order.items || []).length})</span>
+                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isItemsOpen ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  {isItemsOpen && (
+                                    <div className="mt-2 space-y-1 pl-1 text-xs border-l-2 border-orange-300 ml-1">
+                                      {order.items?.map((item: any) => (
+                                        <div key={item.id} className="flex items-center justify-between text-slate-600 dark:text-slate-300 pl-2">
+                                          <span>{item.quantity}x {item.name}</span>
+                                          <span className="font-semibold">{formatBRL(item.price * item.quantity)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
+
+            {/* ========================================================================= */}
+            {/* ABA BAIXADOS: 1 ÚNICA LINHA COLAPSADA POR PEDIDO                          */}
+            {/* ========================================================================= */}
+            {activeTab === 'delivered' && (
+              deliveredOrders.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
+                  <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
+                  <p className="text-sm font-bold">Nenhum pedido baixado hoje</p>
+                  <p className="text-xs">Os pedidos finalizados no caixa aparecerão aqui de forma resumida.</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {deliveredOrders.slice().sort((a: any, b: any) => (b.display_id || 0) - (a.display_id || 0)).map((order: any) => {
+                    const isExpanded = !!expandedDeliveredOrderIds[order.id]
+                    const lowerObs = (order.observations || '').toLowerCase()
+                    let formaFmt = 'PIX'
+                    if (lowerObs.includes('dinheiro')) formaFmt = 'Dinheiro'
+                    else if (lowerObs.includes('débito') || lowerObs.includes('debito')) {
+                      const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
+                      formaFmt = `Débito ${matchMachine ? `(${matchMachine[1]})` : ''}`
+                    } else if (lowerObs.includes('crédito') || lowerObs.includes('credito')) {
+                      const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
+                      formaFmt = `Crédito ${matchMachine ? `(${matchMachine[1]})` : ''}`
+                    }
+
+                    const start = new Date(order.created_at).getTime()
+                    const end = new Date(order.updated_at || order.created_at).getTime()
+                    const tempoEntregaMin = Math.max(1, Math.round((end - start) / 60000))
+
+                    return (
+                      <div
+                        key={order.id}
+                        className="rounded-xl border border-slate-200 bg-white shadow-xs transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 overflow-hidden"
+                      >
+                        {/* LINHA ÚNICA PRINCIPAL (COMPACTA) */}
+                        <div
+                          onClick={() => setExpandedDeliveredOrderIds(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                          className="flex items-center justify-between gap-2 p-2.5 cursor-pointer select-text text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 truncate">
+                            <span className="rounded bg-slate-900 px-1.5 py-0.5 text-xs font-black text-white shrink-0">
+                              #{order.display_id}
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-white truncate max-w-[140px]">
+                              {order.client_name}
+                            </span>
+                            {order.neighborhood && (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                📍 {order.neighborhood}
+                              </span>
+                            )}
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 shrink-0">
+                              🛵 {order.delivery_man || 'Motoboy'}
+                            </span>
+                            <span className="rounded bg-purple-50 border border-purple-200 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-black shrink-0">
+                              {formaFmt}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-black text-xs text-emerald-600 dark:text-emerald-400">
+                              {formatBRL(order.total_amount || 0)}
+                            </span>
+                            <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-bold shrink-0">
+                              ⏱️ {tempoEntregaMin}m
+                            </span>
+                            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+
+                        {/* DETALHES EXPANSÍVEIS AO CLICAR */}
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 bg-slate-50/70 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/50 space-y-2 select-text">
+                            <div className="flex items-start justify-between gap-2 text-slate-600 dark:text-slate-400">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                                <span>{order.address}</span>
+                              </div>
+                              {order.client_phone && (
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
+                                  WhatsApp: {order.client_phone}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="border-t border-slate-200/60 pt-2 space-y-1">
+                              <p className="text-[10px] font-black uppercase text-slate-400">Itens Entregues:</p>
+                              {order.items?.map((item: any) => (
+                                <div key={item.id} className="flex items-center justify-between text-slate-700 dark:text-slate-300">
+                                  <span>{item.quantity}x {item.name}</span>
+                                  <span className="font-semibold">{formatBRL(item.price * item.quantity)}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                              <span>✅ Venda Lançada no Caixa com Sucesso</span>
+                              <span>{formaFmt}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
+
+            {/* ========================================================================= */}
+            {/* ABAS PRODUÇÃO & NOVOS: CARDS DE OPERAÇÃO E PREPARO (PADRÃO APROVADO)      */}
+            {/* ========================================================================= */}
+            {(activeTab === 'in_preparation' || activeTab === 'pending') && (
+              currentList.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
+                  <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
+                  <p className="text-sm font-bold">Nenhum pedido nesta etapa</p>
+                  <p className="text-xs">Os novos pedidos aparecerão aqui automaticamente.</p>
+                </div>
+              ) : (
+                currentList.map((order: any) => {
+                  const sla = getSlaInfo(order)
+                  const paymentBanner = getUnifiedPaymentBanner(order)
+                  const bairro = (order.neighborhood || '').trim()
+                  const hasSharedRegion = activeTab === 'in_preparation' && bairro && neighborhoodCountInPrep[bairro.toLowerCase()] > 1
+
+                  const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
+                  const foodItems = (order.items || []).filter((i: any) => !isDrinkItem(i.name || ''))
+                  const totalItemCount = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
+
+                  const isProducaoTab = activeTab === 'in_preparation'
+                  const isNovosTab = activeTab === 'pending'
+                  const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
+                  const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
+
+                  // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (2 LINHAS)
+                  if (isProducaoTab && !isExpanded) {
+                    return (
+                      <div
+                        key={order.id}
+                        className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
+                          isSelectedForRoute
+                            ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                            : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])
+                            }}
+                            className="text-slate-400 hover:text-orange-600 transition-colors"
+                          >
+                            {isSelectedForRoute ? (
+                              <CheckSquare className="h-4 w-4 text-orange-600" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
+                          </button>
+
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                          >
+                            {/* LINHA 1: Nº Pedido, Nome e Bairro | Valor à extrema direita */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white shrink-0">
+                                  #{order.display_id}
+                                </span>
+                                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                  {order.client_name}
+                                </span>
+                                {order.neighborhood && (
+                                  <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                    📍 {order.neighborhood}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">
+                                {formatBRL(order.total_amount || 0)}
+                              </span>
+                            </div>
+
+                            {/* LINHA 2: Badges lado a lado e Tempo à direita */}
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {renderQuickProductionBadges(order)}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className={`rounded-md px-1.5 py-0.2 text-[10px] font-black ${sla.badgeBg}`}>
+                                  ⏱️ {sla.minutes}m
+                                </span>
+                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // VISUALIZAÇÃO COMPLETA / EXPANDIDA NA PRODUÇÃO OU NOVOS
                   return (
                     <div
                       key={order.id}
-                      className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
+                      className={`select-text rounded-2xl border bg-white p-4 shadow-sm transition-all dark:bg-slate-950 ${
                         isSelectedForRoute
                           ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
                           : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedOrderIdsForRoute((prev) =>
-                              prev.includes(order.id) ? prev.filter((id) => id !== order.id) : [...prev, order.id]
-                            )
-                          }}
-                          className="text-slate-400 hover:text-orange-600 transition-colors shrink-0"
-                          title="Selecionar pedido para montar rota"
-                        >
-                          {isSelectedForRoute ? (
-                            <CheckSquare className="h-5 w-5 text-orange-600" />
-                          ) : (
-                            <Square className="h-5 w-5" />
+                      {/* CABEÇALHO DO CARD */}
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                        <div className="flex items-center gap-2">
+                          {isProducaoTab && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])}
+                              className="mr-1 text-slate-400 hover:text-orange-600 transition-colors"
+                            >
+                              {isSelectedForRoute ? (
+                                <CheckSquare className="h-4 w-4 text-orange-600" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                            </button>
                           )}
-                        </button>
-
-                        <div
-                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                          className="flex-1 min-w-0 cursor-pointer space-y-1"
-                          title="Clique para ver pratos e detalhes"
-                        >
-                          {/* LINHA 1: #1 Nome do Cliente + 📍 Bairro (esq) | 💰 Total (dir) */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0 truncate">
-                              <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">
-                                #{order.display_id || '0'}
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white">
+                                #{order.display_id}
                               </span>
-                              <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                              <span className="text-sm font-black text-slate-900 dark:text-white">
                                 {order.client_name}
                               </span>
-                              {bairro && (
-                                <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-black text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
-                                  📍 {bairro}
+                              {order.neighborhood && (
+                                <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                                  📍 {order.neighborhood}
                                 </span>
                               )}
                             </div>
-                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0">
-                              💰 {formatBRL(order.total_amount || 0)}
-                            </span>
-                          </div>
-
-                          {/* LINHA 2: 📦 Itens + 💳 Maquininha + 🥤 Geladeira + 💬 Obs (esq) | ⏱️ Tempo + ▾ (dir) */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                              <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 shrink-0">
-                                📦 {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
-                              </span>
-                              {renderQuickProductionBadges(order)}
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <div className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
-                                <Clock className="h-2.5 w-2.5" />
-                                <span>{sla.minutes}m</span>
-                              </div>
-                              <ChevronDown className="h-4 w-4 text-slate-400" />
-                            </div>
-                          </div>
-
-                          {/* LINHA 3: Endereço completo */}
-                          <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                            <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
-                            <span className="truncate">
-                              {order.address}{order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }
-
-                // VISUALIZAÇÃO PADRÃO
-                return (
-                  <div
-                    key={order.id}
-                    className={`select-text overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all dark:bg-slate-950 ${
-                      isSelectedForRoute
-                        ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
-                        : 'border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    {/* CABEÇALHO DO CARD */}
-                    <div className="flex items-start justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-                      <div className="flex items-start gap-2.5">
-                        {isProducaoTab && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedOrderIdsForRoute((prev) =>
-                                prev.includes(order.id) ? prev.filter((id) => id !== order.id) : [...prev, order.id]
-                              )
-                            }}
-                            className="mt-0.5 text-slate-400 hover:text-orange-600 transition-colors"
-                            title="Selecionar pedido para montar rota"
-                          >
-                            {isSelectedForRoute ? (
-                              <CheckSquare className="h-5 w-5 text-orange-600" />
-                            ) : (
-                              <Square className="h-5 w-5" />
-                            )}
-                          </button>
-                        )}
-
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="select-text rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
-                              #{order.display_id || '0'}
-                            </span>
-                            <h3 className="select-text text-sm font-bold text-slate-900 dark:text-white">
-                              {order.client_name}
-                            </h3>
-
-                            {isNovosTab && (
-                              <button
-                                type="button"
-                                onClick={(e) => copyFullOrderSummary(order, e)}
-                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                                title="Copiar todos os dados para o PDV"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-
-                          {order.client_phone && (
-                            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                              <a
-                                href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.client_name}, sobre o seu pedido #${order.display_id} no delivery:`)}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-500/20 dark:bg-emerald-950/50 dark:text-emerald-300 transition-colors"
-                              >
-                                <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                <span className="select-text">WhatsApp: {order.client_phone}</span>
-                              </a>
-                              {isNovosTab && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => copyToClipboard(order.client_phone, 'Telefone', e)}
-                                  title="Copiar WhatsApp"
-                                  className="rounded-lg border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                            {order.client_phone && (
+                              <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                <a
+                                  href={`https://wa.me/55${order.client_phone.replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
                                 >
-                                  <Copy className="h-3 w-3" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-right">
-                        {activeTab !== 'delivered' && (
-                          <div className={`select-text inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
-                            <Clock className="h-3 w-3" />
-                            <span className="select-text">{sla.text}</span>
+                                  <MessageCircle className="h-3 w-3" />
+                                  <span>WhatsApp: {order.client_phone}</span>
+                                </a>
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        {isProducaoTab && (
-                          <button
-                            type="button"
-                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: false }))}
-                            className="rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                            title="Recolher card"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ENDEREÇO */}
-                    {order.address && (
-                      <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                        <div className="flex items-start gap-2 select-text cursor-text">
-                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
-                          <span className="font-medium select-text">
-                            {order.address}
-                            {order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
-                          </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {isNovosTab && (
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`rounded-lg px-2 py-1 text-xs font-black ${sla.badgeBg}`}>
+                            {sla.text}
+                          </span>
+                          {isProducaoTab && (
                             <button
                               type="button"
-                              onClick={(e) => copyToClipboard(order.address, 'Endereço', e)}
-                              className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                              title="Copiar Endereço"
+                              onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: false }))}
+                              className="rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                              title="Recolher card"
                             >
-                              <Copy className="h-3.5 w-3.5" />
+                              <ChevronUp className="h-4 w-4" />
                             </button>
                           )}
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.city ? `, ${order.city}` : ''))}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
-                            title="Abrir no Google Maps"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
                         </div>
                       </div>
-                    )}
 
-                    {/* BANNER DE PAGAMENTO */}
-                    {!isProducaoTab && (
+                      {/* ENDEREÇO */}
+                      {order.address && (
+                        <div className="mt-2.5 flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          <div className="flex items-start gap-2 select-text cursor-text">
+                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500" />
+                            <span className="font-medium select-text">
+                              {order.address}
+                              {order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.city ? `, ${order.city}` : ''))}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-orange-500 dark:hover:bg-slate-800 transition-colors"
+                              title="Abrir no Google Maps"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* BANNER DE PAGAMENTO */}
                       <div className={`mt-2.5 flex items-center gap-2.5 rounded-xl border p-2.5 text-xs ${paymentBanner.style}`}>
                         {paymentBanner.icon}
                         <div className="select-text">
@@ -1541,207 +1744,102 @@ export function DeliveryOrdersDrawer({
                           <p className="text-[11px] opacity-90 select-text">{paymentBanner.subText}</p>
                         </div>
                       </div>
-                    )}
 
-                    {/* ALERTA DE REGIÃO */}
-                    {hasSharedRegion && (
-                      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
-                        <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
-                        <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma rota!).</span>
-                      </div>
-                    )}
-
-                    {/* BEBIDAS */}
-                    {isProducaoTab && drinkItems.length > 0 && (
-                      <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
-                        <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
-                          <CupSoda className="h-3.5 w-3.5 text-cyan-600" />
-                          <span>Itens de Geladeira / Bebidas (Conferir):</span>
+                      {/* ALERTA DE REGIÃO */}
+                      {hasSharedRegion && (
+                        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+                          <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
+                          <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma rota!).</span>
                         </div>
-                        <div className="space-y-1">
-                          {drinkItems.map((item: any) => {
-                            const key = `${order.id}-${item.id}`
-                            const isChecked = !!checkedDrinks[key]
+                      )}
 
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => setCheckedDrinks((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200 select-text cursor-pointer"
-                              >
-                                {isChecked ? (
-                                  <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
-                                ) : (
-                                  <Square className="h-4 w-4 text-slate-400 shrink-0" />
-                                )}
-                                <span className={`select-text ${isChecked ? 'line-through opacity-50' : ''}`}>
-                                  {item.quantity}x {item.name}
-                                </span>
-                              </button>
-                            )
-                          })}
+                      {/* BEBIDAS */}
+                      {isProducaoTab && drinkItems.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
+                          <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
+                            <CupSoda className="h-3.5 w-3.5 text-cyan-600" />
+                            <span>Itens de Geladeira / Bebidas (Conferir):</span>
+                          </div>
+                          <div className="space-y-1">
+                            {drinkItems.map((item: any) => {
+                              const key = `${order.id}-${item.id}`
+                              const isChecked = !!checkedDrinks[key]
+
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => setCheckedDrinks((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                  className="flex w-full items-center gap-2 text-left text-xs font-bold text-slate-800 dark:text-slate-200 select-text cursor-pointer"
+                                >
+                                  {isChecked ? (
+                                    <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
+                                  ) : (
+                                    <Square className="h-4 w-4 text-slate-400 shrink-0" />
+                                  )}
+                                  <span className={`select-text ${isChecked ? 'line-through opacity-50' : ''}`}>
+                                    {item.quantity}x {item.name}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* ITENS (COLAPSÁVEL NA ABA NA RUA) */}
-                    {activeTab === 'dispatched' ? (
-                      <div className="mt-2.5 border-t border-slate-100 pt-2 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => setDispatchedExpandedItems((prev) => ({ ...prev, [order.id]: !prev[order.id] }))}
-                          className="flex w-full items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <span>Ver {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'} do pedido</span>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${dispatchedExpandedItems[order.id] ? 'rotate-180' : ''}`} />
-                        </button>
-                        {dispatchedExpandedItems[order.id] && (
-                          <div className="mt-2 space-y-1.5 pl-1">
-                            {order.items?.map((item: any) => (
-                              <div key={item.id} className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
-                                <span>{item.quantity}x {item.name}</span>
-                                <span className="font-bold">{formatBRL(item.price * item.quantity)}</span>
+                      {/* ITENS DO PEDIDO */}
+                      <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          Itens do Pedido:
+                        </p>
+                        {order.items?.map((item: any) => (
+                          <div key={item.id} className="text-xs">
+                            <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
+                              <span>{item.quantity}x {item.name}</span>
+                              <span>{formatBRL(item.price * item.quantity)}</span>
+                            </div>
+                            {item.complements?.map((c: any, idx: number) => (
+                              <div key={idx} className="pl-4 text-[11px] text-emerald-700 dark:text-emerald-400">
+                                + {c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
                               </div>
                             ))}
+                            {item.observations && (
+                              <div className="pl-4 text-[11px] italic text-amber-700 dark:text-amber-400">
+                                Obs: {item.observations}
+                              </div>
+                            )}
                           </div>
+                        ))}
+                      </div>
+
+                      {/* AÇÕES */}
+                      <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+                        {order.status === 'pending' && (
+                          <button
+                            disabled={loadingOrderId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'in_preparation')}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
+                          >
+                            <ChefHat className="h-4 w-4" />
+                            <span>Aceitar & Iniciar Produção 👨‍🍳</span>
+                          </button>
+                        )}
+
+                        {order.status === 'in_preparation' && (
+                          <button
+                            disabled={loadingOrderId === order.id}
+                            onClick={() => openDispatch(order)}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-400 bg-orange-50/50 py-2 text-xs font-bold text-orange-950 hover:bg-orange-100 dark:bg-orange-950/20 dark:text-orange-200"
+                          >
+                            <Bike className="h-4 w-4" />
+                            <span>Despachar Individual / Saiu com Motoboy</span>
+                          </button>
                         )}
                       </div>
-                    ) : (
-                      <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 select-text">
-                          {isProducaoTab ? 'Pratos & Produção:' : 'Itens do Pedido:'}
-                        </p>
-
-                      {(isProducaoTab ? foodItems : order.items)?.map((item: any) => {
-                        const itemName = item.name || 'Item'
-                        const obsItem = (item.observation || '').trim()
-                        const showObs = obsItem && obsItem.toLowerCase() !== itemName.toLowerCase()
-
-                        return (
-                          <div key={item.id} className="space-y-0.5 text-xs select-text cursor-text">
-                            <div className="flex items-start justify-between font-bold text-slate-800 dark:text-slate-200">
-                              <div className="flex items-center gap-1.5">
-                                {isNovosTab && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => copyToClipboard(itemName, 'Nome do item', e)}
-                                    className="rounded p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                                    title="Copiar nome do item"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </button>
-                                )}
-                                <span className="select-text">{item.quantity}x {itemName}</span>
-                              </div>
-                              {!isProducaoTab && (
-                                <span className="select-text">{formatBRL(item.price * item.quantity)}</span>
-                              )}
-                            </div>
-
-                            {Array.isArray(item.complements) && item.complements.length > 0 && (
-                              <div className="pl-5 space-y-0.5 text-[11px] text-emerald-700 dark:text-emerald-400 select-text">
-                                {item.complements.map((c: any, idx: number) => (
-                                  <div key={idx} className="flex items-center gap-1.5 font-medium select-text">
-                                    {isNovosTab && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => copyToClipboard(c.name, 'Adicional', e)}
-                                        className="rounded p-0.5 text-emerald-500/70 hover:text-emerald-800 transition-colors"
-                                        title="Copiar adicional"
-                                      >
-                                        <Copy className="h-2.5 w-2.5" />
-                                      </button>
-                                    )}
-                                    <span className="select-text">
-                                      + {c.quantity && c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {showObs && (
-                              <div className="pl-5 flex items-center gap-1.5 text-[11px] italic font-semibold text-amber-700 dark:text-amber-400 select-text">
-                                {isNovosTab && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => copyToClipboard(obsItem, 'Observação', e)}
-                                    className="rounded p-0.5 text-amber-500/70 hover:text-amber-800 transition-colors"
-                                    title="Copiar observação"
-                                  >
-                                    <Copy className="h-2.5 w-2.5" />
-                                  </button>
-                                )}
-                                <span className="select-text">Obs: {obsItem}</span>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
                     </div>
-                    )}
-
-                    {/* Na Rua */}
-                    {activeTab === 'dispatched' && (
-                      <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-2.5 text-xs dark:border-blue-900/40 dark:bg-blue-950/20">
-                        <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
-                          <span className="flex items-center gap-1.5 select-text">
-                            <Bike className="h-4 w-4 text-blue-600" />
-                            <span className="select-text">Entregador: {order.delivery_man || 'Motoboy em Rota'}</span>
-                          </span>
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 select-text">
-                            {order.departed_at ? `Saída às ${new Date(order.departed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Em trânsito'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Ações */}
-                    <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-                      {order.status === 'pending' && (
-                        <button
-                          disabled={loadingOrderId === order.id}
-                          onClick={() => handleUpdateStatus(order.id, 'in_preparation')}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-xs font-black text-slate-950 shadow-md transition-transform hover:bg-amber-400 active:scale-98"
-                        >
-                          <ChefHat className="h-4 w-4" />
-                          <span>Aceitar e Enviar para Produção</span>
-                        </button>
-                      )}
-
-                      {order.status === 'in_preparation' && (
-                        <button
-                          disabled={loadingOrderId === order.id}
-                          onClick={() => openDispatch(order)}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
-                        >
-                          <Bike className="h-4 w-4" />
-                          <span>Despachar Individual / Saiu com Motoboy</span>
-                        </button>
-                      )}
-
-                      {order.status === 'dispatched' && (
-                        <button
-                          disabled={loadingOrderId === order.id}
-                          onClick={() => openFinalizeModal(order)}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-emerald-500 active:scale-98"
-                        >
-                          <DollarSign className="h-4 w-4" />
-                          <span>Confirmar Retorno & Dar Baixa no Caixa 🛵</span>
-                        </button>
-                      )}
-
-                      {order.status === 'delivered' && (
-                        <div className="flex items-center justify-center gap-1.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span>Venda Lançada no Caixa com Sucesso</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })
+                  )
+                })
+              )
             )}
           </div>
         </motion.div>

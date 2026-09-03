@@ -2815,11 +2815,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   {liveOrderStatus === 'delivered' && (
                     <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-3 text-emerald-900 border border-emerald-200/60 animate-fade-in">
                       <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-bold">🎉 Pedido Entregue!</p>
                         <p className="text-xs text-emerald-800/80 mt-0.5">
                           Seu pedido foi finalizado com sucesso. Tenha um excelente apetite!
                         </p>
+                        {Boolean((profile as any)?.googleReviewUrl || (profile?.deliverySectors as any)?.googleReviewUrl) && (
+                          <a
+                            href={(profile as any)?.googleReviewUrl || (profile?.deliverySectors as any)?.googleReviewUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs py-2.5 px-3 shadow transition-all active:scale-98"
+                          >
+                            <span>⭐ Avaliar no Google com 5 Estrelas ⭐</span>
+                          </a>
+                        )}
                       </div>
                     </div>
                   )}
