@@ -1043,12 +1043,13 @@ export function DeliveryOrdersDrawer({
                 type="button"
                 disabled={loadingOrderId === orderToFinalize.id}
                 onClick={async () => {
+                  const isCard = finalizePaymentMethod === 'Cartão de Débito' || finalizePaymentMethod === 'Cartão de Crédito'
                   await handleUpdateStatus(
                     orderToFinalize.id,
                     'delivered',
                     orderToFinalize.delivery_man,
                     finalizePaymentMethod,
-                    finalizeCardMachine
+                    isCard ? finalizeCardMachine : undefined
                   )
                   setFinalizeModalOpen(false)
                   setOrderToFinalize(null)
@@ -1450,16 +1451,28 @@ export function DeliveryOrdersDrawer({
                 <div className="space-y-1.5">
                   {deliveredOrders.slice().sort((a: any, b: any) => (b.display_id || 0) - (a.display_id || 0)).map((order: any) => {
                     const isExpanded = !!expandedDeliveredOrderIds[order.id]
-                    const lowerObs = (order.observations || '').toLowerCase()
                     let formaFmt = 'PIX'
-                    if (lowerObs.includes('dinheiro')) formaFmt = 'Dinheiro'
-                    else if (lowerObs.includes('débito') || lowerObs.includes('debito')) {
-                      const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
-                      formaFmt = `Débito ${matchMachine ? `(${matchMachine[1]})` : ''}`
-                    } else if (lowerObs.includes('crédito') || lowerObs.includes('credito')) {
-                      const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
-                      formaFmt = `Crédito ${matchMachine ? `(${matchMachine[1]})` : ''}`
+                    const matchForma = (order.observations || '').match(/Forma de Pagamento:\s*([^|]+)/i)
+                    if (matchForma) {
+                      formaFmt = matchForma[1].trim()
+                    } else {
+                      const lowerObs = (order.observations || '').toLowerCase()
+                      if (lowerObs.includes('dinheiro')) formaFmt = 'Dinheiro'
+                      else if (lowerObs.includes('débito') || lowerObs.includes('debito')) {
+                        const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
+                        formaFmt = `Débito ${matchMachine ? `(${matchMachine[1]})` : ''}`
+                      } else if (lowerObs.includes('crédito') || lowerObs.includes('credito')) {
+                        const matchMachine = (order.observations || '').match(/\(([^)]+)\)/)
+                        formaFmt = `Crédito ${matchMachine ? `(${matchMachine[1]})` : ''}`
+                      }
                     }
+                    const isPix = formaFmt.toLowerCase().includes('pix')
+                    const isCash = formaFmt.toLowerCase().includes('dinheiro')
+                    const badgePaymentStyle = isPix
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : isCash
+                      ? 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                      : 'bg-purple-50 border-purple-200 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
 
                     const start = new Date(order.created_at).getTime()
                     const end = new Date(order.updated_at || order.created_at).getTime()
@@ -1490,7 +1503,7 @@ export function DeliveryOrdersDrawer({
                             <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 shrink-0">
                               🛵 {order.delivery_man || 'Motoboy'}
                             </span>
-                            <span className="rounded bg-purple-50 border border-purple-200 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-black shrink-0">
+                            <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black shrink-0 ${badgePaymentStyle}`}>
                               {formaFmt}
                             </span>
                           </div>

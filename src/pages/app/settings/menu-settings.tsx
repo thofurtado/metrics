@@ -18,6 +18,8 @@ import {
   Plus,
   Search,
   Sparkles,
+  Star,
+  ExternalLink,
   Store,
   Trash2,
   Truck,
@@ -1824,6 +1826,80 @@ export function MenuSettings() {
                       {...register('anotaAiApiKey')}
                       placeholder="Token de integração Anota AI"
                     />
+                  </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* INTEGRAÇÃO GOOGLE REVIEWS (AVALIAÇÕES 5 ESTRELAS) */}
+                <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                        ⭐ Avaliações no Google (Google Reviews)
+                      </h4>
+                    </div>
+                    {watch('googleReviewUrl') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = watch('googleReviewUrl')
+                          if (url) window.open(url, '_blank')
+                        }}
+                        className="h-7 text-xs font-bold gap-1 border-amber-300 bg-white text-amber-900 hover:bg-amber-100 dark:bg-slate-900 dark:text-amber-300"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> Testar Link
+                      </Button>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Ao finalizar o pedido no caixa, o cliente recebe uma notificação no celular e um botão no cardápio convidando a avaliar seu restaurante com <strong>5 estrelas no Google</strong>.
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="googleReviewUrl" className="text-xs font-bold">
+                      Link de Avaliação do Google (Google Reviews / Maps / Busca)
+                    </Label>
+                    <Input
+                      id="googleReviewUrl"
+                      {...register('googleReviewUrl')}
+                      placeholder="Ex: https://g.page/r/.../review ou https://www.google.com/search?q=marujo+gastro+bar"
+                      className="bg-white dark:bg-slate-900"
+                    />
+                  </div>
+
+                  <div className="rounded-lg bg-amber-100/70 p-3 text-[11px] leading-relaxed text-amber-950 dark:bg-amber-950/40 dark:text-amber-200 space-y-1.5">
+                    <p className="font-bold">💡 Onde encontrar o link do seu restaurante?</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>
+                        <strong>Link Oficial (Recomendado):</strong> Acesse o <a href="https://business.google.com" target="_blank" rel="noreferrer" className="underline font-bold">Google Meu Negócio</a> &gt; clique em <em>&quot;Pedir avaliações&quot;</em> e copie o link curto gerado (ex: <code>https://g.page/r/CODIGO/review</code>).
+                      </li>
+                      <li>
+                        <strong>Link do Maps ou Busca:</strong> Você também pode pesquisar sua empresa no Google, clicar em &quot;Avaliações&quot; e copiar o link do navegador (ex: <code>https://www.google.com/search?q=marujo+gastro+bar...</code>).
+                      </li>
+                    </ul>
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const name = watch('tradeName') || ''
+                          const city = watch('city') || ''
+                          const query = encodeURIComponent(`${name} ${city} avaliações`.trim())
+                          const generated = `https://www.google.com/search?q=${query}`
+                          setValue('googleReviewUrl', generated, { shouldDirty: true })
+                          toast.success('Link de busca do Google gerado automaticamente com base no nome do restaurante!')
+                        }}
+                        className="h-6 text-[11px] font-bold text-amber-800 hover:text-amber-950 dark:text-amber-300 px-2 underline cursor-pointer"
+                      >
+                        ⚡ Gerar link de busca automaticamente com o nome da loja
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
