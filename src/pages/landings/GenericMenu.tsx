@@ -494,6 +494,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4>(1)
   const [lastOrderText, setLastOrderText] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [lastOrderTotal, setLastOrderTotal] = useState<number>(0)
   const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
   const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)

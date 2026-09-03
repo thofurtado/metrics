@@ -42,6 +42,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import { getPOSMachines } from '@/api/pos-machines'
 import { api } from '@/lib/axios'
 
@@ -116,6 +117,17 @@ export function DeliveryOrdersDrawer({
   const [orderToDispatch, setOrderToDispatch] = useState<any | null>(null)
   const [selectedDriver, setSelectedDriver] = useState<string>('')
   const [customDriverName, setCustomDriverName] = useState<string>('')
+  const [finalizeModalOpen, setFinalizeModalOpen] = useState(false)
+  const [orderToFinalize, setOrderToFinalize] = useState<any | null>(null)
+  const [finalizePaymentMethod, setFinalizePaymentMethod] = useState<string>('PIX')
+  const [finalizeCardMachine, setFinalizeCardMachine] = useState<string>('')
+  const [dispatchedExpandedItems, setDispatchedExpandedItems] = useState<Record<string, boolean>>({})
+
+  const { data: posMachines = [] } = useQuery({
+    queryKey: ['pos-machines'],
+    queryFn: getPOSMachines,
+    staleTime: 1000 * 60 * 5,
+  })
 
   // Atualiza o relógio a cada 10 segundos
   useEffect(() => {
