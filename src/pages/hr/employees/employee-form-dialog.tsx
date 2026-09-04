@@ -1,10 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertTriangle,
   Banknote,
   CalendarDays,
-  Info,
   PlusCircle,
   UserPlus,
   UserX,
@@ -17,7 +15,6 @@ import { z } from 'zod'
 import { createEmployee, Employee, updateEmployee } from '@/api/hr/employees'
 import { uploadFileEmployee } from '@/api/upload-file'
 import { FileUpload } from '@/components/file-upload'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

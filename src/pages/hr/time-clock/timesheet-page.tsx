@@ -54,9 +54,22 @@ function parseDateOnly(dateStr: string): Date {
   return new Date(yyyy, mm - 1, dd)
 }
 
+export interface TimeSheetPageProps {
+  employeeId?: string
+  hideBackButton?: boolean
+  onBack?: () => void
+  isEmbedded?: boolean
+}
+
 // Page Component
-export function TimeSheetPage() {
-  const { employeeId } = useParams<{ employeeId: string }>()
+export function TimeSheetPage({
+  employeeId: employeeIdProp,
+  hideBackButton = false,
+  onBack,
+  isEmbedded = false,
+}: TimeSheetPageProps = {}) {
+  const params = useParams<{ employeeId: string }>()
+  const employeeId = employeeIdProp || params.employeeId
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -659,22 +672,38 @@ export function TimeSheetPage() {
     }
   }
 
-  if (!employeeId) return <div>Funcionário não encontrado</div>
+  if (!employeeId) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-muted-foreground dark:border-slate-800">
+        <Clock className="h-10 w-10 text-muted-foreground/40" />
+        <p className="text-base font-medium">Nenhum colaborador selecionado</p>
+        <p className="text-xs">Selecione um colaborador para abrir o espelho de ponto e editar batidas.</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+    <div className={cn("flex flex-col bg-background", isEmbedded ? "w-full space-y-4" : "h-[calc(100vh-4rem)]")}>
       {/* Header */}
-      <header className="sticky top-0 z-30 flex flex-col justify-between gap-4 border-b bg-card p-4 shadow-sm md:px-6 xl:flex-row xl:items-center">
+      <header className={cn(
+        "flex flex-col justify-between gap-4 border bg-card p-4 shadow-sm xl:flex-row xl:items-center",
+        isEmbedded ? "rounded-2xl border-slate-200/80 dark:border-slate-800" : "sticky top-0 z-30 border-b md:px-6"
+      )}>
         <div className="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center xl:w-auto xl:justify-start">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              title="Voltar"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            {!hideBackButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (onBack) onBack()
+                  else navigate(-1)
+                }}
+                title="Voltar"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
             <div>
               <h1 className="text-lg font-bold tracking-tight sm:text-xl">
                 Espelho de Ponto

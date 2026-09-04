@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertTriangle,
   Calculator,
   CalendarDays,
   CheckCircle2,
@@ -9,6 +8,9 @@ import {
   Eye,
   Info,
   Trash2,
+  Clock,
+  Users,
+  ShieldCheck,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -765,21 +767,24 @@ export function PayrollClosing() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header & Actions */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Fechamento de Mês
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+            Fechamento de Folha & Lotes
           </h2>
-          <p className="text-muted-foreground">
-            Gestão de pagamentos, rateio e auditoria final.
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            Apuração de salários, rateio de gorjetas, adiantamentos e confirmação bancária.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => navigate('/hr/payroll/history')}
+            className="rounded-xl shadow-sm"
           >
-            <CalendarDays className="mr-2 h-4 w-4" />
+            <CalendarDays className="mr-1.5 h-4 w-4 text-muted-foreground" />
             Histórico
           </Button>
           <GenerateBatchDialog onSuccess={refresh} />
@@ -787,55 +792,86 @@ export function PayrollClosing() {
         </div>
       </div>
 
-      {/* Resume Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
-            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(summary.totalAmount)}
+      {/* Modern KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-emerald-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Total a Pagar
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <CircleDollarSign className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {entries.length} lançamentos pendentes
-            </p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
+            {formatCurrency(summary.totalAmount)}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {entries.length} lançamentos pendentes
+          </p>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rateio (10%)</CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(summary.byType.PONTUACAO_10 || 0)}
+
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Rateio (10%)
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <Calculator className="h-4 w-4" />
             </div>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
+            {formatCurrency(summary.byType.PONTUACAO_10 || 0)}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Gorjetas apuradas no período
+          </p>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Salários Fixos
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(summary.byType.SALARIO_60 || 0)}
+
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-purple-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Salários Fixos (CLT)
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <ShieldCheck className="h-4 w-4" />
             </div>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
+            {formatCurrency(summary.byType.SALARIO_60 || 0)}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Saldo de salário mensal
+          </p>
+        </Card>
+
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-amber-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Lotes Pendentes
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Clock className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
+            {groupedList.length}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Lotes prontos para confirmação
+          </p>
         </Card>
       </div>
 
-      {/* List */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      {/* Grouped Payments Table & Cards */}
+      <Card className="rounded-2xl border border-slate-200/70 shadow-sm dark:border-slate-800">
+        <CardHeader className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Prévia de Pagamentos (Agrupado)</CardTitle>
+            <CardTitle className="text-base font-bold sm:text-lg">
+              Prévia de Pagamentos por Lote
+            </CardTitle>
             <CardDescription>
-              Revise os valores por grupo antes de confirmar.
+              Revise os valores e datas de cada grupo antes de confirmar o lote financeiro.
             </CardDescription>
           </div>
           <ConfirmPayrollDialog
@@ -843,64 +879,122 @@ export function PayrollClosing() {
             onSuccess={refresh}
           />
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tipo de Pagamento</TableHead>
-                <TableHead>Data de Previsão de Pagamento</TableHead>
-                <TableHead>Qtd. Funcionários</TableHead>
-                <TableHead className="text-right">Valor Total</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groupedList.map((group) => (
-                <TableRow key={group.id}>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {getPayrollLabel(group.type)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {parseDateOnly(group.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{group.entries.length}</TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatCurrency(group.totalAmount)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+        <CardContent className="p-0">
+          {/* Desktop Table */}
+          <div className="hidden overflow-x-auto md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-muted/40">
+                  <TableHead className="w-[240px]">Tipo de Pagamento</TableHead>
+                  <TableHead>Data de Previsão</TableHead>
+                  <TableHead className="text-center">Colaboradores</TableHead>
+                  <TableHead className="text-right">Valor Total</TableHead>
+                  <TableHead className="w-[140px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groupedList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                      Nenhum lote de pagamento pendente. Clique em "Gerar Lote" ou "Calcular Rateio" acima.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  groupedList.map((group) => (
+                    <TableRow key={group.id} className="transition-colors hover:bg-muted/30">
+                      <TableCell>
+                        <Badge variant="outline" className="rounded-lg font-semibold">
+                          {getPayrollLabel(group.type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {parseDateOnly(group.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold dark:bg-slate-800">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          {group.entries.length}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrency(group.totalAmount)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <GroupDetailsModal group={group} onSuccess={refresh} />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmDelete(group)}
+                            className="h-8 w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10"
+                            title="Excluir Lote"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="space-y-3 p-4 md:hidden">
+            {groupedList.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum lote de pagamento pendente.
+              </div>
+            ) : (
+              groupedList.map((group) => (
+                <div
+                  key={group.id}
+                  className="space-y-3 rounded-2xl border border-slate-200/80 bg-card p-4 shadow-sm dark:border-slate-800"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Badge variant="outline" className="text-xs font-bold">
+                        {getPayrollLabel(group.type)}
+                      </Badge>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Previsão: {parseDateOnly(group.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold dark:bg-slate-800">
+                      <Users className="h-3 w-3 text-muted-foreground" />
+                      {group.entries.length} pessoas
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800/60">
+                    <span className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(group.totalAmount)}
+                    </span>
+                    <div className="flex items-center gap-1">
                       <GroupDetailsModal group={group} onSuccess={refresh} />
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => confirmDelete(group)}
-                        className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        className="h-8 w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {groupedList.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    Nenhum pagamento pendente.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
-        <CardFooter className="flex justify-end border-t bg-slate-50 p-4 dark:bg-slate-900/50">
-          <div className="text-sm text-muted-foreground">
-            Total Geral:{' '}
-            <span className="font-bold text-foreground">
+        <CardFooter className="flex items-center justify-between rounded-b-2xl border-t bg-slate-50/50 p-4 dark:bg-slate-900/50">
+          <span className="text-xs text-muted-foreground">
+            Lançamentos consolidados
+          </span>
+          <div className="text-sm font-medium text-muted-foreground">
+            Total Previsto:{' '}
+            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
               {formatCurrency(summary.totalAmount)}
             </span>
           </div>

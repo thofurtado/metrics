@@ -1,8 +1,16 @@
-import { zodResolver } from '@hookform/resolvers/zod'
+﻿import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import { Calendar as CalendarIcon, Loader2, Plus, Trash2 } from 'lucide-react'
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Info,
+  Loader2,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -75,141 +83,191 @@ export function HrRulesSettings() {
     onError: () => toast.error('Erro ao remover feriado.'),
   })
 
-  const handleAdd = (data: z.infer<typeof customHolidaySchema>) => {
+  const handleAdd = (formData: z.infer<typeof customHolidaySchema>) => {
     createMutation.mutate({
-      name: data.name,
-      date: data.date,
+      name: formData.name,
+      date: formData.date,
       type: 'MUNICIPAL',
     })
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Feriados e Datas Especiais</CardTitle>
-          <CardDescription>
-            Gerencie os feriados locais e municipais. Dias cadastrados aqui (e
-            feriados nacionais) acionam o adicional de 100% nas horas
-            trabalhadas.
-          </CardDescription>
+      {/* Information Cards about CLT Rules */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-5 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100">
+            <Clock className="h-4 w-4 text-blue-500" />
+            <span>Regras de Horas Extras & Jornada</span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            A jornada padrão é de <strong>7h20 diárias</strong> (440 minutos), com tolerância CLT de <strong>10 minutos</strong>. Excedentes em dias normais são calculados a <strong>+60%</strong>. Aos domingos e feriados, aplica-se o adicional de <strong>+100%</strong>.
+          </p>
+        </Card>
+
+        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-purple-50/20 p-5 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+          <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100">
+            <Info className="h-4 w-4 text-purple-500" />
+            <span>Feriados Nacionais & Municipais</span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Feriados nacionais são identificados automaticamente. Cadastre abaixo os feriados municipais e datas especiais da sua cidade para acionar automaticamente o adicional de 100% nas horas trabalhadas da equipe.
+          </p>
+        </Card>
+      </div>
+
+      {/* Holidays Card */}
+      <Card className="rounded-2xl border border-slate-200/70 shadow-sm dark:border-slate-800">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">Feriados e Datas Especiais</CardTitle>
+              <CardDescription>
+                Gerencie feriados locais para cálculo automático de banco de horas e 100%.
+              </CardDescription>
+            </div>
+
+            {/* Year Selector Buttons */}
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200/80 bg-background p-1 dark:border-slate-800">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setYear(year - 1)}
+                title="Ano Anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-3 font-mono text-sm font-bold">{year}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setYear(year + 1)}
+                title="Próximo Ano"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
+
         <CardContent className="space-y-6">
+          {/* Add Holiday Form */}
           <form
             onSubmit={handleSubmit(handleAdd)}
-            className="flex items-end gap-4 rounded-lg border bg-muted/30 p-4"
+            className="flex flex-col gap-3 rounded-2xl border border-slate-200/60 bg-muted/20 p-4 dark:border-slate-800 sm:flex-row sm:items-end"
           >
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="name">Nome do Feriado</Label>
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-bold text-muted-foreground">
+                Nome do Feriado / Data Especial
+              </Label>
               <Input
                 id="name"
-                placeholder="Ex: Padroeiro da Cidade"
+                placeholder="Ex: Aniversário da Cidade, Padroeiro..."
+                className="h-10 rounded-xl bg-background"
                 {...register('name')}
               />
               {errors.name && (
-                <span className="text-xs text-red-500">
-                  {errors.name.message}
-                </span>
+                <span className="text-xs text-destructive">{errors.name.message}</span>
               )}
             </div>
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="date">Data</Label>
-              <Input id="date" type="date" {...register('date')} />
+
+            <div className="w-full space-y-1.5 sm:w-48">
+              <Label htmlFor="date" className="text-xs font-bold text-muted-foreground">
+                Data do Feriado
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                className="h-10 rounded-xl bg-background"
+                {...register('date')}
+              />
               {errors.date && (
-                <span className="text-xs text-red-500">
-                  {errors.date.message}
-                </span>
+                <span className="text-xs text-destructive">{errors.date.message}</span>
               )}
             </div>
-            <Button type="submit" disabled={createMutation.isPending}>
+
+            <Button
+              type="submit"
+              disabled={createMutation.isPending}
+              className="h-10 rounded-xl px-5 font-bold shadow-sm sm:w-auto"
+            >
               {createMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Adicionar Feriado
+              Adicionar
             </Button>
           </form>
 
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setYear(year - 1)}
-              >
-                Ano Anterior
-              </Button>
-              <div className="flex items-center rounded-md bg-secondary/50 px-4 font-bold">
-                {year}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setYear(year + 1)}
-              >
-                Próximo Ano
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-md border">
+          {/* Holidays Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200/70 dark:border-slate-800">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">Data</TableHead>
+                <TableRow className="border-b bg-muted/40">
+                  <TableHead className="w-[180px]">Data</TableHead>
                   <TableHead>Feriado</TableHead>
-                  <TableHead className="w-[150px]">Tipo</TableHead>
+                  <TableHead className="w-[180px]">Tipo</TableHead>
                   <TableHead className="w-[100px] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={4} className="h-28 text-center text-muted-foreground">
                       <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : data?.holidays?.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      Nenhum feriado cadastrado para este ano.
+                    <TableCell colSpan={4} className="h-28 text-center text-muted-foreground">
+                      Nenhum feriado cadastrado para o ano de {year}.
                     </TableCell>
                   </TableRow>
                 ) : (
                   data?.holidays.map((holiday) => (
-                    <TableRow key={holiday.id}>
+                    <TableRow key={holiday.id} className="transition-colors hover:bg-muted/30">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          {format(
-                            new Date(holiday.date.split('T')[0] + 'T12:00:00Z'),
-                            'dd/MM/yyyy',
-                          )}
+                          <CalendarIcon className="h-4 w-4 text-primary" />
+                          <span className="font-mono font-semibold">
+                            {format(
+                              new Date(holiday.date.split('T')[0] + 'T12:00:00Z'),
+                              'dd/MM/yyyy'
+                            )}
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>{holiday.name}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-slate-100">
+                        {holiday.name}
+                      </TableCell>
                       <TableCell>
                         {holiday.type === 'NATIONAL' ? (
-                          <Badge variant="secondary">Nacional</Badge>
+                          <Badge variant="secondary" className="rounded-lg font-medium">
+                            Nacional
+                          </Badge>
                         ) : (
-                          <Badge className="border-purple-200 bg-purple-100 text-purple-700 hover:bg-purple-200">
-                            Municipal/Local
+                          <Badge className="rounded-lg border-purple-200 bg-purple-100 font-medium text-purple-700 hover:bg-purple-200 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                            Municipal / Local
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => deleteMutation.mutate(holiday.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {holiday.type === 'NATIONAL' ? (
+                          <span className="text-xs text-muted-foreground">Padrão</span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10"
+                            onClick={() => deleteMutation.mutate(holiday.id)}
+                            title="Remover feriado"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
