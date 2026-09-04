@@ -125,9 +125,7 @@ export function Sidebar() {
                 onClick={toggleSidebar}
                 className={cn(
                   'h-8 w-8 rounded-xl bg-secondary/50 opacity-100 transition-all duration-300 hover:bg-primary hover:text-primary-foreground',
-                  collapsed
-                    ? 'absolute -right-10 top-1.5 translate-x-2 scale-90 border border-border/50 bg-card shadow-xl hover:translate-x-3'
-                    : '',
+                  collapsed ? 'absolute -right-3.5 top-5 z-50 h-7 w-7 rounded-full border border-border/70 bg-card shadow-md transition-transform hover:scale-110 flex items-center justify-center p-0' : '',
                 )}
               >
                 {collapsed ? (

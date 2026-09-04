@@ -278,7 +278,7 @@ export function EmployeesList() {
                                 : 'CLT'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono font-semibold whitespace-nowrap">
+                      <TableCell className="font-bold tabular-nums whitespace-nowrap text-slate-800 dark:text-slate-200">
                         {employee.registrationType === 'DAILY'
                           ? `${formatCurrency(Number(employee.dailyRate || 0))}/dia`
                           : employee.registrationType === 'HOURLY'

@@ -346,7 +346,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
 
       <ExtractionOverlay isLoading={isExtracting} />
 
-      <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-40 pt-4">
+      <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-6 pt-4">
         <Tabs
           value={activeTab}
           onValueChange={(v) => {
@@ -468,7 +468,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex h-[72px] flex-row items-center justify-between space-y-0 rounded-xl border border-border/60 bg-muted/20 px-4 sm:mb-0">
+                    <FormItem className="flex h-[56px] flex-row items-center justify-between space-y-0 rounded-xl border border-border/60 bg-muted/20 px-4 sm:mb-0">
                       <FormLabel className="cursor-pointer text-sm font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400">
                         {field.value ? '✓ Já Recebi' : 'A Receber'}
                       </FormLabel>

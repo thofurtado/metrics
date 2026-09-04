@@ -60,7 +60,7 @@ export function AppLayout() {
       <main
         className={cn(
           'relative flex min-h-screen w-full flex-1 flex-col transition-[margin] duration-300 ease-in-out',
-          isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]',
+          isCollapsed ? 'lg:ml-[92px]' : 'lg:ml-[260px]',
         )}
       >
         <div className="mx-auto mt-16 flex w-full max-w-[1700px] flex-1 flex-col gap-4 p-3 md:p-5 lg:mt-0 lg:p-6">

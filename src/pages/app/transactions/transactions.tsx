@@ -789,7 +789,7 @@ export function Transactions() {
                     </>
                   ) : (
                     <>
-                      <TableHead className="w-[60px] py-5 pl-8">
+                      <TableHead className="w-[60px] py-2.5 pl-8">
                         <Checkbox
                           checked={
                             transactionsResult?.data.transactions.transactions

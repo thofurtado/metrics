@@ -621,7 +621,7 @@ export function TransactionExpense({
       {/* ─── OVERLAY DE LOADING ─── */}
       <ExtractionOverlay isLoading={isExtracting} />
 
-      <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-40 pt-4">
+      <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-6 pt-4">
         {/* ─── TAB SELECTOR ─── */}
         <Tabs
           value={activeTab}
@@ -635,16 +635,16 @@ export function TransactionExpense({
           }}
           className="mb-6 w-full"
         >
-          <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-muted/40 p-1.5">
+          <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-muted/40 p-1">
             <TabsTrigger
               value="single"
-              className="rounded-xl py-3 text-sm font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="rounded-lg py-1.5 text-xs font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               À Vista
             </TabsTrigger>
             <TabsTrigger
               value="installment"
-              className="rounded-xl py-3 text-sm font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="rounded-lg py-1.5 text-xs font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               Recorrente
             </TabsTrigger>
@@ -705,8 +705,8 @@ export function TransactionExpense({
                         <span>Valor da Despesa</span>
                         <span className="ml-1 font-bold text-red-500">*</span>
                       </FormLabel>
-                      <div className="flex w-full items-center gap-3 rounded-2xl border-2 border-border/60 bg-background px-5 py-8 transition-all duration-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/10 md:py-3.5">
-                        <span className="flex-shrink-0 select-none text-xl font-semibold text-slate-400 dark:text-slate-500">
+                      <div className="flex h-[56px] w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-4 transition-all focus-within:border-rose-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-rose-500/20 dark:border-slate-800 dark:bg-slate-900/50 dark:focus-within:border-rose-500 dark:focus-within:bg-background">
+                        <span className="flex-shrink-0 select-none text-base font-bold text-slate-400 dark:text-slate-500">
                           R$
                         </span>
                         <FormControl>
@@ -730,7 +730,7 @@ export function TransactionExpense({
                             inputMode="decimal"
                             step="0.01"
                             placeholder="0,00"
-                            className="w-full bg-transparent text-4xl font-extrabold tabular-nums tracking-tight text-slate-800 caret-red-500 placeholder:text-slate-200 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-700"
+                            className="w-full border-none bg-transparent p-0 text-2xl font-black tabular-nums tracking-tight text-slate-900 placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none dark:text-slate-50 dark:placeholder:text-slate-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             autoFocus
                           />
                         </FormControl>
@@ -739,10 +739,10 @@ export function TransactionExpense({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-14 w-14 rounded-2xl bg-red-50/50 text-red-600 hover:bg-red-50 hover:text-red-700 dark:bg-red-900/20 dark:text-red-500 dark:hover:bg-red-900/40 dark:hover:text-red-400 lg:hidden"
+                          className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-900/20 dark:text-red-400 lg:hidden"
                           onClick={handleOpenScanner}
                         >
-                          <Camera className="h-7 w-7" />
+                          <Camera className="h-4 w-4" />
                         </Button>
                       </div>
                     </FormItem>
@@ -782,7 +782,7 @@ export function TransactionExpense({
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex h-[72px] flex-row items-center justify-between space-y-0 rounded-xl border border-border/60 bg-muted/20 px-4 sm:mb-0">
+                    <FormItem className="flex h-[56px] flex-row items-center justify-between space-y-0 rounded-xl border border-slate-200 bg-slate-50/60 px-4 transition-all dark:border-slate-800 dark:bg-slate-900/50 sm:mb-0">
                       <FormLabel className="flex cursor-pointer items-center text-sm font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400">
                         <span>{field.value ? '✓ Já Paguei' : 'A Pagar'}</span>
                       </FormLabel>
