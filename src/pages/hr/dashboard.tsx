@@ -47,7 +47,7 @@ export function HRDashboard() {
     <div className="space-y-6 pb-12">
       <PageHeader
         title="Recursos Humanos"
-        description="Gestão integrada e moderna de colaboradores, espelhos de ponto, escalas e fechamento de folha."
+        description="Gestão integrada e moderna de colaboradores, espelhos de ponto, escalas e pagamentos."
       />
 
       <Tabs
@@ -55,31 +55,31 @@ export function HRDashboard() {
         onValueChange={handleTabChange}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-100/70 p-1.5 shadow-inner dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-4">
+        <TabsList className="grid h-auto min-h-12 w-full grid-cols-2 items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-100/70 p-1.5 shadow-inner dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-4">
           <TabsTrigger
             value="employees"
-            className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
           >
             <Users className="h-4 w-4 text-blue-500" />
             <span>Colaboradores</span>
           </TabsTrigger>
           <TabsTrigger
             value="time-clock"
-            className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
           >
             <Clock className="h-4 w-4 text-amber-500" />
             <span>Ponto Eletrônico</span>
           </TabsTrigger>
           <TabsTrigger
             value="payroll"
-            className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
           >
             <CircleDollarSign className="h-4 w-4 text-emerald-500" />
             <span>Fechamento & Folha</span>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
-            className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100 sm:text-sm"
           >
             <SlidersHorizontal className="h-4 w-4 text-purple-500" />
             <span>Configurações</span>

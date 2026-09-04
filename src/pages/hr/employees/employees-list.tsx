@@ -93,21 +93,6 @@ export function EmployeesList() {
 
   return (
     <div className="space-y-6">
-      {/* Action Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
-            Quadro de Colaboradores
-          </h2>
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            Gestão cadastral, contratos, cargos, benefícios e vales.
-          </p>
-        </div>
-        <div className="w-full sm:w-auto">
-          <EmployeeFormDialog />
-        </div>
-      </div>
-
       {/* Modern KPI Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
@@ -227,6 +212,8 @@ export function EmployeesList() {
                   className="scale-75 data-[state=checked]:bg-emerald-600"
                 />
               </div>
+
+              <EmployeeFormDialog />
             </div>
           </div>
         </CardHeader>

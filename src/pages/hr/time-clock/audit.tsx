@@ -144,27 +144,27 @@ export function TimeClockAudit() {
           onValueChange={(val) => setActiveView(val as any)}
           className="w-full sm:w-auto"
         >
-          <TabsList className="grid w-full grid-cols-3 gap-1 rounded-2xl border border-slate-200/60 bg-slate-100/60 p-1 dark:border-slate-800 dark:bg-slate-900/50 sm:w-auto">
+          <TabsList className="grid h-auto min-h-11 w-full grid-cols-3 items-center gap-1 rounded-2xl border border-slate-200/60 bg-slate-100/60 p-1 dark:border-slate-800 dark:bg-slate-900/50 sm:w-auto">
             <TabsTrigger
               value="individual"
-              className="rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
             >
-              <Users className="mr-1.5 h-4 w-4 text-blue-500" />
-              Espelho Individual
+              <Users className="h-4 w-4 text-blue-500" />
+              <span>Espelho Individual</span>
             </TabsTrigger>
             <TabsTrigger
               value="monthly"
-              className="rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
             >
-              <FileSpreadsheet className="mr-1.5 h-4 w-4 text-emerald-500" />
-              Resumo do Mês
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Resumo do Mês</span>
             </TabsTrigger>
             <TabsTrigger
               value="today"
-              className="rounded-xl px-4 py-2 text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold leading-none transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 sm:text-sm"
             >
-              <Clock className="mr-1.5 h-4 w-4 text-amber-500" />
-              Batidas de Hoje
+              <Clock className="h-4 w-4 text-amber-500" />
+              <span>Batidas de Hoje</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
