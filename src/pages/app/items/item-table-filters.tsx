@@ -103,7 +103,7 @@ export function ItemsTableFilters() {
     watchedFields.below_min_stock
 
   return (
-    <div className="flex flex-col flex-wrap gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm lg:flex-row lg:items-center">
+    <div className="flex flex-col flex-wrap gap-3 rounded-xl border border-border bg-card p-2.5 px-3.5 shadow-sm lg:flex-row lg:items-center">
       <div className="flex w-full flex-row items-center gap-3 lg:w-auto">
         <div className="flex flex-1 items-center gap-2 rounded-full border border-border/50 bg-muted/30 px-3 py-1.5 transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20 lg:w-[300px]">
           <Search className="h-4 w-4 text-primary opacity-70" />

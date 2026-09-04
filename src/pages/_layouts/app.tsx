@@ -63,7 +63,7 @@ export function AppLayout() {
           isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]',
         )}
       >
-        <div className="mx-auto mt-16 flex w-full max-w-[1700px] flex-1 flex-col gap-8 p-6 md:p-10 lg:mt-0 lg:p-14">
+        <div className="mx-auto mt-16 flex w-full max-w-[1700px] flex-1 flex-col gap-4 p-3 md:p-5 lg:mt-0 lg:p-6">
           <Outlet />
         </div>
       </main>

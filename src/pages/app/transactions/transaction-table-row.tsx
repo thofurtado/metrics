@@ -718,7 +718,7 @@ export function TransactionTableRow({
       )}
     >
       {customPrefix}
-      <TableCell className="w-[140px] px-4 py-5 text-center">
+      <TableCell className="w-[140px] px-4 py-2.5 text-center">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
           aria-label={
@@ -827,7 +827,7 @@ export function TransactionTableRow({
       {/* (Rest of table) */}
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="min-w-[120px] px-4 py-5 text-center">
+      <TableCell className="min-w-[120px] px-4 py-2.5 text-center">
         <div className="flex flex-col items-center gap-1">
           <span
             className={cn(
@@ -848,7 +848,7 @@ export function TransactionTableRow({
         </div>
       </TableCell>
 
-      <TableCell className="max-w-[200px] truncate px-6 py-5 font-bold tracking-tight text-slate-800 dark:text-slate-100">
+      <TableCell className="max-w-[200px] truncate px-6 py-2.5 font-bold tracking-tight text-slate-800 dark:text-slate-100">
         <div className="flex items-center gap-2">
           {transactions.description}
           {transactions.treatment_id && (
@@ -866,15 +866,15 @@ export function TransactionTableRow({
         </div>
       </TableCell>
 
-      <TableCell className="hidden px-4 py-5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
+      <TableCell className="hidden px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.supplier && transactions.supplier.name) || '-'}
       </TableCell>
 
-      <TableCell className="hidden px-4 py-5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
+      <TableCell className="hidden px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="hidden px-4 py-5 text-center xl:table-cell">
+      <TableCell className="hidden px-4 py-2.5 text-center xl:table-cell">
         <span className="inline-flex items-center rounded-lg border border-slate-200/50 bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:border-slate-700/50 dark:bg-slate-800">
           {transactions.accounts?.name || 'Caixa Central'}
         </span>
@@ -883,7 +883,7 @@ export function TransactionTableRow({
       {/* Célula de Valor */}
       <TableCell
         className={cn(
-          'px-8 py-5 text-right text-base font-black tabular-nums',
+          'px-8 py-2.5 text-right text-base font-black tabular-nums',
           transactions.operation === 'income'
             ? 'text-emerald-600'
             : 'text-rose-600',
@@ -896,7 +896,7 @@ export function TransactionTableRow({
         )}
       </TableCell>
 
-      <TableCell className="w-[120px] px-8 py-5">
+      <TableCell className="w-[120px] px-8 py-2.5">
         <div className="flex items-center justify-end gap-2">
           {transactions.attachment_url && (
             <button

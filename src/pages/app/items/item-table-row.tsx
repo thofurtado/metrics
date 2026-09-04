@@ -122,12 +122,12 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
   return (
     <TableRow className="group border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/50">
       {(activeTabType === 'PRODUCT' || activeTabType === 'SERVICE') && (
-        <TableCell className="hidden py-5 pl-8 font-mono text-[11px] font-medium text-slate-400 sm:table-cell">
+        <TableCell className="hidden py-2.5 pl-8 font-mono text-[11px] font-medium text-slate-400 sm:table-cell">
           #{displayId ?? '-'}
         </TableCell>
       )}
 
-      <TableCell className="py-5 pl-6">
+      <TableCell className="py-2.5 pl-6">
         <div className="flex max-w-[150px] flex-col gap-1 sm:max-w-[300px]">
           <div className="flex items-center gap-2">
             <span
@@ -159,7 +159,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
       {/* Tab Specific Columns */}
       {activeTabType === 'PRODUCT' && (
         <>
-          <TableCell className="py-5 text-center">
+          <TableCell className="py-2.5 text-center">
             {item.product?.is_composite ? (
               <Badge className="rounded-lg border-none bg-indigo-600 px-2.5 font-black tabular-nums text-white shadow-sm hover:bg-indigo-700">
                 {(() => {
@@ -190,13 +190,13 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
               </Badge>
             )}
           </TableCell>
-          <TableCell className="py-5 font-medium tabular-nums text-slate-500">
+          <TableCell className="py-2.5 font-medium tabular-nums text-slate-500">
             {(item.product?.cost ?? 0).toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL',
             })}
           </TableCell>
-          <TableCell className="py-5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
+          <TableCell className="py-2.5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
             <span className="mr-0.5 text-[10px] font-bold text-slate-400">
               R$
             </span>
@@ -205,7 +205,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
               maximumFractionDigits: 2,
             })}
           </TableCell>
-          <TableCell className="hidden py-5 font-mono text-[11px] text-slate-400 md:table-cell">
+          <TableCell className="hidden py-2.5 font-mono text-[11px] text-slate-400 md:table-cell">
             {item.product?.barcode || '-'}
           </TableCell>
         </>
@@ -213,10 +213,10 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
 
       {activeTabType === 'SERVICE' && (
         <>
-          <TableCell className="hidden py-5 font-medium tracking-tight text-slate-500 sm:table-cell">
+          <TableCell className="hidden py-2.5 font-medium tracking-tight text-slate-500 sm:table-cell">
             {item.service?.estimated_time || '-'}
           </TableCell>
-          <TableCell className="py-5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
+          <TableCell className="py-2.5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
             <span className="mr-0.5 text-[10px] font-bold text-slate-400">
               R$
             </span>
@@ -230,12 +230,12 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
 
       {activeTabType === 'SUPPLY' && (
         <>
-          <TableCell className="py-5 text-center">
+          <TableCell className="py-2.5 text-center">
             <Badge className="rounded-lg border-none bg-slate-100 px-2.5 font-black tabular-nums text-slate-700 shadow-sm">
               {stock ?? 0}
             </Badge>
           </TableCell>
-          <TableCell className="py-5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
+          <TableCell className="py-2.5 text-base font-black tabular-nums text-slate-900 dark:text-slate-50">
             <span className="mr-0.5 text-[10px] font-bold text-slate-400">
               R$
             </span>
@@ -244,14 +244,14 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
               maximumFractionDigits: 2,
             })}
           </TableCell>
-          <TableCell className="hidden py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:table-cell">
+          <TableCell className="hidden py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:table-cell">
             {item.supply?.unit || '-'}
           </TableCell>
         </>
       )}
 
       {activeTabType === 'PRODUCT' && (
-        <TableCell className="py-5 text-center">
+        <TableCell className="py-2.5 text-center">
           <div className="flex items-center justify-center">
             <Switch
               checked={showOnMenu}
@@ -264,7 +264,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
         </TableCell>
       )}
 
-      <TableCell className="py-5 text-center">
+      <TableCell className="py-2.5 text-center">
         <div className="flex items-center justify-center">
           <Switch
             checked={active}

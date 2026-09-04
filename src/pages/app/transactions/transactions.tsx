@@ -390,7 +390,7 @@ export function Transactions() {
   return (
     <>
       <Helmet title="Transações Financeiras" />
-      <div className="flex flex-col gap-6 px-5 font-manrope md:px-0">
+      <div className="flex flex-col gap-3.5 px-5 font-manrope md:px-0">
         <PageHeader
           title="Transações Financeiras"
           description="Gerencie suas receitas, despesas e transferências."
@@ -547,24 +547,24 @@ export function Transactions() {
           }}
           className="w-full"
         >
-          <TabsList className="flex h-auto w-full rounded-2xl border border-slate-200/50 bg-slate-100/50 p-1.5 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <TabsList className="flex h-10 w-full rounded-xl border border-slate-200/50 bg-slate-100/50 p-1 dark:border-slate-700/50 dark:bg-slate-800/50">
             <TabsTrigger
               value="payable"
-              className="flex-1 rounded-xl py-3 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm md:text-base"
+              className="flex-1 rounded-lg py-1.5 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm"
             >
               <Clock className="mr-1 h-4 w-4 md:mr-2" />
               Pendência {payableCount !== null ? `(${payableCount})` : ''}
             </TabsTrigger>
             <TabsTrigger
               value="history"
-              className="flex-1 rounded-xl py-3 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm md:text-base"
+              className="flex-1 rounded-lg py-1.5 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm"
             >
               <CheckCircle2 className="mr-1 h-4 w-4 md:mr-2" />
               Histórico {historyCount !== null ? `(${historyCount})` : ''}
             </TabsTrigger>
             <TabsTrigger
               value="transfers"
-              className="flex-1 rounded-xl py-3 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm md:text-base"
+              className="flex-1 rounded-lg py-1.5 text-xs font-bold tracking-tight transition-all data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 sm:text-sm"
             >
               <ArrowRightLeft className="mr-1 hidden h-4 w-4 sm:block md:mr-2" />
               Transferência

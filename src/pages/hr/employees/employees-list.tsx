@@ -92,10 +92,10 @@ export function EmployeesList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5">
       {/* Modern KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <Card className="rounded-xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-3 shadow-xs dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Total Geral
@@ -112,7 +112,7 @@ export function EmployeesList() {
           </p>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-emerald-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+        <Card className="rounded-xl border border-slate-200/70 bg-gradient-to-br from-white to-emerald-50/20 p-3 shadow-xs dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Registrados (CLT)
@@ -129,7 +129,7 @@ export function EmployeesList() {
           </p>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-amber-50/20 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
+        <Card className="rounded-xl border border-slate-200/70 bg-gradient-to-br from-white to-amber-50/20 p-3 shadow-xs dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
           <div className="flex items-center justify-between pb-1">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Diaristas & Horistas

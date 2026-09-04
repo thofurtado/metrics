@@ -178,7 +178,7 @@ export function Items() {
   return (
     <ErrorBoundary>
       <Helmet title="Mercadorias" />
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3.5">
         <PageHeader
           title="Mercadorias"
           description="Gerencie produtos, insumos, fichas técnicas de receitas e adicionais."
@@ -250,7 +250,7 @@ export function Items() {
           onValueChange={handleTabChange}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 gap-1 rounded-xl p-1 h-10 sm:grid-cols-5">
             <TabsTrigger value="PRODUCT" className="rounded-xl font-bold">
               <ShoppingBasket className="mr-2 h-4 w-4 text-blue-500" />
               1. Produtos

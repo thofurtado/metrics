@@ -1,5 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Pirata+One&family=Cinzel:wght@400..900&display=swap');
 
+/* ==========================================================================
+   METRICS RESPONSIVE ROOT SCALING (Density & Universal Zoom for 1024x768 to 1080p @ 125%)
+   ========================================================================== */
+html {
+  font-size: 14px;
+}
+
+@media (max-width: 1440px), (max-height: 850px) {
+  html {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 1080px), (max-height: 768px) {
+  html {
+    font-size: 11.5px;
+  }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

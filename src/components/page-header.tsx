@@ -8,14 +8,14 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, children }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 pb-4 pt-2 md:gap-8 md:pb-6">
+    <div className="flex flex-col gap-2 pb-2 pt-1 border-b border-slate-100 dark:border-slate-800/60">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-3xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-50 md:text-4xl lg:text-5xl">
+          <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-50 md:text-2xl">
             {title}
           </h1>
           {description && (
-            <p className="max-w-[600px] text-base leading-relaxed text-slate-500">
+            <p className="max-w-[600px] text-xs font-medium text-slate-500 line-clamp-1">
               {description}
             </p>
           )}
