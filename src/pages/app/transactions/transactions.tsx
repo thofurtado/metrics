@@ -535,6 +535,102 @@ export function Transactions() {
           />
         </PageHeader>
 
+        {/* CARDS DE RESUMO FINANCEIRO (COCKPIT) */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {/* Card 1: A Pagar */}
+          <div className="rounded-2xl border border-rose-200/80 bg-gradient-to-br from-rose-50/70 to-white p-3.5 shadow-xs dark:border-rose-950/40 dark:from-rose-950/25 dark:to-slate-900 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                A Pagar (Pendente)
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
+                <TrendingDown size={16} />
+              </div>
+            </div>
+            <p className="mt-2 text-xl font-black tabular-nums tracking-tight text-rose-950 dark:text-rose-100 sm:text-2xl">
+              {(metricsData?.aPagar ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <div className="mt-1 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-rose-100/80 pt-1 dark:border-slate-800">
+              <span>{payableCount ?? 0} pendências</span>
+              <span>Saídas</span>
+            </div>
+          </div>
+
+          {/* Card 2: A Receber */}
+          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 to-white p-3.5 shadow-xs dark:border-emerald-950/40 dark:from-emerald-950/25 dark:to-slate-900 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                A Receber (Previsão)
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                <TrendingUp size={16} />
+              </div>
+            </div>
+            <p className="mt-2 text-xl font-black tabular-nums tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-2xl">
+              {(metricsData?.aReceber ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <div className="mt-1 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-emerald-100/80 pt-1 dark:border-slate-800">
+              <span>Entradas a confirmar</span>
+              <span>Receitas</span>
+            </div>
+          </div>
+
+          {/* Card 3: Atrasado */}
+          <div
+            className={cn(
+              "rounded-2xl border p-3.5 shadow-xs transition-all sm:p-4",
+              overdueTotal > 0
+                ? "border-amber-300/90 bg-gradient-to-br from-amber-50/80 to-white dark:border-amber-900/50 dark:from-amber-950/30 dark:to-slate-900 cursor-pointer hover:shadow-sm"
+                : "border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900"
+            )}
+            onClick={() => overdueTotal > 0 && setIsOverdueModalOpen(true)}
+          >
+            <div className="flex items-center justify-between">
+              <span className={cn(
+                "text-[11px] font-black uppercase tracking-wider",
+                overdueTotal > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"
+              )}>
+                Contas Vencidas
+              </span>
+              <div className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-xl",
+                overdueTotal > 0 ? "bg-amber-500/15 text-amber-600 dark:bg-amber-500/25 dark:text-amber-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+              )}>
+                <AlertTriangle size={16} />
+              </div>
+            </div>
+            <p className={cn(
+              "mt-2 text-xl font-black tabular-nums tracking-tight sm:text-2xl",
+              overdueTotal > 0 ? "text-amber-950 dark:text-amber-200" : "text-slate-900 dark:text-slate-100"
+            )}>
+              {overdueTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <div className="mt-1 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-amber-100/80 pt-1 dark:border-slate-800">
+              <span>{overdueTotal > 0 ? 'Clique para auditar' : 'Sem atrasos'}</span>
+              <span>Atenção</span>
+            </div>
+          </div>
+
+          {/* Card 4: Saldo Disponível */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Saldo Disponível
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                <Wallet size={16} />
+              </div>
+            </div>
+            <p className="mt-2 text-xl font-black tabular-nums tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl">
+              {(metricsData?.saldoDisponivel ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <div className="mt-1 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-1 dark:border-slate-800">
+              <span>Bancos e Caixas</span>
+              <span>Total</span>
+            </div>
+          </div>
+        </div>
+
         {/* TABS HEADER */}
         <Tabs
           value={activeTab}

@@ -718,7 +718,7 @@ export function TransactionTableRow({
       )}
     >
       {customPrefix}
-      <TableCell className="w-[140px] px-4 py-2.5 text-center">
+      <TableCell className="w-[140px] px-4 py-3.5 text-center">
         {/* Botão de Ação: Consolidar (Pagar/Receber) ou Desfazer */}
         <button
           aria-label={
@@ -827,7 +827,7 @@ export function TransactionTableRow({
       {/* (Rest of table) */}
 
       {/* -------------------- DADOS DA TABELA -------------------- */}
-      <TableCell className="min-w-[120px] px-4 py-2.5 text-center">
+      <TableCell className="min-w-[120px] px-4 py-3.5 text-center">
         <div className="flex flex-col items-center gap-1">
           <span
             className={cn(
@@ -848,33 +848,49 @@ export function TransactionTableRow({
         </div>
       </TableCell>
 
-      <TableCell className="max-w-[200px] truncate px-6 py-2.5 font-bold tracking-tight text-slate-800 dark:text-slate-100">
-        <div className="flex items-center gap-2">
-          {transactions.description}
-          {transactions.treatment_id && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation()
-                setOpenTreatmentModal(true)
-              }}
-              className="cursor-pointer rounded bg-blue-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-blue-700 hover:bg-blue-200"
-              title="Abrir Ordem de Serviço"
-            >
-              O.S.
+      <TableCell className="min-w-[180px] px-4 py-3.5 font-bold tracking-tight text-slate-800 dark:text-slate-100">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+              {transactions.description}
             </span>
-          )}
+            {transactions.treatment_id && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenTreatmentModal(true)
+                }}
+                className="cursor-pointer shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-200"
+                title="Abrir Ordem de Serviço"
+              >
+                O.S.
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 lg:hidden">
+            {transactions.sectors?.name && (
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {transactions.sectors.name}
+              </span>
+            )}
+            {transactions.accounts?.name && (
+              <span className="rounded border border-slate-200/60 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                {transactions.accounts.name}
+              </span>
+            )}
+          </div>
         </div>
       </TableCell>
 
-      <TableCell className="hidden px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
+      <TableCell className="hidden px-4 py-3.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.supplier && transactions.supplier.name) || '-'}
       </TableCell>
 
-      <TableCell className="hidden px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
+      <TableCell className="hidden px-4 py-3.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400 lg:table-cell">
         {(transactions.sectors && transactions.sectors.name) || '-'}
       </TableCell>
 
-      <TableCell className="hidden px-4 py-2.5 text-center xl:table-cell">
+      <TableCell className="hidden px-4 py-3.5 text-center xl:table-cell">
         <span className="inline-flex items-center rounded-lg border border-slate-200/50 bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:border-slate-700/50 dark:bg-slate-800">
           {transactions.accounts?.name || 'Caixa Central'}
         </span>
@@ -883,7 +899,7 @@ export function TransactionTableRow({
       {/* Célula de Valor */}
       <TableCell
         className={cn(
-          'px-8 py-2.5 text-right text-base font-black tabular-nums',
+          'px-8 py-3.5 text-right text-base font-black tabular-nums',
           transactions.operation === 'income'
             ? 'text-emerald-600'
             : 'text-rose-600',
@@ -896,7 +912,7 @@ export function TransactionTableRow({
         )}
       </TableCell>
 
-      <TableCell className="w-[120px] px-8 py-2.5">
+      <TableCell className="w-[120px] px-8 py-3.5">
         <div className="flex items-center justify-end gap-2">
           {transactions.attachment_url && (
             <button
