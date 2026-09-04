@@ -41,3 +41,16 @@
   - Valores numéricos sempre alinhados à direita com `tabular-nums`.
 - **Modais e Diálogos:** Altura máxima controlada (`max-h-[85vh]`), cabeçalho e rodapé de ações fixos, corpo com scroll interno (`overflow-y-auto`).
 - **Mobile (< 768px):** Proibido tabelas com rolagem horizontal infinita sem tratamento. Tabelas devem colapsar automaticamente em Cards de Lista (List View) de 2 a 3 linhas por item (`Nome + Valor` na linha 1; `Badge/Categoria + Ações` na linha 2).
+
+# 4. Protocolo Rigoroso de Build, Qualidade e Pré-Push (Tolerância Zero a Erros em Produção)
+
+- **BUILD DE PRODUÇÃO OBRIGATÓRIO ANTES DE QUALQUER COMMIT OU PUSH:**
+  - **NUNCA** faça commit ou push para a branch remota sem antes rodar e validar o build de produção (`npm run build`).
+  - O comando deve finalizar estritamente com **código de saída 0** (`✓ built in ...s`). Se falhar ou acusar qualquer erro de importação/sintaxe/bundle, é terminantemente proibido subir o código.
+- **VERIFICAÇÃO DE IMPORTS E VARIÁVEIS (Rollup / Vite):**
+  - Sempre que um novo componente, ícone (ex: `lucide-react`) ou função for adicionado ao JSX/TSX, certifique-se de que o `import` correspondente está presente no topo do arquivo. Nunca assuma que scripts de substituição funcionaram sem inspecionar o arquivo.
+- **AUDITORIA DE DIFF OBRIGATÓRIA:**
+  - Antes de cada commit, execute `git diff` para revisar cirurgicamente cada alteração e assegurar que nenhuma chave, variável, schema ou importação foi excluída ou esquecida.
+- **INTEGRIDADE DO CLIENTE EM PRIMEIRO LUGAR:**
+  - Os clientes do Metrics utilizam o sistema no dia a dia operacional. Qualquer tela quebrada ('Página não encontrada', tela branca ou `ReferenceError`) impacta negócios reais. Toda alteração deve passar pelo funil completo: Edição Cirúrgica -> Inspeção de Diff -> `npm run build` -> Commit -> Push.
+

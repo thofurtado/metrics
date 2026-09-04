@@ -14,6 +14,7 @@ import {
   TrendingDown,
   TrendingUp,
   X,
+  Wallet,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
