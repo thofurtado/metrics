@@ -52,6 +52,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { api } from '@/lib/axios'
+import { cn } from '@/lib/utils'
 import { OverdueTransactionsModal } from '@/pages/app/dashboard/overdue-transactions-modal'
 
 import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
