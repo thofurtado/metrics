@@ -122,6 +122,7 @@ export function Transactions() {
   // Query to fetch pending receipts count
   const { data: receiptsData } = useQuery({
     queryKey: ['pending-receipts'],
+    staleTime: 1000 * 60,
     queryFn: async () => {
       const response = await api.get('/uploads/receipts')
       return response.data
@@ -134,6 +135,7 @@ export function Transactions() {
 
   const { data: metricsData } = useQuery({
     queryKey: ['finance-metrics-overdue'],
+    staleTime: 1000 * 60,
     queryFn: () => getFinanceMetrics(),
   })
   const overdueExpenses = metricsData?.despesaVencida ?? 0
@@ -281,25 +283,32 @@ export function Transactions() {
       sortDirection,
       checked,
     ],
-    queryFn: () =>
-      getTransactions({
+    queryFn: () => {
+      const parsedValue = value
+        ? Number(String(value).replace(/[^\d.-]/g, '').replace(',', '.'))
+        : null
+      const validValue =
+        parsedValue !== null && Number.isFinite(parsedValue) ? parsedValue : null
+
+      return getTransactions({
         page: currentPage,
         perPage,
         description,
-        value: value ? Number(value) : null,
+        value: validValue,
         sectorId: sectorId === 'all' ? null : sectorId,
         accountId,
         supplierId: supplierId === 'all' ? null : supplierId,
         type: type === 'all' ? null : type,
         status: activeTab === 'payable' ? 'pending' : 'completed',
-        toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined, // Pass toDate only for payable
-        fromDate: activeTab === 'payable' ? fromDate?.toISOString() : undefined, // Pass fromDate only for payable
-        month: activeTab === 'history' ? historyDate.toISOString() : undefined, // Pass month only for history
+        toDate: activeTab === 'payable' ? toDate?.toISOString() : undefined,
+        fromDate: activeTab === 'payable' ? fromDate?.toISOString() : undefined,
+        month: activeTab === 'history' ? historyDate.toISOString() : undefined,
         sortBy: sortBy || undefined,
         sortDirection: sortDirection || undefined,
         checked: checked || undefined,
-      }),
-    refetchOnWindowFocus: 'always',
+      })
+    },
+    refetchOnWindowFocus: false,
     enabled: activeTab !== 'transfers',
   })
 
@@ -318,6 +327,8 @@ export function Transactions() {
   // Query for Transfers
   const { data: transfersResult } = useQuery({
     queryKey: ['transfers'],
+    staleTime: 1000 * 30,
+    retry: 1,
     queryFn: () =>
       import('@/api/get-transfer-transactions').then((mod) =>
         mod.getTransferTransactions(),

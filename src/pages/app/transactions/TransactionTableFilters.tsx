@@ -98,7 +98,7 @@ export function TransactionTableFilters({
           if (description) state.set('description', description)
           else state.delete('description')
 
-          if (value) state.set('value', value)
+          if (value && value !== 'NaN') state.set('value', value)
           else state.delete('value')
 
           if (sectorId && sectorId !== 'all') state.set('sectorId', sectorId)
@@ -150,14 +150,17 @@ export function TransactionTableFilters({
 
   const { data: sectors } = useQuery({
     queryKey: ['sectors'],
+    staleTime: 1000 * 60 * 5,
     queryFn: () => getSectors(),
   })
   const { data: accounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ['accounts'],
+    staleTime: 1000 * 60 * 5,
     queryFn: () => getAccounts(),
   })
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers'],
+    staleTime: 1000 * 60 * 5,
     queryFn: () => getSuppliers({ page: 1, perPage: 1000 }),
   })
 
