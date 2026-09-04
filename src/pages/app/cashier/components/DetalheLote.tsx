@@ -69,7 +69,7 @@ export function DetalheLote({
   const [activeTab, setActiveTab] = useState('Todas')
   const [exibirSumario, setExibirSumario] = useState(false)
 
-  const formasCasa = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta']
+  const formasCasa = ['Funcionário', 'Pró-labore', 'Cortesia', 'Permuta', 'Correntista', 'A Prazo']
 
   // Extrair bancos únicos para o select
   const bancosUnicos = useMemo(() => {
@@ -147,6 +147,9 @@ export function DetalheLote({
       'cortesia',
       'permuta',
       'a prazo',
+      'correntista',
+      'fiado',
+      'convenio',
     ].some((p) => normForma.includes(p))
     if (isCasa) return '-'
 

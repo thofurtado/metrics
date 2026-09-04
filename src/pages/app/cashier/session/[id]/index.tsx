@@ -248,10 +248,15 @@ export function CashierSessionDetails() {
 
     const padraoCasa = [
       'funcionário',
+      'funcionario',
       'pró-labore',
+      'pro-labore',
       'cortesia',
       'permuta',
       'a prazo',
+      'correntista',
+      'fiado',
+      'convenio',
     ]
     const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
 
@@ -456,6 +461,8 @@ export function CashierSessionDetails() {
         identification: dados.identificacao || dados.mesa,
         is_checked:
           dados.is_checked !== undefined ? dados.is_checked : dados.conferido,
+        client_id: dados.client_id !== undefined ? dados.client_id : undefined,
+        employee_id: dados.employee_id !== undefined ? dados.employee_id : undefined,
         sector_id: dados.sector_id || null,
       })
     } catch (err: any) {

@@ -102,6 +102,8 @@ export interface CreateEntryParams {
   is_checked?: boolean
   type?: string
   identification?: string
+  client_id?: string | null
+  employee_id?: string | null
   sector_id?: string | null
 }
 
@@ -122,6 +124,8 @@ export async function updateEntry(data: {
   bank?: string
   identification?: string
   is_checked?: boolean
+  client_id?: string | null
+  employee_id?: string | null
   sector_id?: string | null
 }) {
   const response = await api.put<CashierEntry>(

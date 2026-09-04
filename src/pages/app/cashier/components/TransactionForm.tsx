@@ -248,9 +248,17 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
   const isAcessoDevedor = useMemo(() => {
     if (tipo !== 'venda') return false
     const normForma = normalizeStr(forma)
-    const padraoDevedor = ['funcionario', 'permuta', 'a prazo']
-    return padraoDevedor.some((p) => normForma.includes(p))
-  }, [forma, tipo])
+    const padraoDevedor = ['funcionario', 'permuta', 'a prazo', 'correntista', 'fiado', 'convenio']
+    if (padraoDevedor.some((p) => normForma.includes(p))) return true
+
+    if (dbIdentifiers && dbIdentifiers.length > 0) {
+      const found = dbIdentifiers.find(
+        (i: any) => normalizeStr(i.name) === normForma,
+      )
+      if (found && found.is_correntista_debt) return true
+    }
+    return false
+  }, [forma, tipo, dbIdentifiers])
 
   const isOperacional = useMemo(() => {
     if (tipo !== 'venda') return false
@@ -263,9 +271,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
 
     if (dbIdentifiers && dbIdentifiers.length > 0) {
       const found = dbIdentifiers.find(
-        (i) => normalizeStr(i.name) === normForma,
+        (i: any) => normalizeStr(i.name) === normForma,
       )
-      if (found) return true
+      if (found && !found.is_correntista_debt) return true
     }
     return false
   }, [forma, tipo, dbIdentifiers, isAcessoDevedor])
@@ -429,6 +437,9 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
         'cortesia',
         'permuta',
         'a prazo',
+        'correntista',
+        'fiado',
+        'convenio',
       ]
       newIsContaCasa = padraoContaCasa.some((p) => normForma.includes(p))
     }
@@ -441,15 +452,15 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
     } else if (newIsContaCasa && tipo === 'venda') {
       setBanco('CONTA DA CASA')
       setTimeout(() => {
-        const isOperacionalLocal =
-          ['pro-labore', 'cortesia'].some((p) => normForma.includes(p)) ||
-          (dbIdentifiers &&
-            dbIdentifiers.some((i) => normalizeStr(i.name) === normForma))
-        if (isOperacionalLocal) {
-          motivoInputRef.current?.focus()
-        } else {
+        const isDevedorLocal =
+          ['funcionario', 'permuta', 'a prazo', 'correntista', 'fiado', 'convenio'].some((p) => normForma.includes(p)) ||
+          Boolean(dbIdentifiers?.find((i: any) => normalizeStr(i.name) === normForma)?.is_correntista_debt)
+
+        if (isDevedorLocal) {
           setIsDropdownOpen(true)
           searchInputRef.current?.focus()
+        } else {
+          motivoInputRef.current?.focus()
         }
       }, 80)
     } else {
@@ -568,10 +579,16 @@ export function TransactionForm({ onAdd }: { onAdd: (dados: any) => void }) {
       mesa: tipo === 'venda' && tipoOrigem === 'Mesa' ? numOrigem : '',
       identificacao: finalIdentificacao,
       consumidorCasa: tipo === 'venda' && isContaCasa ? finalConsumidor : '',
-      client_id:
-        tipo === 'venda' && isAcessoDevedor && !isEmployeeTarget
-          ? selectedClientId
-          : null,
+      client_id: (() => {
+        if (tipo !== 'venda' || !isAcessoDevedor || isEmployeeTarget) return null
+        if (selectedClientId) return selectedClientId
+        if (searchTerm || consumidorCasa) {
+          const typed = normalizeStr(searchTerm || consumidorCasa)
+          const matched = (clientsList || []).find((c: any) => normalizeStr(c.name) === typed)
+          if (matched) return matched.id
+        }
+        return null
+      })(),
       employee_id: employeeId,
       isCaixinha: tipo === 'caixinha',
       isSaida: tipo === 'sangria',

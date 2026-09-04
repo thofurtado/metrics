@@ -101,7 +101,7 @@ export function SummaryCards({
         {/* CARD 1: RESUMO GERAL (unificado) */}
         {(() => {
           // Separar operacional de a prazo dentro de CASA
-          const padraoAPrazo = ['funcionario', 'permuta', 'a prazo']
+          const padraoAPrazo = ['funcionario', 'permuta', 'a prazo', 'correntista', 'fiado', 'convenio']
           const normalizeStr = (s: string) =>
             s
               .normalize('NFD')

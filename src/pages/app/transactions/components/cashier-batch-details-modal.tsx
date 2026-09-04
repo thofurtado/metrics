@@ -147,6 +147,9 @@ export function CashierBatchDetailsModal({
       'cortesia',
       'permuta',
       'a prazo',
+      'correntista',
+      'fiado',
+      'convenio',
     ]
 
     for (const entry of entriesList || []) {
