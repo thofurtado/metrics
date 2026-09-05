@@ -10,7 +10,6 @@ import {
   Cpu,
   HardDrive,
   Flame,
-  Sparkles,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -78,26 +77,25 @@ export function EquipmentCard({
     : null
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-sm transition-all duration-150 hover:border-indigo-300 hover:shadow-md dark:border-slate-800/90 dark:bg-slate-900/90 dark:hover:border-indigo-700">
+    <div className="group relative flex flex-col justify-between rounded-xl border border-slate-200/90 bg-slate-50/50 p-2 shadow-xs transition-all duration-150 hover:border-indigo-300 hover:bg-white hover:shadow dark:border-slate-800/90 dark:bg-slate-900/60 dark:hover:border-indigo-700 dark:hover:bg-slate-900">
       <div>
         {/* Linha 1: Status com Data do Último Contato lado a lado + Tag Windy */}
         <div className="flex items-center justify-between gap-1 text-[10px]">
-          {/* Status + Última atualização ao lado */}
-          <div className="flex items-center gap-1.5 truncate">
+          <div className="flex items-center gap-1 min-w-0">
             <span
-              className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                isOnline ? 'animate-pulse bg-emerald-500 shadow-sm shadow-emerald-400' : 'bg-slate-400'
+              className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+                isOnline ? 'animate-pulse bg-emerald-500 shadow-xs shadow-emerald-400' : 'bg-slate-400'
               }`}
             />
             <span
-              className={`font-bold uppercase tracking-wider ${
+              className={`font-bold uppercase tracking-wider text-[9px] ${
                 isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
               }`}
             >
               {isOnline ? 'Online' : 'Offline'}
             </span>
             {lastSeenFormatted && (
-              <span className="text-slate-400 dark:text-slate-500 truncate">
+              <span className="text-slate-400 dark:text-slate-500 text-[9px] truncate" title={lastSeenFormatted}>
                 • {lastSeenFormatted}
               </span>
             )}
@@ -105,32 +103,32 @@ export function EquipmentCard({
 
           {/* Versão Windy ou Manual */}
           {hasWindy ? (
-            <span className="flex-shrink-0 rounded bg-cyan-50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-200/50 dark:border-cyan-800/50">
+            <span className="flex-shrink-0 rounded bg-cyan-50 px-1 py-0.2 font-mono text-[8.5px] font-bold text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-200/50 dark:border-cyan-800/50">
               v{windyVersion || '2.3'}
             </span>
           ) : (
-            <span className="flex-shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/50">
+            <span className="flex-shrink-0 rounded bg-amber-50 px-1 py-0.2 text-[8.5px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/50">
               Avulso
             </span>
           )}
         </div>
 
         {/* Linha 2: Ícone do Tipo + Nome/Hostname + Tipo e Marca */}
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
-            <Icon className="h-4 w-4" />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
+            <Icon className="h-3.5 w-3.5" />
           </div>
 
           <div className="min-w-0 flex-1">
             <h4
               onClick={() => onOpenDetails(equipment)}
-              className="cursor-pointer truncate text-xs font-bold text-slate-800 transition-colors hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400"
+              className="cursor-pointer truncate text-[11px] font-bold text-slate-800 transition-colors hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400"
               title={hostname}
             >
               {hostname}
             </h4>
 
-            <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 truncate">
+            <div className="flex items-center gap-1 text-[9px] text-slate-500 dark:text-slate-400 truncate">
               <span className="font-medium text-slate-600 dark:text-slate-300">
                 {typeLabel}
               </span>
@@ -144,10 +142,10 @@ export function EquipmentCard({
         </div>
 
         {/* Linha 3: Métricas Super Compactas (CPU, RAM, Temperatura) */}
-        <div className="mt-2 rounded-lg bg-slate-50/90 px-2 py-1.5 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/70">
+        <div className="mt-1.5 rounded-lg bg-white/90 px-1.5 py-1 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/70">
           {hasWindy ? (
             <div>
-              <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center justify-between text-[9.5px]">
                 {/* CPU */}
                 <span
                   className={`inline-flex items-center gap-0.5 font-bold ${
@@ -195,13 +193,13 @@ export function EquipmentCard({
               </div>
 
               {osDistro && (
-                <div className="mt-0.5 truncate text-[9px] text-slate-400 dark:text-slate-500">
+                <div className="mt-0.5 truncate text-[8.5px] text-slate-400 dark:text-slate-500">
                   {osDistro}
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+            <div className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate">
               {equipment.details || 'Equipamento avulso / sem telemetria'}
             </div>
           )}
@@ -209,50 +207,50 @@ export function EquipmentCard({
       </div>
 
       {/* Linha 4: Ações Mini Compactas */}
-      <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-1.5 dark:border-slate-800">
+      <div className="mt-1.5 flex items-center justify-between border-t border-slate-100 pt-1 dark:border-slate-800">
         <div className="flex items-center gap-0.5">
           {/* Editar */}
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="h-5 w-5 p-0 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800"
             onClick={() => onEdit(equipment)}
             title="Editar tipo, nome e dados"
           >
-            <Edit3 className="h-3 w-3" />
+            <Edit3 className="h-2.5 w-2.5" />
           </Button>
 
           {/* Telemetria / Diagnóstico */}
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+            className="h-5 w-5 p-0 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
             onClick={() => onOpenDetails(equipment)}
             title="Abrir telemetria e diagnóstico completo"
           >
-            <Activity className="h-3 w-3" />
+            <Activity className="h-2.5 w-2.5" />
           </Button>
 
           {/* Etiqueta Niimbot */}
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+            className="h-5 w-5 p-0 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
             onClick={() => onPrintLabel(equipment)}
             title="Imprimir etiqueta térmica Niimbot"
           >
-            <Printer className="h-3 w-3" />
+            <Printer className="h-2.5 w-2.5" />
           </Button>
 
           {/* Prontuário Público */}
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+            className="h-5 w-5 p-0 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
             onClick={() => window.open(`/equipamento/${equipment.id}`, '_blank')}
             title="Abrir Prontuário Público"
           >
-            <ExternalLink className="h-3 w-3" />
+            <ExternalLink className="h-2.5 w-2.5" />
           </Button>
         </div>
 
@@ -260,11 +258,11 @@ export function EquipmentCard({
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
+          className="h-5 w-5 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
           onClick={() => onDelete(equipment)}
           title="Remover da base (duplicatas ou baixas)"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-2.5 w-2.5" />
         </Button>
       </div>
     </div>

@@ -395,7 +395,7 @@ export function ClientsEquipments() {
           </div>
 
           {/* TAB 1: VISÃO INTELIGENTE POR CARDS (PADRÃO) */}
-          <TabsContent value="cards" className="mt-3.5 space-y-3">
+          <TabsContent value="cards" className="mt-3.5">
             {isLoadingClients ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
                 <RefreshCw className="h-7 w-7 animate-spin text-indigo-600" />
@@ -404,19 +404,22 @@ export function ClientsEquipments() {
                 </p>
               </div>
             ) : filteredClients.length > 0 ? (
-              filteredClients.map((client: any) => (
-                <ClientCard
-                  key={client.id}
-                  client={client}
-                  equipments={client.filteredEquipments || []}
-                  checkIsOnline={checkIsOnline}
-                  onAddEquipment={handleAddEquipmentForClient}
-                  onEditEquipment={handleOpenEdit}
-                  onDeleteEquipment={handleOpenDelete}
-                  onOpenDetails={handleOpenDetails}
-                  onPrintLabel={handlePrintLabel}
-                />
-              ))
+              /* Grid Inteligente Multi-Colunas: Vários clientes lado a lado com preenchimento eficiente */
+              <div className="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-3">
+                {filteredClients.map((client: any) => (
+                  <ClientCard
+                    key={client.id}
+                    client={client}
+                    equipments={client.filteredEquipments || []}
+                    checkIsOnline={checkIsOnline}
+                    onAddEquipment={handleAddEquipmentForClient}
+                    onEditEquipment={handleOpenEdit}
+                    onDeleteEquipment={handleOpenDelete}
+                    onOpenDetails={handleOpenDetails}
+                    onPrintLabel={handlePrintLabel}
+                  />
+                ))}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
                 <Filter className="h-8 w-8 text-slate-300 dark:text-slate-600" />

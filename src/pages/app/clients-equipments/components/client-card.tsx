@@ -5,7 +5,6 @@ import {
   Plus,
   Monitor,
   Phone,
-  Mail,
   FileText,
 } from 'lucide-react'
 
@@ -37,78 +36,75 @@ export function ClientCard({
   const totalCount = equipments.length
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-3 sm:p-4 shadow-sm transition-all dark:border-slate-800/90 dark:bg-slate-950/40">
-      {/* Header do Cliente (Compacto e Elegante) */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/60 pb-3 dark:border-slate-800/60">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 font-bold text-white shadow-sm shadow-indigo-600/20">
-            <Building2 className="h-4 w-4" />
+    <div className="break-inside-avoid mb-3 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-sm transition-all duration-150 hover:border-indigo-300 hover:shadow-md dark:border-slate-800/90 dark:bg-slate-900/90 dark:hover:border-indigo-700">
+      {/* Header do Cliente (Compacto, Alta Densidade) */}
+      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white shadow-sm shadow-indigo-600/20">
+            <Building2 className="h-3.5 w-3.5" />
           </div>
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3
+                className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px]"
+                title={client.name}
+              >
                 {client.name}
               </h3>
 
-              {/* Status do Contrato */}
+              {/* Badge de Contrato */}
               {client.contract ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Contrato Ativo
+                <span className="inline-flex items-center gap-0.5 rounded-full border border-emerald-300/60 bg-emerald-50 px-1.5 py-0.2 text-[9px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <CheckCircle2 className="h-2.5 w-2.5" />
+                  Contrato
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                  Sem Contrato
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.2 text-[9px] font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                  Avulso
                 </span>
               )}
-
-              {/* Contador de Máquinas */}
-              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-                {totalCount} {totalCount === 1 ? 'máquina' : 'máquinas'}
-                {onlineCount > 0 && ` • ${onlineCount} online`}
-              </span>
             </div>
 
-            {/* Contato rápido */}
-            <div className="mt-0.5 flex flex-wrap items-center gap-2.5 text-[11px] text-slate-500 dark:text-slate-400">
+            {/* Metadados rápidos: Quantidade de Máquinas + Documento/Telefone */}
+            <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 truncate">
+              <span>
+                <strong className="text-slate-700 dark:text-slate-300">{totalCount}</strong> {totalCount === 1 ? 'máquina' : 'máquinas'}
+                {onlineCount > 0 && (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold"> • {onlineCount} online</span>
+                )}
+              </span>
               {client.identification && (
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3 w-3 text-slate-400" />
-                  {client.identification}
-                </span>
+                <span className="truncate text-slate-400">• {client.identification}</span>
               )}
-              {client.phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3 text-slate-400" />
-                  {client.phone}
-                </span>
-              )}
-              {client.email && (
-                <span className="flex items-center gap-1">
-                  <Mail className="h-3 w-3 text-slate-400" />
-                  {client.email}
-                </span>
+              {client.phone && !client.identification && (
+                <span className="truncate text-slate-400">• {client.phone}</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Botão Novo Equipamento */}
+        {/* Botão Compacto Adicionar Equipamento */}
         <Button
           size="sm"
+          variant="outline"
           onClick={() => onAddEquipment(client.id)}
-          className="h-8 self-start sm:self-center rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white shadow-sm hover:bg-indigo-700"
+          className="h-7 px-2 text-[11px] rounded-lg font-bold gap-1 text-indigo-600 border-indigo-200/80 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-indigo-950/50 flex-shrink-0"
+          title="Adicionar novo equipamento para este cliente"
         >
-          <Plus className="mr-1 h-3.5 w-3.5" />
-          Novo Equipamento
+          <Plus className="h-3 w-3" />
+          <span className="hidden sm:inline">Equip.</span>
         </Button>
       </div>
 
-      {/* Grid de Equipamentos - Ultra Denso para caber várias máquinas por linha */}
-      <div className="mt-3">
+      {/* Grid de Equipamentos dentro do Card do Cliente */}
+      <div className="mt-2.5">
         {totalCount > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
+          <div
+            className={`grid gap-2 ${
+              equipments.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
+            }`}
+          >
             {equipments.map((equipment) => (
               <EquipmentCard
                 key={equipment.id}
@@ -122,19 +118,16 @@ export function ClientCard({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/40 p-4 text-center dark:border-slate-800 dark:bg-slate-900/30">
-            <Monitor className="h-6 w-6 text-slate-300 dark:text-slate-600" />
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-              Nenhuma máquina cadastrada para este cliente.
-            </p>
+          <div className="flex items-center justify-between rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-2 text-xs dark:border-slate-800 dark:bg-slate-900/30">
+            <span className="text-[11px] text-slate-400">Nenhuma máquina cadastrada</span>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => onAddEquipment(client.id)}
-              className="mt-2 h-7 rounded-lg border-dashed text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50"
+              className="h-6 px-1.5 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50"
             >
-              <Plus className="mr-1 h-3 w-3" />
-              Adicionar Equipamento
+              <Plus className="mr-1 h-2.5 w-2.5" />
+              Adicionar
             </Button>
           </div>
         )}
