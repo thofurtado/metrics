@@ -3,10 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
+  Banknote,
   Calendar as CalendarIcon,
+  CalendarDays,
   Camera,
   CreditCard,
   ListChecks,
+  Repeat,
   TrendingDown,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -600,7 +603,10 @@ export function TransactionExpense({
   const isPending = isTransactionPending || isUploading
 
   return (
-    <ResponsiveDialogContent onInteractOutside={(e) => e.preventDefault()}>
+    <ResponsiveDialogContent
+      className="flex max-h-[92vh] flex-col md:max-w-3xl lg:max-w-4xl"
+      onInteractOutside={(e) => e.preventDefault()}
+    >
       {/* ─── HEADER ─── */}
       <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-4 md:pt-6">
         <div className="flex items-center gap-3">
@@ -623,33 +629,37 @@ export function TransactionExpense({
 
       <div className="flex-1 overflow-y-auto scroll-smooth px-6 pb-6 pt-4">
         {/* ─── TAB SELECTOR ─── */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => {
-            setActiveTab(v as any)
-            if (v === 'installment') {
-              form.setValue('confirmed', false)
-            } else if (v === 'single') {
-              form.setValue('confirmed', false)
-            }
-          }}
-          className="mb-6 w-full"
-        >
-          <TabsList className="grid h-10 w-full grid-cols-2 rounded-xl bg-muted/40 p-1">
-            <TabsTrigger
-              value="single"
-              className="rounded-lg py-1.5 text-xs font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              À Vista
-            </TabsTrigger>
-            <TabsTrigger
-              value="installment"
-              className="rounded-lg py-1.5 text-xs font-bold transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              Recorrente
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="mb-6 w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              setActiveTab(v as any)
+              if (v === 'installment') {
+                form.setValue('confirmed', false)
+              } else if (v === 'single') {
+                form.setValue('confirmed', false)
+              }
+            }}
+            className="w-full"
+          >
+            <TabsList className="shadow-xs grid h-12 w-full grid-cols-2 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1 dark:border-slate-800 dark:bg-slate-900/80">
+              <TabsTrigger
+                value="single"
+                className="flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold text-slate-500 transition-all duration-200 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm dark:text-slate-400 dark:hover:text-slate-100 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-red-400 md:text-sm"
+              >
+                <Banknote className="h-4 w-4" />
+                <span>À Vista</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="installment"
+                className="flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold text-slate-500 transition-all duration-200 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm dark:text-slate-400 dark:hover:text-slate-100 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-red-400 md:text-sm"
+              >
+                <Repeat className="h-4 w-4" />
+                <span>Recorrente</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         <Form {...form}>
           <form
@@ -701,11 +711,11 @@ export function TransactionExpense({
                   name="amount"
                   render={({ field }) => (
                     <FormItem className="flex-1 space-y-1.5">
-                      <FormLabel className="ml-0.5 flex items-center text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      <FormLabel className="ml-0.5 flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         <span>Valor da Despesa</span>
                         <span className="ml-1 font-bold text-red-500">*</span>
                       </FormLabel>
-                      <div className="flex h-[56px] w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-4 transition-all focus-within:border-rose-500 focus-within:bg-background focus-within:ring-2 focus-within:ring-rose-500/20 dark:border-slate-800 dark:bg-slate-900/50 dark:focus-within:border-rose-500 dark:focus-within:bg-background">
+                      <div className="shadow-xs flex h-12 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 transition-all focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900">
                         <span className="flex-shrink-0 select-none text-base font-bold text-slate-400 dark:text-slate-500">
                           R$
                         </span>
@@ -730,7 +740,7 @@ export function TransactionExpense({
                             inputMode="decimal"
                             step="0.01"
                             placeholder="0,00"
-                            className="w-full border-none bg-transparent p-0 text-2xl font-black tabular-nums tracking-tight text-slate-900 placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none dark:text-slate-50 dark:placeholder:text-slate-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            className="w-full border-none bg-transparent p-0 text-xl font-black tabular-nums tracking-tight text-slate-900 shadow-none [appearance:textfield] placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             autoFocus
                           />
                         </FormControl>
@@ -739,7 +749,7 @@ export function TransactionExpense({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-900/20 dark:text-red-400 lg:hidden"
+                          className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-900/20 dark:text-red-400 lg:hidden"
                           onClick={handleOpenScanner}
                         >
                           <Camera className="h-4 w-4" />
@@ -755,12 +765,12 @@ export function TransactionExpense({
                     name="interest"
                     render={({ field }) => (
                       <FormItem className="flex-1 space-y-1.5">
-                        <FormLabel className="ml-0.5 text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        <FormLabel className="ml-0.5 flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                           Juros
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400 dark:text-slate-500">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none font-bold text-slate-400 dark:text-slate-500">
                               R$
                             </span>
                             <Input
@@ -769,7 +779,7 @@ export function TransactionExpense({
                               inputMode="decimal"
                               step="0.01"
                               placeholder="0,00"
-                              className="h-[72px] rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
+                              className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-9 text-base font-semibold transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                             />
                           </div>
                         </FormControl>
@@ -782,8 +792,8 @@ export function TransactionExpense({
                   control={form.control}
                   name="confirmed"
                   render={({ field }) => (
-                    <FormItem className="flex h-[56px] flex-row items-center justify-between space-y-0 rounded-xl border border-slate-200 bg-slate-50/60 px-4 transition-all dark:border-slate-800 dark:bg-slate-900/50 sm:mb-0">
-                      <FormLabel className="flex cursor-pointer items-center text-sm font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400">
+                    <FormItem className="shadow-xs flex h-12 flex-row items-center justify-between space-y-0 rounded-xl border border-slate-200 bg-white px-4 transition-all dark:border-slate-700 dark:bg-slate-900 sm:mb-0">
+                      <FormLabel className="flex cursor-pointer items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         <span>{field.value ? '✓ Já Paguei' : 'A Pagar'}</span>
                       </FormLabel>
                       <FormControl>
@@ -810,175 +820,201 @@ export function TransactionExpense({
                 />
               </div>
             ) : (
-              <div className="relative mt-2 grid grid-cols-1 gap-4 rounded-xl border border-dashed border-border/60 bg-slate-50 p-5 dark:bg-slate-800/40 sm:grid-cols-2 lg:grid-cols-4">
-                <span className="absolute -top-3.5 left-4 rounded-full border bg-background px-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                  Condição de Pagamento
-                </span>
+              <div className="shadow-xs relative rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 pt-6 dark:border-slate-800 dark:bg-slate-900/40">
+                <div className="shadow-xs absolute -top-3 left-4 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <CalendarDays className="h-3.5 w-3.5 text-red-500" />
+                  <span>Condição de Pagamento</span>
+                </div>
 
-                {/* 1º: VALOR TOTAL */}
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                        Valor Total <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400 dark:text-slate-500">
-                            R$
-                          </span>
+                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {/* 1º: VALOR TOTAL */}
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="flex h-5 items-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                          <span>Valor Total</span>
+                          <span className="ml-1 text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-bold text-slate-400 dark:text-slate-500">
+                              R$
+                            </span>
+                            <Input
+                              {...field}
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              placeholder="0,00"
+                              className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 text-base font-bold text-slate-900 transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                field.onChange(e)
+                                const val = parseFloat(e.target.value) || 0
+                                const count =
+                                  parseInt(
+                                    form.getValues('installments_count') || '1',
+                                  ) || 1
+                                if (
+                                  !isNaN(val) &&
+                                  val > 0 &&
+                                  !isNaN(count) &&
+                                  count > 0
+                                ) {
+                                  setInstallmentValue((val / count).toFixed(2))
+                                } else if (val === 0) {
+                                  setInstallmentValue('')
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* 2º: NÚMERO DE PARCELAS */}
+                  <FormField
+                    control={form.control}
+                    name="installments_count"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="flex h-5 items-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                          <span>Nº de Parcelas</span>
+                          <span className="ml-1 text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
                           <Input
                             {...field}
                             type="number"
-                            inputMode="decimal"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
+                            inputMode="numeric"
+                            min={1}
+                            max={120}
+                            placeholder="12"
+                            className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white text-center text-base font-bold text-slate-900 transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
-                              const val = parseFloat(e.target.value) || 0
-                              const count =
-                                parseInt(
-                                  form.getValues('installments_count') || '1',
-                                ) || 1
-                              if (!isNaN(val) && val > 0 && !isNaN(count) && count > 0) {
-                                setInstallmentValue((val / count).toFixed(2))
-                              } else if (val === 0) {
-                                setInstallmentValue('')
+                              const count = parseInt(e.target.value) || 1
+                              const total =
+                                parseFloat(form.getValues('amount') || '0') || 0
+                              if (
+                                !isNaN(total) &&
+                                total > 0 &&
+                                !isNaN(count) &&
+                                count > 0
+                              ) {
+                                setInstallmentValue((total / count).toFixed(2))
                               }
                             }}
                           />
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                {/* 2º: NÚMERO DE PARCELAS */}
-                <FormField
-                  control={form.control}
-                  name="installments_count"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                        Nº de Parcelas <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
+                  {/* 3º: VALOR DA PARCELA */}
+                  <FormItem className="space-y-2">
+                    <FormLabel className="flex h-5 items-center justify-between whitespace-nowrap text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      <span>Valor da Parcela</span>
+                      <span className="text-[10px] font-normal lowercase tracking-normal text-slate-400 dark:text-slate-500">
+                        (calc.)
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-bold text-slate-400 dark:text-slate-500">
+                          R$
+                        </span>
                         <Input
-                          {...field}
                           type="number"
-                          inputMode="numeric"
-                          placeholder="12"
-                          className="h-12 rounded-xl border-border/70 bg-background text-center text-base font-medium"
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={installmentValue}
+                          className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 text-base font-bold text-slate-900 transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => {
-                            field.onChange(e)
-                            const count = parseInt(e.target.value) || 1
-                            const total =
-                              parseFloat(form.getValues('amount') || '0') || 0
-                            if (!isNaN(total) && total > 0 && !isNaN(count) && count > 0) {
-                              setInstallmentValue((total / count).toFixed(2))
+                            const val = e.target.value
+                            setInstallmentValue(val)
+                            const instVal = parseFloat(val) || 0
+                            const count =
+                              parseInt(
+                                form.getValues('installments_count') || '1',
+                              ) || 1
+                            if (
+                              !isNaN(instVal) &&
+                              instVal > 0 &&
+                              !isNaN(count) &&
+                              count > 0
+                            ) {
+                              form.setValue(
+                                'amount',
+                                (instVal * count).toFixed(2),
+                                { shouldValidate: true },
+                              )
                             }
                           }}
                         />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                      </div>
+                    </FormControl>
+                  </FormItem>
 
-                {/* 3º: VALOR DA PARCELA */}
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                    Valor da Parcela
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400 dark:text-slate-500">
-                        R$
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={installmentValue}
-                        className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          setInstallmentValue(val)
-                          const instVal = parseFloat(val) || 0
-                          const count =
-                            parseInt(
-                              form.getValues('installments_count') || '1',
-                            ) || 1
-                          if (!isNaN(instVal) && instVal > 0 && !isNaN(count) && count > 0) {
-                            form.setValue(
-                              'amount',
-                              (instVal * count).toFixed(2),
-                              { shouldValidate: true },
-                            )
-                          }
-                        }}
-                      />
-                    </div>
-                  </FormControl>
-                </FormItem>
-
-                <FormField
-                  control={form.control}
-                  name="interval_frequency"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                        Frequência
-                      </FormLabel>
-                      <Select
-                        onValueChange={(val) => {
-                          field.onChange(val)
-                          setTimeout(() => {
-                            if (frequencyTriggerRef.current) {
-                              const form =
-                                frequencyTriggerRef.current.closest('form')
-                              if (form) {
-                                const inputs = Array.from(
-                                  form.querySelectorAll(
-                                    'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
-                                  ),
-                                ) as HTMLElement[]
-                                const index = inputs.indexOf(
-                                  frequencyTriggerRef.current,
-                                )
-                                if (index > -1 && index < inputs.length - 1) {
-                                  const nextElement = inputs[index + 1]
-                                  if (nextElement) nextElement.focus()
+                  {/* 4º: FREQUÊNCIA */}
+                  <FormField
+                    control={form.control}
+                    name="interval_frequency"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="flex h-5 items-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                          <span>Frequência</span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={(val) => {
+                            field.onChange(val)
+                            setTimeout(() => {
+                              if (frequencyTriggerRef.current) {
+                                const form =
+                                  frequencyTriggerRef.current.closest('form')
+                                if (form) {
+                                  const inputs = Array.from(
+                                    form.querySelectorAll(
+                                      'input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button[role="combobox"]:not([disabled]):not([tabindex="-1"]), button[aria-haspopup="dialog"]:not([disabled]):not([tabindex="-1"]), button[role="switch"]:not([disabled]):not([tabindex="-1"]), button[type="submit"]:not([disabled]):not([tabindex="-1"])',
+                                    ),
+                                  ) as HTMLElement[]
+                                  const index = inputs.indexOf(
+                                    frequencyTriggerRef.current,
+                                  )
+                                  if (index > -1 && index < inputs.length - 1) {
+                                    const nextElement = inputs[index + 1]
+                                    if (nextElement) nextElement.focus()
+                                  }
                                 }
                               }
-                            }
-                          }, 50)
-                        }}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger
-                            ref={frequencyTriggerRef}
-                            className="h-12 rounded-xl border-border/70 bg-background text-base font-medium"
-                          >
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent withPortal={false}>
-                          <SelectItem value="WEEKLY">Semanal</SelectItem>
-                          <SelectItem value="MONTHLY">Mensal</SelectItem>
-                          <SelectItem value="YEARLY">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                            }, 50)
+                          }}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              ref={frequencyTriggerRef}
+                              className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-semibold text-slate-900 transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                            >
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent withPortal={false}>
+                            <SelectItem value="WEEKLY">Semanal</SelectItem>
+                            <SelectItem value="MONTHLY">Mensal</SelectItem>
+                            <SelectItem value="YEARLY">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             )}
 
@@ -988,7 +1024,7 @@ export function TransactionExpense({
               name="description"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                  <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                     <span>Descrição / Observação</span>
                     <span className="ml-1 font-bold text-red-500">*</span>
                   </FormLabel>
@@ -997,7 +1033,7 @@ export function TransactionExpense({
                       {...field}
                       onFocus={(e) => e.target.select()}
                       placeholder="Ex: Aluguel do escritório..."
-                      className="h-14 rounded-2xl border-border/70 bg-background text-base font-medium placeholder:text-muted-foreground/50 focus-visible:border-red-500 focus-visible:ring-red-500/30 md:h-12 md:rounded-xl"
+                      className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base font-medium transition-all placeholder:text-muted-foreground/50 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                     />
                   </FormControl>
                 </FormItem>
@@ -1015,7 +1051,7 @@ export function TransactionExpense({
                 name="data_emissao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                    <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       <span>Emissão</span>
                       <span className="ml-1 font-bold text-red-500">*</span>
                     </FormLabel>
@@ -1039,7 +1075,7 @@ export function TransactionExpense({
                 name="data_vencimento"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-1.5">
-                    <FormLabel className="flex items-center justify-between text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                    <FormLabel className="flex h-5 items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                       <span className="flex items-center">
                         <span>Vencimento</span>
                         <span className="ml-1 font-bold text-red-500">*</span>
@@ -1077,7 +1113,7 @@ export function TransactionExpense({
                   name="supplier"
                   render={({ field: { onChange, value } }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                      <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         Fornecedor
                       </FormLabel>
                       <SupplierCombobox
@@ -1102,7 +1138,7 @@ export function TransactionExpense({
                     name="payment_method"
                     render={({ field }) => (
                       <FormItem className="space-y-1.5">
-                        <FormLabel className="text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                        <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                           Forma de Pagamento
                         </FormLabel>
                         <Select
@@ -1250,7 +1286,7 @@ export function TransactionExpense({
                   name="sector"
                   render={({ field: { onChange, value, disabled } }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                      <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         <span>Categoria</span>
                         <span className="ml-1 font-bold text-red-500">*</span>
                       </FormLabel>
@@ -1280,7 +1316,7 @@ export function TransactionExpense({
                   name="account"
                   render={({ field: { onChange, value, disabled } }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="flex items-center text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                      <FormLabel className="flex h-5 items-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         <span>Conta</span>
                         <span className="ml-1 font-bold text-red-500">*</span>
                       </FormLabel>

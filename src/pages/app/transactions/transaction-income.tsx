@@ -327,7 +327,10 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
   }
 
   return (
-    <ResponsiveDialogContent onInteractOutside={(e) => e.preventDefault()}>
+    <ResponsiveDialogContent
+      className="flex max-h-[92vh] flex-col md:max-w-3xl lg:max-w-4xl"
+      onInteractOutside={(e) => e.preventDefault()}
+    >
       <ResponsiveDialogHeader className="border-b border-border/50 px-6 pb-4 pt-4 md:pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
@@ -530,7 +533,12 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                                 parseInt(
                                   form.getValues('installments_count') || '1',
                                 ) || 1
-                              if (!isNaN(val) && val > 0 && !isNaN(count) && count > 0) {
+                              if (
+                                !isNaN(val) &&
+                                val > 0 &&
+                                !isNaN(count) &&
+                                count > 0
+                              ) {
                                 setInstallmentValue((val / count).toFixed(2))
                               } else if (val === 0) {
                                 setInstallmentValue('')
@@ -565,7 +573,12 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                             const count = parseInt(e.target.value) || 1
                             const total =
                               parseFloat(form.getValues('amount') || '0') || 0
-                            if (!isNaN(total) && total > 0 && !isNaN(count) && count > 0) {
+                            if (
+                              !isNaN(total) &&
+                              total > 0 &&
+                              !isNaN(count) &&
+                              count > 0
+                            ) {
                               setInstallmentValue((total / count).toFixed(2))
                             }
                           }}
@@ -601,7 +614,12 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                             parseInt(
                               form.getValues('installments_count') || '1',
                             ) || 1
-                          if (!isNaN(instVal) && instVal > 0 && !isNaN(count) && count > 0) {
+                          if (
+                            !isNaN(instVal) &&
+                            instVal > 0 &&
+                            !isNaN(count) &&
+                            count > 0
+                          ) {
                             form.setValue(
                               'amount',
                               (instVal * count).toFixed(2),
