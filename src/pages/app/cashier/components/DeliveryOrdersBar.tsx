@@ -11,7 +11,7 @@ import {
   Check,
   X
 } from 'lucide-react'
-import { api } from '@/lib/axios'
+import { api, API_BASE_URL } from '@/lib/axios'
 import { DeliveryOrdersDrawer } from './DeliveryOrdersDrawer'
 import {
   deliveryAlertManager,
@@ -41,7 +41,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       const res = await api.get('/public/orders/pending')
       return res.data || { orders: [], profile: null }
     },
-    refetchInterval: 5000
+    refetchInterval: 3000
   })
 
   const orders: any[] = Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : []
