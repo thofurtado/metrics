@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import {
-  ArrowLeft,
   RefreshCw,
   Plus,
   Search,
@@ -26,7 +24,6 @@ import { getClients } from '@/api/get-clients'
 import { getOrphans } from '@/api/get-orphans'
 import { linkEquipment } from '@/api/link-equipment'
 import { deleteEquipment } from '@/api/delete-equipment'
-import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -158,7 +155,6 @@ export function ClientsEquipments() {
 
     return clients
       .filter((client: any) => {
-        // Filtro de contrato (ativo por padrão!)
         if (onlyContracts && !client.contract) {
           return false
         }
@@ -170,18 +166,14 @@ export function ClientsEquipments() {
           client.name.toLowerCase().includes(term) ||
           (client.identification && client.identification.toLowerCase().includes(term))
 
-        // Filtra equipamentos do cliente de acordo com o termo de busca e status
         const clientEquipments = (client.equipments || []).filter((eq: any) => {
           const isOnline = checkIsOnline(eq)
 
-          // Filtro de status online/offline
           if (statusFilter === 'online' && !isOnline) return false
           if (statusFilter === 'offline' && isOnline) return false
 
-          // Se o cliente deu match geral no nome/doc e não há busca específica
           if (clientMatches && !term) return true
 
-          // Se há termo de busca, verifica campos do equipamento
           if (term) {
             const hostname = (eq.last_telemetry?.osInfo?.hostname || '').toLowerCase()
             const identification = (eq.identification || '').toLowerCase()
@@ -217,7 +209,7 @@ export function ClientsEquipments() {
       })
   }, [clients, onlyContracts, searchTerm, statusFilter])
 
-  // Handlers de Ações
+  // Handlers
   const handleOpenDetails = (equipment: any) => {
     setSelectedEquipmentId(equipment.id)
     setDetailsModalOpen(true)
@@ -255,173 +247,159 @@ export function ClientsEquipments() {
     <>
       <Helmet title="Clientes e Equipamentos" />
 
-      <div className="flex flex-col gap-5 px-2 pb-16 md:px-0">
-        {/* Header Principal */}
-        <PageHeader
-          title="Central de Clientes & Equipamentos"
-          description="Gestão inteligente de equipamentos avulsos, telemetria Windy em tempo real e administração de clientes."
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar
-              </Link>
-            </Button>
+      <div className="flex flex-col gap-3.5 pb-12">
+        <Tabs defaultValue="cards" className="w-full">
+          {/* BARRA SUPERIOR INTEGRADA: ABAS + AÇÕES */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Seletor de Visão (Tabs) */}
+            <TabsList className="flex h-9 w-full sm:w-auto rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900">
+              <TabsTrigger value="cards" className="flex-1 sm:flex-none rounded-lg text-xs font-semibold px-3 py-1.5">
+                <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
+                Visão por Clientes (Cards)
+              </TabsTrigger>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ['clients-fleet'] })
-                queryClient.invalidateQueries({ queryKey: ['orphans-fleet'] })
-              }}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar
-            </Button>
+              <TabsTrigger value="table" className="flex-1 sm:flex-none rounded-lg text-xs font-semibold px-3 py-1.5">
+                <TableIcon className="mr-1.5 h-3.5 w-3.5" />
+                Tabela Geral
+              </TabsTrigger>
 
-            <Button
-              size="sm"
-              onClick={() => {
-                setPreselectedClientId(null)
-                setCreateModalOpen(true)
-              }}
-              className="bg-indigo-600 font-bold text-white shadow-sm hover:bg-indigo-700"
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              Novo Equipamento
-            </Button>
-
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setIsNewClientOpen(true)}
-              className="font-semibold"
-            >
-              <Users className="mr-1.5 h-4 w-4" />
-              Novo Cliente
-            </Button>
-          </div>
-        </PageHeader>
-
-        {/* Toolbar de Filtros e Resumo de Métricas */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Esquerda: Filtro de Contrato Ativo + Busca */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              {/* Switch de Contrato (Ativo por Padrão!) */}
-              <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2 dark:border-slate-800 dark:bg-slate-950">
-                <Switch
-                  id="only-contracts-toggle"
-                  checked={onlyContracts}
-                  onCheckedChange={setOnlyContracts}
-                  className="data-[state=checked]:bg-emerald-600"
-                />
-                <Label
-                  htmlFor="only-contracts-toggle"
-                  className="cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 sm:text-sm"
-                >
-                  Apenas Clientes de Contrato
-                </Label>
-                {onlyContracts && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    Padrão
+              <TabsTrigger value="orphans" className="flex-1 sm:flex-none rounded-lg text-xs font-semibold px-3 py-1.5">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+                Aguardando Vínculo
+                {orphans && orphans.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-indigo-500 px-1.5 py-0.2 text-[10px] font-bold text-white">
+                    {orphans.length}
                   </span>
                 )}
-              </div>
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Input de Busca Rápida */}
-              <div className="relative min-w-[240px] flex-1 sm:w-80">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Buscar cliente, máquina, hostname..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-10 rounded-2xl pl-9 text-xs sm:text-sm"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
-
-              {/* Filtro Online/Offline */}
-              <Select
-                value={statusFilter}
-                onValueChange={(val: any) => setStatusFilter(val)}
+            {/* Ações Principais */}
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-xl text-xs gap-1"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['clients-fleet'] })
+                  queryClient.invalidateQueries({ queryKey: ['orphans-fleet'] })
+                }}
               >
-                <SelectTrigger className="h-10 w-[140px] rounded-2xl text-xs">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="online">Apenas Online</SelectItem>
-                  <SelectItem value="offline">Apenas Offline</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <RefreshCw className="h-3.5 w-3.5" />
+                Atualizar
+              </Button>
 
-            {/* Direita: Contadores / Métricas Rápidas */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                <Users className="h-3.5 w-3.5 text-indigo-500" />
-                <span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsNewClientOpen(true)}
+                className="h-8 rounded-xl text-xs font-semibold gap-1"
+              >
+                <Users className="h-3.5 w-3.5 text-slate-500" />
+                Novo Cliente
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => {
+                  setPreselectedClientId(null)
+                  setCreateModalOpen(true)
+                }}
+                className="h-8 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 gap-1"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Novo Equipamento
+              </Button>
+            </div>
+          </div>
+
+          {/* BARRA DE FILTROS INTEGRADA (Compacta) */}
+          <div className="mt-2.5 rounded-2xl border border-slate-200/90 bg-white p-2.5 sm:p-3 shadow-sm dark:border-slate-800/90 dark:bg-slate-900">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+              {/* Controles de Filtro */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {/* Switch de Contrato */}
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 dark:border-slate-800 dark:bg-slate-950">
+                  <Switch
+                    id="only-contracts-toggle"
+                    checked={onlyContracts}
+                    onCheckedChange={setOnlyContracts}
+                    className="scale-90 data-[state=checked]:bg-emerald-600"
+                  />
+                  <Label
+                    htmlFor="only-contracts-toggle"
+                    className="cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200"
+                  >
+                    Apenas Clientes de Contrato
+                  </Label>
+                  {onlyContracts && (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      Padrão
+                    </span>
+                  )}
+                </div>
+
+                {/* Input de Busca */}
+                <div className="relative min-w-[200px] flex-1 sm:w-72">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    placeholder="Buscar cliente, máquina, hostname..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 rounded-xl pl-8 text-xs"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-600"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtro de Status */}
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val: any) => setStatusFilter(val)}
+                >
+                  <SelectTrigger className="h-8 w-[130px] rounded-xl text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="online">Apenas Online</SelectItem>
+                    <SelectItem value="offline">Apenas Offline</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Chips de Métricas Rápidas */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <Users className="h-3 w-3 text-indigo-500" />
                   <strong>{filteredClients.length}</strong> clientes
                 </span>
-              </div>
 
-              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                <Monitor className="h-3.5 w-3.5 text-slate-500" />
-                <span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <Monitor className="h-3 w-3 text-slate-500" />
                   <strong>{totalEquipmentsCount}</strong> máquinas
                 </span>
-              </div>
 
-              <div className="flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-                <span className="h-2 w-2 rounded-full animate-pulse bg-emerald-500" />
-                <span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <span className="h-1.5 w-1.5 rounded-full animate-pulse bg-emerald-500" />
                   <strong>{totalOnlineCount}</strong> online
                 </span>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Abas: Visão em Cards Inteligentes (Padrão) / Tabela Geral / Órfãos */}
-        <Tabs defaultValue="cards" className="w-full">
-          <TabsList className="mb-4 flex h-auto w-full flex-wrap gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-900 sm:w-auto">
-            <TabsTrigger value="cards" className="flex-1 rounded-xl py-2.5 sm:flex-none">
-              <LayoutGrid className="mr-2 h-4 w-4" />
-              Visão por Clientes (Cards)
-            </TabsTrigger>
-
-            <TabsTrigger value="table" className="flex-1 rounded-xl py-2.5 sm:flex-none">
-              <TableIcon className="mr-2 h-4 w-4" />
-              Tabela Geral
-            </TabsTrigger>
-
-            <TabsTrigger value="orphans" className="flex-1 rounded-xl py-2.5 sm:flex-none">
-              <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
-              Aguardando Vínculo
-              {orphans && orphans.length > 0 && (
-                <span className="ml-2 animate-pulse rounded-full bg-indigo-500 px-2 py-0.5 text-xs text-white">
-                  {orphans.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
 
           {/* TAB 1: VISÃO INTELIGENTE POR CARDS (PADRÃO) */}
-          <TabsContent value="cards" className="space-y-4">
+          <TabsContent value="cards" className="mt-3.5 space-y-3">
             {isLoadingClients ? (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <RefreshCw className="h-8 w-8 animate-spin text-indigo-600" />
-                <p className="mt-4 text-sm font-semibold text-slate-600 dark:text-slate-400">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <RefreshCw className="h-7 w-7 animate-spin text-indigo-600" />
+                <p className="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
                   Carregando clientes e frota de computadores...
                 </p>
               </div>
@@ -440,23 +418,23 @@ export function ClientsEquipments() {
                 />
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <Filter className="h-10 w-10 text-slate-300 dark:text-slate-600" />
-                <h3 className="mt-3 text-base font-bold text-slate-800 dark:text-slate-200">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <Filter className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                <h3 className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-200">
                   Nenhum cliente encontrado com os filtros atuais
                 </h3>
                 <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-slate-400">
                   {onlyContracts
-                    ? 'O filtro "Apenas Clientes de Contrato" está ativo por padrão. Você pode desativá-lo acima para visualizar todos os clientes avulsos.'
+                    ? 'O filtro "Apenas Clientes de Contrato" está ativo. Você pode desativá-lo acima para visualizar todos os clientes avulsos.'
                     : 'Tente alterar os termos de busca para encontrar clientes ou equipamentos.'}
                 </p>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-3 flex gap-2">
                   {onlyContracts && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setOnlyContracts(false)}
-                      className="rounded-xl"
+                      className="h-8 rounded-xl text-xs"
                     >
                       Mostrar Todos os Clientes
                     </Button>
@@ -466,7 +444,7 @@ export function ClientsEquipments() {
                       size="sm"
                       variant="ghost"
                       onClick={() => setSearchTerm('')}
-                      className="rounded-xl"
+                      className="h-8 rounded-xl text-xs"
                     >
                       Limpar Busca
                     </Button>
@@ -477,25 +455,25 @@ export function ClientsEquipments() {
           </TabsContent>
 
           {/* TAB 2: TABELA GERAL */}
-          <TabsContent value="table">
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <TabsContent value="table" className="mt-3.5">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900/80">
                   <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Identificação / Computador</TableHead>
-                    <TableHead>Cliente Dono</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead>CPU / RAM</TableHead>
-                    <TableHead className="text-right">Último Contato</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Identificação / Computador</TableHead>
+                    <TableHead className="text-xs">Cliente Dono</TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs">Origem</TableHead>
+                    <TableHead className="text-xs">CPU / RAM</TableHead>
+                    <TableHead className="text-right text-xs">Último Contato</TableHead>
+                    <TableHead className="text-right text-xs">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingClients ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-20 text-center text-xs">
                         Buscando equipamentos...
                       </TableCell>
                     </TableRow>
@@ -508,22 +486,25 @@ export function ClientsEquipments() {
                       const typeLabel = formatEquipmentTypeLabel(eq.type)
                       const windyVer = eq.last_telemetry?.windy?.version
                       const cpuLoad = eq.last_telemetry?.cpu?.currentLoad
+                      const memUsed = eq.last_telemetry?.mem?.usedPercent !== undefined
+                        ? Math.round(Number(eq.last_telemetry.mem.usedPercent))
+                        : null
 
                       return (
                         <TableRow
                           key={eq.id}
-                          className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 text-xs"
                           onClick={() => handleOpenDetails(eq)}
                         >
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span
-                                className={`h-2.5 w-2.5 rounded-full ${
+                                className={`h-2 w-2 rounded-full ${
                                   isOnline ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'
                                 }`}
                               />
                               <span
-                                className={`text-xs font-bold uppercase ${
+                                className={`text-[11px] font-bold uppercase ${
                                   isOnline ? 'text-emerald-600' : 'text-slate-500'
                                 }`}
                               >
@@ -535,7 +516,7 @@ export function ClientsEquipments() {
                             <div>
                               <span>{eq.identification || eq.last_telemetry?.osInfo?.hostname || typeLabel}</span>
                               {eq.brand && (
-                                <span className="block text-xs font-normal text-slate-400">
+                                <span className="block text-[11px] font-normal text-slate-400">
                                   {eq.brand}
                                 </span>
                               )}
@@ -545,23 +526,24 @@ export function ClientsEquipments() {
                             {eq.client?.name || '-'}
                           </TableCell>
                           <TableCell>
-                            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                               {typeLabel}
                             </span>
                           </TableCell>
                           <TableCell>
                             {windyVer ? (
-                              <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">
+                              <span className="rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">
                                 v{windyVer}
                               </span>
                             ) : (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                                 Manual
                               </span>
                             )}
                           </TableCell>
                           <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                             {cpuLoad !== undefined ? `CPU ${Math.round(cpuLoad)}%` : '--'}
+                            {memUsed !== null ? ` • RAM ${memUsed}%` : ''}
                           </TableCell>
                           <TableCell className="text-right text-xs font-medium text-slate-500">
                             {lastSeen}
@@ -571,38 +553,38 @@ export function ClientsEquipments() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-slate-600 hover:text-indigo-600"
+                                className="h-7 w-7 p-0 text-slate-600 hover:text-indigo-600"
                                 onClick={() => handleOpenEdit(eq)}
                                 title="Editar equipamento"
                               >
-                                <Edit3 className="h-4 w-4" />
+                                <Edit3 className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50"
+                                className="h-7 w-7 p-0 text-indigo-600 hover:bg-indigo-50"
                                 onClick={() => handlePrintLabel(eq)}
                                 title="Imprimir Etiqueta Niimbot"
                               >
-                                <Printer className="h-4 w-4" />
+                                <Printer className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
+                                className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => window.open(`/equipamento/${eq.id}`, '_blank')}
                                 title="Visualizar Prontuário Público"
                               >
-                                <ExternalLink className="h-4 w-4" />
+                                <ExternalLink className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                                className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
                                 onClick={() => handleOpenDelete(eq)}
                                 title="Excluir equipamento"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </TableCell>
@@ -611,7 +593,7 @@ export function ClientsEquipments() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="h-20 text-center text-xs text-muted-foreground">
                         Nenhum equipamento encontrado.
                       </TableCell>
                     </TableRow>
@@ -622,39 +604,37 @@ export function ClientsEquipments() {
           </TabsContent>
 
           {/* TAB 3: ÓRFÃOS (AGUARDANDO VÍNCULO) */}
-          <TabsContent value="orphans">
-            <div className="mb-4 flex items-center justify-between rounded-3xl border border-indigo-100 bg-indigo-50/80 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/30">
-              <div>
-                <h3 className="font-bold text-indigo-900 dark:text-indigo-300">
-                  Equipamentos Aguardando Vínculo (Órfãos)
-                </h3>
-                <p className="mt-1 text-xs text-indigo-700/80 dark:text-indigo-400/80 sm:text-sm">
-                  Máquinas com o agente Windy instalado que se comunicaram com a API mas ainda não possuem um cliente associado.
-                </p>
-              </div>
+          <TabsContent value="orphans" className="mt-3.5">
+            <div className="mb-3 rounded-2xl border border-indigo-100 bg-indigo-50/80 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+              <h3 className="text-xs font-bold text-indigo-900 dark:text-indigo-300">
+                Equipamentos Aguardando Vínculo (Órfãos)
+              </h3>
+              <p className="mt-0.5 text-[11px] text-indigo-700/80 dark:text-indigo-400/80">
+                Máquinas com o agente Windy instalado que se comunicaram com a API mas ainda não possuem um cliente associado.
+              </p>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-900">
                   <TableRow>
-                    <TableHead>Identificação / Hostname</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Entrada no Sistema</TableHead>
-                    <TableHead className="w-[320px]">Vincular ao Cliente</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
+                    <TableHead className="text-xs">Identificação / Hostname</TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs">Entrada no Sistema</TableHead>
+                    <TableHead className="w-[300px] text-xs">Vincular ao Cliente</TableHead>
+                    <TableHead className="text-right text-xs">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingOrphans ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-20 text-center text-xs">
                         Buscando órfãos...
                       </TableCell>
                     </TableRow>
                   ) : orphans && orphans.length > 0 ? (
                     orphans.map((orphan: any) => (
-                      <TableRow key={orphan.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                      <TableRow key={orphan.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 text-xs">
                         <TableCell>
                           <div
                             className="cursor-pointer font-bold text-slate-800 transition-colors hover:text-indigo-600 dark:text-slate-200"
@@ -663,12 +643,12 @@ export function ClientsEquipments() {
                           >
                             {orphan.last_telemetry?.osInfo?.hostname || orphan.identification || orphan.type || 'Equipamento'}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[11px] text-muted-foreground">
                             {orphan.ip_address} • CPU: {orphan.last_telemetry?.cpu?.currentLoad?.toFixed(0) || 0}%
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {formatEquipmentTypeLabel(orphan.type)}
                           </span>
                         </TableCell>
@@ -689,7 +669,7 @@ export function ClientsEquipments() {
                               })
                             }
                           >
-                            <SelectTrigger className="w-full rounded-xl">
+                            <SelectTrigger className="w-full h-8 rounded-xl text-xs">
                               <SelectValue placeholder="Selecione um cliente..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-60">
@@ -705,18 +685,18 @@ export function ClientsEquipments() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50"
+                            className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50"
                             onClick={() => handleOpenDelete(orphan)}
                             title="Excluir órfão duplicado"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="h-20 text-center text-xs text-muted-foreground">
                         Nenhum equipamento aguardando vínculo.
                       </TableCell>
                     </TableRow>
