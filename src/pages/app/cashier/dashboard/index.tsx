@@ -61,7 +61,6 @@ export function CashierDashboard() {
   const dataAtual = new Date()
 
   const [saldoAbertura, setSaldoAbertura] = useState('0.00')
-  const [periodo, setPeriodo] = useState('Almoço')
   const [selectedUser, setSelectedUser] = useState('')
   const [dataAbertura, setDataAbertura] = useState(
     `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`,
@@ -415,7 +414,6 @@ export function CashierDashboard() {
 
       await openSessionFn({
         initial_balance: parseFloat(saldoAbertura) || 0,
-        period: periodo,
         opened_at,
         ...(isAdmin && selectedUser ? { user_id: selectedUser } : {}),
       } as any)
@@ -758,17 +756,14 @@ export function CashierDashboard() {
 
                 <div>
                   <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
-                    Período / Turno
+                    Identificação do Caixa
                   </label>
-                  <select
-                    value={periodo}
-                    onChange={(e) => setPeriodo(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                  >
-                    <option value="Almoço" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Almoço</option>
-                    <option value="Jantar" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Jantar</option>
-                    <option value="Dia Todo" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">Dia Todo</option>
-                  </select>
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950">
+                    <Zap size={14} className="text-amber-500 shrink-0" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      Gerado automaticamente (Caixa 01, 02...)
+                    </span>
+                  </div>
                 </div>
               </div>
 
