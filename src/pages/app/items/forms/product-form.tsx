@@ -911,9 +911,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="ncm"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          NCM (8 Dígitos)
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          NCM (8 dígitos)
                         </FormLabel>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -945,9 +945,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cest"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          CEST (7 Dígitos)
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          CEST (7 dígitos)
                         </FormLabel>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -979,8 +979,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cfop"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           CFOP de Saída
                         </FormLabel>
                         <Tooltip>
@@ -1016,9 +1016,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="csosn"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          CSOSN (Simples Nacional)
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          CSOSN (Simples)
                         </FormLabel>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1062,8 +1062,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="origem"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           Origem da Mercadoria
                         </FormLabel>
                         <Tooltip>
@@ -1103,9 +1103,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cst_icms"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          CST ICMS (Regime Normal / Correlação)
+                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                        <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          CST ICMS (Regime Normal)
                         </FormLabel>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1151,10 +1151,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="cst_pis"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                          CST PIS
-                        </FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            CST PIS
+                          </FormLabel>
+                        </div>
                         <FormControl>
                           <Input
                             placeholder="Ex: 49"
@@ -1173,10 +1175,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="aliquota_pis"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                          Alíquota PIS (%)
-                        </FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            Alíq. PIS (%)
+                          </FormLabel>
+                        </div>
                         <FormControl>
                           <Input
                             type="number"
@@ -1195,10 +1199,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="cst_cofins"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                          CST COFINS
-                        </FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            CST COFINS
+                          </FormLabel>
+                        </div>
                         <FormControl>
                           <Input
                             placeholder="Ex: 49"
@@ -1217,10 +1223,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="aliquota_cofins"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                          Alíquota COFINS (%)
-                        </FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            Alíq. COFINS (%)
+                          </FormLabel>
+                        </div>
                         <FormControl>
                           <Input
                             type="number"
