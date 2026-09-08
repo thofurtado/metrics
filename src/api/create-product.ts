@@ -8,6 +8,17 @@ export interface CreateProductBody {
   min_stock?: number | null
   barcode?: string | null
   ncm?: string | null
+  cest?: string | null
+  cfop?: string | null
+  csosn?: string | null
+  cst_icms?: string | null
+  origem?: number | null
+  cst_pis?: string | null
+  aliquota_pis?: number | null
+  cst_cofins?: string | null
+  aliquota_cofins?: number | null
+  subcategory_id?: string | null
+  is_priority?: boolean | null
   category?: string | null
   active?: boolean | null
   display_id?: number | null
