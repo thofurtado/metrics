@@ -140,6 +140,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   // Foto do Produto
   const [productImage, setProductImage] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const existingImageUrl =
@@ -295,16 +296,38 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const profit = watchedPrice - effectiveCost
   const margin = effectiveCost > 0 ? (profit / effectiveCost) * 100 : 0
 
-  // Tratamento da imagem
+  // Processamento unificado de imagem (Upload, Drag&Drop e Ctrl+V)
+  const processImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('O arquivo precisa ser uma imagem válida (JPG, PNG ou WEBP)')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB')
+      return
+    }
+
+    const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
+    const fileName =
+      file.name && file.name !== 'image.png' && !file.name.startsWith('blob')
+        ? file.name
+        : `foto-produto-${Date.now()}.${ext}`
+
+    const normalizedFile = new File([file], fileName, { type: file.type })
+
+    setProductImage(normalizedFile)
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl)
+    }
+    setImagePreviewUrl(URL.createObjectURL(normalizedFile))
+    setActiveTab('general')
+    toast.success('Foto do produto colada com sucesso!')
+  }
+
+  // Tratamento da imagem via input de arquivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('A imagem deve ter no máximo 5MB')
-        return
-      }
-      setProductImage(file)
-      setImagePreviewUrl(URL.createObjectURL(file))
+      processImageFile(e.target.files[0])
     }
   }
 
@@ -318,6 +341,49 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
       fileInputRef.current.value = ''
     }
   }
+
+  // Listener global para capturar Ctrl + V com imagem na área de transferência
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const clipboardData = e.clipboardData
+      if (!clipboardData) return
+
+      // 1. Prioriza arquivos de imagem diretos no clipboard (ex: arquivo copiado do Explorer)
+      if (clipboardData.files && clipboardData.files.length > 0) {
+        for (let i = 0; i < clipboardData.files.length; i++) {
+          const file = clipboardData.files[i]
+          if (file.type.startsWith('image/')) {
+            e.preventDefault()
+            e.stopPropagation()
+            processImageFile(file)
+            return
+          }
+        }
+      }
+
+      // 2. Verifica itens da área de transferência (ex: print screen, copiar imagem da web / snipping tool)
+      if (clipboardData.items && clipboardData.items.length > 0) {
+        for (let i = 0; i < clipboardData.items.length; i++) {
+          const item = clipboardData.items[i]
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile()
+            if (file) {
+              e.preventDefault()
+              e.stopPropagation()
+              processImageFile(file)
+              return
+            }
+          }
+        }
+      }
+    }
+
+    // Captura no modo capture (true) para interceptar o Ctrl+V mesmo com campos focados
+    window.addEventListener('paste', handlePaste, true)
+    return () => {
+      window.removeEventListener('paste', handlePaste, true)
+    }
+  }, [imagePreviewUrl])
 
   // Presets fiscais inteligentes do Simples Nacional
   function applySimples102() {
@@ -1036,7 +1102,31 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 />
 
                 {currentDisplayImageUrl ? (
-                  <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(true)
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(false)
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(false)
+                      const file = e.dataTransfer.files?.[0]
+                      if (file) processImageFile(file)
+                    }}
+                    className={cn(
+                      'flex flex-col gap-3 rounded-lg border p-2.5 transition-all sm:flex-row sm:items-center',
+                      isDragging
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                        : 'border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/40'
+                    )}
+                  >
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-inner dark:border-slate-800 dark:bg-slate-950">
                       <img
                         src={currentDisplayImageUrl}
@@ -1049,9 +1139,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     </div>
 
                     <div className="flex-1 space-y-0.5 truncate">
-                      <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {productImage?.name || 'foto-produto-cardapio.jpg'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
+                          {productImage?.name || 'foto-produto-cardapio.jpg'}
+                        </p>
+                        <span className="inline-flex items-center rounded border border-slate-200 bg-white px-1.5 py-0.2 text-[9px] font-bold text-slate-600 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          Ctrl + V para trocar
+                        </span>
+                      </div>
                       <p className="text-[10px] text-muted-foreground">
                         {productImage
                           ? `${(productImage.size / (1024 * 1024)).toFixed(2)} MB • Pronto para salvar`
@@ -1085,18 +1180,45 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-3.5 py-2 transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-primary/40"
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(true)
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(false)
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDragging(false)
+                      const file = e.dataTransfer.files?.[0]
+                      if (file) processImageFile(file)
+                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between rounded-lg border border-dashed px-3.5 py-2.5 transition-all',
+                      isDragging
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-primary/40'
+                    )}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Camera className="h-3.5 w-3.5" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Camera className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          Foto do Cardápio (Opcional)
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Foto do Cardápio (Opcional)
+                          </p>
+                          <span className="inline-flex items-center rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-600 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            Ctrl + V
+                          </span>
+                        </div>
                         <p className="text-[10px] text-muted-foreground">
-                          JPG, PNG ou WEBP até 5MB
+                          JPG, PNG ou WEBP até 5MB • Cole com Ctrl+V de qualquer lugar ou arraste
                         </p>
                       </div>
                     </div>
