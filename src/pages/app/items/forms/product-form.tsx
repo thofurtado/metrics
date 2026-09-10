@@ -537,8 +537,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             className="flex flex-1 flex-col overflow-hidden"
           >
             {/* ── BARRA DE ABAS REFINADA (ESTILO STITCH) ────────────────────────── */}
-            <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-2.5 dark:border-slate-800 dark:bg-slate-900/30 sm:px-8">
-              <TabsList className="grid h-11 w-full max-w-[620px] grid-cols-3 rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80">
+            <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-2 dark:border-slate-800 dark:bg-slate-900/30 sm:px-8">
+              <TabsList className="grid h-10 w-full max-w-[560px] grid-cols-3 rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80">
                 <TabsTrigger
                   value="general"
                   className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
@@ -570,238 +570,16 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             {/* ═══════════════════════════════════════════════════════════════════ */}
             <TabsContent
               value="general"
-              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
+              className="mt-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-8 sm:py-6"
             >
-              {/* 1. TOP CARDS: Status, Cardápio e Prioridade KDS */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {/* Status Ativo */}
-                <FormField
-                  control={form.control}
-                  name="active"
-                  render={({ field }) => (
-                    <div
-                      onClick={() => field.onChange(!field.value)}
-                      className={cn(
-                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
-                        field.value
-                          ? 'border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/20 dark:bg-emerald-950/20'
-                          : 'border-slate-200 bg-slate-50/50 opacity-70 dark:border-slate-800 dark:bg-slate-900/30'
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
-                            Status
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase',
-                              field.value
-                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                            )}
-                          >
-                            {field.value ? 'Ativo' : 'Inativo'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Disponível no sistema
-                        </p>
-                      </div>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-emerald-500"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
-                />
-
-                {/* Cardápio Visível */}
-                <FormField
-                  control={form.control}
-                  name="show_on_menu"
-                  render={({ field }) => (
-                    <div
-                      onClick={() => field.onChange(!field.value)}
-                      className={cn(
-                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
-                        field.value
-                          ? 'border-blue-500/30 bg-blue-500/5 dark:border-blue-500/20 dark:bg-blue-950/20'
-                          : 'border-slate-200 bg-slate-50/50 opacity-70 dark:border-slate-800 dark:bg-slate-900/30'
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
-                            Cardápio
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs font-bold',
-                              field.value
-                                ? 'text-blue-600 dark:text-blue-400'
-                                : 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? 'Visível' : 'Oculto'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Exibir para clientes/PDV
-                        </p>
-                      </div>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-blue-500"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
-                />
-
-                {/* Prioridade KDS */}
-                <FormField
-                  control={form.control}
-                  name="is_priority"
-                  render={({ field }) => (
-                    <div
-                      onClick={() => field.onChange(!field.value)}
-                      className={cn(
-                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
-                        field.value
-                          ? 'border-amber-500/30 bg-amber-500/10 dark:border-amber-500/20 dark:bg-amber-950/20'
-                          : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30'
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
-                            Prioridade KDS
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Fila urgente cozinha
-                        </p>
-                      </div>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-amber-500"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
-                />
-              </div>
-
-              {/* 2. CARD DE FOTO DO PRODUTO NO CARDÁPIO */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-primary" />
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                      Imagem do Produto no Cardápio
-                    </h4>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">
-                    Exibido no cardápio digital, tablets e totem
-                  </span>
-                </div>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-
-                {currentDisplayImageUrl ? (
-                  <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center">
-                    {/* Thumbnail */}
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner dark:border-slate-800 dark:bg-slate-950">
-                      <img
-                        src={currentDisplayImageUrl}
-                        alt="Preview"
-                        className="h-full w-full object-cover"
-                      />
-                      <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[9px] font-black uppercase text-white backdrop-blur-sm">
-                        HD
-                      </span>
-                    </div>
-
-                    {/* Metadados e Status */}
-                    <div className="flex-1 space-y-1 truncate">
-                      <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {productImage?.name || 'foto-produto-cardapio.jpg'}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {productImage
-                          ? `${(productImage.size / (1024 * 1024)).toFixed(2)} MB • Upload pronto para salvar`
-                          : 'Imagem vinculada ao produto no sistema'}
-                      </p>
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          Foto Ativa
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Ações */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-9 gap-1.5 rounded-xl border-slate-200 text-xs font-bold dark:border-slate-800"
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        Alterar foto
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleRemovePhoto}
-                        className="h-9 w-9 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-                        title="Remover foto"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-primary/40"
-                  >
-                    <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Camera className="h-5 w-5" />
-                    </div>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Clique para selecionar ou arraste uma foto do produto
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      JPG, PNG ou WEBP até 5MB. Recomendado proporção 1:1 (quadrada mín. 800x800px).
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* 3. NOME DO PRODUTO E CÓDIGO DE BARRAS */}
-              <div className="grid grid-cols-12 gap-5">
+              {/* 1. CAMPOS PRINCIPAIS OBRIGATÓRIOS NO TOPO (NOME E CÓDIGO) */}
+              <div className="grid grid-cols-12 gap-4">
                 <div className="col-span-12 sm:col-span-8">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-1">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                             Nome do Produto *
@@ -829,7 +607,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="barcode"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-1">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                             Código de Barras
@@ -855,38 +633,11 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
 
-              {/* 4. UNIDADE, CATEGORIA E SUBCATEGORIA (+ CÓDIGO PDV DISCRETO) */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
-                {/* Unidade de Medida */}
-                <div className="sm:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="measureUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Unidade Medida
-                        </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 rounded-xl font-semibold">
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent withPortal={false}>
-                            <SelectItem value="UNITARY">Unidade (UN)</SelectItem>
-                            <SelectItem value="FRACTIONAL">Fracionado (KG/L/M)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+              {/* 2. CATEGORIA, SUBCATEGORIA E UNIDADE DE MEDIDA */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
                 {/* Categoria */}
                 <div className="sm:col-span-5">
-                  <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  <FormLabel className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     Categoria *
                   </FormLabel>
                   <div className="flex gap-2">
@@ -903,8 +654,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-11 rounded-xl font-semibold">
-                                <SelectValue placeholder="Selecione a categoria..." />
+                              <SelectTrigger className="h-10 rounded-xl font-semibold">
+                                <SelectValue placeholder="Selecione categoria..." />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent withPortal={false}>
@@ -923,7 +674,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 shrink-0 rounded-xl border-slate-200 dark:border-slate-800"
+                      className="h-10 w-10 shrink-0 rounded-xl border-slate-200 dark:border-slate-800"
                       onClick={() => setIsNewCategoryOpen(true)}
                       title="Nova Categoria"
                     >
@@ -934,7 +685,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
                 {/* Subcategoria */}
                 <div className="sm:col-span-4">
-                  <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  <FormLabel className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     Subcategoria
                   </FormLabel>
                   <FormField
@@ -948,7 +699,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           disabled={!selectedCategory || (subcategoriesData?.subcategories || []).length === 0}
                         >
                           <FormControl>
-                            <SelectTrigger className="h-11 rounded-xl font-semibold">
+                            <SelectTrigger className="h-10 rounded-xl font-semibold">
                               <SelectValue placeholder={!selectedCategory ? "Escolha a categoria" : "Selecione subcategoria..."} />
                             </SelectTrigger>
                           </FormControl>
@@ -965,11 +716,38 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     )}
                   />
                 </div>
+
+                {/* Unidade de Medida */}
+                <div className="sm:col-span-3">
+                  <FormField
+                    control={form.control}
+                    name="measureUnit"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          Unidade Medida
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-10 rounded-xl font-semibold">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent withPortal={false}>
+                            <SelectItem value="UNITARY">Unidade (UN)</SelectItem>
+                            <SelectItem value="FRACTIONAL">Fracionado (KG/L/M)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
-              {/* 5. PREÇO, CUSTO & RENTABILIDADE (ESTILO STITCH) */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/30">
-                <div className="mb-3.5 flex items-center justify-between">
+              {/* 3. PREÇO, CUSTO & RENTABILIDADE */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+                <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-primary" />
                     <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -983,7 +761,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
                   {/* Custo de Compra (CMV) */}
                   <FormField
                     control={form.control}
@@ -1004,7 +782,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                               {...field}
                               disabled={watchedCompositions.length > 0}
                               className={cn(
-                                'h-12 rounded-xl pl-9 font-mono text-base font-bold',
+                                'h-11 rounded-xl pl-9 font-mono text-base font-bold',
                                 watchedCompositions.length > 0
                                   ? 'bg-muted/40 cursor-not-allowed'
                                   : 'bg-white dark:bg-slate-950'
@@ -1017,7 +795,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     )}
                   />
 
-                  {/* Preço de Venda (Em Destaque) */}
+                  {/* Preço de Venda (Destaque Principal) */}
                   <FormField
                     control={form.control}
                     name="price"
@@ -1035,7 +813,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                               type="number"
                               step="0.01"
                               {...field}
-                              className="h-12 rounded-xl border-2 border-primary/40 bg-primary/5 pl-10 font-mono text-lg font-black text-primary shadow-sm focus-visible:border-primary"
+                              className="h-11 rounded-xl border-2 border-primary/40 bg-primary/5 pl-10 font-mono text-lg font-black text-primary shadow-sm focus-visible:border-primary"
                             />
                           </div>
                         </FormControl>
@@ -1045,13 +823,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   />
 
                   {/* Lucro Bruto */}
-                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                     <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                       Lucro Bruto
                     </span>
                     <span
                       className={cn(
-                        'font-mono text-lg font-black',
+                        'font-mono text-base font-black',
                         profit >= 0
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : 'text-red-500'
@@ -1065,14 +843,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   </div>
 
                   {/* Margem Líquida */}
-                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                     <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                       Margem Líquida
                     </span>
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
-                          'font-mono text-lg font-black',
+                          'font-mono text-base font-black',
                           margin >= 0
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-red-500'
@@ -1082,7 +860,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       </span>
                       <span
                         className={cn(
-                          'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase',
+                          'rounded-md px-1.5 py-0.2 text-[9px] font-black uppercase',
                           margin >= 50
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                             : margin > 0
@@ -1104,14 +882,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
 
-              {/* 6. ESTOQUE & CÓDIGO INTERNO (PDV) */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+              {/* 4. ESTOQUE & CÓDIGO PDV */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
                 <div className="sm:col-span-4">
                   <FormField
                     control={form.control}
                     name="stock"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-1">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                             {!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}
@@ -1124,7 +902,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           <Input
                             type="number"
                             {...field}
-                            className="h-11 rounded-xl font-mono text-xs font-bold"
+                            className="h-10 rounded-xl font-mono text-xs font-bold"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1138,7 +916,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="min_stock"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-1">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                             Estoque Mínimo
@@ -1151,7 +929,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           <Input
                             type="number"
                             {...field}
-                            className="h-11 rounded-xl font-mono text-xs font-bold"
+                            className="h-10 rounded-xl font-mono text-xs font-bold"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1160,13 +938,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   />
                 </div>
 
-                {/* Código PDV Interno */}
+                {/* Código PDV Rápido */}
                 <div className="sm:col-span-4">
                   <FormField
                     control={form.control}
                     name="display_id"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-1">
                         <div className="flex items-center justify-between">
                           <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                             Código PDV
@@ -1177,10 +955,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                         </div>
                         <FormControl>
                           <Input
-                            placeholder="Auto"
+                            placeholder="Automático"
                             value={field.value ?? ''}
                             onChange={field.onChange}
-                            className="h-11 rounded-xl font-mono text-xs font-bold"
+                            className="h-10 rounded-xl font-mono text-xs font-bold"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1190,19 +968,203 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
 
-              {/* 7. DESCRIÇÃO / OBSERVAÇÕES (PRESERVADA) */}
+              {/* 5. CARD COMPACTO UNIFICADO: STATUS, CARDÁPIO E PRIORIDADE KDS (1 LINHA!) */}
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/40">
+                {/* Status Ativo */}
+                <FormField
+                  control={form.control}
+                  name="active"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-emerald-500 scale-90"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Status:{' '}
+                        <strong
+                          className={
+                            field.value
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-slate-400'
+                          }
+                        >
+                          {field.value ? 'Ativo' : 'Inativo'}
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                />
+
+                <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
+
+                {/* Cardápio Visível */}
+                <FormField
+                  control={form.control}
+                  name="show_on_menu"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-blue-500 scale-90"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Cardápio:{' '}
+                        <strong
+                          className={
+                            field.value
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-slate-400'
+                          }
+                        >
+                          {field.value ? 'Visível' : 'Oculto'}
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                />
+
+                <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
+
+                {/* Prioridade KDS */}
+                <FormField
+                  control={form.control}
+                  name="is_priority"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-amber-500 scale-90"
+                      />
+                      <span className="flex items-center gap-1 text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <Zap className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                        Prioridade KDS{' '}
+                        {field.value && (
+                          <strong className="text-amber-600 dark:text-amber-400">
+                            (Urgente)
+                          </strong>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                />
+              </div>
+
+              {/* 6. IMAGEM DO PRODUTO NO CARDÁPIO (OPCIONAL E NO FINAL!) */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                      Foto do Produto no Cardápio (Opcional)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    Exibido no cardápio digital, tablets e totem
+                  </span>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                {currentDisplayImageUrl ? (
+                  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center">
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner dark:border-slate-800 dark:bg-slate-950">
+                      <img
+                        src={currentDisplayImageUrl}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/70 px-1 text-[8px] font-black uppercase text-white">
+                        HD
+                      </span>
+                    </div>
+
+                    <div className="flex-1 space-y-0.5 truncate">
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {productImage?.name || 'foto-produto-cardapio.jpg'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {productImage
+                          ? `${(productImage.size / (1024 * 1024)).toFixed(2)} MB • Pronto para salvar`
+                          : 'Imagem vinculada ao produto'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-8 gap-1.5 rounded-lg border-slate-200 text-xs font-bold dark:border-slate-800"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Alterar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleRemovePhoto}
+                        className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                        title="Remover foto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-3.5 py-2.5 transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-primary/40"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Camera className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          Adicionar foto do produto
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          JPG, PNG ou WEBP até 5MB (Recomendado 1:1)
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7.5 rounded-lg border-slate-200 px-2.5 text-xs font-bold dark:border-slate-800"
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" /> Selecionar Foto
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* 7. DESCRIÇÃO / OBSERVAÇÕES DO CARDÁPIO */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-1">
                     <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                       Descrição / Observações do Cardápio
                     </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Ingredientes, detalhes da receita, notas de alérgenos ou mensagens para o cardápio digital..."
-                        className="min-h-[75px] resize-none rounded-xl"
+                        className="min-h-[65px] resize-none rounded-xl text-xs"
                         {...field}
                       />
                     </FormControl>
@@ -1217,13 +1179,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             {/* ═══════════════════════════════════════════════════════════════════ */}
             <TabsContent
               value="fiscal"
-              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
+              className="mt-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-8 sm:py-6"
             >
               {/* Header Informativo */}
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
-                <div className="flex items-start gap-3.5">
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-4.5">
+                <div className="flex items-start gap-3">
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                    <ReceiptText className="h-5 w-5" />
+                    <ReceiptText className="h-4.5 w-4.5" />
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1243,7 +1205,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
 
               {/* Presets Rápidos */}
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     ⚡ Presets Rápidos (Simples Nacional)
@@ -1263,7 +1225,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   <button
                     type="button"
                     onClick={applySimples102}
-                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3.5 text-left transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-primary/40"
+                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-primary/40"
                   >
                     <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                       🛒 Tributação Normal
@@ -1279,7 +1241,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   <button
                     type="button"
                     onClick={applySimples500}
-                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3.5 text-left transition-all hover:border-amber-500/50 hover:bg-amber-500/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-amber-500/40"
+                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-amber-500/50 hover:bg-amber-500/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-amber-500/40"
                   >
                     <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
                       🏷️ Substituição Tributária (ST)
@@ -1295,7 +1257,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   <button
                     type="button"
                     onClick={applyFabricacaoPropria}
-                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3.5 text-left transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-emerald-500/40"
+                    className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-emerald-500/40"
                   >
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                       🍳 Fabricação Própria (Cozinha)
@@ -1312,20 +1274,20 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
               {/* Alerta de CEST Obrigatório se CSOSN 500 */}
               {watchedCsosn === '500' && !watchedCest && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200">
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
                   ⚠️ <strong>Atenção:</strong> Produtos com Substituição Tributária (CSOSN 500 / CFOP 5405) exigem o preenchimento do código <strong>CEST</strong> para a emissão correta da NFC-e na SEFAZ.
                 </div>
               )}
 
               {/* Campos Fiscais: NCM, CEST, CFOP e CSOSN */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {/* NCM */}
                 <FormField
                   control={form.control}
                   name="ncm"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           NCM (8 dígitos)
                         </FormLabel>
@@ -1359,7 +1321,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cest"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           CEST (7 dígitos)
                         </FormLabel>
@@ -1393,7 +1355,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cfop"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           CFOP de Saída
                         </FormLabel>
@@ -1430,7 +1392,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="csosn"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           CSOSN (Simples)
                         </FormLabel>
@@ -1469,14 +1431,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
 
               {/* Origem e CST ICMS */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Origem da Mercadoria */}
                 <FormField
                   control={form.control}
                   name="origem"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           Origem da Mercadoria
                         </FormLabel>
@@ -1517,7 +1479,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   name="cst_icms"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex h-6 items-center gap-1.5 overflow-hidden">
+                      <div className="flex h-5 items-center gap-1.5 overflow-hidden">
                         <FormLabel className="truncate whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           CST ICMS (Regime Normal)
                         </FormLabel>
@@ -1555,22 +1517,20 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
 
               {/* PIS e COFINS */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
-                <h5 className="mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+                <h5 className="mb-2.5 text-xs font-black uppercase tracking-wider text-muted-foreground">
                   PIS e COFINS
                 </h5>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {/* CST PIS */}
                   <FormField
                     control={form.control}
                     name="cst_pis"
                     render={({ field }) => (
-                      <FormItem className="space-y-1.5">
-                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
-                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                            CST PIS
-                          </FormLabel>
-                        </div>
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          CST PIS
+                        </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Ex: 49"
@@ -1589,12 +1549,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="aliquota_pis"
                     render={({ field }) => (
-                      <FormItem className="space-y-1.5">
-                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
-                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                            Alíq. PIS (%)
-                          </FormLabel>
-                        </div>
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          Alíq. PIS (%)
+                        </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -1613,12 +1571,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="cst_cofins"
                     render={({ field }) => (
-                      <FormItem className="space-y-1.5">
-                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
-                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                            CST COFINS
-                          </FormLabel>
-                        </div>
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          CST COFINS
+                        </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Ex: 49"
@@ -1637,12 +1593,10 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     control={form.control}
                     name="aliquota_cofins"
                     render={({ field }) => (
-                      <FormItem className="space-y-1.5">
-                        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
-                          <FormLabel className="truncate whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                            Alíq. COFINS (%)
-                          </FormLabel>
-                        </div>
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          Alíq. COFINS (%)
+                        </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -1664,21 +1618,21 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             {/* ═══════════════════════════════════════════════════════════════════ */}
             <TabsContent
               value="complements"
-              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
+              className="mt-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-8 sm:py-6"
             >
               {/* 1. SEÇÃO DE GRUPOS DE ADICIONAIS & OPCIONAIS */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-3.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 dark:bg-orange-500/20">
-                      <Sliders className="h-5 w-5" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 dark:bg-orange-500/20">
+                      <Sliders className="h-4.5 w-4.5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
                           Grupos de Adicionais & Opcionais
                         </h4>
-                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400">
+                        <span className="rounded-full bg-orange-500/10 px-2 py-0.2 text-[10px] font-black text-orange-600 dark:text-orange-400">
                           {selectedComplementGroupIds.length} selecionados
                         </span>
                       </div>
@@ -1720,7 +1674,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             }
                           }}
                           className={cn(
-                            'flex cursor-pointer items-start gap-3.5 rounded-xl border p-4 transition-all',
+                            'flex cursor-pointer items-start gap-3.5 rounded-xl border p-3.5 transition-all',
                             isChecked
                               ? 'border-primary/50 bg-primary/5 shadow-sm dark:border-primary/40 dark:bg-primary/10'
                               : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-slate-700'
@@ -1765,18 +1719,18 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </div>
 
               {/* 2. SEÇÃO DE FICHA TÉCNICA (COMPOSIÇÃO & CMV) */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                      <ChefHat className="h-5 w-5" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+                      <ChefHat className="h-4.5 w-4.5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
                           Ficha Técnica (Composição & CMV)
                         </h4>
-                        <span className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-black text-purple-600 dark:text-purple-400">
+                        <span className="rounded-full bg-purple-500/10 px-2 py-0.2 text-[10px] font-black text-purple-600 dark:text-purple-400">
                           {fields.length} {fields.length === 1 ? 'Insumo' : 'Insumos'}
                         </span>
                       </div>
@@ -1791,15 +1745,15 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => append({ supply_id: '', quantity: 1 })}
-                    className="h-9 gap-1.5 rounded-xl border-purple-200 bg-purple-50/50 text-xs font-bold text-purple-700 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-950/30 dark:text-purple-300"
+                    className="h-8 gap-1.5 rounded-xl border-purple-200 bg-purple-50/50 text-xs font-bold text-purple-700 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-950/30 dark:text-purple-300"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                     Adicionar Insumo
                   </Button>
                 </div>
 
                 {fields.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/20">
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center dark:border-slate-800 dark:bg-slate-900/20">
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
                       Nenhum insumo adicionado a este produto.
                     </p>
@@ -1811,14 +1765,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => append({ supply_id: '', quantity: 1 })}
-                      className="mt-3 gap-1.5 rounded-xl text-xs font-bold"
+                      className="mt-2.5 gap-1.5 rounded-xl text-xs font-bold"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Começar Ficha Técnica
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {/* Cabeçalho da Tabela de Insumos */}
                     <div className="hidden grid-cols-12 gap-3 px-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground sm:grid">
                       <span className="col-span-6">Insumo Selecionado</span>
@@ -1828,7 +1782,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     </div>
 
                     {/* Linhas de Insumos */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       {fields.map((field, index) => {
                         const selectedSupplyId = form.watch(`compositions.${index}.supply_id`)
                         const selectedQuantity = Number(form.watch(`compositions.${index}.quantity`)) || 0
@@ -1838,7 +1792,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                         return (
                           <div
                             key={field.id}
-                            className="grid grid-cols-12 items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/30 sm:p-2.5"
+                            className="grid grid-cols-12 items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-slate-900/30"
                           >
                             {/* Insumo Dropdown */}
                             <div className="col-span-12 sm:col-span-6">
@@ -1851,7 +1805,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                     onValueChange={subField.onChange}
                                   >
                                     <FormControl>
-                                      <SelectTrigger className="h-10 rounded-xl bg-white text-xs font-semibold dark:bg-slate-950">
+                                      <SelectTrigger className="h-9.5 rounded-xl bg-white text-xs font-semibold dark:bg-slate-950">
                                         <SelectValue placeholder="Selecione o insumo..." />
                                       </SelectTrigger>
                                     </FormControl>
@@ -1884,9 +1838,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                                       step="0.0001"
                                       placeholder="Qtd"
                                       {...qtyField}
-                                      className="h-10 rounded-xl bg-white pr-10 text-center font-mono text-xs font-bold dark:bg-slate-950"
+                                      className="h-9.5 rounded-xl bg-white pr-10 text-center font-mono text-xs font-bold dark:bg-slate-950"
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-muted-foreground">
+                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-muted-foreground">
                                       {currentSupply?.unit || 'UN'}
                                     </span>
                                   </div>
@@ -1920,13 +1874,13 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     </div>
 
                     {/* Resumo Rodapé da Ficha Técnica */}
-                    <div className="mt-4 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex flex-wrap items-center gap-6">
                         <div>
                           <span className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                             Custo Total (CMV):
                           </span>
-                          <span className="font-mono text-lg font-black text-slate-900 dark:text-slate-100">
+                          <span className="font-mono text-base font-black text-slate-900 dark:text-slate-100">
                             R$ {calculatedCMV.toFixed(2)}
                           </span>
                         </div>
@@ -1936,7 +1890,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             Margem Estimada:
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
                               {margin >= 0 ? `+${margin.toFixed(1)}%` : `${margin.toFixed(1)}%`}
                             </span>
                             <span className="text-[10px] text-muted-foreground">
@@ -1946,8 +1900,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-700 dark:border-blue-500/30 dark:text-blue-300">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] text-white">
+                      <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-2.5 py-1.5 text-xs font-bold text-blue-700 dark:border-blue-500/30 dark:text-blue-300">
+                        <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 text-[9px] text-white">
                           ✓
                         </span>
                         <span>Baixa automática de estoque acionada a cada venda</span>
@@ -1960,12 +1914,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           </Tabs>
 
           {/* ── FOOTER FIXO (CANCELAR & SALVAR PRODUTO) ────────────────────────── */}
-          <ResponsiveDialogFooter className="border-t border-slate-200 bg-slate-50/80 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/80 sm:px-8">
+          <ResponsiveDialogFooter className="border-t border-slate-200 bg-slate-50/80 px-6 py-3.5 dark:border-slate-800 dark:bg-slate-900/80 sm:px-8">
             <ResponsiveDialogClose asChild>
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-xl px-6 font-semibold"
+                className="h-10 rounded-xl px-5 font-semibold"
               >
                 Cancelar
               </Button>
@@ -1973,7 +1927,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="h-11 rounded-xl bg-primary px-8 font-bold text-white shadow-md hover:bg-primary/90"
+              className="h-10 rounded-xl bg-primary px-8 font-bold text-white shadow-md hover:bg-primary/90"
             >
               {form.formState.isSubmitting
                 ? 'Salvando...'
