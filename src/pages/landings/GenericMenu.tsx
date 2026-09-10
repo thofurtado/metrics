@@ -58,7 +58,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
-import { cn } from '@/lib/utils'
+import { cn, resolveImageUrl } from '@/lib/utils'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
 
 
@@ -408,7 +408,7 @@ const DynamicHero = ({ profile }: { profile: any }) => {
     return (
       <div className="absolute inset-0 overflow-hidden">
         <img
-          src={profile.banner_url}
+          src={resolveImageUrl(profile.banner_url)}
           className="h-full w-full object-cover object-center"
           alt="Banner do Estabelecimento"
         />
@@ -1606,7 +1606,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-[3px] border-white/90 bg-white shadow-2xl transition-transform hover:scale-105 lg:h-24 lg:w-24">
                 {profile?.logo_url ? (
                   <img
-                    src={profile.logo_url}
+                    src={resolveImageUrl(profile.logo_url)}
                     alt="Logo"
                     className="h-full w-full object-cover"
                   />
@@ -1807,8 +1807,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         {product.imageUrl && (
                           <div className="h-40 w-full overflow-hidden bg-slate-50">
                             <img
-                              src={product.imageUrl}
+                              src={resolveImageUrl(product.imageUrl)}
                               alt={product.name}
+                              onError={(e) => {
+                                (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
+                              }}
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                           </div>

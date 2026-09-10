@@ -70,7 +70,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { API_BASE_URL } from '@/lib/axios'
-import { cn } from '@/lib/utils'
+import { cn, resolveImageUrl } from '@/lib/utils'
+import { compressImage } from '@/lib/image-compression'
 
 const productSchema = z.object({
   name: z.string().min(1, 'Nome do produto é obrigatório'),
@@ -296,32 +297,32 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const profit = watchedPrice - effectiveCost
   const margin = effectiveCost > 0 ? (profit / effectiveCost) * 100 : 0
 
-  // Processamento unificado de imagem (Upload, Drag&Drop e Ctrl+V)
-  const processImageFile = (file: File) => {
+  // Processamento unificado de imagem (Upload, Drag&Drop e Ctrl+V com compressão ultra-rápida)
+  const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('O arquivo precisa ser uma imagem válida (JPG, PNG ou WEBP)')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('A imagem deve ter no máximo 5MB')
-      return
+
+    try {
+      // Otimiza no cliente para ~80KB-180KB com resolução 1200x1200px (upload em <0.2s)
+      const optimized = await compressImage(file)
+      setProductImage(optimized)
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl)
+      }
+      setImagePreviewUrl(URL.createObjectURL(optimized))
+      setActiveTab('general')
+      toast.success('Foto carregada e otimizada!')
+    } catch {
+      setProductImage(file)
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl)
+      }
+      setImagePreviewUrl(URL.createObjectURL(file))
+      setActiveTab('general')
+      toast.success('Foto carregada!')
     }
-
-    const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
-    const fileName =
-      file.name && file.name !== 'image.png' && !file.name.startsWith('blob')
-        ? file.name
-        : `foto-produto-${Date.now()}.${ext}`
-
-    const normalizedFile = new File([file], fileName, { type: file.type })
-
-    setProductImage(normalizedFile)
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl)
-    }
-    setImagePreviewUrl(URL.createObjectURL(normalizedFile))
-    setActiveTab('general')
-    toast.success('Foto do produto colada com sucesso!')
   }
 
   // Tratamento da imagem via input de arquivo
@@ -581,10 +582,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const currentDisplayImageUrl = useMemo(() => {
     if (imagePreviewUrl) return imagePreviewUrl
     if (existingImageUrl) {
-      if (existingImageUrl.startsWith('http')) return existingImageUrl
-      const base = API_BASE_URL?.replace(/\/$/, '') || ''
-      const slash = existingImageUrl.startsWith('/') ? '' : '/'
-      return `${base}${slash}${existingImageUrl}`
+      return resolveImageUrl(existingImageUrl)
     }
     return null
   }, [imagePreviewUrl, existingImageUrl])

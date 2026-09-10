@@ -25,6 +25,9 @@ import { cn } from '@/lib/utils'
 import { DeleteItemDialog } from './delete-item-dialog'
 import { ProductItemDialog } from './product-item-dialog'
 import { StockAdjustmentDialog } from './stock-adjustment-dialog'
+import { ProductPhotoDialog } from './product-photo-dialog'
+import { Camera } from 'lucide-react'
+import { resolveImageUrl } from '@/lib/utils'
 
 // Use the type from the API response
 type Item = GetItemsResponse['items'][0]
@@ -40,6 +43,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isAdjustStockOpen, setIsAdjustStockOpen] = useState(false)
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false)
 
   const initialActive = item.active ?? (item.product as any)?.active ?? true
   const initialShowOnMenu = (item.product as any)?.show_on_menu ?? (item as any)?.show_on_menu ?? true
@@ -128,7 +132,34 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
       )}
 
       <TableCell className="py-2.5 pl-6">
-        <div className="flex max-w-[150px] flex-col gap-1 sm:max-w-[300px]">
+        <div className="flex items-center gap-3">
+          {activeTabType === 'PRODUCT' && (
+            <button
+              type="button"
+              onClick={() => setIsPhotoDialogOpen(true)}
+              className="group/thumb relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-2xs transition-all hover:scale-105 hover:border-primary hover:shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              title={item.product?.image_url ? 'Ver ou alterar foto do cardápio' : 'Adicionar foto do cardápio'}
+            >
+              {item.product?.image_url ? (
+                <>
+                  <img
+                    src={resolveImageUrl(item.product.image_url)}
+                    alt={item.name}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover/thumb:opacity-100">
+                    <Camera className="h-3.5 w-3.5 text-white" />
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-slate-400 group-hover/thumb:text-primary">
+                  <Camera className="h-4 w-4" />
+                </div>
+              )}
+            </button>
+          )}
+
+          <div className="flex max-w-[150px] flex-col gap-1 sm:max-w-[300px]">
           <div className="flex items-center gap-2">
             <span
               className="truncate text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100"
@@ -153,6 +184,7 @@ export function ItemTableRow({ item, activeTabType }: ItemTableRowProps) {
                 : item.category.name}
             </span>
           )}
+        </div>
         </div>
       </TableCell>
 
