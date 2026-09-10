@@ -8,14 +8,18 @@ import {
   Box,
   Check,
   CheckCircle2,
+  Coins,
   CreditCard,
   Minus,
   Package,
   Percent,
   Plus,
   QrCode,
+  Receipt,
   Search,
   ShoppingCart,
+  Sparkles,
+  Tag,
   Trash2,
   User,
   Wallet,
@@ -334,7 +338,7 @@ export function TreatmentItems({
   async function handleQuickAdd(item: any, e?: React.MouseEvent) {
     if (e) e.stopPropagation()
     try {
-      let unitPrice = item.price || 0
+      const unitPrice = item.price || 0
       let discountVal = 0
 
       if (treatment?.clients?.contract && !item.isItem) {
@@ -505,7 +509,7 @@ export function TreatmentItems({
   async function onSubmitCustomizer(data: FormSchemaType) {
     try {
       const quantity = data.quantity ? parseFloat(data.quantity) : 1
-      let unitSalesValue = salesValue
+      const unitSalesValue = salesValue
       let discountValue = 0
 
       if (isFinanceActive) {
@@ -556,7 +560,7 @@ export function TreatmentItems({
     (p) => p.id === currentPayment.paymentId,
   )
   const isCreditCard =
-    selectedPaymentMethodObj?.name?.toLowerCase().includes('crÃ©dito') || false
+    selectedPaymentMethodObj?.name?.toLowerCase().includes('crédito') || false
   const maxInstallments = selectedPaymentMethodObj?.installment_limit || 1
 
   function handleAddPayment() {
@@ -568,7 +572,7 @@ export function TreatmentItems({
       return
     }
     if (isNaN(inputAmount) || inputAmount <= 0) {
-      toast.error('Informe um valor vÃ¡lido.')
+      toast.error('Informe um valor válido.')
       return
     }
 
@@ -655,14 +659,14 @@ export function TreatmentItems({
 
   return (
     <DialogContent
-      className="fixed inset-0 z-[9999] flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-none bg-slate-950 p-0 text-slate-100 shadow-2xl focus:outline-none"
+      className="!fixed !inset-0 !top-0 !left-0 !right-0 !bottom-0 !m-0 !h-screen !w-screen !max-w-none !max-h-none !translate-x-0 !translate-y-0 !rounded-none !border-none flex flex-col overflow-hidden bg-slate-950 p-0 text-slate-100 shadow-none focus:outline-none md:!fixed md:!inset-0 md:!top-0 md:!left-0 md:!right-0 md:!bottom-0 md:!m-0 md:!h-screen md:!w-screen md:!max-w-none md:!max-h-none md:!translate-x-0 md:!translate-y-0 md:!rounded-none md:!border-none [&>button[class*='absolute']]:hidden"
       onOpenAutoFocus={(e) => e.preventDefault()}
       onPointerDownOutside={(e) => e.preventDefault()}
       onInteractOutside={(e) => e.preventDefault()}
     >
       <DialogHeader className="hidden">
         <DialogTitle>PDV do Atendimento</DialogTitle>
-        <DialogDescription>GestÃ£o de itens, serviÃ§os e finalizaÃ§Ã£o de pagamento</DialogDescription>
+        <DialogDescription>Gestão de itens, serviços e finalização de pagamento</DialogDescription>
       </DialogHeader>
 
       {/* TOPBAR HEADER */}
@@ -674,7 +678,7 @@ export function TreatmentItems({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-black tracking-tight text-white sm:text-lg">
-                PDV & PeÃ§as da O.S.
+                PDV & Peças da O.S.
               </h2>
               <Badge variant="outline" className="border-indigo-500/40 bg-indigo-500/10 font-mono text-xs text-indigo-300">
                 #{treatmentId.slice(0, 8)}
@@ -695,22 +699,25 @@ export function TreatmentItems({
           </div>
         </div>
 
-        {/* STEP SWITCHER & CLOSE */}
+        {/* STEP SWITCHER & TOTAL & CLOSE */}
         <div className="flex items-center gap-4">
           {/* Navigation Steps */}
           <div className="hidden sm:flex items-center rounded-xl border border-slate-800 bg-slate-950 p-1">
             <button
               onClick={() => setCurrentStep('catalog')}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all',
+                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all',
                 currentStep === 'catalog'
-                  ? 'bg-indigo-600 text-white shadow-md'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-slate-400 hover:text-slate-200',
               )}
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
-              1. PeÃ§as & ServiÃ§os
-              <span className="ml-1 rounded-full bg-slate-900/60 px-1.5 py-0.2 text-[10px]">
+              <ShoppingCart className="h-4 w-4" />
+              1. Peças & Serviços
+              <span className={cn(
+                'ml-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                currentStep === 'catalog' ? 'bg-indigo-950 text-indigo-200' : 'bg-slate-800 text-slate-400'
+              )}>
                 {treatment.items?.length || 0}
               </span>
             </button>
@@ -720,24 +727,24 @@ export function TreatmentItems({
                 else toast.info('Adicione itens ao carrinho antes de prosseguir.')
               }}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all',
+                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all',
                 currentStep === 'payment'
-                  ? 'bg-emerald-600 text-white shadow-md'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                   : 'text-slate-400 hover:text-slate-200',
               )}
             >
-              <CreditCard className="h-3.5 w-3.5" />
+              <CreditCard className="h-4 w-4" />
               2. Pagamento & Fechamento
             </button>
           </div>
 
           {/* Total Value Pill */}
           {isFinanceActive && (
-            <div className="hidden md:flex flex-col items-end border-l border-slate-800 pl-4">
+            <div className="hidden md:flex flex-col items-end border-l border-slate-800 pl-4 pr-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Total Geral
               </span>
-              <span className="font-mono text-xl font-black text-emerald-400">
+              <span className="font-mono text-2xl font-black text-emerald-400">
                 {formatBRL(subtotal)}
               </span>
             </div>
@@ -748,7 +755,7 @@ export function TreatmentItems({
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange?.(false)}
-            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-950/80 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/40"
+            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-950/80 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/40 transition-colors"
             title="Fechar Janela (ESC)"
           >
             <X className="h-5 w-5" />
@@ -770,7 +777,7 @@ export function TreatmentItems({
                   : 'border-transparent text-slate-400',
               )}
             >
-              CatÃ¡logo ({filteredItems.length})
+              Catálogo ({filteredItems.length})
             </button>
             <button
               onClick={() => setMobileTab('cart')}
@@ -781,7 +788,7 @@ export function TreatmentItems({
                   : 'border-transparent text-slate-400',
               )}
             >
-              Carrinho ({treatment.items?.length || 0}) â€¢ {formatBRL(subtotal)}
+              Carrinho ({treatment.items?.length || 0}) • {formatBRL(subtotal)}
             </button>
           </div>
 
@@ -789,17 +796,17 @@ export function TreatmentItems({
             {/* LEFT COLUMN: CATALOG & DOCKED CUSTOMIZER */}
             <div
               className={cn(
-                'flex h-full w-full flex-col overflow-hidden md:w-[62%] lg:w-[67%] xl:w-[72%]',
+                'flex h-full w-full flex-col overflow-hidden md:flex-1',
                 mobileTab === 'products' ? 'flex' : 'hidden md:flex',
               )}
             >
               {/* Catalog Search & Filter Toolbar */}
-              <div className="z-10 flex flex-none flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-900/60 p-3.5 backdrop-blur-md">
-                <div className="relative min-w-[220px] flex-1">
+              <div className="z-10 flex flex-none flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-900/60 p-4 backdrop-blur-md">
+                <div className="relative min-w-[260px] flex-1">
                   <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     ref={searchInputRef}
-                    placeholder="Buscar por cÃ³digo, nome de peÃ§a, produto ou serviÃ§o..."
+                    placeholder="Buscar por código, nome de peça, produto ou serviço..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-10 w-full rounded-xl border-slate-800 bg-slate-950/90 pl-10 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -819,7 +826,7 @@ export function TreatmentItems({
                   <button
                     onClick={() => setCategoryFilter('ALL')}
                     className={cn(
-                      'rounded-lg px-3 py-1 text-xs font-bold transition-all',
+                      'rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all',
                       categoryFilter === 'ALL'
                         ? 'bg-slate-800 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-200',
@@ -830,33 +837,35 @@ export function TreatmentItems({
                   <button
                     onClick={() => setCategoryFilter('PRODUCT')}
                     className={cn(
-                      'rounded-lg px-3 py-1 text-xs font-bold transition-all',
+                      'rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5',
                       categoryFilter === 'PRODUCT'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-200',
                     )}
                   >
+                    <Box className="h-3.5 w-3.5" />
                     Produtos
                   </button>
                   <button
                     onClick={() => setCategoryFilter('SERVICE')}
                     className={cn(
-                      'rounded-lg px-3 py-1 text-xs font-bold transition-all',
+                      'rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5',
                       categoryFilter === 'SERVICE'
                         ? 'bg-amber-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-slate-200',
                     )}
                   >
-                    ServiÃ§os
+                    <Wrench className="h-3.5 w-3.5" />
+                    Serviços
                   </button>
                 </div>
 
                 {/* Quick Item Creation */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="h-10 gap-1.5 rounded-xl bg-indigo-600 font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500">
+                    <Button className="h-10 gap-2 rounded-xl bg-indigo-600 font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500">
                       <Plus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Cadastrar Item</span>
+                      <span>Cadastrar Item</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 border-slate-800 bg-slate-900 text-slate-100">
@@ -878,7 +887,7 @@ export function TreatmentItems({
                       className="cursor-pointer hover:bg-slate-800"
                     >
                       <Wrench className="mr-2 h-4 w-4 text-amber-400" />
-                      Novo ServiÃ§o
+                      Novo Serviço
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -895,12 +904,12 @@ export function TreatmentItems({
                 </Dialog>
               </div>
 
-              {/* Catalog Items Grid (Clean, Readable, Generous Cards) */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+              {/* Catalog Items Grid (Generous & High-Density) */}
+              <ScrollArea className="flex-1 p-5">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {isItemsLoading ? (
-                    Array.from({ length: 9 }).map((_, i) => (
-                      <Skeleton key={i} className="h-28 w-full rounded-2xl bg-slate-900" />
+                    Array.from({ length: 12 }).map((_, i) => (
+                      <Skeleton key={i} className="h-32 w-full rounded-2xl bg-slate-900" />
                     ))
                   ) : (
                     <>
@@ -915,14 +924,14 @@ export function TreatmentItems({
                             className={cn(
                               'group relative cursor-pointer overflow-hidden rounded-2xl border transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/10 active:scale-[0.99]',
                               isSelected
-                                ? 'border-indigo-500 bg-indigo-950/40 ring-2 ring-indigo-500'
-                                : 'border-slate-800/80 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900',
+                                ? 'border-indigo-500 bg-indigo-950/40 ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/20'
+                                : 'border-slate-800/80 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900',
                               !hasStock && 'opacity-65',
                             )}
                           >
-                            <CardContent className="flex flex-col justify-between p-3.5">
+                            <CardContent className="flex h-full flex-col justify-between p-4">
                               <div>
-                                <div className="mb-2 flex items-center justify-between gap-2">
+                                <div className="mb-2.5 flex items-center justify-between gap-2">
                                   <Badge
                                     variant="outline"
                                     className={cn(
@@ -932,7 +941,7 @@ export function TreatmentItems({
                                         : 'bg-amber-500/15 text-amber-400',
                                     )}
                                   >
-                                    {item.isItem ? 'Produto' : 'ServiÃ§o'}
+                                    {item.isItem ? 'Produto' : 'Serviço'}
                                   </Badge>
 
                                   {!hasStock && isStockActive && (
@@ -943,17 +952,17 @@ export function TreatmentItems({
                                 </div>
 
                                 <h3
-                                  className="line-clamp-2 text-sm font-bold leading-tight text-slate-100 group-hover:text-white"
+                                  className="line-clamp-2 text-sm font-bold leading-snug text-slate-100 group-hover:text-white"
                                   title={item.name}
                                 >
                                   {item.name}
                                 </h3>
                               </div>
 
-                              <div className="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-2.5">
+                              <div className="mt-3.5 flex items-center justify-between border-t border-slate-800/80 pt-3">
                                 <div>
                                   <span className="text-[10px] font-semibold uppercase text-slate-500">
-                                    Valor UnitÃ¡rio
+                                    Valor Unitário
                                   </span>
                                   <p className="font-mono text-base font-black text-emerald-400">
                                     {formatBRL(item.price || 0)}
@@ -964,7 +973,7 @@ export function TreatmentItems({
                                 <Button
                                   size="sm"
                                   onClick={(e) => handleQuickAdd(item, e)}
-                                  className="h-8 gap-1 rounded-xl bg-indigo-600/90 px-3 text-xs font-bold text-white shadow-md hover:bg-indigo-500 active:scale-95"
+                                  className="h-8 gap-1.5 rounded-xl bg-indigo-600/90 px-3 text-xs font-bold text-white shadow-md hover:bg-indigo-500 active:scale-95 transition-all"
                                   title="Adicionar 1 unidade direto ao carrinho"
                                 >
                                   <Plus className="h-3.5 w-3.5" />
@@ -989,50 +998,60 @@ export function TreatmentItems({
               </ScrollArea>
 
               {/* DOCKED BOTTOM CUSTOMIZER BAR */}
-              <div className="z-20 flex-none border-t border-slate-800 bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-xl">
+              <div className="z-20 flex-none border-t border-slate-800 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
                 <Form {...form}>
                   <form
                     ref={formRef}
                     onSubmit={form.handleSubmit(onSubmitCustomizer)}
-                    className="mx-auto flex flex-col gap-2.5"
+                    className="flex flex-col gap-3"
                   >
                     {/* Selected Item Notification Header */}
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2.5">
                       <div className="flex items-center gap-2.5 truncate">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
-                          <Box className="h-4 w-4" />
+                        <div className={cn(
+                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                          editingItemId ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/20 text-indigo-400'
+                        )}>
+                          {editingItemId ? <Wrench className="h-4 w-4" /> : <Box className="h-4 w-4" />}
                         </div>
                         <span className="truncate text-xs font-bold text-slate-200 sm:text-sm">
                           {editingItemId
                             ? `Editando Item do Carrinho: ${treatment?.items?.find((i) => i.id === editingItemId)?.items?.name || ''}`
                             : items?.find((i: any) => i.id === form.watch('item'))?.name ||
-                              'Selecione um item no catÃ¡logo acima ou clique em "+ Adicionar"'}
+                              'Selecione um item no catálogo acima para personalizar ou clique em "+ Adicionar"'}
                         </span>
                       </div>
 
                       {form.watch('item') && (
-                        <span className="shrink-0 font-mono text-xs font-bold text-emerald-400">
-                          Unit: {formatBRL(salesValue)}
-                        </span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-mono text-xs font-bold text-slate-400">
+                            Unitário: <strong className="text-emerald-400">{formatBRL(salesValue)}</strong>
+                          </span>
+                          {itemDiscount > 0 && (
+                            <span className="font-mono text-xs font-bold text-rose-400">
+                              Total com Desc: {formatBRL(finalSalesValue)}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
                     {/* Inputs Row */}
-                    <div className="grid grid-cols-2 items-end gap-2.5 sm:grid-cols-12">
+                    <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-12">
                       {/* Observations */}
-                      <div className="col-span-2 sm:col-span-4">
+                      <div className="col-span-2 sm:col-span-5">
                         <FormField
                           control={form.control}
                           name="observations"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                ObservaÃ§Ãµes / Detalhes
+                                Observações / Detalhes
                               </FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="Ex: Troca na garantia, nÂ° sÃ©rie..."
-                                  className="h-10 rounded-xl border-slate-800 bg-slate-950 text-xs text-slate-100 focus:border-indigo-500"
+                                  placeholder="Ex: Troca na garantia, nº de série, especificações..."
+                                  className="h-11 rounded-xl border-slate-800 bg-slate-950 text-xs text-slate-100 placeholder:text-slate-600 focus:border-indigo-500"
                                   {...field}
                                   value={field.value || ''}
                                 />
@@ -1043,7 +1062,7 @@ export function TreatmentItems({
                       </div>
 
                       {/* Quantity Stepper */}
-                      <div className="col-span-1 sm:col-span-3">
+                      <div className="col-span-1 sm:col-span-2">
                         <FormField
                           control={form.control}
                           name="quantity"
@@ -1052,13 +1071,13 @@ export function TreatmentItems({
                               <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                 Quantidade
                               </FormLabel>
-                              <div className="flex h-10 items-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                              <div className="flex h-11 items-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
                                 <button
                                   type="button"
                                   onClick={() => adjustQuantity(-1)}
-                                  className="flex h-full w-9 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white"
+                                  className="flex h-full w-10 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                                 >
-                                  <Minus className="h-3.5 w-3.5" />
+                                  <Minus className="h-4 w-4" />
                                 </button>
                                 <Input
                                   id="customizer-qty-input"
@@ -1076,9 +1095,9 @@ export function TreatmentItems({
                                 <button
                                   type="button"
                                   onClick={() => adjustQuantity(1)}
-                                  className="flex h-full w-9 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white"
+                                  className="flex h-full w-10 items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                                 >
-                                  <Plus className="h-3.5 w-3.5" />
+                                  <Plus className="h-4 w-4" />
                                 </button>
                               </div>
                             </FormItem>
@@ -1100,13 +1119,13 @@ export function TreatmentItems({
                                 <FormControl>
                                   <div className="relative">
                                     <Input
-                                      className="h-10 rounded-xl border-slate-800 bg-slate-950 pr-7 text-center font-mono text-sm font-bold text-rose-400 focus:border-rose-500"
+                                      className="h-11 rounded-xl border-slate-800 bg-slate-950 pr-8 text-center font-mono text-sm font-bold text-rose-400 focus:border-rose-500"
                                       type="number"
                                       {...field}
                                       onChange={(e) => onDiscountChange(e.target.value)}
                                       value={discountInputDisplay}
                                     />
-                                    <Percent className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                                    <Percent className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                                   </div>
                                 </FormControl>
                               </FormItem>
@@ -1121,13 +1140,13 @@ export function TreatmentItems({
                           type="submit"
                           disabled={!form.watch('item')}
                           className={cn(
-                            'h-10 flex-1 rounded-xl text-xs font-bold text-white shadow-lg transition-all active:scale-[0.98]',
+                            'h-11 flex-1 rounded-xl text-xs font-bold text-white shadow-lg transition-all active:scale-[0.98]',
                             editingItemId
                               ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
                               : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20',
                           )}
                         >
-                          {editingItemId ? 'SALVAR ALTERAÃ‡ÃƒO' : 'CONFIRMAR ITEM'}
+                          {editingItemId ? 'SALVAR ALTERAÇÃO' : 'CONFIRMAR ITEM'}
                         </Button>
 
                         {editingItemId && (
@@ -1135,8 +1154,8 @@ export function TreatmentItems({
                             type="button"
                             variant="outline"
                             onClick={resetCustomizer}
-                            className="h-10 border-slate-800 bg-slate-900 px-3 text-slate-400 hover:text-white"
-                            title="Cancelar ediÃ§Ã£o"
+                            className="h-11 border-slate-800 bg-slate-900 px-3 text-slate-400 hover:text-white"
+                            title="Cancelar edição"
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -1151,13 +1170,13 @@ export function TreatmentItems({
             {/* RIGHT COLUMN: CART & SALE SUMMARY */}
             <div
               className={cn(
-                'z-20 flex h-full w-full flex-col border-l border-slate-800 bg-slate-900 shadow-2xl md:w-[38%] lg:w-[33%] xl:w-[28%]',
+                'z-20 flex h-full w-full flex-col border-l border-slate-800 bg-slate-900 shadow-2xl md:w-[380px] lg:w-[420px] 2xl:w-[460px] shrink-0',
                 mobileTab === 'cart' ? 'flex' : 'hidden md:flex',
               )}
             >
               {/* Cart Header */}
-              <div className="flex flex-none items-center justify-between border-b border-slate-800 bg-slate-950/80 p-3.5">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-none items-center justify-between border-b border-slate-800 bg-slate-950/80 px-5 py-4">
+                <div className="flex items-center gap-2.5">
                   <ShoppingCart className="h-5 w-5 text-emerald-400" />
                   <h3 className="text-sm font-bold text-white">Carrinho da O.S.</h3>
                 </div>
@@ -1167,8 +1186,8 @@ export function TreatmentItems({
               </div>
 
               {/* Cart Items List */}
-              <ScrollArea className="flex-1 p-3">
-                <div className="space-y-2.5">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
                   {(treatment.items || []).map((item) => {
                     const itemSubtotal =
                       Number(item.quantity || 1) * Number(item.salesValue || 0) -
@@ -1179,30 +1198,30 @@ export function TreatmentItems({
                         key={item.id}
                         onClick={() => onCartItemSelect(item)}
                         className={cn(
-                          'group relative cursor-pointer rounded-xl border p-3 transition-all duration-200',
+                          'group relative cursor-pointer rounded-2xl border p-3.5 transition-all duration-200',
                           editingItemId === item.id
                             ? 'border-amber-500/80 bg-amber-950/25 ring-1 ring-amber-500'
                             : 'border-slate-800/90 bg-slate-950/80 hover:border-slate-700 hover:bg-slate-950',
                         )}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2.5 truncate">
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex items-start gap-3 truncate">
                             <div
                               className={cn(
-                                'mt-0.5 rounded-lg p-1.5 text-xs',
+                                'mt-0.5 rounded-lg p-2 text-xs shrink-0',
                                 item.items?.isItem
                                   ? 'bg-blue-500/15 text-blue-400'
                                   : 'bg-amber-500/15 text-amber-400',
                               )}
                             >
-                              {item.items?.isItem ? <Box className="h-3.5 w-3.5" /> : <Wrench className="h-3.5 w-3.5" />}
+                              {item.items?.isItem ? <Box className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
                             </div>
                             <div className="flex flex-col truncate">
-                              <span className="truncate text-xs font-bold text-slate-100" title={item.items?.name}>
+                              <span className="truncate text-sm font-bold text-slate-100" title={item.items?.name}>
                                 {item.items?.name}
                               </span>
                               {item.observations && (
-                                <span className="truncate text-[11px] text-slate-400" title={item.observations}>
+                                <span className="truncate text-xs text-slate-400 mt-0.5" title={item.observations}>
                                   Obs: {item.observations}
                                 </span>
                               )}
@@ -1214,7 +1233,7 @@ export function TreatmentItems({
                               e.stopPropagation()
                               handleCartItemDelete(item.id)
                             }}
-                            className="p-1 text-slate-500 transition-colors hover:text-rose-400"
+                            className="p-1.5 text-slate-500 transition-colors hover:text-rose-400"
                             title="Remover item"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1222,37 +1241,40 @@ export function TreatmentItems({
                         </div>
 
                         {/* Cart Item Row: Inline Stepper & Line Total */}
-                        <div className="mt-2.5 flex items-center justify-between border-t border-slate-900 pt-2">
+                        <div className="mt-3 flex items-center justify-between border-t border-slate-900 pt-2.5">
                           {/* Stepper directly inside cart item */}
-                          <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-1.5 py-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
                               type="button"
                               onClick={() => handleCartQuantityChange(item, -1)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white"
+                              className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                               title="Diminuir"
                             >
-                              <Minus className="h-3 w-3" />
+                              <Minus className="h-3.5 w-3.5" />
                             </button>
-                            <span className="min-w-[20px] text-center font-mono text-xs font-bold text-slate-200">
+                            <span className="min-w-[24px] text-center font-mono text-xs font-bold text-slate-200">
                               {item.quantity}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCartQuantityChange(item, 1)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-800 hover:text-white"
+                              className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                               title="Aumentar"
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>
 
                           <div className="text-right">
                             {Number(item.discount || 0) > 0 && (
-                              <span className="block text-[10px] font-medium text-rose-400">
+                              <span className="block text-[10px] font-semibold text-rose-400">
                                 -{formatBRL(item.discount || 0)}
                               </span>
                             )}
-                            <span className="font-mono text-sm font-black text-emerald-400">
+                            <span className="font-mono text-base font-black text-emerald-400">
                               {Number(item.salesValue || 0) === 0 ? (
                                 <span className="text-xs text-blue-400 font-bold">CONTRATO</span>
                               ) : (
@@ -1266,19 +1288,19 @@ export function TreatmentItems({
                   })}
 
                   {treatment.items?.length === 0 && (
-                    <div className="flex h-44 flex-col items-center justify-center text-center text-slate-500">
-                      <ShoppingCart className="mb-2 h-8 w-8 opacity-30" />
-                      <p className="text-xs font-bold text-slate-400">Carrinho Vazio</p>
-                      <p className="text-[11px] text-slate-600">Selecione itens no catÃ¡logo ao lado para adicionar.</p>
+                    <div className="flex h-56 flex-col items-center justify-center text-center text-slate-500">
+                      <ShoppingCart className="mb-2.5 h-10 w-10 opacity-30" />
+                      <p className="text-sm font-bold text-slate-400">Carrinho Vazio</p>
+                      <p className="text-xs text-slate-600 mt-1">Selecione itens no catálogo ao lado para adicionar à O.S.</p>
                     </div>
                   )}
                 </div>
               </ScrollArea>
 
               {/* Cart Sticky Breakdown & Advance Button */}
-              <div className="flex-none space-y-3 border-t border-slate-800 bg-slate-950 p-4 shadow-2xl">
+              <div className="flex-none space-y-3.5 border-t border-slate-800 bg-slate-950 p-5 shadow-2xl">
                 {isFinanceActive && (
-                  <div className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 text-xs">
+                  <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3.5 text-xs">
                     <div className="flex items-center justify-between text-slate-400">
                       <span>Subtotal Bruto:</span>
                       <span className="font-mono">{formatBRL(totalGross)}</span>
@@ -1289,9 +1311,9 @@ export function TreatmentItems({
                         <span className="font-mono">-{formatBRL(totalDiscount)}</span>
                       </div>
                     )}
-                    <div className="border-t border-slate-800 pt-1.5 flex items-center justify-between text-sm font-black text-white">
+                    <div className="border-t border-slate-800 pt-2 flex items-center justify-between text-sm font-black text-white">
                       <span>Total a Pagar:</span>
-                      <span className="font-mono text-lg text-emerald-400">
+                      <span className="font-mono text-xl font-black text-emerald-400">
                         {formatBRL(subtotal)}
                       </span>
                     </div>
@@ -1301,11 +1323,11 @@ export function TreatmentItems({
                 <Button
                   onClick={() => setCurrentStep('payment')}
                   disabled={treatment.items?.length === 0}
-                  className="h-12 w-full gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white shadow-xl shadow-emerald-600/25 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98]"
+                  className="h-14 w-full gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-black text-white shadow-xl shadow-emerald-600/25 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98]"
                 >
-                  <CreditCard className="h-4 w-4" />
-                  <span>AVANÃ‡AR PARA O PAGAMENTO</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <CreditCard className="h-5 w-5" />
+                  <span>AVANÇAR PARA O PAGAMENTO</span>
+                  <ArrowRight className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -1317,7 +1339,7 @@ export function TreatmentItems({
       {currentStep === 'payment' && (
         <div className="flex flex-1 flex-col overflow-hidden bg-slate-950">
           {/* Hero Financial Banner */}
-          <div className="flex-none border-b border-slate-800 bg-slate-900/80 p-4 sm:p-6 backdrop-blur-md">
+          <div className="flex-none border-b border-slate-800 bg-slate-900/80 p-5 sm:p-7 backdrop-blur-md">
             <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Button
@@ -1327,7 +1349,7 @@ export function TreatmentItems({
                   className="mb-2 h-8 gap-1.5 text-xs text-slate-400 hover:text-white"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
-                  Voltar para PeÃ§as & ServiÃ§os
+                  Voltar para Peças & Serviços
                 </Button>
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-black text-white sm:text-2xl">
@@ -1342,7 +1364,7 @@ export function TreatmentItems({
               </div>
 
               {/* Progress & Remaining Card */}
-              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-inner">
+              <div className="flex flex-wrap items-center gap-5 rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-inner">
                 <div>
                   <span className="text-[10px] font-bold uppercase text-slate-500">Total O.S.</span>
                   <p className="font-mono text-base font-bold text-slate-300">{formatBRL(subtotal)}</p>
@@ -1370,8 +1392,8 @@ export function TreatmentItems({
             </div>
 
             {/* Visual Progress Bar */}
-            <div className="mx-auto mt-4 max-w-5xl">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+            <div className="mx-auto mt-5 max-w-5xl">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
                 <div
                   className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
                   style={{ width: `${progressPercentage}%` }}
@@ -1381,18 +1403,18 @@ export function TreatmentItems({
           </div>
 
           {/* Body: Split Layout (Payment Form & Registered List) */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-12">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+            <div className="mx-auto grid max-w-5xl grid-cols-1 gap-7 md:grid-cols-12">
               {/* LEFT: PAYMENT REGISTRATION FORM */}
               <div className="space-y-4 md:col-span-6">
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
                   <h4 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-300">
                     <Wallet className="h-4 w-4 text-indigo-400" />
                     Registrar Forma de Pagamento
                   </h4>
 
                   {changeAlert !== null && (
-                    <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 p-3 text-xs font-bold text-amber-300">
+                    <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 p-3.5 text-xs font-bold text-amber-300">
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       <span>TROCO A DEVOLVER: {formatBRL(changeAlert)}</span>
                     </div>
@@ -1411,13 +1433,13 @@ export function TreatmentItems({
                         disabled={isFullyPaid}
                       >
                         <SelectTrigger className="h-11 border-slate-800 bg-slate-950 text-sm text-slate-100 focus:border-indigo-500">
-                          <SelectValue placeholder="Selecione o mÃ©todo de pagamento..." />
+                          <SelectValue placeholder="Selecione o método de pagamento..." />
                         </SelectTrigger>
                         <SelectContent className="border-slate-800 bg-slate-900 text-slate-100">
                           {availablePayments.map((p) => (
                             <SelectItem key={p.id} value={p.id} className="py-2.5 text-sm hover:bg-slate-800">
                               <div className="flex items-center gap-2.5">
-                                {p.name.toLowerCase().includes('crÃ©dito') ? (
+                                {p.name.toLowerCase().includes('crédito') ? (
                                   <CreditCard className="h-4 w-4 text-blue-400" />
                                 ) : p.name.toLowerCase().includes('pix') ? (
                                   <QrCode className="h-4 w-4 text-teal-400" />
@@ -1495,7 +1517,7 @@ export function TreatmentItems({
 
               {/* RIGHT: REGISTERED PAYMENTS LIST */}
               <div className="space-y-4 md:col-span-6">
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
                   <h4 className="mb-4 flex items-center justify-between text-sm font-bold uppercase tracking-wider text-slate-300">
                     <span className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4 text-emerald-400" />
@@ -1512,16 +1534,16 @@ export function TreatmentItems({
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 shadow-sm"
+                          className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/80 p-4 shadow-sm"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-slate-800 p-2 text-slate-300">
+                            <div className="rounded-lg bg-slate-800 p-2.5 text-slate-300">
                               <Banknote className="h-4 w-4" />
                             </div>
                             <div>
                               <p className="text-sm font-bold text-slate-100">{method?.name || 'Pagamento'}</p>
                               <span className="text-xs text-slate-400">
-                                {item.installments > 1 ? `${item.installments}x de ${formatBRL(item.amount / item.installments)}` : 'Ã€ vista'}
+                                {item.installments > 1 ? `${item.installments}x de ${formatBRL(item.amount / item.installments)}` : 'À vista'}
                               </span>
                             </div>
                           </div>
@@ -1532,7 +1554,7 @@ export function TreatmentItems({
                             </span>
                             <button
                               onClick={() => handleRemovePayment(item.id)}
-                              className="p-1 text-slate-500 hover:text-rose-400"
+                              className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
                               title="Remover pagamento"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1543,10 +1565,10 @@ export function TreatmentItems({
                     })}
 
                     {paymentMethodsData.length === 0 && (
-                      <div className="flex h-36 flex-col items-center justify-center text-center text-slate-500">
+                      <div className="flex h-40 flex-col items-center justify-center text-center text-slate-500">
                         <Wallet className="mb-2 h-8 w-8 opacity-30" />
                         <p className="text-xs font-bold text-slate-400">Nenhum pagamento registrado</p>
-                        <p className="text-[11px] text-slate-600">Selecione o mÃ©todo ao lado para registrar o recebimento.</p>
+                        <p className="text-[11px] text-slate-600 mt-1">Selecione o método ao lado para registrar o recebimento.</p>
                       </div>
                     )}
                   </div>
@@ -1556,7 +1578,7 @@ export function TreatmentItems({
           </div>
 
           {/* Checkout Footer Bar */}
-          <footer className="flex-none border-t border-slate-800 bg-slate-950 p-4 shadow-2xl">
+          <footer className="flex-none border-t border-slate-800 bg-slate-950 p-5 shadow-2xl">
             <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Button
                 variant="outline"
@@ -1570,7 +1592,7 @@ export function TreatmentItems({
               <Button
                 onClick={handleFinishSale}
                 disabled={isFinishing || (isFinanceActive && remainingAmount > 0.01)}
-                className="h-14 gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-base font-black text-white shadow-xl shadow-emerald-600/30 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98] disabled:opacity-50"
+                className="h-14 gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-base font-black text-white shadow-xl shadow-emerald-600/30 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98] disabled:opacity-50"
               >
                 <CheckCircle2 className="h-5 w-5" />
                 {isFinishing ? 'FINALIZANDO...' : 'CONCLUIR E FINALIZAR ATENDIMENTO'}
