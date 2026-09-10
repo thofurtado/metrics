@@ -27,6 +27,11 @@ export interface UpdateItemBody {
   measureUnit?: 'UNITARY' | 'FRACTIONAL'
   show_on_menu?: boolean | null
   is_priority?: boolean | null
+  is_composite?: boolean
+  compositions?: {
+    supply_id: string
+    quantity: number
+  }[]
 }
 
 export async function updateItem({ id, ...body }: UpdateItemBody) {

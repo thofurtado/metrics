@@ -1,8 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { HelpCircle, Layers, Plus, ReceiptText, Sliders, Trash, Zap } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import {
+  AlertCircle,
+  Barcode,
+  Camera,
+  ChefHat,
+  HelpCircle,
+  Image as ImageIcon,
+  Layers,
+  Plus,
+  ReceiptText,
+  Sliders,
+  Trash2,
+  Upload,
+  Utensils,
+  X,
+  Zap,
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -12,8 +28,10 @@ import { createCategory } from '@/api/create-category'
 import { createProduct } from '@/api/create-product'
 import { getCategories } from '@/api/get-categories'
 import { getNextProductId } from '@/api/get-next-product-id'
+import { getSupplies } from '@/api/get-supplies'
 import { getSubcategories } from '@/api/subcategories'
 import { updateItem } from '@/api/update-item'
+import { uploadFileProduct } from '@/api/upload-file'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -51,26 +69,39 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { API_BASE_URL } from '@/lib/axios'
 import { cn } from '@/lib/utils'
 
 const productSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
+  name: z.string().min(1, 'Nome do produto é obrigatório'),
   description: z.string().optional(),
   category: z.string().optional(),
   subcategory_id: z.string().optional(),
 
-  // Financial
+  // Financeiro
   cost: z.coerce.number().min(0).optional().default(0),
-  price: z.coerce.number().min(0).optional().default(0),
+  price: z.coerce.number().min(0, 'Preço de venda é obrigatório').default(0),
 
-  // Stock
+  // Estoque
   stock: z.coerce.number().optional().default(0),
   min_stock: z.coerce.number().optional().default(0),
 
-  // Barcode
-  barcode: z.string().regex(/^\d*$/, 'Apenas números').optional(),
+  // Identificação e Códigos
+  barcode: z.string().regex(/^\d*$/, 'Apenas números').optional().or(z.literal('')),
+  display_id: z.preprocess((val) => {
+    if (!val || val === '' || val === 'Auto') return undefined
+    const parsed = Number(val)
+    return isNaN(parsed) ? undefined : parsed
+  }, z.number().optional()),
 
-  // Fiscal Details (NFC-e / Tributação)
+  measureUnit: z.enum(['UNITARY', 'FRACTIONAL']).default('UNITARY'),
+
+  // Status & Operação
+  active: z.boolean().default(true),
+  show_on_menu: z.boolean().default(true),
+  is_priority: z.boolean().default(false),
+
+  // Dados Fiscais (NFC-e / SAT)
   ncm: z.string().regex(/^\d*$/, 'Apenas números (8 dígitos)').optional().or(z.literal('')),
   cest: z.string().regex(/^\d*$/, 'Apenas números (7 dígitos)').optional().or(z.literal('')),
   cfop: z.string().regex(/^\d*$/, 'Apenas números (4 dígitos)').optional().or(z.literal('')),
@@ -82,17 +113,14 @@ const productSchema = z.object({
   cst_cofins: z.string().optional().or(z.literal('')),
   aliquota_cofins: z.coerce.number().optional().default(0),
 
-  active: z.boolean().default(true),
-  show_on_menu: z.boolean().default(true),
-  is_priority: z.boolean().default(false),
-
-  display_id: z.preprocess((val) => {
-    if (!val || val === '' || val === 'Auto') return undefined
-    const parsed = Number(val)
-    return isNaN(parsed) ? undefined : parsed
-  }, z.number().optional()),
-
-  measureUnit: z.enum(['UNITARY', 'FRACTIONAL']).default('UNITARY'),
+  // Ficha Técnica (Composição)
+  is_composite: z.boolean().default(false),
+  compositions: z.array(
+    z.object({
+      supply_id: z.string().min(1, 'Selecione o insumo'),
+      quantity: z.coerce.number().min(0.0001, 'Qtd deve ser maior que 0'),
+    })
+  ).optional(),
 })
 
 type ProductSchema = z.infer<typeof productSchema>
@@ -105,15 +133,30 @@ interface ProductFormProps {
 export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const queryClient = useQueryClient()
   const isEdit = !!initialData
+  const [activeTab, setActiveTab] = useState('general')
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
-  const [profit, setProfit] = useState(0)
-  const [margin, setMargin] = useState(0)
-  const [activeTab, setActiveTab] = useState('general')
-  const [selectedComplementGroupIds, setSelectedComplementGroupIds] = useState<string[]>(
-    initialData?.complementGroups?.map((cg: any) => cg.group_id || cg.group?.id) || []
-  )
 
+  // Foto do Produto
+  const [productImage, setProductImage] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const existingImageUrl =
+    initialData?.product?.image_url || initialData?.image_url || null
+
+  // Grupos de adicionais selecionados
+  const [selectedComplementGroupIds, setSelectedComplementGroupIds] = useState<string[]>(() => {
+    if (initialData?.complementGroups && Array.isArray(initialData.complementGroups)) {
+      return initialData.complementGroups.map((cg: any) => cg.group_id || cg.group?.id || cg.id)
+    }
+    if (initialData?.product?.complementGroups && Array.isArray(initialData.product.complementGroups)) {
+      return initialData.product.complementGroups.map((cg: any) => cg.group_id || cg.group?.id || cg.id)
+    }
+    return []
+  })
+
+  // Queries
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
@@ -124,94 +167,156 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     queryFn: getComplementGroups,
   })
 
+  const { data: suppliesData } = useQuery({
+    queryKey: ['supplies-all'],
+    queryFn: () => getSupplies({ pageIndex: 1, perPage: 500 }),
+  })
+
+  const supplies = suppliesData?.data?.supplies || []
+  const complementGroups = complementGroupsData?.groups || []
+
+  // Sincroniza complementos caso venham da query de complementos
+  useEffect(() => {
+    if (isEdit && complementGroups.length > 0 && selectedComplementGroupIds.length === 0) {
+      const prodId = initialData?.product?.id || initialData?.id
+      if (prodId) {
+        const matchingGroupIds = complementGroups
+          .filter((g) => g.products?.some((p: any) => p.product_id === prodId))
+          .map((g) => g.id)
+        if (matchingGroupIds.length > 0) {
+          setSelectedComplementGroupIds(matchingGroupIds)
+        }
+      }
+    }
+  }, [complementGroups, initialData, isEdit])
+
+  // Inicialização de composições
+  const initialCompositions = useMemo(() => {
+    const rawComps = initialData?.product?.compositions || initialData?.compositions || []
+    if (Array.isArray(rawComps) && rawComps.length > 0) {
+      return rawComps.map((c: any) => ({
+        supply_id: c.supply?.id || c.supply_id || '',
+        quantity: c.quantity || 1,
+      }))
+    }
+    return []
+  }, [initialData])
+
   const form = useForm<ProductSchema>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: initialData?.name ?? '',
-      description: initialData?.description ?? '',
+      name: initialData?.name ?? initialData?.product?.name ?? '',
+      description: initialData?.description ?? initialData?.product?.description ?? '',
       category:
         initialData?.category?.id ??
         initialData?.category_id ??
+        initialData?.product?.category_id ??
         (typeof initialData?.category === 'string' ? initialData.category : ''),
-      subcategory_id: initialData?.subcategory_id ?? initialData?.subcategory?.id ?? '',
-      cost: initialData?.cost ?? 0,
-      price: initialData?.price ?? 0,
-      stock: initialData?.stock ?? 0,
-      min_stock: initialData?.min_stock ?? 0,
-      barcode: initialData?.barcode ?? '',
-      ncm: initialData?.ncm ?? '',
-      cest: initialData?.cest ?? '',
-      cfop: initialData?.cfop ?? '',
-      csosn: initialData?.csosn ?? '',
-      cst_icms: initialData?.cst_icms ?? '',
-      origem: initialData?.origem ?? 0,
-      cst_pis: initialData?.cst_pis ?? '',
-      aliquota_pis: initialData?.aliquota_pis ?? 0,
-      cst_cofins: initialData?.cst_cofins ?? '',
-      aliquota_cofins: initialData?.aliquota_cofins ?? 0,
-      active: initialData?.active ?? true,
-      show_on_menu: initialData?.show_on_menu ?? initialData?.product?.show_on_menu ?? true,
-      is_priority: initialData?.is_priority ?? false,
-      display_id: initialData?.display_id ?? undefined,
-      measureUnit: initialData?.measureUnit ?? 'UNITARY',
+      subcategory_id:
+        initialData?.subcategory_id ??
+        initialData?.subcategory?.id ??
+        initialData?.product?.subcategory_id ??
+        '',
+      cost: initialData?.cost ?? initialData?.product?.cost ?? 0,
+      price: initialData?.price ?? initialData?.product?.price ?? 0,
+      stock: initialData?.stock ?? initialData?.product?.stock ?? 0,
+      min_stock: initialData?.min_stock ?? initialData?.product?.min_stock ?? 0,
+      barcode: initialData?.barcode ?? initialData?.product?.barcode ?? '',
+      display_id: initialData?.display_id ?? initialData?.product?.display_id ?? undefined,
+      measureUnit:
+        initialData?.measureUnit ?? initialData?.product?.measureUnit ?? 'UNITARY',
+
+      active: initialData?.active ?? initialData?.product?.active ?? true,
+      show_on_menu:
+        initialData?.show_on_menu ??
+        initialData?.product?.show_on_menu ??
+        true,
+      is_priority:
+        initialData?.is_priority ?? initialData?.product?.is_priority ?? false,
+
+      // Fiscais
+      ncm: initialData?.ncm ?? initialData?.product?.ncm ?? '',
+      cest: initialData?.cest ?? initialData?.product?.cest ?? '',
+      cfop: initialData?.cfop ?? initialData?.product?.cfop ?? '',
+      csosn: initialData?.csosn ?? initialData?.product?.csosn ?? '',
+      cst_icms: initialData?.cst_icms ?? initialData?.product?.cst_icms ?? '',
+      origem: initialData?.origem ?? initialData?.product?.origem ?? 0,
+      cst_pis: initialData?.cst_pis ?? initialData?.product?.cst_pis ?? '',
+      aliquota_pis: initialData?.aliquota_pis ?? initialData?.product?.aliquota_pis ?? 0,
+      cst_cofins: initialData?.cst_cofins ?? initialData?.product?.cst_cofins ?? '',
+      aliquota_cofins: initialData?.aliquota_cofins ?? initialData?.product?.aliquota_cofins ?? 0,
+
+      is_composite:
+        initialData?.is_composite ??
+        initialData?.product?.is_composite ??
+        initialCompositions.length > 0,
+      compositions: initialCompositions,
     },
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'compositions',
   })
 
   const selectedCategory = form.watch('category')
   const watchedCsosn = form.watch('csosn')
   const watchedCest = form.watch('cest')
+  const watchedPrice = form.watch('price') || 0
+  const watchedCost = form.watch('cost') || 0
+  const watchedCompositions = form.watch('compositions') || []
 
+  // Subcategorias filtradas
   const { data: subcategoriesData } = useQuery({
     queryKey: ['subcategories', selectedCategory],
     queryFn: () => getSubcategories(selectedCategory || undefined),
     enabled: !!selectedCategory,
   })
 
-  const { mutateAsync: createCategoryFn } = useMutation({
-    mutationFn: createCategory,
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] })
-      setIsNewCategoryOpen(false)
-      setNewCategoryName('')
-      toast.success('Categoria criada!')
-      if (data?.category?.id) {
-        form.setValue('category', data.category.id)
-      } else if (data?.id) {
-        form.setValue('category', data.id)
-      }
-    },
-    onError: () => toast.error('Erro ao criar categoria.'),
-  })
+  // Cálculo automático do CMV e da Margem
+  const calculatedCMV = useMemo(() => {
+    if (!watchedCompositions || watchedCompositions.length === 0) return 0
+    return watchedCompositions.reduce((acc, curr) => {
+      if (!curr.supply_id) return acc
+      const supply = supplies.find((s) => s.id === curr.supply_id)
+      return acc + (supply?.cost ?? 0) * (Number(curr.quantity) || 0)
+    }, 0)
+  }, [watchedCompositions, supplies])
 
-  const { mutateAsync: createProductFn } = useMutation({
-    mutationFn: createProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      onSuccess?.()
-    },
-  })
-
-  const { mutateAsync: updateItemFn } = useMutation({
-    mutationFn: updateItem,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['items'] })
-      onSuccess?.()
-    },
-  })
-
+  // Se houver insumos na receita, sincroniza o Custo da Aba Geral com o CMV calculado
   useEffect(() => {
-    const cost = form.getValues('cost') || 0
-    const price = form.getValues('price') || 0
-    const calculatedProfit = price - cost
-    setProfit(calculatedProfit)
-    setMargin(cost > 0 ? (calculatedProfit / cost) * 100 : 0)
-  }, [form])
+    if (watchedCompositions.length > 0 && calculatedCMV > 0) {
+      form.setValue('cost', Number(calculatedCMV.toFixed(2)))
+      form.setValue('is_composite', true)
+    }
+  }, [calculatedCMV, watchedCompositions.length, form])
 
-  async function handleCreateCategory() {
-    if (!newCategoryName.trim()) return
-    await createCategoryFn({ name: newCategoryName })
+  const effectiveCost = watchedCompositions.length > 0 && calculatedCMV > 0 ? calculatedCMV : watchedCost
+  const profit = watchedPrice - effectiveCost
+  const margin = effectiveCost > 0 ? (profit / effectiveCost) * 100 : 0
+
+  // Tratamento da imagem
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('A imagem deve ter no máximo 5MB')
+        return
+      }
+      setProductImage(file)
+      setImagePreviewUrl(URL.createObjectURL(file))
+    }
+  }
+
+  const handleRemovePhoto = () => {
+    setProductImage(null)
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl)
+    }
+    setImagePreviewUrl(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   // Presets fiscais inteligentes do Simples Nacional
@@ -265,17 +370,69 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
     toast.info('Campos fiscais limpos.')
   }
 
+  // Criação de categoria inline
+  const { mutateAsync: createCategoryFn } = useMutation({
+    mutationFn: createCategory,
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+      setIsNewCategoryOpen(false)
+      setNewCategoryName('')
+      toast.success('Categoria criada!')
+      if (data?.category?.id) {
+        form.setValue('category', data.category.id)
+      } else if (data?.id) {
+        form.setValue('category', data.id)
+      }
+    },
+    onError: () => toast.error('Erro ao criar categoria.'),
+  })
+
+  async function handleCreateCategory() {
+    if (!newCategoryName.trim()) return
+    await createCategoryFn({ name: newCategoryName })
+  }
+
+  // Mutations de criação e atualização
+  const { mutateAsync: createProductFn } = useMutation({
+    mutationFn: createProduct,
+  })
+
+  const { mutateAsync: updateItemFn } = useMutation({
+    mutationFn: updateItem,
+  })
+
   async function onSubmit(data: ProductSchema) {
     try {
-      let savedProductId = initialData?.id
+      let savedProductId = initialData?.product?.id || initialData?.id
+      const validCompositions = (data.compositions || []).filter(
+        (c) => c.supply_id && Number(c.quantity) > 0
+      )
+      const isComposite = validCompositions.length > 0
+
+      const finalCost = isComposite ? calculatedCMV : data.cost || 0
+
       if (isEdit) {
         await updateItemFn({
-          id: initialData.id,
+          id: savedProductId,
           type: 'PRODUCT',
-          ...data,
+          name: data.name,
+          description: data.description || null,
+          category: data.category || null,
           subcategory_id: data.subcategory_id || null,
-          is_priority: data.is_priority,
+          cost: finalCost,
+          price: data.price || 0,
+          stock: data.stock,
+          min_stock: data.min_stock,
+          barcode: data.barcode || null,
+          display_id: data.display_id,
+          measureUnit: data.measureUnit,
+          active: data.active,
           show_on_menu: data.show_on_menu,
+          is_priority: data.is_priority,
+          is_composite: isComposite,
+          compositions: validCompositions,
+
+          // Fiscais
           ncm: data.ncm || null,
           cest: data.cest || null,
           cfop: data.cfop || null,
@@ -287,15 +444,27 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           cst_cofins: data.cst_cofins || null,
           aliquota_cofins: data.aliquota_cofins || 0,
         } as any)
-        toast.success('Produto atualizado!')
+        toast.success('Produto atualizado com sucesso!')
       } else {
         const createRes = await createProductFn({
           name: data.name,
           description: data.description,
           price: data.price || 0,
+          cost: finalCost,
           stock: data.stock,
           min_stock: data.min_stock,
-          barcode: data.barcode,
+          barcode: data.barcode || null,
+          display_id: data.display_id,
+          measureUnit: data.measureUnit,
+          category: data.category || null,
+          subcategory_id: data.subcategory_id || null,
+          active: data.active,
+          show_on_menu: data.show_on_menu,
+          is_priority: data.is_priority,
+          is_composite: isComposite,
+          compositions: validCompositions,
+
+          // Fiscais
           ncm: data.ncm || null,
           cest: data.cest || null,
           cfop: data.cfop || null,
@@ -306,30 +475,53 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           aliquota_pis: data.aliquota_pis || 0,
           cst_cofins: data.cst_cofins || null,
           aliquota_cofins: data.aliquota_cofins || 0,
-          category: data.category,
-          subcategory_id: data.subcategory_id || null,
-          is_priority: data.is_priority,
-          active: data.active,
-          show_on_menu: data.show_on_menu,
-          display_id: data.display_id,
-          measureUnit: data.measureUnit,
-          cost: data.cost || 0,
         })
-        savedProductId = createRes?.data?.product?.id
-        toast.success('Produto cadastrado!')
+        savedProductId = createRes?.data?.product?.id || createRes?.data?.id
+        toast.success('Produto cadastrado com sucesso!')
       }
 
+      // Upload de imagem se foi selecionado um novo arquivo
+      if (productImage && savedProductId) {
+        try {
+          await uploadFileProduct(savedProductId, productImage)
+          toast.success('Foto do produto enviada!')
+        } catch (imgErr) {
+          console.error('Erro no upload da foto:', imgErr)
+          toast.warning('Produto salvo, mas houve falha ao enviar a foto.')
+        }
+      }
+
+      // Sincronização dos grupos de complementos
       if (savedProductId && selectedComplementGroupIds) {
         try {
           await syncProductComplementGroups(savedProductId, selectedComplementGroupIds)
         } catch (syncErr) {
-          console.error('Erro ao sincronizar adicionais:', syncErr)
+          console.error('Erro ao vincular adicionais:', syncErr)
         }
       }
-    } catch {
-      toast.error('Erro ao salvar produto.')
+
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['items'] })
+      queryClient.invalidateQueries({ queryKey: ['composite-products'] })
+      queryClient.invalidateQueries({ queryKey: ['complement-groups'] })
+      onSuccess?.()
+    } catch (err: any) {
+      console.error('Erro ao salvar produto:', err)
+      toast.error('Erro ao salvar produto. Verifique os campos.')
     }
   }
+
+  // URL final da imagem atual (seja preview local ou URL remota)
+  const currentDisplayImageUrl = useMemo(() => {
+    if (imagePreviewUrl) return imagePreviewUrl
+    if (existingImageUrl) {
+      if (existingImageUrl.startsWith('http')) return existingImageUrl
+      const base = API_BASE_URL?.replace(/\/$/, '') || ''
+      const slash = existingImageUrl.startsWith('/') ? '' : '/'
+      return `${base}${slash}${existingImageUrl}`
+    }
+    return null
+  }, [imagePreviewUrl, existingImageUrl])
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -344,41 +536,285 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             onValueChange={setActiveTab}
             className="flex flex-1 flex-col overflow-hidden"
           >
-            {/* Barra de Abas Elegante */}
-            <div className="border-b bg-muted/20 px-6 py-2.5 sm:px-8">
-              <TabsList className="grid w-full max-w-[400px] grid-cols-2">
-                <TabsTrigger value="general" className="flex items-center gap-2 text-xs font-semibold">
-                  <Layers className="h-3.5 w-3.5" />
+            {/* ── BARRA DE ABAS REFINADA (ESTILO STITCH) ────────────────────────── */}
+            <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-2.5 dark:border-slate-800 dark:bg-slate-900/30 sm:px-8">
+              <TabsList className="grid h-11 w-full max-w-[620px] grid-cols-3 rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80">
+                <TabsTrigger
+                  value="general"
+                  className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
+                >
+                  <Layers className="h-4 w-4" />
                   <span>Geral & Venda</span>
                 </TabsTrigger>
-                <TabsTrigger value="fiscal" className="flex items-center gap-2 text-xs font-semibold">
-                  <ReceiptText className="h-3.5 w-3.5 text-primary" />
+
+                <TabsTrigger
+                  value="fiscal"
+                  className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
+                >
+                  <ReceiptText className="h-4 w-4" />
                   <span>Dados Fiscais (NFC-e)</span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="complements"
+                  className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
+                >
+                  <ChefHat className="h-4 w-4" />
+                  <span>Complementos & Ficha</span>
                 </TabsTrigger>
               </TabsList>
             </div>
 
+            {/* ═══════════════════════════════════════════════════════════════════ */}
             {/* ── ABA 1: GERAL & VENDA ─────────────────────────────────────────── */}
+            {/* ═══════════════════════════════════════════════════════════════════ */}
             <TabsContent
               value="general"
-              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8"
+              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
             >
-              {/* Header: Nome, Prioridade KDS e Status */}
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 space-y-2 sm:col-span-6 lg:col-span-7">
+              {/* 1. TOP CARDS: Status, Cardápio e Prioridade KDS */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {/* Status Ativo */}
+                <FormField
+                  control={form.control}
+                  name="active"
+                  render={({ field }) => (
+                    <div
+                      onClick={() => field.onChange(!field.value)}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
+                        field.value
+                          ? 'border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/20 dark:bg-emerald-950/20'
+                          : 'border-slate-200 bg-slate-50/50 opacity-70 dark:border-slate-800 dark:bg-slate-900/30'
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            Status
+                          </span>
+                          <span
+                            className={cn(
+                              'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase',
+                              field.value
+                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            )}
+                          >
+                            {field.value ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Disponível no sistema
+                        </p>
+                      </div>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-emerald-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                />
+
+                {/* Cardápio Visível */}
+                <FormField
+                  control={form.control}
+                  name="show_on_menu"
+                  render={({ field }) => (
+                    <div
+                      onClick={() => field.onChange(!field.value)}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
+                        field.value
+                          ? 'border-blue-500/30 bg-blue-500/5 dark:border-blue-500/20 dark:bg-blue-950/20'
+                          : 'border-slate-200 bg-slate-50/50 opacity-70 dark:border-slate-800 dark:bg-slate-900/30'
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            Cardápio
+                          </span>
+                          <span
+                            className={cn(
+                              'text-xs font-bold',
+                              field.value
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? 'Visível' : 'Oculto'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Exibir para clientes/PDV
+                        </p>
+                      </div>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-blue-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                />
+
+                {/* Prioridade KDS */}
+                <FormField
+                  control={form.control}
+                  name="is_priority"
+                  render={({ field }) => (
+                    <div
+                      onClick={() => field.onChange(!field.value)}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all',
+                        field.value
+                          ? 'border-amber-500/30 bg-amber-500/10 dark:border-amber-500/20 dark:bg-amber-950/20'
+                          : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30'
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                          <span className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            Prioridade KDS
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Fila urgente cozinha
+                        </p>
+                      </div>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-amber-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                />
+              </div>
+
+              {/* 2. CARD DE FOTO DO PRODUTO NO CARDÁPIO */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                      Imagem do Produto no Cardápio
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    Exibido no cardápio digital, tablets e totem
+                  </span>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                {currentDisplayImageUrl ? (
+                  <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center">
+                    {/* Thumbnail */}
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner dark:border-slate-800 dark:bg-slate-950">
+                      <img
+                        src={currentDisplayImageUrl}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[9px] font-black uppercase text-white backdrop-blur-sm">
+                        HD
+                      </span>
+                    </div>
+
+                    {/* Metadados e Status */}
+                    <div className="flex-1 space-y-1 truncate">
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {productImage?.name || 'foto-produto-cardapio.jpg'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {productImage
+                          ? `${(productImage.size / (1024 * 1024)).toFixed(2)} MB • Upload pronto para salvar`
+                          : 'Imagem vinculada ao produto no sistema'}
+                      </p>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                          Foto Ativa
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-9 gap-1.5 rounded-xl border-slate-200 text-xs font-bold dark:border-slate-800"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Alterar foto
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleRemovePhoto}
+                        className="h-9 w-9 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                        title="Remover foto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 transition-all hover:border-primary/50 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-primary/40"
+                  >
+                    <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Camera className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Clique para selecionar ou arraste uma foto do produto
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      JPG, PNG ou WEBP até 5MB. Recomendado proporção 1:1 (quadrada mín. 800x800px).
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. NOME DO PRODUTO E CÓDIGO DE BARRAS */}
+              <div className="grid grid-cols-12 gap-5">
+                <div className="col-span-12 sm:col-span-8">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Nome do Produto
-                        </FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Nome do Produto *
+                          </FormLabel>
+                          <span className="text-[10px] text-muted-foreground">
+                            Exibido em cupons, cardápio e telas
+                          </span>
+                        </div>
                         <FormControl>
                           <Input
-                            placeholder="Ex: Coca-Cola Lata 350ml, Cerveja Heineken..."
+                            placeholder="Ex: Pizza Calabresa Nobre Especial..."
                             {...field}
-                            className="h-12 text-lg font-medium"
+                            className="h-11 rounded-xl text-base font-semibold"
                             autoFocus
                           />
                         </FormControl>
@@ -388,72 +824,70 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   />
                 </div>
 
-                {/* Switches de Cardápio, KDS e Ativo */}
-                <div className="col-span-12 flex flex-wrap items-end gap-2.5 sm:col-span-6 lg:col-span-5">
+                <div className="col-span-12 sm:col-span-4">
                   <FormField
                     control={form.control}
-                    name="show_on_menu"
+                    name="barcode"
                     render={({ field }) => (
-                      <FormItem className="flex h-12 flex-1 min-w-[130px] items-center space-x-2.5 space-y-0 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 dark:border-emerald-900/30">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          Cardápio
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="is_priority"
-                    render={({ field }) => (
-                      <FormItem className="flex h-12 flex-1 items-center space-x-2.5 space-y-0 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 dark:border-amber-900/30">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer text-xs font-bold text-amber-700 dark:text-amber-300">
-                          ⚡ Prioridade KDS
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  {isEdit && (
-                    <FormField
-                      control={form.control}
-                      name="active"
-                      render={({ field }) => (
-                        <FormItem className="flex h-12 flex-1 items-center space-x-2.5 space-y-0 rounded-xl border bg-muted/20 p-3">
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="cursor-pointer text-xs font-medium">
-                            Ativo
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Código de Barras
                           </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                          <span className="text-[10px] text-muted-foreground">
+                            EAN / GTIN
+                          </span>
+                        </div>
+                        <FormControl>
+                          <div className="relative">
+                            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="7898357410012"
+                              {...field}
+                              className="h-11 rounded-xl pl-9 font-mono text-xs font-bold"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
 
-              {/* Categoria, Subcategoria, Unidade e Código de Barras */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="sm:col-span-1">
+              {/* 4. UNIDADE, CATEGORIA E SUBCATEGORIA (+ CÓDIGO PDV DISCRETO) */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+                {/* Unidade de Medida */}
+                <div className="sm:col-span-3">
+                  <FormField
+                    control={form.control}
+                    name="measureUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          Unidade Medida
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11 rounded-xl font-semibold">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent withPortal={false}>
+                            <SelectItem value="UNITARY">Unidade (UN)</SelectItem>
+                            <SelectItem value="FRACTIONAL">Fracionado (KG/L/M)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Categoria */}
+                <div className="sm:col-span-5">
                   <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Categoria
+                    Categoria *
                   </FormLabel>
                   <div className="flex gap-2">
                     <FormField
@@ -469,8 +903,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-10">
-                                <SelectValue placeholder="Selecione..." />
+                              <SelectTrigger className="h-11 rounded-xl font-semibold">
+                                <SelectValue placeholder="Selecione a categoria..." />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent withPortal={false}>
@@ -489,7 +923,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-10 w-10 shrink-0"
+                      className="h-11 w-11 shrink-0 rounded-xl border-slate-200 dark:border-slate-800"
                       onClick={() => setIsNewCategoryOpen(true)}
                       title="Nova Categoria"
                     >
@@ -498,7 +932,8 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   </div>
                 </div>
 
-                <div className="sm:col-span-1">
+                {/* Subcategoria */}
+                <div className="sm:col-span-4">
                   <FormLabel className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     Subcategoria
                   </FormLabel>
@@ -513,7 +948,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           disabled={!selectedCategory || (subcategoriesData?.subcategories || []).length === 0}
                         >
                           <FormControl>
-                            <SelectTrigger className="h-10">
+                            <SelectTrigger className="h-11 rounded-xl font-semibold">
                               <SelectValue placeholder={!selectedCategory ? "Escolha a categoria" : "Selecione subcategoria..."} />
                             </SelectTrigger>
                           </FormControl>
@@ -530,47 +965,222 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                     )}
                   />
                 </div>
+              </div>
 
-                <div className="sm:col-span-1">
+              {/* 5. PREÇO, CUSTO & RENTABILIDADE (ESTILO STITCH) */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/30">
+                <div className="mb-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Preço, Custo & Rentabilidade
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    {watchedCompositions.length > 0
+                      ? 'CMV calculado automaticamente pela Ficha Técnica'
+                      : 'Cálculo automático de margem'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {/* Custo de Compra (CMV) */}
                   <FormField
                     control={form.control}
-                    name="measureUnit"
+                    name="cost"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          Custo de Compra (CMV)
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-muted-foreground">
+                              R$
+                            </span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...field}
+                              disabled={watchedCompositions.length > 0}
+                              className={cn(
+                                'h-12 rounded-xl pl-9 font-mono text-base font-bold',
+                                watchedCompositions.length > 0
+                                  ? 'bg-muted/40 cursor-not-allowed'
+                                  : 'bg-white dark:bg-slate-950'
+                              )}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Preço de Venda (Em Destaque) */}
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[11px] font-black uppercase tracking-wide text-primary">
+                          Preço de Venda *
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-primary">
+                              R$
+                            </span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...field}
+                              className="h-12 rounded-xl border-2 border-primary/40 bg-primary/5 pl-10 font-mono text-lg font-black text-primary shadow-sm focus-visible:border-primary"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Lucro Bruto */}
+                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                      Lucro Bruto
+                    </span>
+                    <span
+                      className={cn(
+                        'font-mono text-lg font-black',
+                        profit >= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-red-500'
+                      )}
+                    >
+                      R$ {profit.toFixed(2)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Líquido unitário
+                    </span>
+                  </div>
+
+                  {/* Margem Líquida */}
+                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                      Margem Líquida
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'font-mono text-lg font-black',
+                          margin >= 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-red-500'
+                        )}
+                      >
+                        {margin >= 0 ? `+${margin.toFixed(1)}%` : `${margin.toFixed(1)}%`}
+                      </span>
+                      <span
+                        className={cn(
+                          'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase',
+                          margin >= 50
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : margin > 0
+                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                              : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                        )}
+                      >
+                        {margin >= 50
+                          ? 'Alta'
+                          : margin > 0
+                            ? 'Normal'
+                            : 'Negativa'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      Rentabilidade calculada
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 6. ESTOQUE & CÓDIGO INTERNO (PDV) */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+                <div className="sm:col-span-4">
+                  <FormField
+                    control={form.control}
+                    name="stock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Unidade de Medida
-                        </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent withPortal={false}>
-                            <SelectItem value="UNITARY">Unidade (UN)</SelectItem>
-                            <SelectItem value="FRACTIONAL">Fracionado (KG/L/M)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            {!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}
+                          </FormLabel>
+                          <span className="text-[10px] text-muted-foreground">
+                            Saldo de abertura
+                          </span>
+                        </div>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            className="h-11 rounded-xl font-mono text-xs font-bold"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <div className="sm:col-span-1">
+                <div className="sm:col-span-4">
                   <FormField
                     control={form.control}
-                    name="barcode"
+                    name="min_stock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Código de Barras
-                        </FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Estoque Mínimo
+                          </FormLabel>
+                          <span className="text-[10px] text-muted-foreground">
+                            Alerta de reposição
+                          </span>
+                        </div>
                         <FormControl>
                           <Input
-                            placeholder="EAN / GTIN"
+                            type="number"
                             {...field}
-                            className="h-10 font-mono"
+                            className="h-11 rounded-xl font-mono text-xs font-bold"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Código PDV Interno */}
+                <div className="sm:col-span-4">
+                  <FormField
+                    control={form.control}
+                    name="display_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Código PDV
+                          </FormLabel>
+                          <span className="text-[10px] text-muted-foreground">
+                            ID Rápido Caixa
+                          </span>
+                        </div>
+                        <FormControl>
+                          <Input
+                            placeholder="Auto"
+                            value={field.value ?? ''}
+                            onChange={field.onChange}
+                            className="h-11 rounded-xl font-mono text-xs font-bold"
                           />
                         </FormControl>
                         <FormMessage />
@@ -580,217 +1190,19 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
 
-              {/* Valores Comerciais: Custo, Preço, Lucro e Margem */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  <FormField
-                    control={form.control}
-                    name="cost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          Custo de Compra
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">
-                              R$
-                            </span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              className="h-12 pl-8 font-mono text-base font-bold"
-                              onChange={(e) => {
-                                field.onChange(e)
-                                const newCost = parseFloat(e.target.value) || 0
-                                const price = form.getValues('price') || 0
-                                const newProfit = price - newCost
-                                setProfit(newProfit)
-                                setMargin(newCost > 0 ? (newProfit / newCost) * 100 : 0)
-                              }}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-wide text-primary">
-                          Preço de Venda
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-primary">
-                              R$
-                            </span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              className="h-12 border-primary/30 bg-primary/5 pl-9 text-lg font-black text-primary"
-                              onChange={(e) => {
-                                field.onChange(e)
-                                const newPrice = parseFloat(e.target.value) || 0
-                                const cost = form.getValues('cost') || 0
-                                const newProfit = newPrice - cost
-                                setProfit(newProfit)
-                                setMargin(cost > 0 ? (newProfit / cost) * 100 : 0)
-                              }}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                      Lucro Bruto (R$)
-                    </span>
-                    <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400">
-                      R$ {profit.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                      Margem (%)
-                    </span>
-                    <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400">
-                      +{margin.toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Estoque */}
-              <div className="grid grid-cols-2 gap-6 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="stock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                        {!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          className="h-10 font-mono"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="min_stock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                        Estoque Mínimo
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          className="h-10 font-mono"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Grupos de Complementos & Adicionais Vinculados */}
-              <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Sliders className="h-5 w-5 text-orange-500" />
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">
-                        Grupos de Adicionais & Opcionais
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Marque quais grupos de complementos se aplicam a este produto
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="border-slate-200 text-xs font-bold dark:border-slate-800">
-                    {selectedComplementGroupIds.length} grupos selecionados
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {(complementGroupsData?.groups || []).map((group: any) => {
-                    const isChecked = selectedComplementGroupIds.includes(group.id)
-                    return (
-                      <div
-                        key={group.id}
-                        onClick={() => {
-                          if (isChecked) {
-                            setSelectedComplementGroupIds(
-                              selectedComplementGroupIds.filter((id) => id !== group.id)
-                            )
-                          } else {
-                            setSelectedComplementGroupIds([
-                              ...selectedComplementGroupIds,
-                              group.id,
-                            ])
-                          }
-                        }}
-                        className={cn(
-                          'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all',
-                          isChecked
-                            ? 'border-orange-500/50 bg-orange-50/50 shadow-sm dark:border-orange-500/40 dark:bg-orange-950/20'
-                            : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700'
-                        )}
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => {}}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 space-y-0.5">
-                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {group.name}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {group.options?.length || 0} opções • {group.min_quantity > 0 ? 'Obrigatório' : 'Opcional'}
-                            {group.free_quantity > 0 ? ` • ${group.free_quantity} Grátis` : ''}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Descrição */}
+              {/* 7. DESCRIÇÃO / OBSERVAÇÕES (PRESERVADA) */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      Descrição / Observações
+                      Descrição / Observações do Cardápio
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Informações adicionais do produto..."
-                        className="min-h-[80px] resize-none"
+                        placeholder="Ingredientes, detalhes da receita, notas de alérgenos ou mensagens para o cardápio digital..."
+                        className="min-h-[75px] resize-none rounded-xl"
                         {...field}
                       />
                     </FormControl>
@@ -800,10 +1212,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               />
             </TabsContent>
 
+            {/* ═══════════════════════════════════════════════════════════════════ */}
             {/* ── ABA 2: DADOS FISCAIS (NFC-e / SAT) ────────────────────────────── */}
+            {/* ═══════════════════════════════════════════════════════════════════ */}
             <TabsContent
               value="fiscal"
-              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-8"
+              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
             >
               {/* Header Informativo */}
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
@@ -874,7 +1288,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       CSOSN 500 • CFOP 5405
                     </span>
                     <span className="mt-1 text-[11px] text-muted-foreground leading-tight">
-                      Bebidas frias, cervejas e refrigerantes (ICMS já retido na indústria/distribuidora).
+                      Bebidas frias, cervejas e refrigerantes (ICMS retido na indústria/distribuidora).
                     </span>
                   </button>
 
@@ -931,7 +1345,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           placeholder="Ex: 22021000"
                           maxLength={8}
                           {...field}
-                          className="h-10 font-mono font-medium"
+                          className="h-10 font-mono font-medium rounded-xl"
                         />
                       </FormControl>
                       <FormMessage />
@@ -965,7 +1379,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           placeholder="Ex: 0300100"
                           maxLength={7}
                           {...field}
-                          className="h-10 font-mono font-medium"
+                          className="h-10 font-mono font-medium rounded-xl"
                         />
                       </FormControl>
                       <FormMessage />
@@ -1002,7 +1416,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           placeholder="Ex: 5102"
                           maxLength={4}
                           {...field}
-                          className="h-10 font-mono font-medium"
+                          className="h-10 font-mono font-medium rounded-xl"
                         />
                       </FormControl>
                       <FormMessage />
@@ -1036,7 +1450,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       </div>
                       <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 rounded-xl">
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                         </FormControl>
@@ -1082,7 +1496,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                         value={field.value?.toString() ?? '0'}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 rounded-xl">
                             <SelectValue placeholder="0 - Nacional" />
                           </SelectTrigger>
                         </FormControl>
@@ -1123,7 +1537,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                       </div>
                       <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 rounded-xl">
                             <SelectValue placeholder="Selecione se aplicável..." />
                           </SelectTrigger>
                         </FormControl>
@@ -1162,7 +1576,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             placeholder="Ex: 49"
                             maxLength={2}
                             {...field}
-                            className="h-10 font-mono"
+                            className="h-10 font-mono rounded-xl"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1186,7 +1600,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             type="number"
                             step="0.01"
                             {...field}
-                            className="h-10 font-mono"
+                            className="h-10 font-mono rounded-xl"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1210,7 +1624,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             placeholder="Ex: 49"
                             maxLength={2}
                             {...field}
-                            className="h-10 font-mono"
+                            className="h-10 font-mono rounded-xl"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1234,7 +1648,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                             type="number"
                             step="0.01"
                             {...field}
-                            className="h-10 font-mono"
+                            className="h-10 font-mono rounded-xl"
                           />
                         </FormControl>
                         <FormMessage />
@@ -1244,18 +1658,322 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 </div>
               </div>
             </TabsContent>
+
+            {/* ═══════════════════════════════════════════════════════════════════ */}
+            {/* ── ABA 3: COMPLEMENTOS & FICHA TÉCNICA (ESTILO STITCH) ─────────── */}
+            {/* ═══════════════════════════════════════════════════════════════════ */}
+            <TabsContent
+              value="complements"
+              className="mt-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-6 py-6 sm:px-8 sm:py-7"
+            >
+              {/* 1. SEÇÃO DE GRUPOS DE ADICIONAIS & OPCIONAIS */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 dark:bg-orange-500/20">
+                      <Sliders className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                          Grupos de Adicionais & Opcionais
+                        </h4>
+                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400">
+                          {selectedComplementGroupIds.length} selecionados
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Marque quais grupos de complementos se aplicam a este produto
+                      </p>
+                    </div>
+                  </div>
+
+                  <Badge
+                    variant="outline"
+                    className="border-slate-200 text-xs font-semibold dark:border-slate-800"
+                  >
+                    Cardápio & Delivery
+                  </Badge>
+                </div>
+
+                {complementGroups.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-muted-foreground dark:border-slate-800">
+                    Nenhum grupo de adicionais cadastrado ainda no sistema.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {complementGroups.map((group: any) => {
+                      const isChecked = selectedComplementGroupIds.includes(group.id)
+                      return (
+                        <div
+                          key={group.id}
+                          onClick={() => {
+                            if (isChecked) {
+                              setSelectedComplementGroupIds(
+                                selectedComplementGroupIds.filter((id) => id !== group.id)
+                              )
+                            } else {
+                              setSelectedComplementGroupIds([
+                                ...selectedComplementGroupIds,
+                                group.id,
+                              ])
+                            }
+                          }}
+                          className={cn(
+                            'flex cursor-pointer items-start gap-3.5 rounded-xl border p-4 transition-all',
+                            isChecked
+                              ? 'border-primary/50 bg-primary/5 shadow-sm dark:border-primary/40 dark:bg-primary/10'
+                              : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/30 dark:hover:border-slate-700'
+                          )}
+                        >
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => {}}
+                            className="mt-0.5 rounded-md"
+                          />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black text-slate-900 dark:text-slate-100">
+                                {group.name}
+                              </p>
+                              <span
+                                className={cn(
+                                  'h-2 w-2 rounded-full',
+                                  isChecked ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700'
+                                )}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span>{group.options?.length || 0} opções</span>
+                              <span>•</span>
+                              <span>{group.min_quantity > 0 ? 'Obrigatório' : 'Opcional'}</span>
+                              {group.free_quantity > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="rounded bg-emerald-500/10 px-1 py-0.2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                    {group.free_quantity} Grátis
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. SEÇÃO DE FICHA TÉCNICA (COMPOSIÇÃO & CMV) */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+                      <ChefHat className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                          Ficha Técnica (Composição & CMV)
+                        </h4>
+                        <span className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-black text-purple-600 dark:text-purple-400">
+                          {fields.length} {fields.length === 1 ? 'Insumo' : 'Insumos'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Componha a receita com os insumos para cálculo automático do CMV e baixa no estoque a cada venda.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ supply_id: '', quantity: 1 })}
+                    className="h-9 gap-1.5 rounded-xl border-purple-200 bg-purple-50/50 text-xs font-bold text-purple-700 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-950/30 dark:text-purple-300"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar Insumo
+                  </Button>
+                </div>
+
+                {fields.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/20">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Nenhum insumo adicionado a este produto.
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Se este produto for produzido na cozinha (prato, pizza, hambúrguer), adicione os insumos para compor o custo real e automatizar as baixas de estoque.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => append({ supply_id: '', quantity: 1 })}
+                      className="mt-3 gap-1.5 rounded-xl text-xs font-bold"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Começar Ficha Técnica
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Cabeçalho da Tabela de Insumos */}
+                    <div className="hidden grid-cols-12 gap-3 px-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground sm:grid">
+                      <span className="col-span-6">Insumo Selecionado</span>
+                      <span className="col-span-3 text-center">Quantidade</span>
+                      <span className="col-span-2 text-right">Custo Prop.</span>
+                      <span className="col-span-1 text-center"></span>
+                    </div>
+
+                    {/* Linhas de Insumos */}
+                    <div className="space-y-2.5">
+                      {fields.map((field, index) => {
+                        const selectedSupplyId = form.watch(`compositions.${index}.supply_id`)
+                        const selectedQuantity = Number(form.watch(`compositions.${index}.quantity`)) || 0
+                        const currentSupply = supplies.find((s) => s.id === selectedSupplyId)
+                        const propCost = (currentSupply?.cost || 0) * selectedQuantity
+
+                        return (
+                          <div
+                            key={field.id}
+                            className="grid grid-cols-12 items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/30 sm:p-2.5"
+                          >
+                            {/* Insumo Dropdown */}
+                            <div className="col-span-12 sm:col-span-6">
+                              <FormField
+                                control={form.control}
+                                name={`compositions.${index}.supply_id`}
+                                render={({ field: subField }) => (
+                                  <Select
+                                    value={subField.value}
+                                    onValueChange={subField.onChange}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="h-10 rounded-xl bg-white text-xs font-semibold dark:bg-slate-950">
+                                        <SelectValue placeholder="Selecione o insumo..." />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent withPortal={false} className="max-h-60">
+                                      {supplies.map((s) => (
+                                        <SelectItem key={s.id} value={s.id}>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <span className="font-semibold">{s.name}</span>
+                                            <span className="font-mono text-[11px] text-muted-foreground">
+                                              (R$ {Number(s.cost || 0).toFixed(2)} / {s.unit || 'UN'})
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                            </div>
+
+                            {/* Quantidade com Unidade */}
+                            <div className="col-span-6 sm:col-span-3">
+                              <FormField
+                                control={form.control}
+                                name={`compositions.${index}.quantity`}
+                                render={({ field: qtyField }) => (
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      step="0.0001"
+                                      placeholder="Qtd"
+                                      {...qtyField}
+                                      className="h-10 rounded-xl bg-white pr-10 text-center font-mono text-xs font-bold dark:bg-slate-950"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-muted-foreground">
+                                      {currentSupply?.unit || 'UN'}
+                                    </span>
+                                  </div>
+                                )}
+                              />
+                            </div>
+
+                            {/* Custo Proporcional */}
+                            <div className="col-span-4 text-right sm:col-span-2">
+                              <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200">
+                                R$ {propCost.toFixed(2)}
+                              </span>
+                            </div>
+
+                            {/* Botão Remover */}
+                            <div className="col-span-2 flex justify-end sm:col-span-1 sm:justify-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => remove(index)}
+                                className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                                title="Remover insumo"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Resumo Rodapé da Ficha Técnica */}
+                    <div className="mt-4 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-6">
+                        <div>
+                          <span className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Custo Total (CMV):
+                          </span>
+                          <span className="font-mono text-lg font-black text-slate-900 dark:text-slate-100">
+                            R$ {calculatedCMV.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Margem Estimada:
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
+                              {margin >= 0 ? `+${margin.toFixed(1)}%` : `${margin.toFixed(1)}%`}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              (Venda R$ {watchedPrice.toFixed(2)})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-700 dark:border-blue-500/30 dark:text-blue-300">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] text-white">
+                          ✓
+                        </span>
+                        <span>Baixa automática de estoque acionada a cada venda</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
           </Tabs>
 
-          <ResponsiveDialogFooter className="border-t bg-muted/40 px-6 py-4">
+          {/* ── FOOTER FIXO (CANCELAR & SALVAR PRODUTO) ────────────────────────── */}
+          <ResponsiveDialogFooter className="border-t border-slate-200 bg-slate-50/80 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/80 sm:px-8">
             <ResponsiveDialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl px-6 font-semibold"
+              >
                 Cancelar
               </Button>
             </ResponsiveDialogClose>
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="bg-primary hover:bg-primary/90"
+              className="h-11 rounded-xl bg-primary px-8 font-bold text-white shadow-md hover:bg-primary/90"
             >
               {form.formState.isSubmitting
                 ? 'Salvando...'
@@ -1272,7 +1990,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
         open={isNewCategoryOpen}
         onOpenChange={setIsNewCategoryOpen}
       >
-        <ResponsiveDialogContent className="max-w-md">
+        <ResponsiveDialogContent className="max-w-md rounded-2xl">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>Nova Categoria</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
@@ -1284,6 +2002,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               placeholder="Nome da categoria"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
+              className="h-11 rounded-xl"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -1297,10 +2016,15 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               type="button"
               variant="outline"
               onClick={() => setIsNewCategoryOpen(false)}
+              className="rounded-xl"
             >
               Cancelar
             </Button>
-            <Button type="button" onClick={handleCreateCategory}>
+            <Button
+              type="button"
+              onClick={handleCreateCategory}
+              className="rounded-xl bg-primary"
+            >
               Criar Categoria
             </Button>
           </ResponsiveDialogFooter>

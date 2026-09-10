@@ -40,7 +40,7 @@ export function ProductItemDialog({
   }
 
   return (
-    <ResponsiveDialogContent className="sm:data-[state=open]:slide-in-from-bottom-auto fixed left-0 top-0 z-[9999] flex h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 shadow-none outline-none data-[state=open]:slide-in-from-bottom-0 sm:fixed sm:left-[50%] sm:top-[50%] sm:z-[9999] sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-[800px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:shadow-2xl sm:data-[state=open]:slide-in-from-top-[48%]">
+    <ResponsiveDialogContent className="sm:data-[state=open]:slide-in-from-bottom-auto fixed left-0 top-0 z-[9999] flex h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 shadow-none outline-none data-[state=open]:slide-in-from-bottom-0 sm:fixed sm:left-[50%] sm:top-[50%] sm:z-[9999] sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:shadow-2xl sm:data-[state=open]:slide-in-from-top-[48%]">
       <ResponsiveDialogHeader className="shrink-0 border-b bg-muted/40 px-6 py-5 text-left">
         <ResponsiveDialogTitle className="text-xl font-bold tracking-tight">
           {isEdit ? `Editar ${typeLabels[type]}` : `Novo ${typeLabels[type]}`}
