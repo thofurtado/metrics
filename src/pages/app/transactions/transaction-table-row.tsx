@@ -760,7 +760,7 @@ export function TransactionTableRow({
           ) : transactions.isVirtual ? (
             <>
               <Eye className="h-3 w-3" />
-              Ver Fatura
+              {transactions.confirmed ? 'Fatura Paga' : transactions.isPartial ? 'Baixa Parcial' : 'Ver Fatura'}
             </>
           ) : transactions.isCashierGroup ? (
             <>
@@ -899,16 +899,39 @@ export function TransactionTableRow({
       {/* Célula de Valor */}
       <TableCell
         className={cn(
-          'px-8 py-3.5 text-right text-base font-black tabular-nums',
+          'px-8 py-3.5 text-right tabular-nums',
           transactions.operation === 'income'
             ? 'text-emerald-600'
             : 'text-rose-600',
         )}
       >
-        <span className="mr-0.5 text-sm font-bold opacity-60">R$</span>
-        {(transactions.totalValue ?? transactions.amount).toLocaleString(
-          'pt-BR',
-          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+        {transactions.isVirtual ? (
+          <div className="flex flex-col items-end">
+            <span className="text-base font-black text-rose-600">
+              <span className="mr-0.5 text-sm font-bold opacity-60">R$</span>
+              {(transactions.amount).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            {transactions.isPartial ? (
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                Fatura: R$ {(transactions.totalValue ?? transactions.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            ) : transactions.confirmed ? (
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                Fatura Paga
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-base font-black">
+            <span className="mr-0.5 text-sm font-bold opacity-60">R$</span>
+            {(transactions.totalValue ?? transactions.amount).toLocaleString(
+              'pt-BR',
+              { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+            )}
+          </span>
         )}
       </TableCell>
 

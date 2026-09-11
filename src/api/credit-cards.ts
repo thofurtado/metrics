@@ -48,9 +48,25 @@ export async function deleteCreditCard(id: string) {
   await api.delete(`/credit-cards/${id}`)
 }
 
-export async function payCreditCardInvoice(id: string, month: string) {
-  const response = await api.patch<{ count: number }>(
-    `/credit-cards/${id}/pay-invoice?month=${month}`,
-  )
+export interface PayCreditCardInvoiceBody {
+  amountPaid?: number
+  accountId?: string
+  paymentDate?: string | Date
+  paymentMethod?: string
+}
+
+export async function payCreditCardInvoice(
+  id: string,
+  month: string,
+  data?: PayCreditCardInvoiceBody,
+) {
+  const response = await api.patch<{
+    success: boolean
+    transactionId: string
+    paidAmount: number
+    remainingAmount: number
+    isFullyPaid: boolean
+    count?: number
+  }>(`/credit-cards/${id}/pay-invoice?month=${month}`, data || {})
   return response.data
 }
