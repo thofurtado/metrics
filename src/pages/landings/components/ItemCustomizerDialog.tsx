@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resolveImageUrl } from '@/lib/utils'
 
 export interface ComplementOption {
   id: string
@@ -308,33 +309,70 @@ export function ItemCustomizerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl">
-        {/* CABEÇALHO 100% LIGHT */}
-        <div className="border-b border-slate-100 bg-slate-50/90 p-5 backdrop-blur-md">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-emerald-700">
-                {product.category || 'Item'}
-              </span>
-              <DialogTitle className="mt-1 text-xl font-black tracking-tight text-slate-900">
-                {product.name}
-              </DialogTitle>
-              {product.description && (
-                <p className="mt-1 text-xs font-medium text-slate-500 line-clamp-2">
-                  {product.description}
-                </p>
-              )}
+      <DialogContent className="max-h-[92vh] max-w-lg overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden">
+        {/* HERO IMAGE BANNER COM BOTÃO FECHAR E PREÇO FLUTUANTE */}
+        {product.imageUrl ? (
+          <div className="relative h-64 w-full shrink-0 overflow-hidden bg-slate-100">
+            <img
+              src={resolveImageUrl(product.imageUrl)}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+            {/* Botão Fechar X Circular Flutuante */}
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 backdrop-blur-md shadow-md transition-all hover:bg-white active:scale-95"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5 stroke-[2.5]" />
+            </button>
+
+            {/* Pílula de Preço Flutuante */}
+            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-slate-900 shadow-md backdrop-blur-md">
+              A partir de {formatBRL(product.price)}
             </div>
-            <div className="text-right shrink-0">
-              <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          </div>
+        ) : (
+          <div className="relative border-b border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+                {product.category || 'ITEM'}
+              </span>
+              <span className="text-xs font-extrabold text-slate-700">
                 A partir de {formatBRL(product.price)}
               </span>
             </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition-all hover:bg-slate-300"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4 stroke-[2.5]" />
+            </button>
           </div>
+        )}
+
+        {/* INFORMAÇÕES DO PRODUTO (FIXAS ABAIXO DA IMAGEM) */}
+        <div className="shrink-0 px-5 pt-4 pb-2 bg-white">
+          {product.imageUrl && (
+            <span className="inline-block rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+              {product.category || 'ITEM'}
+            </span>
+          )}
+          <DialogTitle className="mt-1.5 text-xl font-black tracking-tight text-slate-900">
+            {product.name}
+          </DialogTitle>
+          {product.description && (
+            <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+              {product.description}
+            </p>
+          )}
         </div>
 
-        {/* CONTEÚDO SCROLLÁVEL 100% LIGHT */}
-        <div className="max-h-[55vh] space-y-6 overflow-y-auto p-5 bg-[#F8FAFC]">
+        {/* CONTEÚDO SCROLLÁVEL */}
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 bg-slate-50/50">
           {/* SEÇÃO 1: FRACIONAMENTO / MEIO-A-MEIO */}
           {acceptsFractions && (
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
@@ -576,59 +614,77 @@ export function ItemCustomizerDialog({
             </div>
           )}
 
-          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS ESTILO IFOOD */}
+          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS ESTILO STITCH */}
           {groups.map((group) => {
             const totalQtyInGroup = group.options.reduce(
               (sum, opt) => sum + (selectedOptionsQty[opt.id] || 0),
-              0
+              0,
             )
             const isMandatory = group.min_quantity > 0
 
             return (
-              <div key={group.id} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div
+                key={group.id}
+                className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"
+              >
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <h4 className="text-sm font-black text-slate-900">{group.name}</h4>
-                    <p className="text-[11px] font-semibold text-slate-500">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-black text-slate-900">{group.name}</h4>
+                      {group.free_quantity > 0 && (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                          {group.free_quantity === 1 ? '1º Grátis' : `${group.free_quantity} Grátis`}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-medium text-slate-500">
                       {isMandatory
-                        ? 'Escolha no mínimo ' + group.min_quantity + ' e no máximo ' + group.max_quantity
-                        : 'Escolha até ' + group.max_quantity}
+                        ? `Escolha no mínimo ${group.min_quantity} e no máximo ${group.max_quantity}`
+                        : `Escolha até ${group.max_quantity} opções`}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {isMandatory && (
-                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800">
-                        Obrigatório
-                      </span>
-                    )}
-                    {group.free_quantity > 0 && (
-                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                        {group.free_quantity} Grátis
-                      </span>
-                    )}
-                  </div>
+                  {isMandatory && (
+                    <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800">
+                      Obrigatório
+                    </span>
+                  )}
                 </div>
 
-                <div className="divide-y divide-slate-100 pt-2">
+                {/* Callout informativo quando houver cortesia/grátis */}
+                {group.free_quantity > 0 && (
+                  <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5 text-[11px] text-emerald-900">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span>
+                      {group.free_quantity === 1
+                        ? 'O primeiro item é por nossa conta! Demais são cobrados à parte.'
+                        : `Os primeiros ${group.free_quantity} itens são por nossa conta! Demais são cobrados à parte.`}
+                    </span>
+                  </div>
+                )}
+
+                <div className="divide-y divide-slate-100 pt-1">
                   {group.options.map((opt) => {
                     const qty = selectedOptionsQty[opt.id] || 0
                     const canAdd = totalQtyInGroup < group.max_quantity
 
                     return (
-                      <div key={opt.id} className="flex items-center justify-between py-2.5">
+                      <div
+                        key={opt.id}
+                        className="flex items-center justify-between py-2.5"
+                      >
                         <div>
                           <p className="text-xs font-bold text-slate-800">{opt.name}</p>
                           <p className="text-[11px] font-semibold text-slate-500">
-                            {opt.price > 0 ? '+ ' + formatBRL(opt.price) : 'Grátis'}
+                            {opt.price > 0 ? `+ ${formatBRL(opt.price)}` : 'Grátis'}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1">
+                        <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
                           <button
                             type="button"
                             onClick={() => handleDecreaseOption(opt)}
                             disabled={qty === 0}
-                            className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition-all disabled:opacity-30 active:scale-95"
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition-all hover:bg-slate-100 disabled:opacity-30 active:scale-95"
                           >
                             <Minus className="h-3 w-3 stroke-[3]" />
                           </button>
@@ -639,8 +695,7 @@ export function ItemCustomizerDialog({
                             type="button"
                             onClick={() => handleIncreaseOption(group, opt)}
                             disabled={!canAdd}
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all disabled:opacity-30 active:scale-95"
-                            style={{ backgroundColor: primaryColor }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 disabled:opacity-30 active:scale-95"
                           >
                             <Plus className="h-3 w-3 stroke-[3]" />
                           </button>
@@ -653,49 +708,57 @@ export function ItemCustomizerDialog({
             )
           })}
 
-          {/* SEÇÃO 3: OBSERVAÇÕES */}
+          {/* SEÇÃO 3: OBSERVAÇÕES PARA A COZINHA */}
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-            <Label className="text-xs font-bold text-slate-800">
-              Observações para o restaurante (opcional):
-            </Label>
-            <Input
-              placeholder="Ex: Tirar cebola, carne bem passada, enviar sachê..."
-              value={observation}
-              onChange={(e) => setObservation(e.target.value)}
-              className="mt-2 text-xs border-slate-200 bg-white text-slate-900"
-              maxLength={200}
-            />
+            <h4 className="text-xs font-extrabold text-slate-900">
+              Observações para a cozinha (opcional):
+            </h4>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Avise sobre pontos da carne, remoção de itens ou restrições alimentares.
+            </p>
+            <div className="relative mt-2.5">
+              <textarea
+                placeholder="Ex: Tirar cebola, carne bem passada, enviar sachês..."
+                value={observation}
+                onChange={(e) => setObservation(e.target.value.slice(0, 140))}
+                className="w-full h-20 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none font-medium"
+                maxLength={140}
+              />
+              <span className="absolute bottom-2.5 right-3 text-[10px] font-bold text-slate-400">
+                {observation.length}/140
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO 100% LIGHT */}
-        <div className="border-t border-slate-100 bg-slate-50/90 p-5 backdrop-blur-md">
+        {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO */}
+        <div className="border-t border-slate-100 bg-white p-4 shrink-0">
           {validationError && (
-            <p className="mb-3 text-center text-xs font-bold text-amber-700">
+            <p className="mb-2 text-center text-xs font-bold text-amber-700">
               ⚠️ {validationError}
             </p>
           )}
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
             {/* Contador de Quantidade do Prato */}
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+            <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setItemQuantity((q) => Math.max(1, q - 1))}
                 disabled={itemQuantity <= 1}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-all disabled:opacity-30 active:scale-95"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition-all disabled:opacity-30 active:scale-95"
               >
-                <Minus className="h-4 w-4 stroke-[3]" />
+                <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
               </button>
-              <span className="w-8 text-center text-sm font-black text-slate-900">
+              <span className="w-6 text-center text-sm font-black text-slate-900">
                 {itemQuantity}
               </span>
               <button
                 type="button"
                 onClick={() => setItemQuantity((q) => q + 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-all active:scale-95"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition-all active:scale-95"
               >
-                <Plus className="h-4 w-4 stroke-[3]" />
+                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
               </button>
             </div>
 
@@ -704,15 +767,14 @@ export function ItemCustomizerDialog({
               type="button"
               onClick={handleConfirm}
               disabled={!isReadyToConfirm}
-              className="flex-1 flex items-center justify-between rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-40 active:scale-[0.98]"
-              style={{ backgroundColor: primaryColor }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]"
             >
-              <span>Adicionar à Sacola</span>
+              <span>ADICIONAR À SACOLA</span>
               <span>{formatBRL(unitPrice * itemQuantity)}</span>
             </button>
           </div>
         </div>
-      </DialogContent>
+</DialogContent>
     </Dialog>
   )
 }
