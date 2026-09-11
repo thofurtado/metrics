@@ -279,7 +279,7 @@ export function CreditCardDetailsDialog({
           </TabsList>
 
           <TabsContent value="swipes" className="mt-3">
-            <div className="max-h-[220px] overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="max-h-[240px] overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
               <Table>
                 <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
                   <TableRow className="border-slate-100 dark:border-slate-800">
@@ -288,6 +288,12 @@ export function CreditCardDetailsDialog({
                     </TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Descrição
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Setor
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Status
                     </TableHead>
                     <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Valor
@@ -303,8 +309,27 @@ export function CreditCardDetailsDialog({
                       <TableCell className="py-2 text-xs font-medium text-slate-600 dark:text-slate-300">
                         {dayjs(swipe.data_vencimento).format('DD/MM/YYYY')}
                       </TableCell>
-                      <TableCell className="max-w-[240px] truncate py-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      <TableCell className="max-w-[200px] truncate py-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
                         {swipe.description || 'Compra em cartão'}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Badge
+                          variant="outline"
+                          className="border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                        >
+                          {swipe.sectors?.name || 'Sem setor'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        {swipe.confirmed ? (
+                          <Badge className="border-transparent bg-emerald-100 text-[9px] font-black uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                            Pago
+                          </Badge>
+                        ) : (
+                          <Badge className="border-transparent bg-amber-100 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                            Pendente
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="py-2 text-right text-xs font-black tabular-nums text-slate-800 dark:text-slate-100">
                         R${' '}
@@ -321,7 +346,7 @@ export function CreditCardDetailsDialog({
                   {virtualTransaction.swipes?.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={3}
+                        colSpan={5}
                         className="py-6 text-center text-xs font-bold text-slate-400"
                       >
                         Nenhuma compra registrada nesta fatura.
@@ -399,11 +424,16 @@ export function CreditCardDetailsDialog({
         {/* ─── ÁREA DE BAIXA / LIQUIDAÇÃO ─────────────────────────────── */}
         {!isFullyPaid ? (
           <div className="space-y-3 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-rose-600" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Registrar Pagamento da Fatura
-              </h4>
+            <div>
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-rose-600" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Registrar Pagamento da Fatura
+                </h4>
+              </div>
+              <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                A baixa amortiza sequencialmente as compras pendentes mantendo o setor (Centro de Custo / DRE) de cada despesa.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -520,7 +550,7 @@ export function CreditCardDetailsDialog({
                       minimumFractionDigits: 2,
                     })}
                   </strong>{' '}
-                  nesta fatura.
+                  nesta fatura. A compra correspondente será desmembrada preservando seu setor.
                 </span>
               </div>
             )}
