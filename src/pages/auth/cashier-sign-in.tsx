@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
+  Hash,
   KeyRound,
   Loader2,
   Lock,
@@ -21,7 +22,9 @@ export function CashierSignIn() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [selectedUser, setSelectedUser] = useState<CashierUser | null>(null)
+  const [authMode, setAuthMode] = useState<'pin' | 'password'>('pin')
   const [password, setPassword] = useState('')
+  const [pin, setPin] = useState('')
 
   const {
     data: cashierUsers = [],
@@ -52,15 +55,22 @@ export function CashierSignIn() {
     },
     onError: (err: any) => {
       toast.error(
-        err?.response?.data?.message || 'Senha incorreta. Tente novamente.',
+        err?.response?.data?.message || 'Credenciais inválidas. Tente novamente.',
       )
     },
   })
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUser || !password) return
-    await login({ userId: selectedUser.id, password })
+    if (!selectedUser) return
+    if (authMode === 'pin' && !pin) return
+    if (authMode === 'password' && !password) return
+
+    await login({
+      userId: selectedUser.id,
+      pin: authMode === 'pin' ? pin : undefined,
+      password: authMode === 'password' ? password : undefined,
+    })
   }
 
   return (
@@ -171,31 +181,85 @@ export function CashierSignIn() {
               </button>
             </div>
 
-            {/* Input de Senha */}
-            <div className="space-y-2">
-              <Label className="block text-xs font-extrabold uppercase text-slate-300">
-                Digite sua Senha
-              </Label>
-              <div className="relative">
-                <Input
-                  type="password"
-                  autoFocus
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="******"
-                  className="w-full rounded-2xl border-slate-700 bg-slate-950 p-4 pl-11 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <KeyRound
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                />
-              </div>
+            {/* Alternador de Modo: PIN vs Senha */}
+            <div className="flex rounded-2xl bg-slate-950 p-1 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAuthMode('pin')}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
+                  authMode === 'pin'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Hash size={14} /> PIN Rápido
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('password')}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
+                  authMode === 'password'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <KeyRound size={14} /> Senha Alfanumérica
+              </button>
             </div>
+
+            {/* Input Conforme o Modo */}
+            {authMode === 'pin' ? (
+              <div className="space-y-2">
+                <Label className="block text-xs font-extrabold uppercase text-slate-300">
+                  Digite seu PIN (4 a 6 dígitos)
+                </Label>
+                <div className="relative">
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    autoFocus
+                    required
+                    maxLength={6}
+                    value={pin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                      setPin(val)
+                    }}
+                    placeholder="••••"
+                    className="w-full text-center tracking-[0.5em] rounded-2xl border-slate-700 bg-slate-950 p-4 pl-11 text-lg font-black text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <Hash
+                    size={18}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className="block text-xs font-extrabold uppercase text-slate-300">
+                  Digite sua Senha
+                </Label>
+                <div className="relative">
+                  <Input
+                    type="password"
+                    autoFocus
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="******"
+                    className="w-full rounded-2xl border-slate-700 bg-slate-950 p-4 pl-11 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <KeyRound
+                    size={18}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                  />
+                </div>
+              </div>
+            )}
 
             <Button
               type="submit"
-              disabled={isLoggingIn || !password}
+              disabled={isLoggingIn || (authMode === 'pin' ? !pin : !password)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-6 text-xs font-black uppercase text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 disabled:opacity-50"
             >
               {isLoggingIn ? (

@@ -44,6 +44,7 @@ export function Permissions() {
     name: '',
     email: '',
     password: '',
+    pin: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     modules: [] as string[],
   })
@@ -74,6 +75,9 @@ export function Permissions() {
         const payload: any = { id: selectedUser.id, ...formData }
         if (!payload.password || payload.password.trim() === '') {
           delete payload.password
+        }
+        if (!payload.pin || payload.pin.trim() === '') {
+          delete payload.pin
         }
         return updateUser(payload)
       }
@@ -108,6 +112,7 @@ export function Permissions() {
       name: '',
       email: '',
       password: '',
+      pin: '',
       role: 'MEMBER',
       modules: [],
     })
@@ -120,6 +125,7 @@ export function Permissions() {
       name: user.name,
       email: user.email,
       password: '',
+      pin: '',
       role: user.role,
       modules: user.modules,
     })
@@ -227,22 +233,32 @@ export function Permissions() {
                   {user.email}
                 </div>
               </div>
-              <Badge
-                variant="outline"
-                className={
-                  user.role === 'ADMIN'
-                    ? 'mb-4 border-amber-600/30 bg-amber-500/10 text-amber-600'
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={
+                    user.role === 'ADMIN'
+                      ? 'border-amber-600/30 bg-amber-500/10 text-amber-600'
+                      : user.role === 'CASHIER'
+                        ? 'border-purple-600/30 bg-purple-500/10 text-purple-600'
+                        : 'text-slate-500'
+                  }
+                >
+                  {user.role === 'ADMIN'
+                    ? 'Administrador'
                     : user.role === 'CASHIER'
-                      ? 'mb-4 border-purple-600/30 bg-purple-500/10 text-purple-600'
-                      : 'mb-4 text-slate-500'
-                }
-              >
-                {user.role === 'ADMIN'
-                  ? 'Administrador'
-                  : user.role === 'CASHIER'
-                    ? 'Operador de Caixa'
-                    : 'Membro'}
-              </Badge>
+                      ? 'Operador de Caixa'
+                      : 'Membro'}
+                </Badge>
+                {user.has_pin && (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-600/30 bg-emerald-500/10 text-[10px] font-bold text-emerald-600"
+                  >
+                    PIN Ativo
+                  </Badge>
+                )}
+              </div>
 
               <div className="mt-auto flex flex-wrap gap-1.5">
                 {user.modules.length === 0 ? (
@@ -328,25 +344,45 @@ export function Permissions() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Nível de Acesso Global</Label>
-                <select
-                  id="role"
-                  value={formData.role}
+                <Label htmlFor="pin">
+                  PIN Rápido (4 a 6 dígitos)
+                </Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={formData.pin}
                   onChange={(e) => {
-                    const newRole = e.target.value as any
-                    setFormData({
-                      ...formData,
-                      role: newRole,
-                      modules: newRole === 'CASHIER' ? [] : formData.modules,
-                    })
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    setFormData({ ...formData, pin: val })
                   }}
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                >
-                  <option value="MEMBER">Membro Padrão</option>
-                  <option value="ADMIN">Administrador</option>
-                  <option value="CASHIER">Operador de Caixa</option>
-                </select>
+                  placeholder={
+                    isCreating ? 'Ex: 1234' : 'Deixe em branco para manter'
+                  }
+                />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Nível de Acesso Global</Label>
+              <select
+                id="role"
+                value={formData.role}
+                onChange={(e) => {
+                  const newRole = e.target.value as any
+                  setFormData({
+                    ...formData,
+                    role: newRole,
+                    modules: newRole === 'CASHIER' ? [] : formData.modules,
+                  })
+                }}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="MEMBER">Membro Padrão</option>
+                <option value="ADMIN">Administrador</option>
+                <option value="CASHIER">Operador de Caixa</option>
+              </select>
             </div>
 
             <div className="mt-2 border-t pt-2">

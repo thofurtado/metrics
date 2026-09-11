@@ -4,6 +4,7 @@ export interface CreateUserBody {
   name: string
   email: string
   password?: string
+  pin?: string
   role?: 'ADMIN' | 'MEMBER'
   modules?: string[]
 }
@@ -18,6 +19,7 @@ export interface UpdateUserBody {
   name?: string
   email?: string
   password?: string
+  pin?: string
   role?: 'ADMIN' | 'MEMBER'
   modules?: string[]
 }

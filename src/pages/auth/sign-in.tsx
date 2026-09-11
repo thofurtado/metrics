@@ -197,7 +197,7 @@ export function SignIn() {
             Acessar Metrics
           </h1>
           <p className="text-sm text-muted-foreground">
-            Selecione seu perfil e informe sua senha para entrar
+            Selecione seu perfil e informe sua senha ou PIN para entrar
           </p>
         </div>
 
@@ -286,10 +286,11 @@ export function SignIn() {
           </div>
 
           <div className="space-y-2 pt-2">
-            <Label htmlFor="password">Senha:</Label>
+            <Label htmlFor="password">Senha ou PIN:</Label>
             <Input
               id="password"
               type="password"
+              placeholder="Digite sua senha ou PIN..."
               {...register('password')}
               className={
                 errors.password

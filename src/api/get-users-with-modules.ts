@@ -6,6 +6,7 @@ export interface UserWithModules {
   email: string
   role: 'ADMIN' | 'MEMBER'
   modules: string[]
+  has_pin?: boolean
 }
 
 export async function getUsersWithModules() {
