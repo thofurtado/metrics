@@ -695,7 +695,7 @@ export function ItemCustomizerDialog({
                             type="button"
                             onClick={() => handleIncreaseOption(group, opt)}
                             disabled={!canAdd}
-                            className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 disabled:opacity-30 active:scale-95"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm transition-all disabled:opacity-30 active:scale-95" style={{ backgroundColor: primaryColor }}
                           >
                             <Plus className="h-3 w-3 stroke-[3]" />
                           </button>
@@ -767,7 +767,7 @@ export function ItemCustomizerDialog({
               type="button"
               onClick={handleConfirm}
               disabled={!isReadyToConfirm}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]" style={{ backgroundColor: primaryColor }}
             >
               <span>ADICIONAR À SACOLA</span>
               <span>{formatBRL(unitPrice * itemQuantity)}</span>

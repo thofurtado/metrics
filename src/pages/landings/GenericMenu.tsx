@@ -1603,7 +1603,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => handleIncrementCartItem(item.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#15803d] text-white shadow-sm transition-all hover:bg-[#166534] active:scale-95"
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                       >
                         <Plus className="h-3 w-3 stroke-[2.5]" />
                       </button>
@@ -1645,7 +1645,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           type="button"
           onClick={handleOpenCheckout}
           disabled={cartCount === 0 || !storeStatus.isOpen || !isMinOrderSatisfied}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] py-4 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
         >
           <span>Avançar para o Checkout</span>
           <ChevronRight className="h-4 w-4 stroke-[3]" />
@@ -1658,10 +1658,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       <main className="relative flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
         <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
           {/* Header Curvo Verde Floresta (Design Fiel ao Stitch) */}
-          <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden px-5 pt-8 pb-10 sm:pt-10 sm:pb-12 rounded-b-[36px] bg-[#0c3b23] shadow-lg sm:min-h-[240px]">
+          <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden px-5 pt-8 pb-10 sm:pt-10 sm:pb-12 rounded-b-[36px] shadow-lg sm:min-h-[240px]" style={{ backgroundColor: "var(--primary-color, #0c3b23)" }}>
             {/* Banner de fundo se houver */}
             <DynamicHero profile={profile} />
-            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-[#0c3b23] via-[#0c3b23]/80 to-[#0c3b23]/40" />
+            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
 
             {/* Conteúdo Posicionado Sobre o Header */}
             <div className="relative z-20 flex flex-col gap-3 text-white">
@@ -1754,7 +1754,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
           {/* Barra de Pesquisa Flutuante */}
           <div className="-mt-6 px-4 z-20 relative max-w-2xl mx-auto">
-            <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3.5 shadow-xl border border-slate-100 transition-all focus-within:ring-2 focus-within:ring-[#15803d]">
+            <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3.5 shadow-xl border border-slate-100 transition-all focus-within:ring-2 focus-within:ring-[var(--primary-color,#10B981)]">
               <Search className="h-5 w-5 text-slate-400 shrink-0" />
               <input
                 type="text"
@@ -1790,8 +1790,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     onClick={() => setActiveCategory(cat)}
                     className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${
                       isActive
-                        ? 'bg-[#15803d] text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
+                    style={isActive ? { backgroundColor: 'var(--primary-color, #10B981)' } : undefined}
                     }`}
                   >
                     {label}
@@ -1806,7 +1807,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         <div className="flex-1 px-4 py-6 sm:px-6 lg:px-12">
           {isLoading ? (
             <div className="flex h-64 flex-col items-center justify-center space-y-4">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#15803d]" />
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[var(--primary-color,#10B981)]" />
             </div>
           ) : !products?.length ? (
             <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
@@ -1888,7 +1889,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                     <button
                                       type="button"
                                       onClick={() => handleProductClick(product)}
-                                      className="flex items-center gap-1.5 rounded-full bg-[#15803d] hover:bg-[#166534] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95"
+                                      className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                                     >
                                       {totalInCart > 0 ? (
                                         <>
@@ -1923,7 +1924,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                       <button
                                         type="button"
                                         onClick={() => handleAddToCart(product)}
-                                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#15803d] text-white shadow-sm transition-all hover:bg-[#166534] active:scale-95"
+                                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                                       >
                                         <Plus className="h-3 w-3 stroke-[3]" />
                                       </button>
@@ -1935,7 +1936,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                   <button
                                     type="button"
                                     onClick={() => handleAddToCart(product)}
-                                    className="flex items-center gap-1.5 rounded-full bg-[#15803d] hover:bg-[#166534] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95"
+                                    className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                                   >
                                     <Plus className="h-3.5 w-3.5 stroke-[3]" />
                                     Adicionar
@@ -1968,12 +1969,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: 'spring', bounce: 0.2 }}
             onClick={() => setIsCartModalOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] p-3 px-4 font-bold text-white shadow-2xl transition-transform active:scale-[0.98]"
+            className="flex w-full items-center justify-between rounded-2xl p-3 px-4 font-bold text-white shadow-2xl transition-transform active:scale-[0.98]" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
           >
             <div className="flex items-center gap-3">
               <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white">
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-black text-[#0f763e] shadow">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-black shadow" style={{ color: "var(--primary-color, #10B981)" }}>
                   {cartCount}
                 </span>
               </div>
@@ -2485,7 +2486,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         }
                       }
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] py-3 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                   >
                     <span>AVANÇAR PARA PAGAMENTO</span>
                     <ChevronRight className="h-4 w-4 stroke-[3]" />
@@ -2635,7 +2636,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     <button
                       type="button"
                       onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
-                      className="flex items-center gap-1 rounded-lg bg-[#0f763e] hover:bg-[#0d6e38] px-3 py-1.5 text-xs font-bold text-white transition-all shrink-0"
+                      className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-all shrink-0" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                     >
                       {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                       {isCopiedPix ? 'Copiado!' : 'Copiar Pix'}
@@ -2701,7 +2702,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     type="button"
                     disabled={isSubmittingOrder}
                     onClick={handleFinalizeOrder}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#0f763e] hover:bg-[#0d6e38] py-3.5 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                   >
                     {isSubmittingOrder ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
