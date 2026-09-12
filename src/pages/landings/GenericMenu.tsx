@@ -484,54 +484,13 @@ function formatMeasureUnit(unit?: string) {
   return unit
 }
 
-
-function getPairingSuggestion(category: string = '', name: string = ''): string {
-  const text = `${category} ${name}`.toLowerCase()
-  if (text.includes('camar') || text.includes('peixe') || text.includes('ostra') || text.includes('marisco') || text.includes('lula') || text.includes('polvo') || text.includes('frutos do mar') || text.includes('caiçara')) {
-    return 'Chopp Artesanal IPA ou Vinho Verde'
-  }
-  if (text.includes('burger') || text.includes('angus') || text.includes('carne') || text.includes('costela') || text.includes('picanha')) {
-    return 'Vinho Tinto Malbec ou Drink Old Fashioned'
-  }
-  if (text.includes('pizza') || text.includes('massa') || text.includes('risoto')) {
-    return 'Chianti Clássico ou Cerveja Dunkel'
-  }
-  if (text.includes('batata') || text.includes('petisco') || text.includes('porção') || text.includes('isca')) {
-    return 'Chopp Pilsen Extra Gelado ou Drink Gin Tônica'
-  }
-  if (text.includes('sobremesa') || text.includes('doce') || text.includes('torta') || text.includes('pudim')) {
-    return 'Espumante Moscatel ou Café Espresso Especial'
-  }
-  return 'Cerveja Artesanal Especial'
-}
-
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
-  const isHauteCoastal = Boolean(
-    tenantName?.toLowerCase().includes('marujo') ||
-    profile?.themeClass === 'theme-marujo' ||
-    (typeof window !== 'undefined' && (
-      window.location.hostname.includes('marujo') ||
-      window.location.hostname.includes('metrics-two-gamma')
-    ))
-  )
-
-  // Gerencia o tema: Dark Luxury (#080E18) se for Haute Coastal (Marujo), ou Claro para White Label padrão
+  // Garante que o cardápio público esteja SEMPRE no modo Claro (Light), independente do tema da retaguarda
   useEffect(() => {
     const root = document.documentElement
     const hadDark = root.classList.contains('dark')
-
-    if (isHauteCoastal) {
-      root.classList.add('dark')
-      root.classList.add('theme-marujo')
-      root.classList.remove('light')
-      document.documentElement.style.setProperty('--primary-color', '#d97707')
-      document.documentElement.style.setProperty('--secondary-color', '#ffb95f')
-      document.documentElement.style.setProperty('--background-color', '#080e18')
-    } else {
-      root.classList.remove('dark')
-      root.classList.remove('theme-marujo')
-      root.classList.add('light')
-    }
+    root.classList.remove('dark')
+    root.classList.add('light')
 
     return () => {
       if (hadDark) {
@@ -539,7 +498,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         root.classList.remove('light')
       }
     }
-  }, [isHauteCoastal])
+  }, [])
 
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -774,38 +733,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setTimeout(() => {
       document.getElementById('zipcode-input')?.focus()
     }, 100)
-  }
-
-    const handleSearchCEPCheckout = async (rawCep: string) => {
-    if (rawCep.length !== 8) return
-    setIsSearchingCEPCheckout(true)
-    try {
-      const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
-      if (!res.ok) throw new Error('CEP não encontrado')
-      const data = await res.json()
-      setStreet(data.street || '')
-      setCity(data.city || '')
-      setState(data.state || '')
-      const matched = matchNeighborhoodWithConfig(data.neighborhood || '')
-      if (matched) {
-        setNeighborhood(matched)
-      } else {
-        setNeighborhood('')
-        if (availableNeighborhoodsList.length > 0) {
-          setUnsupportedNeighborhoodModal({
-            isOpen: true,
-            neighborhoodName: data.neighborhood || '',
-          })
-        }
-      }
-      setTimeout(() => {
-        document.getElementById('number-input')?.focus()
-      }, 100)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsSearchingCEPCheckout(false)
-    }
   }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1727,17 +1654,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     </div>
   )
   return (
-    <div className={`flex min-h-[100dvh] w-full flex-col font-sans lg:flex-row ${isHauteCoastal ? 'bg-[#080E18] text-[#DDE2F1] theme-marujo font-jakarta' : 'bg-[#F8FAFC] text-slate-800'}`}>
+    <div className="flex min-h-[100dvh] w-full flex-col bg-[#F8FAFC] font-sans text-slate-800 lg:flex-row">
       <main className="relative flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
-        {/* Faixa de Premiação Topo - 8x Campeão */}
-        {isHauteCoastal && (
-          <div className="w-full bg-gradient-to-r from-[#140b02] via-[#2a1705] to-[#140b02] border-b border-[#d97707]/40 py-2.5 px-4 text-center sticky top-0 z-40 shadow-lg">
-            <span className="text-[11px] sm:text-xs font-bold tracking-widest text-[#ffb77d] uppercase font-sans flex items-center justify-center gap-2">
-              <span className="text-amber-400">👑</span> ★ 8X CAMPEÃO DO CARAGUÁ A GOSTO • ALTA GASTRONOMIA LITORÂNEA
-            </span>
-          </div>
-        )}
-        <header className={`relative z-10 shrink-0 ${isHauteCoastal ? 'bg-[#080E18]' : 'bg-[#F8FAFC]'}`}>
+        <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
           {/* Header Curvo Verde Floresta (Design Fiel ao Stitch) */}
           <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden px-5 pt-8 pb-10 sm:pt-10 sm:pb-12 rounded-b-[36px] shadow-lg sm:min-h-[240px]" style={{ backgroundColor: "var(--primary-color, #0c3b23)" }}>
             {/* Banner de fundo se houver */}
@@ -1857,75 +1776,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           </div>
         </header>
 
-        {/* Seção Pratos Premiados & Assinatura (Exclusivo Haute Coastal / Marujo) */}
-        {isHauteCoastal && !searchQuery && (products || []).length > 0 && (
-          <div className="px-4 pt-6 pb-2 sm:px-6 lg:px-12">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="h-5 w-1 rounded-full bg-[#d97707]"></span>
-                <h2 className="text-xl sm:text-2xl font-bold font-playfair tracking-wide text-white">
-                  Pratos Premiados & Assinatura
-                </h2>
-              </div>
-              <span className="rounded-full bg-[#d97707]/20 border border-[#d97707]/50 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 tracking-wider uppercase">
-                Edição Ouro
-              </span>
-            </div>
-
-            {/* Carrossel Horizontal de Assinaturas */}
-            <div className="no-scrollbar flex gap-4 overflow-x-auto pb-4 pt-1 snap-x">
-              {(products || []).slice(0, 5).map((item: any, idx: number) => {
-                const badgeLabel = idx === 0 ? 'CAMPEÃO 2023' : idx === 1 ? 'GRAND PRIX' : idx === 2 ? 'EDIÇÃO LIMITADA' : 'DESTAQUE DO CHEF'
-                return (
-                  <div
-                    key={`sig-${item.id}`}
-                    onClick={() => handleProductClick(item)}
-                    className="group relative flex-shrink-0 w-72 sm:w-80 cursor-pointer snap-start overflow-hidden rounded-2xl border border-white/10 bg-[#161c26]/90 p-3 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#d97707]/60 hover:shadow-[0_0_20px_rgba(217,119,7,0.2)]"
-                  >
-                    <div className="relative h-44 w-full overflow-hidden rounded-xl bg-slate-900">
-                      {item.imageUrl ? (
-                        <img
-                          src={resolveImageUrl(item.imageUrl)}
-                          alt={item.name}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[#0e141e] text-amber-500/40">
-                          <ChefHat className="h-12 w-12" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0e141e] via-transparent to-transparent opacity-80" />
-                      <span className="absolute top-2.5 left-2.5 rounded-full bg-[#d97707] px-2.5 py-0.5 text-[10px] font-extrabold text-slate-950 uppercase tracking-wider shadow-md">
-                        ★ {badgeLabel}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex flex-col justify-between">
-                      <h3 className="text-base font-bold font-playfair text-white line-clamp-1 group-hover:text-amber-300 transition-colors">
-                        {item.name}
-                      </h3>
-                      <p className="mt-1 text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                        {item.description || 'Culinária refinada com ingredientes frescos e selecionados à beira-mar.'}
-                      </p>
-                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-white/5">
-                        <span className="text-base font-extrabold font-playfair text-amber-400">
-                          {formatCurrency(item.price)}
-                        </span>
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d97707] text-slate-950 font-bold shadow-md transition-transform group-hover:scale-110">
-                          <Plus className="h-4 w-4 stroke-[3]" />
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Categorias Navegáveis em Pílulas (Estilo Stitch) */}
         {!searchQuery && categories.length > 0 && (
-          <div className={`sticky top-0 z-30 mt-3 shrink-0 border-b ${isHauteCoastal ? 'border-white/10 bg-[#080E18]/95' : 'border-slate-100 bg-white/95'} px-4 py-2.5 backdrop-blur-md`}>
+          <div className="sticky top-0 z-30 mt-3 shrink-0 border-b border-slate-100 bg-white/95 px-4 py-2.5 backdrop-blur-md">
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat
@@ -1936,15 +1789,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     type="button"
                     onClick={() => setActiveCategory(cat)}
                     className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${
-                      isHauteCoastal
-                        ? isActive
-                          ? 'bg-[#d97707]/25 border border-[#d97707] text-amber-300 font-playfair shadow-[0_0_12px_rgba(217,119,7,0.3)]'
-                          : 'bg-[#161c26] text-slate-300 border border-white/5 hover:border-amber-500/30'
-                        : isActive
-                          ? 'text-white shadow-sm'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      isActive
+                        ? 'text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
-                    style={!isHauteCoastal && isActive ? { backgroundColor: 'var(--primary-color, #10B981)' } : undefined}
+                    style={isActive ? { backgroundColor: 'var(--primary-color, #10B981)' } : undefined}
                   >
                     {label}
                   </button>
@@ -2008,15 +1857,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         )}
 
                         <div className="flex flex-1 flex-col p-4">
-                          <h3 className={`text-[15px] font-extrabold leading-snug ${isHauteCoastal ? 'font-playfair text-white text-base' : 'text-slate-900'}`}>
+                          <h3 className="text-[15px] font-extrabold leading-snug text-slate-900">
                             {product.name}
                           </h3>
-                          {isHauteCoastal && (
-                            <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-[#0e141e]/90 border border-[#d97707]/20 px-2 py-0.5 text-[10px] text-amber-200/90 font-jakarta">
-                              <span>🍷</span>
-                              <span className="font-medium">Harmoniza com {getPairingSuggestion(product.category, product.name)}</span>
-                            </div>
-                          )}
                           {product.description && (
                             <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
                               {product.description}
@@ -2028,7 +1871,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                                 UNITÁRIO
                               </span>
-                              <p className={`text-base font-black tracking-tight ${isHauteCoastal ? 'font-playfair text-amber-400 text-lg' : 'text-slate-900'}`}>
+                              <p className="text-base font-black tracking-tight text-slate-900">
                                 {formatCurrency(product.price)}
                               </p>
                             </div>
@@ -2914,36 +2757,36 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 <div className="mt-3">
                   {liveOrderStatus === 'pending' && (
-                    <div className={`flex items-start gap-3 rounded-xl p-3 border ${isHauteCoastal ? 'bg-[#161c26] text-amber-200 border-[#d97707]/30' : 'bg-amber-50 text-amber-900 border-amber-200/60'}`}>
-                      <span className="text-lg shrink-0 mt-0.5">⚓</span>
+                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 text-amber-900 border border-amber-200/60">
+                      <Clock className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-bold">{isHauteCoastal ? 'Pedido Recebido (Ancorado)' : '🟡 Aguardando Confirmação do Restaurante'}</p>
-                        <p className={`text-xs mt-0.5 ${isHauteCoastal ? 'text-slate-400' : 'text-amber-800/80'}`}>
-                          {isHauteCoastal ? 'Comanda validada e impressa no posto culinário.' : 'O restaurante recebeu seu pedido e está validando para iniciar o preparo.'}
+                        <p className="text-sm font-bold">🟡 Aguardando Confirmação do Restaurante</p>
+                        <p className="text-xs text-amber-800/80 mt-0.5">
+                          O restaurante recebeu seu pedido e está validando para iniciar o preparo.
                         </p>
                       </div>
                     </div>
                   )}
 
                   {liveOrderStatus === 'in_preparation' && (
-                    <div className={`flex items-start gap-3 rounded-xl p-3 border animate-fade-in ${isHauteCoastal ? 'bg-[#161c26] text-amber-200 border-[#d97707]/30' : 'bg-orange-50 text-orange-900 border-orange-200/60'}`}>
-                      <span className="text-lg shrink-0 mt-0.5">🔥</span>
+                    <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-3 text-orange-900 border border-orange-200/60 animate-fade-in">
+                      <ChefHat className="h-5 w-5 shrink-0 text-orange-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-bold">{isHauteCoastal ? 'Preparando na Cozinha (Ao Fogo do Chef)' : '👨‍🍳 Pedido Confirmado! Em Preparo'}</p>
-                        <p className={`text-xs mt-0.5 ${isHauteCoastal ? 'text-slate-400' : 'text-orange-800/80'}`}>
-                          {isHauteCoastal ? 'Os mestres artesãos estão lapidando seu prato especial.' : 'Nossa cozinha já está preparando seus pratos com todo o carinho.'}
+                        <p className="text-sm font-bold">👨‍🍳 Pedido Confirmado! Em Preparo</p>
+                        <p className="text-xs text-orange-800/80 mt-0.5">
+                          Nossa cozinha já está preparando seus pratos com todo o carinho.
                         </p>
                       </div>
                     </div>
                   )}
 
                   {liveOrderStatus === 'dispatched' && (
-                    <div className={`flex items-start gap-3 rounded-xl p-3 border animate-fade-in ${isHauteCoastal ? 'bg-[#161c26] text-amber-200 border-[#d97707]/30' : 'bg-blue-50 text-blue-900 border-blue-200/60'}`}>
-                      <span className="text-lg shrink-0 mt-0.5">⛵</span>
+                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 p-3 text-blue-900 border border-blue-200/60 animate-fade-in">
+                      <Bike className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-bold">{isHauteCoastal ? 'Saiu para Entrega (Navegando até Você)' : '🛵 Pedido a Caminho!'}</p>
-                        <p className={`text-xs mt-0.5 ${isHauteCoastal ? 'text-slate-400' : 'text-blue-800/80'}`}>
-                          {isHauteCoastal ? 'Previsão estimada de navegação: 25 - 35 min.' : 'O motoboy já retirou seu pedido e está a caminho do seu endereço.'}
+                        <p className="text-sm font-bold">🛵 Pedido a Caminho!</p>
+                        <p className="text-xs text-blue-800/80 mt-0.5">
+                          O motoboy já retirou seu pedido e está a caminho do seu endereço.
                         </p>
                       </div>
                     </div>

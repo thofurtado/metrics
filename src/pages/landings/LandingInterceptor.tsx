@@ -6,6 +6,7 @@ import { api } from '@/lib/axios'
 
 const EurecaLanding = lazy(() => import('./Eureca'))
 const GenericMenu = lazy(() => import('./GenericMenu'))
+const MarujoMenu = lazy(() => import('./Marujo/MarujoMenu'))
 
 const isAuthenticated = () => !!localStorage.getItem('token')
 
@@ -127,17 +128,15 @@ export function LandingInterceptor() {
 
     if (tenant.landingPageSlug === 'marujo') {
       return (
-        <div className="theme-marujo">
-          <Suspense
-            fallback={
-              <div className="flex h-screen items-center justify-center">
-                Carregando cardápio...
-              </div>
-            }
-          >
-            <GenericMenu tenantName={tenant.name} profile={profile} />
-          </Suspense>
-        </div>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center bg-[#080E18] text-[#ffb77d]">
+              Carregando cardápio Marujo...
+            </div>
+          }
+        >
+          <MarujoMenu tenantName={tenant.name} profile={profile} />
+        </Suspense>
       )
     }
   }
