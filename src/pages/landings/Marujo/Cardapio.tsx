@@ -9,7 +9,7 @@ import {
   RotateCw,
   ShoppingBag,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 
 import {
@@ -220,7 +220,7 @@ function CardapioContent() {
             {/* Listagem de Produtos */}
             <div className="space-y-4">
               {activeCategory &&
-                groupedProducts[activeCategory]?.map((product) => (
+                groupedProducts[activeCategory]?.map((product: any) => (
                   <div
                     key={product.id}
                     data-testid={`product-item-${product.display_id}`}

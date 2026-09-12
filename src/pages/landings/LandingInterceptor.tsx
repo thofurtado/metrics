@@ -5,7 +5,6 @@ import { Navigate } from 'react-router-dom'
 import { api } from '@/lib/axios'
 
 const EurecaLanding = lazy(() => import('./Eureca'))
-const MarujoLanding = lazy(() => import('./Marujo'))
 const GenericMenu = lazy(() => import('./GenericMenu'))
 
 const isAuthenticated = () => !!localStorage.getItem('token')
@@ -132,11 +131,11 @@ export function LandingInterceptor() {
           <Suspense
             fallback={
               <div className="flex h-screen items-center justify-center">
-                Carregando...
+                Carregando cardápio...
               </div>
             }
           >
-            <MarujoLanding />
+            <GenericMenu tenantName={tenant.name} profile={profile} />
           </Suspense>
         </div>
       )

@@ -5,7 +5,6 @@ import { Navigate } from 'react-router-dom'
 
 import { api } from '@/lib/axios'
 
-const MarujoLanding = lazy(() => import('./Marujo/Cardapio'))
 const GenericMenu = lazy(() => import('./GenericMenu'))
 
 interface TenantInfo {
@@ -103,11 +102,11 @@ export function MenuResolver() {
         <Suspense
           fallback={
             <div className="flex h-screen items-center justify-center">
-              Carregando...
+              Carregando cardápio...
             </div>
           }
         >
-          <MarujoLanding />
+          <GenericMenu tenantName={tenant.name} profile={profile} />
         </Suspense>
       </div>
     )

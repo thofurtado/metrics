@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Pirata+One&family=Cinzel:wght@400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Manrope:wght@200..800&family=Pirata+One&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 /* ==========================================================================
    METRICS RESPONSIVE ROOT SCALING (Legible, Crisp Typography)
@@ -130,44 +130,48 @@ input[type="number"] {
     /* Lighter Amber for dark mode */
   }
 
-  .theme-marujo {
-    /* Tema: Dark Tavern Premium */
-    --background: transparent;
+  .theme-marujo,
+  .theme-haute-coastal {
+    /* Haute Coastal Gastronomy - Palette do DESIGN.md */
+    --background: 220 50% 6%; /* #080e18 - Oceanic Obsidian */
+    --foreground: 223 38% 90%; /* #dde2f1 - Crisp Platinum / Alabaster */
 
-    /* Texto principal: stone-200 (60 5% 90%) para leitura suave */
-    --foreground: 60 5% 90%;
+    --card: 218 27% 12%; /* #161c26 - Velvet Graphite Surface */
+    --card-foreground: 223 38% 90%;
 
-    /* Fundos de card/modais: stone-900 (24 10% 10%) or white/5 */
-    --card: 24 10% 10%;
-    --card-foreground: 60 5% 90%;
+    --popover: 218 27% 12%;
+    --popover-foreground: 223 38% 90%;
 
-    --popover: 24 10% 10%;
-    --popover-foreground: 60 5% 90%;
+    /* Primary: Burnished Antique Gold (#d97707) */
+    --primary: 36 94% 44%;
+    --primary-foreground: 24 100% 14%;
 
-    /* Primary: Amber 600 elegante (38 92% 43%) */
-    --primary: 38 92% 43%;
-    --primary-foreground: 0 0% 100%;
+    /* Secondary: Warm Amber (#ffb95f / #ee9800) */
+    --secondary: 35 100% 68%;
+    --secondary-foreground: 24 100% 14%;
 
-    /* Tons atenuados para elementos secundários */
-    --secondary: 24 10% 15%;
-    --secondary-foreground: 60 5% 90%;
+    --muted: 218 20% 18%; /* #1e2634 */
+    --muted-foreground: 218 15% 65%; /* #94a3b8 */
 
-    --muted: 24 10% 15%;
-    --muted-foreground: 60 5% 72%;
-    /* ↑ Was 65% → now 72% for marujo dark theme legibility */
-
-    --accent: 24 10% 15%;
-    --accent-foreground: 60 5% 90%;
+    --accent: 36 94% 44%;
+    --accent-foreground: 220 50% 6%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 15%;
-    /* white/10ish */
-    --input: 0 0% 15%;
-    --ring: 38 92% 43%;
+    --border: 218 20% 22%; /* rgba(255,255,255,0.08) */
+    --input: 218 20% 22%;
+    --ring: 36 94% 44%;
 
-    --radius: 0.2rem;
+    --radius: 0.5rem;
+  }
+
+  .font-playfair {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  .font-jakarta {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 
