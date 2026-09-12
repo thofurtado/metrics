@@ -98,6 +98,7 @@ const profileSchema = z.object({
   deliveryTimeMin: z.coerce.number().min(1, 'Tempo inválido').default(30),
   deliveryTimeMax: z.coerce.number().min(1, 'Tempo inválido').default(60),
   ifoodMerchantId: z.string().optional(),
+  food99ShopId: z.string().optional(),
   anotaAiApiKey: z.string().optional(),
   googleReviewUrl: z.string().optional(),
   pixKey: z.string().optional(),
@@ -1810,22 +1811,151 @@ export function MenuSettings() {
 
                 <Separator className="my-2" />
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="ifoodMerchantId">iFood Merchant ID</Label>
-                    <Input
-                      id="ifoodMerchantId"
-                      {...register('ifoodMerchantId')}
-                      placeholder="Identificador da loja no portal do iFood"
-                    />
+                {/* MARKETPLACES: IFOOD & 99FOOD */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        🛵 Marketplaces de Delivery Conectados
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Integração nativa para captura automática de pedidos no PDV e sincronização de cardápio.
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={handleSyncCatalog}
+                      disabled={isSyncingCatalog}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow-sm"
+                    >
+                      {isSyncingCatalog ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3.5 w-3.5" /> Sincronizar Cardápio Completo
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="anotaAiApiKey">Anota AI API Key</Label>
-                    <Input
-                      id="anotaAiApiKey"
-                      {...register('anotaAiApiKey')}
-                      placeholder="Token de integração Anota AI"
-                    />
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {/* CARD IFOOD */}
+                    <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/40 dark:bg-red-950/20 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 font-black text-white text-xs">
+                            iF
+                          </span>
+                          <div>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">iFood</span>
+                            <div className="flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Ativo e Escutando</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleConnectIfood}
+                          disabled={isConnectingIfood}
+                          className="h-7 text-xs font-bold border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300"
+                        >
+                          {isConnectingIfood ? <Loader2 className="h-3 w-3 animate-spin" /> : '🔗 Autorizar Loja'}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="ifoodMerchantId" className="text-xs font-semibold">iFood Merchant ID</Label>
+                        <Input
+                          id="ifoodMerchantId"
+                          {...register('ifoodMerchantId')}
+                          placeholder="Ex: 0157299d-4790-4389-9703-47d56b5fe140"
+                          className="bg-white dark:bg-slate-900 text-xs"
+                        />
+                      </div>
+
+                      {ifoodAuthData && (
+                        <div className="rounded-xl border border-red-300 bg-white p-3 dark:bg-slate-900 space-y-2">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white">Código de Autorização iFood:</p>
+                          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+                            <code className="text-sm font-black text-red-600 tracking-wider">{ifoodAuthData.userCode}</code>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] font-bold gap-1"
+                              onClick={() => {
+                                navigator.clipboard.writeText(ifoodAuthData.userCode)
+                                toast.success('Código copiado!')
+                              }}
+                            >
+                              <Copy className="h-3 w-3" /> Copiar
+                            </Button>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1"
+                            onClick={() => window.open(ifoodAuthData.verificationUrlComplete, '_blank')}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" /> Abrir Portal iFood para Confirmar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* CARD 99FOOD */}
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500 font-black text-white text-xs">
+                            99
+                          </span>
+                          <div>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">99Food</span>
+                            <div className="flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Webhook Ativo</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText('https://api.metrics.dev.br/webhooks/99food')
+                            toast.success('URL do Webhook copiada!')
+                          }}
+                          className="h-7 text-xs font-bold border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 gap-1"
+                        >
+                          <Copy className="h-3 w-3" /> Copiar Webhook
+                        </Button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="food99ShopId" className="text-xs font-semibold">99Food App Shop ID</Label>
+                        <Input
+                          id="food99ShopId"
+                          {...register('food99ShopId')}
+                          placeholder="Ex: 342343227"
+                          className="bg-white dark:bg-slate-900 text-xs"
+                        />
+                      </div>
+
+                      <p className="text-[11px] text-muted-foreground">
+                        Notificações de pedidos são recebidas instantaneamente pelo servidor oficial na nuvem.
+                      </p>
+                    </div>
                   </div>
                 </div>
 

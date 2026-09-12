@@ -530,6 +530,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [state, setState] = useState('')
   const [zipcode, setZipcode] = useState('')
   const [complement, setComplement] = useState('')
+  const [referencePoint, setReferencePoint] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<
     'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'
   >('PIX')
@@ -1200,6 +1201,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           state: state || 'UF',
           zipcode: zipcode || undefined,
           complement: complement || undefined,
+          reference: referencePoint || undefined,
           payment_method_name:
             paymentMethod === 'PIX'
               ? 'PIX'
@@ -2407,15 +2409,25 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-slate-700">Complemento / Ref.</label>
+                          <label className="text-[11px] font-bold text-slate-700">Complemento</label>
                           <input
                             type="text"
-                            placeholder="Apto, bloco, etc."
+                            placeholder="Apto, bloco, casa 2..."
                             value={complement}
                             onChange={(e) => setComplement(e.target.value)}
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
                           />
                         </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700">Ponto de Referência (Opcional)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Próximo à padaria, portão branco, em frente ao mercado"
+                          value={referencePoint}
+                          onChange={(e) => setReferencePoint(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
+                        />
                       </div>
                     </div>
                   )}
