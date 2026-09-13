@@ -1,28 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { format, differenceInCalendarDays } from 'date-fns'
 import {
-  AlertCircle,
-  ArrowLeft,
-  Banknote,
-  Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CreditCard,
   FileText,
+  Layers,
+  List,
+  MessageCircle,
   Percent,
-  Plus,
+  Printer,
   RefreshCw,
   Rocket,
   Search,
   Undo2,
-  User,
+  UserCheck,
   Users,
-  Wallet,
-  Zap,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { getAccounts } from '@/api/get-accounts'
@@ -31,10 +28,8 @@ import { getPendingSettlements } from '@/api/get-pending-settlements'
 import { getSettlements } from '@/api/get-settlements'
 import { getEmployees } from '@/api/hr/employees'
 import { revertSettlement } from '@/api/revert-settlement'
-import { settleTermDebt } from '@/api/settle-term-debt'
 import { MonthPicker } from '@/components/MonthPicker'
 import { PageHeader } from '@/components/page-header'
-import { Pagination } from '@/components/pagination'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,11 +46,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -73,8 +67,9 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
-import { cn } from '@/lib/utils'
 
+import { ClientSettleModal } from './components/client-settle-modal'
+import { EmployeeTermPdfModal } from './components/employee-term-pdf-modal'
 import { TermReportModal } from './components/term-report-modal'
 
 export function Settlements() {
@@ -88,58 +83,104 @@ export function Settlements() {
   const [activeTab, setActiveTab] = useState<string>('automatic')
 
   // Pagination per tab
-  const [pendingCardPageIndex, setPendingCardPageIndex] = useState(0)
-  const [receivedCardPageIndex, setReceivedCardPageIndex] = useState(0)
-  const [pendingTermPageIndex, setPendingTermPageIndex] = useState(0)
-  const [receivedTermPageIndex, setReceivedTermPageIndex] = useState(0)
+  const [pendingCardPageIndex] = useState(0)
+  const [receivedCardPageIndex] = useState(0)
+  const [pendingTermPageIndex] = useState(0)
 
   // Modals state
   const [triggerModalOpen, setTriggerModalOpen] = useState(false)
-  const [termModalOpen, setTermModalOpen] = useState(false)
-  const [selectedTermTx, setSelectedTermTx] = useState<any>(null)
   const [reportModalOpen, setReportModalOpen] = useState(false)
 
-  // Selection for batch settlements
+  // Client Settle Modal State
+  const [clientModalTarget, setClientModalTarget] = useState<{
+    clientName: string
+    transactions: any[]
+  } | null>(null)
+  const [clientModalOpen, setClientModalOpen] = useState(false)
+
+  // Employee PDF Modal State
+  const [employeeModalTarget, setEmployeeModalTarget] = useState<{
+    id: string
+    name: string
+    department?: string
+    role?: string
+    items: any[]
+    totalAmount: number
+  } | null>(null)
+  const [employeeModalOpen, setEmployeeModalOpen] = useState(false)
+
+  // Multi-selection for cards
   const [selectedTxIds, setSelectedTxIds] = useState<string[]>([])
 
-  // Term Debt Form state
-  const [targetAccountId, setTargetAccountId] = useState('')
-  const [actualMethod, setActualMethod] = useState('PIX')
+  // Filters: Cards
+  const [cardSearchQuery, setCardSearchQuery] = useState('')
+  const [cardAcquirerFilter, setCardAcquirerFilter] = useState('all')
+  const [cardDueFilter, setCardDueFilter] = useState('all')
 
-  // Sorting
-  const [sortFieldPendingCard, setSortFieldPendingCard] =
-    useState('data_vencimento')
-  const [sortDirPendingCard, setSortDirPendingCard] = useState('asc')
+  // Filters: Clients (Term)
+  const [clientSearchQuery, setClientSearchQuery] = useState('')
+  const [clientTypeFilter, setClientTypeFilter] = useState('all')
+  const [clientStatusFilter, setClientStatusFilter] = useState('all')
+  const [clientSortBy, setClientSortBy] = useState<'amount_desc' | 'due_asc' | 'name_asc'>('amount_desc')
+  const [clientViewMode, setClientViewMode] = useState<'grouped' | 'list'>('grouped')
+  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({})
 
-  const [sortFieldReceivedCard, setSortFieldReceivedCard] =
-    useState('data_vencimento')
-  const [sortDirReceivedCard, setSortDirReceivedCard] = useState('desc')
+  // Filters: Employees
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('')
+  const [employeeDeptFilter, setEmployeeDeptFilter] = useState('all')
 
-  // Search filter inside Term tab
-  const [termSearchQuery, setTermSearchQuery] = useState('')
-
-  // 1. Query: Cartões à Receber no Mês Selecionado (Vendas do mês ou com vencimento no mês)
-  const { data: pendingCardsResult, isLoading: isLoadingPendingCards } =
-    useQuery({
-      queryKey: [
-        'pending-settlements-cards',
-        pendingCardPageIndex,
-        sortFieldPendingCard,
-        sortDirPendingCard,
-        selectedMonth,
-        selectedYear,
-      ],
-      queryFn: () =>
-        getPendingSettlements({
-          pageIndex: pendingCardPageIndex,
-          sortBy: sortFieldPendingCard,
-          sortDir: sortDirPendingCard,
-          month: selectedMonth,
-          year: selectedYear,
-          type: 'automatic',
-        }),
-    })
-  const pendingCards = pendingCardsResult?.data || []
+  // 1. Query: Cartões à Receber no Mês Selecionado
+  const { data: pendingCardsResult, isLoading: isLoadingPendingCards } = useQuery({
+    queryKey: [
+      'pending-settlements-cards',
+      pendingCardPageIndex,
+      selectedMonth,
+      selectedYear,
+    ],
+    queryFn: () =>
+      getPendingSettlements({
+        pageIndex: pendingCardPageIndex,
+        sortBy: 'data_vencimento',
+        sortDir: 'asc',
+        month: selectedMonth,
+        year: selectedYear,
+        type: 'automatic',
+      }),
+  })
+  const rawPendingCards = pendingCardsResult?.data || []
+  const pendingCards = useMemo(() => {
+    let list = [...rawPendingCards]
+    if (cardSearchQuery.trim()) {
+      const q = cardSearchQuery.toLowerCase()
+      list = list.filter((tx: any) =>
+        (tx.description || '').toLowerCase().includes(q) ||
+        (tx.payment_method || '').toLowerCase().includes(q) ||
+        ((tx as any).accounts?.name || '').toLowerCase().includes(q)
+      )
+    }
+    if (cardAcquirerFilter !== 'all') {
+      const acq = cardAcquirerFilter.toLowerCase()
+      list = list.filter((tx: any) =>
+        (tx.description || '').toLowerCase().includes(acq) ||
+        (tx.payment_method || '').toLowerCase().includes(acq)
+      )
+    }
+    if (cardDueFilter === 'today') {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      list = list.filter((tx: any) => format(new Date(tx.data_vencimento), 'yyyy-MM-dd') <= todayStr)
+    } else if (cardDueFilter === '7days') {
+      list = list.filter((tx: any) => {
+        const d = differenceInCalendarDays(new Date(tx.data_vencimento), new Date())
+        return d >= 0 && d <= 7
+      })
+    } else if (cardDueFilter === '15days') {
+      list = list.filter((tx: any) => {
+        const d = differenceInCalendarDays(new Date(tx.data_vencimento), new Date())
+        return d >= 0 && d <= 15
+      })
+    }
+    return list
+  }, [rawPendingCards, cardSearchQuery, cardAcquirerFilter, cardDueFilter])
   const pendingCardsSummary = pendingCardsResult?.summary || {
     totalGross: 0,
     totalNet: 0,
@@ -147,39 +188,24 @@ export function Settlements() {
     count: 0,
   }
 
-  // 2. Query: Cartões à Receber GERAL (Futuro Total em Aberto)
-  const { data: allPendingCardsResult } = useQuery({
-    queryKey: ['pending-settlements-cards-all'],
+  // 2. Query: Cartões Liquidados no Mês
+  const { data: receivedCardsResult, isLoading: isLoadingReceivedCards } = useQuery({
+    queryKey: [
+      'settlements-cards',
+      receivedCardPageIndex,
+      selectedMonth,
+      selectedYear,
+    ],
     queryFn: () =>
-      getPendingSettlements({
+      getSettlements({
+        pageIndex: receivedCardPageIndex,
+        sortBy: 'data_vencimento',
+        sortDir: 'desc',
+        month: selectedMonth,
+        year: selectedYear,
         type: 'automatic',
       }),
   })
-  const totalAllPendingCardsGross =
-    allPendingCardsResult?.summary?.totalGross || 0
-  const totalAllPendingCardsNet = allPendingCardsResult?.summary?.totalNet || 0
-
-  // 3. Query: Cartões Recebidos / Liquidados no Mês
-  const { data: receivedCardsResult, isLoading: isLoadingReceivedCards } =
-    useQuery({
-      queryKey: [
-        'settlements-cards',
-        receivedCardPageIndex,
-        sortFieldReceivedCard,
-        sortDirReceivedCard,
-        selectedMonth,
-        selectedYear,
-      ],
-      queryFn: () =>
-        getSettlements({
-          pageIndex: receivedCardPageIndex,
-          sortBy: sortFieldReceivedCard,
-          sortDir: sortDirReceivedCard,
-          month: selectedMonth,
-          year: selectedYear,
-          type: 'automatic',
-        }),
-    })
   const receivedCards = receivedCardsResult?.data || []
   const receivedCardsSummary = receivedCardsResult?.summary || {
     totalGross: 0,
@@ -188,26 +214,25 @@ export function Settlements() {
     count: 0,
   }
 
-  // 4. Query: A Prazo a Receber (Clientes e Funcionários) no Mês
-  const { data: pendingTermsResult, isLoading: isLoadingPendingTerms } =
-    useQuery({
-      queryKey: [
-        'pending-settlements-terms',
-        selectedMonth,
-        selectedYear,
-        pendingTermPageIndex,
-      ],
-      queryFn: () =>
-        getPendingSettlements({
-          pageIndex: pendingTermPageIndex,
-          month: selectedMonth,
-          year: selectedYear,
-          type: 'term',
-        }),
-    })
+  // 3. Query: A Prazo a Receber (Clientes e Funcionários) no Mês
+  const { data: pendingTermsResult, isLoading: isLoadingPendingTerms } = useQuery({
+    queryKey: [
+      'pending-settlements-terms',
+      selectedMonth,
+      selectedYear,
+      pendingTermPageIndex,
+    ],
+    queryFn: () =>
+      getPendingSettlements({
+        pageIndex: pendingTermPageIndex,
+        month: selectedMonth,
+        year: selectedYear,
+        type: 'term',
+      }),
+  })
   const pendingTerms = pendingTermsResult?.data || []
 
-  // 5. Query: A Prazo a Receber GERAL (Todos os débitos em aberto para o modal de relatório e total)
+  // 4. Query: A Prazo a Receber GERAL (Todos os débitos em aberto para o modal de relatório)
   const { data: allPendingTermsResult } = useQuery({
     queryKey: ['pending-settlements-terms-all'],
     queryFn: () =>
@@ -217,36 +242,12 @@ export function Settlements() {
   })
   const allPendingTerms = allPendingTermsResult?.data || []
 
-  // 6. Query: A Prazo Recebidos no Mês
-  const { data: receivedTermsResult, isLoading: isLoadingReceivedTerms } =
-    useQuery({
-      queryKey: [
-        'settlements-terms',
-        selectedMonth,
-        selectedYear,
-        receivedTermPageIndex,
-      ],
-      queryFn: () =>
-        getSettlements({
-          pageIndex: receivedTermPageIndex,
-          month: selectedMonth,
-          year: selectedYear,
-          type: 'term',
-        }),
-    })
-  const receivedTerms = receivedTermsResult?.data || []
-  const receivedTermsSummary = receivedTermsResult?.summary || {
-    totalGross: 0,
-    totalNet: 0,
-    totalFees: 0,
-    count: 0,
-  }
-
   // Auxiliary data: Contas, Clientes e Funcionários
-  const { data: accounts } = useQuery({
+  const { data: accountsData } = useQuery({
     queryKey: ['accounts'],
     queryFn: getAccounts,
   })
+  const accounts: any[] = (accountsData as any) || []
 
   const { data: clientsData } = useQuery({
     queryKey: ['clients'],
@@ -272,9 +273,7 @@ export function Settlements() {
           params: { onlyToday: 'true' },
         })
         queryClient.invalidateQueries({ queryKey: ['settlements-cards'] })
-        queryClient.invalidateQueries({
-          queryKey: ['pending-settlements-cards'],
-        })
+        queryClient.invalidateQueries({ queryKey: ['pending-settlements-cards'] })
         queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
       } catch (e) {
         console.error('Failed to auto-settle', e)
@@ -295,71 +294,36 @@ export function Settlements() {
     onError: () => toast.error('Erro ao reverter liquidação.'),
   })
 
-  const { mutateAsync: triggerSettlement, isPending: isTriggering } =
-    useMutation({
-      mutationFn: async (ids?: string[]) => {
-        const payload =
-          ids && ids.length > 0 ? { transactionIds: ids } : undefined
-        const res = await api.post('/trigger-settlement', payload)
-        return res.data
-      },
-      onSuccess: (data) => {
-        toast.success(data.message || 'Liquidação processada com sucesso!')
-        queryClient.invalidateQueries({ queryKey: ['settlements-cards'] })
-        queryClient.invalidateQueries({
-          queryKey: ['pending-settlements-cards'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['pending-settlements-cards-all'],
-        })
-        queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
-        setTriggerModalOpen(false)
-        setSelectedTxIds([])
-      },
-      onError: (err: any) =>
-        toast.error(
-          err?.response?.data?.message || 'Erro ao processar liquidações.',
-        ),
-    })
-
-  const { mutateAsync: handleSettleTerm, isPending: isSettlingTerm } =
-    useMutation({
-      mutationFn: (isWriteOff: boolean) =>
-        settleTermDebt({
-          transactionId: selectedTermTx.id,
-          targetAccountId: isWriteOff ? null : targetAccountId,
-          actualPaymentMethod: isWriteOff ? null : actualMethod,
-          isWriteOff,
-        }),
-      onSuccess: () => {
-        toast.success('Baixa realizada com sucesso!')
-        queryClient.invalidateQueries({
-          queryKey: ['pending-settlements-terms'],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['pending-settlements-terms-all'],
-        })
-        queryClient.invalidateQueries({ queryKey: ['settlements-terms'] })
-        queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
-        setTermModalOpen(false)
-        setSelectedTermTx(null)
-      },
-      onError: (err: any) =>
-        toast.error(err?.response?.data?.message || 'Erro ao realizar baixa.'),
-    })
+  const { mutateAsync: triggerSettlement, isPending: isTriggering } = useMutation({
+    mutationFn: async (ids?: string[]) => {
+      const payload = ids && ids.length > 0 ? { transactionIds: ids } : undefined
+      const res = await api.post('/trigger-settlement', payload)
+      return res.data
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Liquidação processada com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['settlements-cards'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-settlements-cards'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
+      setTriggerModalOpen(false)
+      setSelectedTxIds([])
+    },
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Erro ao processar liquidações.'),
+  })
 
   // Multi-select for card settlements
-  const allAutomaticIds = pendingCards.map((t) => t.id)
-  const isAllSelected =
-    allAutomaticIds.length > 0 &&
-    selectedTxIds.length === allAutomaticIds.length
+  const allCardIds = pendingCards.map((t) => t.id)
+  const isAllCardsSelected =
+    allCardIds.length > 0 && selectedTxIds.length === allCardIds.length
 
-  const handleSelectAll = () => {
-    if (isAllSelected) setSelectedTxIds([])
-    else setSelectedTxIds(allAutomaticIds)
+  const handleSelectAllCards = () => {
+    if (isAllCardsSelected) setSelectedTxIds([])
+    else setSelectedTxIds(allCardIds)
   }
 
-  const toggleSelection = (id: string) => {
+  const toggleCardSelection = (id: string) => {
     setSelectedTxIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     )
@@ -368,21 +332,10 @@ export function Settlements() {
   // Selected cards financial summary
   const selectedCardsSummary = useMemo(() => {
     if (!selectedTxIds.length) {
-      return {
-        count: 0,
-        gross: 0,
-        net: 0,
-        fees: 0,
-        items: [] as typeof pendingCards,
-      }
+      return { count: 0, gross: 0, net: 0, fees: 0, items: [] as typeof pendingCards }
     }
-
-    const allAvailable = [
-      ...pendingCards,
-      ...(allPendingCardsResult?.data || []),
-    ]
     const map = new Map<string, (typeof pendingCards)[0]>()
-    allAvailable.forEach((item) => map.set(item.id, item))
+    pendingCards.forEach((item) => map.set(item.id, item))
 
     const selectedItems: typeof pendingCards = []
     let gross = 0
@@ -403,119 +356,205 @@ export function Settlements() {
       }
     })
 
-    return {
-      count: selectedTxIds.length,
-      gross,
-      net,
-      fees,
-      items: selectedItems,
-    }
-  }, [selectedTxIds, pendingCards, allPendingCardsResult])
+    return { count: selectedTxIds.length, gross, net, fees, items: selectedItems }
+  }, [selectedTxIds, pendingCards])
 
-  // Today's pending cards summary (vencidas até hoje)
-  const todayPendingSummary = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const todayItems = pendingCards.filter((tx) => {
-      try {
-        const dueStr = format(new Date(tx.data_vencimento), 'yyyy-MM-dd')
-        return dueStr <= todayStr
-      } catch {
-        return false
-      }
-    })
-    const count = todayItems.length
-    const gross = todayItems.reduce(
-      (acc, tx) => acc + Number(tx.amount || 0),
-      0,
-    )
-    const net = todayItems.reduce(
-      (acc, tx) => acc + Number(tx.totalValue ?? tx.amount ?? 0),
-      0,
-    )
-    const fees = Math.max(0, gross - net)
-    return { count, gross, net, fees, items: todayItems }
-  }, [pendingCards])
-
-  // Month names in Portuguese
+  // Month names
   const monthNames = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
   ]
 
-  // KPI Calculations for Term Debts (A Prazo)
-  const termKpis = useMemo(() => {
-    let mesFuncionarios = 0
-    let mesClientes = 0
-    let geralFuncionarios = 0
-    let geralClientes = 0
+  // Separação dos Débitos de Term: Clientes vs Funcionários
+  const { clientDebts, employeeDebts, termSummary } = useMemo(() => {
+    const clientsList: any[] = []
+    const employeesList: any[] = []
+    let clientTotal = 0
+    let employeeTotal = 0
 
     pendingTerms.forEach((item) => {
       const amt = Number(item.amount || 0)
-      if (
+      const isEmployee =
         item.isEmployeeVale ||
         (item.payment_method || '').toUpperCase().includes('FUNCIONARIO')
-      ) {
-        mesFuncionarios += amt
-      } else {
-        mesClientes += amt
-      }
-    })
 
-    allPendingTerms.forEach((item) => {
-      const amt = Number(item.amount || 0)
-      if (
-        item.isEmployeeVale ||
-        (item.payment_method || '').toUpperCase().includes('FUNCIONARIO')
-      ) {
-        geralFuncionarios += amt
+      if (isEmployee) {
+        employeesList.push(item)
+        employeeTotal += amt
       } else {
-        geralClientes += amt
+        clientsList.push(item)
+        clientTotal += amt
       }
     })
 
     return {
-      mesTotal: mesFuncionarios + mesClientes,
-      mesFuncionarios,
-      mesClientes,
-      geralTotal: geralFuncionarios + geralClientes,
-      geralFuncionarios,
-      geralClientes,
+      clientDebts: clientsList,
+      employeeDebts: employeesList,
+      termSummary: {
+        clientTotal,
+        employeeTotal,
+        total: clientTotal + employeeTotal,
+      },
     }
-  }, [pendingTerms, allPendingTerms])
+  }, [pendingTerms])
 
-  // Filtered term items by search
-  const filteredPendingTerms = useMemo(() => {
-    if (!termSearchQuery.trim()) return pendingTerms
-    const q = termSearchQuery.toLowerCase()
-    return pendingTerms.filter(
-      (item) =>
-        (item.description || '').toLowerCase().includes(q) ||
-        (item.employeeName || '').toLowerCase().includes(q) ||
-        (item.payment_method || '').toLowerCase().includes(q),
+  // Agrupamento de Clientes A Prazo
+  const groupedClients = useMemo(() => {
+    const map = new Map<string, { clientName: string; phone?: string; items: any[]; totalAmount: number; hasOverdue: boolean }>()
+
+    clientDebts.forEach((tx) => {
+      let name = tx.client?.name || ''
+      if (!name) {
+        const match = tx.description?.match(/:\s*([^[]+)/) || tx.description?.match(/-\s*([^-]+)$/)
+        name = match ? match[1].trim() : 'Cliente'
+      }
+
+      const clientObj = clients.find((c: any) => c.name?.toLowerCase() === name.toLowerCase())
+      const phone = clientObj?.phone || clientObj?.cellphone || ''
+
+      const isOverdue = format(new Date(tx.data_vencimento || tx.data_emissao), 'yyyy-MM-dd') < format(new Date(), 'yyyy-MM-dd')
+
+      const current = map.get(name) || {
+        clientName: name,
+        phone,
+        items: [] as any[],
+        totalAmount: 0,
+        hasOverdue: false,
+      }
+
+      current.items.push(tx)
+      current.totalAmount += Number(tx.amount || 0)
+      if (isOverdue) current.hasOverdue = true
+
+      map.set(name, current)
+    })
+
+    let list = Array.from(map.values())
+
+    // Filtro por busca
+    if (clientSearchQuery.trim()) {
+      const q = clientSearchQuery.toLowerCase()
+      list = list.filter((c) =>
+        c.clientName.toLowerCase().includes(q) ||
+        c.items.some((i) => (i.description || '').toLowerCase().includes(q))
+      )
+    }
+
+    // Filtro por Status
+    if (clientStatusFilter === 'overdue') {
+      list = list.filter((c) => c.hasOverdue)
+    } else if (clientStatusFilter === 'today') {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      list = list.filter((c) =>
+        c.items.some((i) => format(new Date(i.data_vencimento || i.data_emissao), 'yyyy-MM-dd') === todayStr)
+      )
+    }
+
+    // Ordenação
+    if (clientSortBy === 'amount_desc') {
+      list.sort((a, b) => b.totalAmount - a.totalAmount)
+    } else if (clientSortBy === 'name_asc') {
+      list.sort((a, b) => a.clientName.localeCompare(b.clientName))
+    }
+
+    return list
+  }, [clientDebts, clients, clientSearchQuery, clientStatusFilter, clientSortBy])
+
+  // Filtragem de Lista Plana de Clientes A Prazo
+  const filteredClientRows = useMemo(() => {
+    let list = [...clientDebts]
+
+    if (clientSearchQuery.trim()) {
+      const q = clientSearchQuery.toLowerCase()
+      list = list.filter((tx) => {
+        const desc = (tx.description || '').toLowerCase()
+        return desc.includes(q)
+      })
+    }
+
+    if (clientTypeFilter !== 'all') {
+      list = list.filter((tx) => {
+        const method = (tx.payment_method || '').toUpperCase()
+        if (clientTypeFilter === 'permuta') return method.includes('PERMUTA')
+        if (clientTypeFilter === 'convenio') return method.includes('CONVENIO')
+        return !method.includes('PERMUTA') && !method.includes('CONVENIO')
+      })
+    }
+
+    return list
+  }, [clientDebts, clientSearchQuery, clientTypeFilter])
+
+  // Agrupamento de Funcionários (Vales)
+  const groupedEmployees = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; department?: string; role?: string; items: any[]; totalAmount: number }>()
+
+    employeeDebts.forEach((item) => {
+      const empName = item.employeeName || 'Colaborador'
+      const empId = item.employeeId || empName
+
+      const empObj = employees.find((e: any) => e.id === empId || e.name?.toLowerCase() === empName.toLowerCase())
+
+      const current = map.get(empName) || {
+        id: empId,
+        name: empName,
+        department: empObj?.sector?.name || empObj?.department || 'Geral',
+        role: empObj?.role || 'Colaborador',
+        items: [] as any[],
+        totalAmount: 0,
+      }
+
+      current.items.push(item)
+      current.totalAmount += Number(item.amount || 0)
+      map.set(empName, current)
+    })
+
+    let list = Array.from(map.values())
+
+    if (employeeSearchQuery.trim()) {
+      const q = employeeSearchQuery.toLowerCase()
+      list = list.filter((e) =>
+        e.name.toLowerCase().includes(q) ||
+        (e.role || '').toLowerCase().includes(q) ||
+        (e.department || '').toLowerCase().includes(q)
+      )
+    }
+
+    if (employeeDeptFilter !== 'all') {
+      list = list.filter((e) => e.department === employeeDeptFilter)
+    }
+
+    return list
+  }, [employeeDebts, employees, employeeSearchQuery, employeeDeptFilter])
+
+  // Gerador de Link do WhatsApp para Cobrança
+  const handleOpenWhatsApp = (phone: string | undefined, clientName: string, amount: number) => {
+    const cleanPhone = (phone || '').replace(/\D/g, '')
+    const formattedAmount = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    const text = encodeURIComponent(
+      `Olá ${clientName}! Tudo bem? Passando para lembrar do seu saldo em aberto no valor de ${formattedAmount}. Caso queira a chave PIX ou acertar na sua próxima visita, estamos à disposição! Muito obrigado.`
     )
-  }, [pendingTerms, termSearchQuery])
+    const url = cleanPhone ? `https://wa.me/55${cleanPhone}?text=${text}` : `https://api.whatsapp.com/send?text=${text}`
+    window.open(url, '_blank')
+  }
+
+  const toggleClientExpanded = (clientName: string) => {
+    setExpandedClients((prev) => ({
+      ...prev,
+      [clientName]: !prev[clientName],
+    }))
+  }
 
   return (
     <>
       <Helmet title="Recebíveis & Liquidações" />
 
-      <div className="flex flex-col gap-6 px-5 font-manrope md:px-0">
+      <div className="flex flex-col gap-5 px-4 font-manrope md:px-0">
         {/* HEADER PRINCIPAL PADRÃO COM SELETOR DE MÊS */}
         <PageHeader
           title="Recebíveis & Liquidações"
-          description="Gestão de recebimentos de cartões, liquidações de adquirentes e controle de contas a prazo."
+          description="Controle integrado de maquininhas de cartão, crediário de clientes e vales de colaboradores."
         >
-          <div className="mb-8 flex w-full flex-row items-center justify-between gap-2 md:mb-0 md:w-auto md:justify-end md:gap-3">
+          <div className="mb-4 flex w-full flex-row items-center justify-between gap-2 md:mb-0 md:w-auto md:justify-end md:gap-3">
             <MonthPicker
               date={selectedMonthDate}
               setDate={setSelectedMonthDate}
@@ -524,34 +563,117 @@ export function Settlements() {
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 rounded-xl border-slate-200 bg-white text-xs font-bold dark:border-slate-800 dark:bg-slate-900"
+              className="gap-1.5 rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
               onClick={() => {
-                queryClient.invalidateQueries({
-                  queryKey: ['settlements-cards'],
-                })
-                queryClient.invalidateQueries({
-                  queryKey: ['pending-settlements-cards'],
-                })
-                queryClient.invalidateQueries({
-                  queryKey: ['pending-settlements-cards-all'],
-                })
-                queryClient.invalidateQueries({
-                  queryKey: ['pending-settlements-terms'],
-                })
-                queryClient.invalidateQueries({
-                  queryKey: ['pending-settlements-terms-all'],
-                })
-                queryClient.invalidateQueries({
-                  queryKey: ['settlements-terms'],
-                })
+                queryClient.invalidateQueries({ queryKey: ['settlements-cards'] })
+                queryClient.invalidateQueries({ queryKey: ['pending-settlements-cards'] })
+                queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms'] })
+                queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms-all'] })
+                queryClient.invalidateQueries({ queryKey: ['settlements-terms'] })
                 toast.success('Dados atualizados com sucesso!')
               }}
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={13} />
               <span>Atualizar</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => setReportModalOpen(true)}
+              className="gap-1.5 rounded-xl bg-slate-900 px-3.5 text-xs font-black uppercase text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+            >
+              <FileText size={14} />
+              <span>Relatório PDF</span>
             </Button>
           </div>
         </PageHeader>
+
+        {/* 4 CARDS DE KPIS CONSOLIDADOS */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Card 1: Cartões a Receber */}
+          <div className="rounded-2xl border border-blue-200/80 bg-white p-4 shadow-sm dark:border-blue-900/40 dark:bg-slate-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Cartões a Receber no Mês
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                <CreditCard size={15} />
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+              {pendingCardsSummary.totalNet.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              Bruto: {pendingCardsSummary.totalGross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} • {pendingCardsSummary.count} lançamentos
+            </p>
+          </div>
+
+          {/* Card 2: Taxas MDR Retidas */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Taxas MDR Retidas
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                <Percent size={15} />
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
+              - {pendingCardsSummary.totalFees.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              Retenção Stone, PagBank e outras
+            </p>
+          </div>
+
+          {/* Card 3: Clientes a Prazo */}
+          <div className="rounded-2xl border border-purple-200/80 bg-white p-4 shadow-sm dark:border-purple-900/40 dark:bg-slate-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-400">
+                Clientes a Prazo (Fiado)
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400">
+                <Users size={15} />
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-black tracking-tight text-purple-950 dark:text-purple-100">
+              {termSummary.clientTotal.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              {groupedClients.length} clientes com débito em aberto
+            </p>
+          </div>
+
+          {/* Card 4: Vales de Funcionários */}
+          <div className="rounded-2xl border border-emerald-200/80 bg-white p-4 shadow-sm dark:border-emerald-900/40 dark:bg-slate-900">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Vales de Funcionários
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                <UserCheck size={15} />
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-300">
+              {termSummary.employeeTotal.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              {groupedEmployees.length} colaboradores com vales no ciclo
+            </p>
+          </div>
+        </div>
 
         {/* 4 ABAS DA TELA DE RECEBÍVEIS */}
         <Tabs
@@ -566,6 +688,9 @@ export function Settlements() {
             >
               <CreditCard size={15} />
               <span>Cartões à Receber</span>
+              <span className="rounded-full bg-blue-100 px-2 py-0.2 text-[10px] font-black text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                {pendingCards.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
@@ -573,23 +698,32 @@ export function Settlements() {
               className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-emerald-400"
             >
               <CheckCircle2 size={15} />
-              <span>Cartões Recebidos</span>
+              <span>Cartões Liquidados</span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                {receivedCards.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="term"
-              className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-orange-400"
+              className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-purple-400"
             >
               <Users size={15} />
-              <span>A Prazo a Receber</span>
+              <span>Clientes a Prazo</span>
+              <span className="rounded-full bg-purple-100 px-2 py-0.2 text-[10px] font-black text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                {clientDebts.length} pendentes
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
-              value="term_history"
-              className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-purple-400"
+              value="employees"
+              className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-emerald-400"
             >
-              <Banknote size={15} />
-              <span>A Prazo Recebidos</span>
+              <UserCheck size={15} />
+              <span>Vales de Funcionários</span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                {groupedEmployees.length} colaboradores
+              </span>
             </TabsTrigger>
           </TabsList>
 
@@ -597,148 +731,38 @@ export function Settlements() {
           {/* ABA 1: CARTÕES À RECEBER */}
           {/* ========================================================================= */}
           <TabsContent value="automatic" className="space-y-4">
-            {/* CARDS DE KPIS */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="shadow-xs rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-white p-4 dark:border-blue-900/40 dark:from-slate-900 dark:to-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                    A Receber (Vendas de {monthNames[selectedMonth - 1]})
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                    <CreditCard size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-blue-950 dark:text-blue-100">
-                  {pendingCardsSummary.totalNet.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <div className="mt-1 flex items-center justify-between border-t border-blue-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  <span>
-                    Bruto:{' '}
-                    {pendingCardsSummary.totalGross.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    })}
-                  </span>
-                  <span>{pendingCardsSummary.count} lançamentos</span>
-                </div>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Total Futuro em Aberto (Geral)
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
-                    <Wallet size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  {totalAllPendingCardsNet.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <div className="mt-1 flex items-center justify-between border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  <span>
-                    Bruto Total:{' '}
-                    {totalAllPendingCardsGross.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    })}
-                  </span>
-                  <span>Todos os Meses</span>
-                </div>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Taxas MDR Retidas ({monthNames[selectedMonth - 1]})
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                    <Percent size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
-                  -{' '}
-                  {pendingCardsSummary.totalFees.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Retenção Stone / PagBank
-                </span>
-              </div>
-            </div>
-
-            {/* BANNER DINÂMICO DE SELEÇÃO DE ADIANTAMENTO */}
+            {/* BANNER FLUTUANTE DE SELEÇÃO EM LOTE */}
             {selectedTxIds.length > 0 && (
-              <div className="flex flex-col gap-4 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 p-4 shadow-sm animate-in fade-in-50 slide-in-from-top-2 dark:border-blue-900/60 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 shadow-sm dark:border-blue-900/60 dark:bg-blue-950/40 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-600/30">
-                      <Rocket size={20} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase tracking-wider text-blue-900 dark:text-blue-200">
-                          {selectedCardsSummary.count}{' '}
-                          {selectedCardsSummary.count === 1
-                            ? 'Cartão Selecionado'
-                            : 'Cartões Selecionados'}
-                        </span>
-                        <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-[10px] font-extrabold uppercase text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
-                          Adiantamento Ativo
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        Valores que serão creditados na sua conta bancária
-                        imediatamente
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                      {selectedCardsSummary.count}
+                    </span>
+                    <span className="text-xs font-black uppercase tracking-wider text-blue-900 dark:text-blue-200">
+                      Cartões Selecionados
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 border-t border-blue-200/80 pt-2 dark:border-blue-800/60 sm:gap-6 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Valor Bruto
+                  <div className="flex items-center gap-4 text-xs">
+                    <span>
+                      Bruto:{' '}
+                      <strong className="font-mono">
+                        {selectedCardsSummary.gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </strong>
+                    </span>
+                    <span>
+                      Taxas MDR:{' '}
+                      <strong className="font-mono text-red-500">
+                        - {selectedCardsSummary.fees.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </strong>
+                    </span>
+                    <span className="rounded-xl border border-blue-200 bg-white px-3 py-1 font-bold text-emerald-600 dark:border-blue-800 dark:bg-slate-900 dark:text-emerald-400">
+                      Líquido a Creditar:{' '}
+                      <span className="font-mono text-sm font-black">
+                        {selectedCardsSummary.net.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
-                      <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 sm:text-sm">
-                        {selectedCardsSummary.gross.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        })}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Taxas MDR
-                      </span>
-                      <span className="font-mono text-xs font-bold text-red-500 sm:text-sm">
-                        -{' '}
-                        {selectedCardsSummary.fees.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        })}
-                      </span>
-                    </div>
-
-                    <div className="shadow-xs rounded-xl border border-blue-200/80 bg-white px-3.5 py-1.5 dark:border-blue-800/60 dark:bg-slate-900">
-                      <span className="block text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        Total Líquido a Adiantar
-                      </span>
-                      <span className="font-mono text-base font-black text-emerald-600 dark:text-emerald-400 sm:text-lg">
-                        {selectedCardsSummary.net.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        })}
-                      </span>
-                    </div>
+                    </span>
                   </div>
                 </div>
 
@@ -747,649 +771,167 @@ export function Settlements() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedTxIds([])}
-                    className="h-10 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="text-xs font-bold text-slate-500 hover:text-slate-900"
                   >
-                    Desmarcar
+                    Limpar seleção
                   </Button>
 
                   <Button
                     onClick={() => setTriggerModalOpen(true)}
-                    className="h-11 gap-2 rounded-xl bg-blue-600 px-5 text-xs font-black uppercase text-white shadow-md shadow-blue-600/30 hover:bg-blue-700 active:scale-95"
+                    className="gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 hover:bg-blue-700"
                   >
-                    <Rocket size={15} />
-                    <span>
-                      Adiantar{' '}
-                      {selectedCardsSummary.net.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
-                    </span>
+                    <Rocket size={14} />
+                    <span>Adiantar / Liquidar Selecionados</span>
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* BARRA DE AÇÕES DA TABELA */}
-            <div className="shadow-xs flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
-                <Select
-                  value={`${sortFieldPendingCard}-${sortDirPendingCard}`}
-                  onValueChange={(val) => {
-                    const [field, dir] = val.split('-')
-                    setSortFieldPendingCard(field)
-                    setSortDirPendingCard(dir)
-                  }}
-                >
-                  <SelectTrigger className="w-[210px] rounded-xl bg-slate-50 text-xs font-bold dark:bg-slate-950">
-                    <SelectValue placeholder="Ordenar por..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="data_vencimento-asc">
-                      Vencimento (Próximos)
-                    </SelectItem>
-                    <SelectItem value="data_vencimento-desc">
-                      Vencimento (Distantes)
-                    </SelectItem>
-                    <SelectItem value="data_emissao-desc">
-                      Venda Mais Recente
-                    </SelectItem>
-                    <SelectItem value="amount-desc">Maior Valor</SelectItem>
-                    <SelectItem value="amount-asc">Menor Valor</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* BARRA DE FILTROS */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Filtrar por adquirente, bandeira ou conta destino..."
+                  value={cardSearchQuery}
+                  onChange={(e) => setCardSearchQuery(e.target.value)}
+                  className="rounded-xl pl-9 text-xs font-semibold bg-slate-50 dark:bg-slate-950"
+                />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setTriggerModalOpen(true)}
-                  className="gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 active:scale-95"
-                >
-                  <Rocket size={15} />
-                  <span>
-                    {selectedTxIds.length > 0
-                      ? `Adiantar ${selectedTxIds.length} Selecionados (${selectedCardsSummary.net.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`
-                      : todayPendingSummary.count > 0
-                        ? `Adiantar Hoje (${todayPendingSummary.count} • ${todayPendingSummary.net.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`
-                        : 'Adiantar Liquidações de Hoje'}
-                  </span>
-                </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={cardAcquirerFilter} onValueChange={setCardAcquirerFilter}>
+                  <SelectTrigger className="w-[160px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Adquirente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as Adquirentes</SelectItem>
+                    <SelectItem value="stone">Stone</SelectItem>
+                    <SelectItem value="pagbank">PagBank</SelectItem>
+                    <SelectItem value="cielo">Cielo</SelectItem>
+                    <SelectItem value="rede">Rede</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={cardDueFilter} onValueChange={setCardDueFilter}>
+                  <SelectTrigger className="w-[180px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Vencimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Vencimentos</SelectItem>
+                    <SelectItem value="today">Vencidos ou Hoje</SelectItem>
+                    <SelectItem value="7days">Próximos 7 dias</SelectItem>
+                    <SelectItem value="15days">Próximos 15 dias</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {/* TABELA DE CARTÕES A RECEBER */}
-            <div className="shadow-xs overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950">
                   <TableRow>
-                    <TableHead className="w-[50px] text-center">
+                    <TableHead className="w-[45px] text-center">
                       <Checkbox
-                        checked={isAllSelected}
-                        onCheckedChange={handleSelectAll}
-                        disabled={pendingCards.length === 0}
+                        checked={isAllCardsSelected}
+                        onCheckedChange={handleSelectAllCards}
                       />
                     </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Vencimento Previsto
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Data da Venda
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Venda / Descrição
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Forma / Bandeira
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Bruto (R$)
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Taxa MDR
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Líquido a Receber
-                    </TableHead>
+                    <TableHead className="text-xs font-black uppercase">Vencimento Previsto</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Data da Venda</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Adquirente / Bandeira</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Conta Destino</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Valor Bruto</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Taxa MDR (%)</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Valor Líquido</TableHead>
+                    <TableHead className="w-[110px] text-center text-xs font-black uppercase">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingPendingCards ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-28 text-center text-xs font-bold text-slate-500"
-                      >
-                        Carregando recebíveis de cartões...
+                      <TableCell colSpan={9} className="h-28 text-center text-xs font-bold text-slate-500">
+                        Carregando lançamentos de cartões...
                       </TableCell>
                     </TableRow>
                   ) : pendingCards.length > 0 ? (
                     pendingCards.map((tx) => {
-                      const taxPerc = tx.interest || 0
-                      const bruto = tx.amount
-                      const liquido = tx.totalValue || tx.amount
+                      const bruto = Number(tx.amount || 0)
+                      const liquido = Number(tx.totalValue ?? tx.amount ?? 0)
+                      const feeVal = Math.max(0, bruto - liquido)
+                      const feePerc = bruto > 0 ? ((feeVal / bruto) * 100).toFixed(1) : '0.0'
+
+                      const daysDiff = differenceInCalendarDays(new Date(tx.data_vencimento), new Date())
+                      const isToday = daysDiff === 0
+                      const isPast = daysDiff < 0
+
+                      const isSelected = selectedTxIds.includes(tx.id)
 
                       return (
-                        <TableRow
-                          key={tx.id}
-                          className={cn(
-                            'transition-colors',
-                            selectedTxIds.includes(tx.id)
-                              ? 'bg-blue-50/70 hover:bg-blue-100/60 dark:bg-blue-950/40 dark:hover:bg-blue-950/60'
-                              : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/50',
-                          )}
-                        >
+                        <TableRow key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
                           <TableCell className="text-center">
                             <Checkbox
-                              checked={selectedTxIds.includes(tx.id)}
-                              onCheckedChange={() => toggleSelection(tx.id)}
+                              checked={isSelected}
+                              onCheckedChange={() => toggleCardSelection(tx.id)}
                             />
                           </TableCell>
-                          <TableCell className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
-                            {format(
-                              new Date(tx.data_vencimento),
-                              'dd/MM/yyyy',
-                              { locale: ptBR },
-                            )}
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                                {format(new Date(tx.data_vencimento), 'dd/MM/yyyy')}
+                              </span>
+                              {isToday && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                  Hoje
+                                </span>
+                              )}
+                              {isPast && (
+                                <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                  Atrasado
+                                </span>
+                              )}
+                              {!isToday && !isPast && (
+                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                  Em {daysDiff}d
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
-                          <TableCell className="font-mono text-xs font-medium text-slate-500">
-                            {format(new Date(tx.data_emissao), 'dd/MM/yyyy', {
-                              locale: ptBR,
-                            })}
-                          </TableCell>
-                          <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                            {tx.description}
+                          <TableCell className="font-mono text-xs text-slate-500">
+                            {format(new Date(tx.data_emissao), 'dd/MM/yyyy')}
                           </TableCell>
                           <TableCell>
-                            <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                              {tx.payment_method}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                                {tx.payment_method || 'Cartão'}
+                              </span>
+                              <span className="truncate text-xs text-slate-600 dark:text-slate-400">
+                                {tx.description?.replace(/\[DEST:[^\]]+\]/, '')}
+                              </span>
+                            </div>
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-medium text-slate-600 dark:text-slate-400">
-                            {bruto.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
+                          <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                            {(tx as any).accounts?.name || 'Conta Padrão'}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold text-red-500">
-                            {taxPerc}%
+                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {bruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-amber-600 dark:text-amber-400">
+                            {feePerc}% (-{feeVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
-                            {liquido.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="h-28 text-center text-xs font-semibold text-slate-400"
-                      >
-                        Nenhum cartão ou voucher aguardando liquidação para o
-                        mês de {monthNames[selectedMonth - 1]}.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {pendingCardsResult?.meta &&
-              pendingCardsResult.meta.totalPages > 1 && (
-                <Pagination
-                  pageIndex={pendingCardPageIndex}
-                  totalCount={pendingCardsResult.meta.total}
-                  perPage={pendingCardsResult.meta.limit}
-                  onPageChange={setPendingCardPageIndex}
-                />
-              )}
-          </TabsContent>
-
-          {/* ========================================================================= */}
-          {/* ABA 2: CARTÕES RECEBIDOS (SEPARADOS POR MÊS) */}
-          {/* ========================================================================= */}
-          <TabsContent value="card_history" className="space-y-4">
-            {/* CARDS DE KPIS DO MÊS */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="shadow-xs rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-white p-4 dark:border-emerald-900/40 dark:from-slate-900 dark:to-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Líquido Depositado ({monthNames[selectedMonth - 1]})
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    <CheckCircle2 size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-950 dark:text-emerald-300">
-                  {receivedCardsSummary.totalNet.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-emerald-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Saldo Real Efetivado
-                </span>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Bruto Original Faturado
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                    <Wallet size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  {receivedCardsSummary.totalGross.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Valor de Venda no Balcão
-                </span>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Taxas MDR Descontadas
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                    <Percent size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
-                  -{' '}
-                  {receivedCardsSummary.totalFees.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Retenção das Maquininhas
-                </span>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Liquidações no Mês
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-500/10 text-slate-600 dark:bg-slate-500/20 dark:text-slate-400">
-                    <CheckCircle2 size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  {receivedCardsSummary.count}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Lotes Efetivados no Banco
-                </span>
-              </div>
-            </div>
-
-            {/* TABELA DE HISTÓRICO DE CARTÕES */}
-            <div className="shadow-xs overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-              <Table>
-                <TableHeader className="bg-slate-50 dark:bg-slate-950">
-                  <TableRow>
-                    <TableHead className="text-xs font-black uppercase">
-                      Data da Baixa
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Data da Venda
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Descrição / Maquininha
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Conta Destino
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Bruto Original
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Líquido Depositado
-                    </TableHead>
-                    <TableHead className="w-[80px] text-center"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingReceivedCards ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="h-28 text-center text-xs font-bold text-slate-500"
-                      >
-                        Carregando histórico de liquidações...
-                      </TableCell>
-                    </TableRow>
-                  ) : receivedCards && receivedCards.length > 0 ? (
-                    receivedCards.map((settlement) => (
-                      <TableRow
-                        key={settlement.id}
-                        className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
-                      >
-                        <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {format(
-                            new Date(settlement.data_vencimento),
-                            'dd/MM/yyyy',
-                            { locale: ptBR },
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-medium text-slate-500">
-                          {format(
-                            new Date(settlement.data_emissao),
-                            'dd/MM/yyyy',
-                            { locale: ptBR },
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {settlement.description || 'Liquidação'}
-                        </TableCell>
-                        <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          {settlement.accounts?.name || 'Conta Padrão'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-medium text-slate-600 dark:text-slate-400">
-                          {(
-                            settlement.amount || settlement.totalValue
-                          ).toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
-                          {(
-                            settlement.totalValue || settlement.amount
-                          ).toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-orange-500 hover:bg-orange-50 hover:text-orange-600"
-                                title="Desfazer e voltar para pendentes"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-3xl">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Reverter liquidação?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta ação marcará esta transação como Pendente
-                                  novamente, e ela sairá dos relatórios de saldo
-                                  atual.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="rounded-xl">
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => revert({ id: settlement.id })}
-                                  className="rounded-xl bg-orange-500 font-bold hover:bg-orange-600"
-                                >
-                                  Sim, Reverter
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="h-28 text-center text-xs font-semibold text-slate-400"
-                      >
-                        Nenhuma liquidação de cartão efetivada em{' '}
-                        {monthNames[selectedMonth - 1]} de {selectedYear}.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {receivedCardsResult?.meta &&
-              receivedCardsResult.meta.totalPages > 1 && (
-                <Pagination
-                  pageIndex={receivedCardPageIndex}
-                  totalCount={receivedCardsResult.meta.total}
-                  perPage={receivedCardsResult.meta.limit}
-                  onPageChange={setReceivedCardPageIndex}
-                />
-              )}
-          </TabsContent>
-
-          {/* ========================================================================= */}
-          {/* ABA 3: A PRAZO A RECEBER (CLIENTES E FUNCIONÁRIOS) */}
-          {/* ========================================================================= */}
-          <TabsContent value="term" className="space-y-4">
-            {/* CARDS DE KPIS DE A PRAZO */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="shadow-xs rounded-2xl border border-orange-200/70 bg-gradient-to-br from-orange-50/80 to-white p-4 dark:border-orange-900/40 dark:from-slate-900 dark:to-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-orange-700 dark:text-orange-400">
-                    A Prazo no Mês ({monthNames[selectedMonth - 1]})
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-                    <Users size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-orange-950 dark:text-orange-100">
-                  {termKpis.mesTotal.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <div className="mt-1 flex items-center justify-between border-t border-orange-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  <span>{pendingTerms.length} débitos</span>
-                  <span>{monthNames[selectedMonth - 1]}</span>
-                </div>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Débitos: Funcionários (Vales)
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                    <User size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  {termKpis.mesFuncionarios.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Consumos em Folha no Mês
-                </span>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Débitos: Clientes (Fiado/Permuta)
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                    <Users size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  {termKpis.mesClientes.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Contas de Clientes no Mês
-                </span>
-              </div>
-
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Total Geral em Aberto
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
-                    <Wallet size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400">
-                  {termKpis.geralTotal.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Acumulado de Todos os Meses
-                </span>
-              </div>
-            </div>
-
-            {/* BARRA DE AÇÕES: RELATÓRIO PDF + BUSCA */}
-            <div className="shadow-xs flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center">
-              <div className="relative max-w-md flex-1">
-                <Search
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="text"
-                  placeholder="Buscar cliente, funcionário ou descrição..."
-                  value={termSearchQuery}
-                  onChange={(e) => setTermSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-semibold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setReportModalOpen(true)}
-                  className="gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-black uppercase text-white shadow-md shadow-orange-600/25 hover:bg-orange-700 active:scale-95"
-                >
-                  <FileText size={14} />
-                  <span>Relatório / Cobrança em PDF</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* TABELA DE A PRAZO A RECEBER */}
-            <div className="shadow-xs overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-              <Table>
-                <TableHeader className="bg-slate-50 dark:bg-slate-950">
-                  <TableRow>
-                    <TableHead className="text-xs font-black uppercase">
-                      Data / Vencimento
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Devedor / Nome
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Categoria / Tipo
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Descrição / Turno
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Valor a Receber
-                    </TableHead>
-                    <TableHead className="w-[140px] text-center text-xs font-black uppercase">
-                      Ações
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingPendingTerms ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="h-28 text-center text-xs font-bold text-slate-500"
-                      >
-                        Carregando débitos a prazo...
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredPendingTerms.length > 0 ? (
-                    filteredPendingTerms.map((tx) => {
-                      const isEmployee =
-                        tx.isEmployeeVale ||
-                        (tx.payment_method || '')
-                          .toUpperCase()
-                          .includes('FUNCIONARIO')
-                      let personName = tx.employeeName || ''
-                      if (!personName) {
-                        const match =
-                          tx.description?.match(/:s*([^[]+)/) ||
-                          tx.description?.match(/-s*([^-]+)$/)
-                        personName = match ? match[1].trim() : 'Cliente'
-                      }
-
-                      return (
-                        <TableRow
-                          key={tx.id}
-                          className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
-                        >
-                          <TableCell className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
-                            {format(
-                              new Date(tx.data_vencimento || tx.data_emissao),
-                              'dd/MM/yyyy',
-                              { locale: ptBR },
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {personName}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
-                                isEmployee
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'
-                                  : tx.payment_method === 'PERMUTA'
-                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400'
-                                    : 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400'
-                              }`}
-                            >
-                              {isEmployee
-                                ? 'Funcionário'
-                                : tx.payment_method === 'PERMUTA'
-                                  ? 'Permuta'
-                                  : 'Cliente A Prazo'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                            {tx.description}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm font-black text-emerald-600 dark:text-emerald-400">
-                            {tx.amount.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
+                            {liquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </TableCell>
                           <TableCell className="text-center">
                             <Button
                               size="sm"
-                              className="shadow-xs gap-1 rounded-xl bg-emerald-600 px-3 text-xs font-black uppercase text-white hover:bg-emerald-700"
-                              onClick={() => {
-                                setSelectedTermTx(tx)
-                                setTermModalOpen(true)
-                              }}
+                              variant="outline"
+                              onClick={() => triggerSettlement([tx.id])}
+                              disabled={isTriggering}
+                              className="h-8 rounded-xl border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200"
                             >
-                              <CheckCircle2 size={13} />
-                              <span>Receber</span>
+                              Liquidar
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1397,12 +939,8 @@ export function Settlements() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="h-28 text-center text-xs font-semibold text-slate-400"
-                      >
-                        Nenhum débito a prazo de clientes ou funcionários
-                        encontrado em {monthNames[selectedMonth - 1]}.
+                      <TableCell colSpan={9} className="h-28 text-center text-xs font-semibold text-slate-400">
+                        Nenhum cartão pendente de liquidação para {monthNames[selectedMonth - 1]} de {selectedYear}.
                       </TableCell>
                     </TableRow>
                   )}
@@ -1412,489 +950,738 @@ export function Settlements() {
           </TabsContent>
 
           {/* ========================================================================= */}
-          {/* ABA 4: A PRAZO RECEBIDOS (HISTÓRICO MENSAL) */}
+          {/* ABA 2: CARTÕES LIQUIDADOS (HISTÓRICO) */}
           {/* ========================================================================= */}
-          <TabsContent value="term_history" className="space-y-4">
-            {/* CARDS DE KPIS */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="shadow-xs rounded-2xl border border-purple-200/70 bg-gradient-to-br from-purple-50/80 to-white p-4 dark:border-purple-900/40 dark:from-slate-900 dark:to-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-400">
-                    Total Acertado / Baixado ({monthNames[selectedMonth - 1]})
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                    <CheckCircle2 size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-purple-950 dark:text-purple-100">
-                  {receivedTermsSummary.totalGross.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
+          <TabsContent value="card_history" className="space-y-4">
+            {/* MINI KPIS */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-900/40 dark:bg-slate-900">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  Líquido Depositado ({monthNames[selectedMonth - 1]})
+                </span>
+                <p className="mt-2 font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  {receivedCardsSummary.totalNet.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
-                <div className="mt-1 flex items-center justify-between border-t border-purple-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  <span>{receivedTermsSummary.count} acertos realizados</span>
-                  <span>{monthNames[selectedMonth - 1]}</span>
-                </div>
+                <span className="text-[11px] font-semibold text-slate-500">Saldo Real Efetivado</span>
               </div>
 
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Recebidos de Clientes
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    <Wallet size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
-                  {receivedTermsSummary.totalNet.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                  })}
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Acertos Depositados no Mês
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  Bruto Original Faturado
                 </span>
+                <p className="mt-2 font-mono text-2xl font-black text-slate-900 dark:text-slate-100">
+                  {receivedCardsSummary.totalGross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+                <span className="text-[11px] font-semibold text-slate-500">Valor de Balcão</span>
               </div>
 
-              <div className="shadow-xs rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Status das Baixas
-                  </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-500/10 text-slate-600 dark:bg-slate-500/20 dark:text-slate-400">
-                    <Banknote size={15} />
-                  </div>
-                </div>
-                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                  100% Conciliado
-                </p>
-                <span className="mt-1 block border-t border-slate-100 pt-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
-                  Integrado com Contas Bancárias
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  Taxas MDR Descontadas
                 </span>
+                <p className="mt-2 font-mono text-2xl font-black text-amber-600 dark:text-amber-400">
+                  - {receivedCardsSummary.totalFees.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+                <span className="text-[11px] font-semibold text-slate-500">Retenção de Adquirentes</span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  Liquidações no Mês
+                </span>
+                <p className="mt-2 font-mono text-2xl font-black text-slate-900 dark:text-slate-100">
+                  {receivedCardsSummary.count}
+                </p>
+                <span className="text-[11px] font-semibold text-slate-500">Lotes Efetivados no Banco</span>
               </div>
             </div>
 
-            {/* TABELA DE A PRAZO RECEBIDOS */}
-            <div className="shadow-xs overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            {/* TABELA DE HISTÓRICO */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950">
                   <TableRow>
-                    <TableHead className="text-xs font-black uppercase">
-                      Data da Baixa
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Descrição / Acerto
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Forma Recebida
-                    </TableHead>
-                    <TableHead className="text-xs font-black uppercase">
-                      Conta Destino
-                    </TableHead>
-                    <TableHead className="text-right text-xs font-black uppercase">
-                      Valor Recebido
-                    </TableHead>
+                    <TableHead className="text-xs font-black uppercase">Data da Baixa</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Data da Venda</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Descrição / Maquininha</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Conta Destino</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Bruto Original</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Taxa Descontada</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Líquido Depositado</TableHead>
+                    <TableHead className="w-[80px] text-center text-xs font-black uppercase">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoadingReceivedTerms ? (
+                  {isLoadingReceivedCards ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-28 text-center text-xs font-bold text-slate-500"
-                      >
-                        Carregando histórico de acertos...
+                      <TableCell colSpan={8} className="h-28 text-center text-xs font-bold text-slate-500">
+                        Carregando histórico de liquidações...
                       </TableCell>
                     </TableRow>
-                  ) : receivedTerms && receivedTerms.length > 0 ? (
-                    receivedTerms.map((settlement) => (
-                      <TableRow
-                        key={settlement.id}
-                        className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
-                      >
-                        <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {format(
-                            new Date(settlement.data_vencimento),
-                            'dd/MM/yyyy',
-                            { locale: ptBR },
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {settlement.description || 'Acerto de Conta'}
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            {settlement.payment_method || 'Acerto'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          {settlement.accounts?.name || 'Caixa Central'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
-                          {settlement.amount.toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                  ) : receivedCards.length > 0 ? (
+                    receivedCards.map((settlement) => {
+                      const bruto = Number(settlement.amount || settlement.totalValue || 0)
+                      const liquido = Number(settlement.totalValue || settlement.amount || 0)
+                      const taxa = Math.max(0, bruto - liquido)
+
+                      return (
+                        <TableRow key={settlement.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            {format(new Date(settlement.data_vencimento), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-slate-500">
+                            {format(new Date(settlement.data_emissao), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {settlement.description || 'Liquidação'}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                            {settlement.accounts?.name || 'Conta Padrão'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-600 dark:text-slate-400">
+                            {bruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-amber-600 dark:text-amber-400">
+                            - {taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
+                            {liquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-orange-500 hover:bg-orange-50"
+                                  title="Estornar liquidação"
+                                >
+                                  <Undo2 size={14} />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-3xl">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Estornar liquidação?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação retornará este cartão para a lista de pendentes e estornará a conciliação.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => revert({ id: settlement.id })}
+                                    className="rounded-xl bg-orange-500 font-bold hover:bg-orange-600"
+                                  >
+                                    Sim, Estornar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-28 text-center text-xs font-semibold text-slate-400"
-                      >
-                        Nenhum acerto de contas a prazo registrado em{' '}
-                        {monthNames[selectedMonth - 1]} de {selectedYear}.
+                      <TableCell colSpan={8} className="h-28 text-center text-xs font-semibold text-slate-400">
+                        Nenhuma liquidação de cartão efetivada em {monthNames[selectedMonth - 1]} de {selectedYear}.
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
-            {receivedTermsResult?.meta &&
-              receivedTermsResult.meta.totalPages > 1 && (
-                <Pagination
-                  pageIndex={receivedTermPageIndex}
-                  totalCount={receivedTermsResult.meta.total}
-                  perPage={receivedTermsResult.meta.limit}
-                  onPageChange={setReceivedTermPageIndex}
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* ABA 3: CLIENTES A PRAZO (FIADO / CONVÊNIO / PERMUTA) */}
+          {/* ========================================================================= */}
+          <TabsContent value="term" className="space-y-4">
+            {/* BANNER INFORMATIVO */}
+            <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5 text-xs text-purple-900 dark:border-purple-900/40 dark:bg-purple-950/30 dark:text-purple-300">
+              <span className="text-lg">💡</span>
+              <p>
+                <strong>Gestão de Contas a Prazo & Fiado:</strong> Controle de comandas em aberto, convênios e permutas. Envie lembretes amigáveis via WhatsApp ou dê baixa com crédito imediato no saldo da empresa.
+              </p>
+            </div>
+
+            {/* BARRA DE FILTROS & AÇÕES */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative max-w-md flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Buscar por cliente, documento ou comanda..."
+                  value={clientSearchQuery}
+                  onChange={(e) => setClientSearchQuery(e.target.value)}
+                  className="rounded-xl pl-9 text-xs font-semibold bg-slate-50 dark:bg-slate-950"
                 />
-              )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={clientTypeFilter} onValueChange={setClientTypeFilter}>
+                  <SelectTrigger className="w-[150px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Tipos</SelectItem>
+                    <SelectItem value="fiado">A Prazo / Fiado</SelectItem>
+                    <SelectItem value="convenio">Convênio</SelectItem>
+                    <SelectItem value="permuta">Permuta</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
+                  <SelectTrigger className="w-[150px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="overdue">Vencidos</SelectItem>
+                    <SelectItem value="today">Vence Hoje</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={clientSortBy} onValueChange={(val: any) => setClientSortBy(val)}>
+                  <SelectTrigger className="w-[160px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="amount_desc">Maior Dívida</SelectItem>
+                    <SelectItem value="name_asc">Nome do Cliente (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Alternador de Visão */}
+                <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-950">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setClientViewMode('grouped')}
+                    className={`h-7 px-2.5 text-xs font-bold rounded-lg transition-all ${
+                      clientViewMode === 'grouped'
+                        ? 'bg-white text-purple-700 shadow-xs dark:bg-slate-800 dark:text-purple-300'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    <Layers size={13} className="mr-1" />
+                    Agrupado
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setClientViewMode('list')}
+                    className={`h-7 px-2.5 text-xs font-bold rounded-lg transition-all ${
+                      clientViewMode === 'list'
+                        ? 'bg-white text-purple-700 shadow-xs dark:bg-slate-800 dark:text-purple-300'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    <List size={13} className="mr-1" />
+                    Comandas
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* VISÃO 1: AGRUPADA POR CLIENTE */}
+            {clientViewMode === 'grouped' ? (
+              <div className="space-y-3">
+                {isLoadingPendingTerms ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+                    Carregando débitos de clientes...
+                  </div>
+                ) : groupedClients.length > 0 ? (
+                  groupedClients.map((client) => {
+                    const isExpanded = expandedClients[client.clientName] || false
+                    const initials = client.clientName
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()
+
+                    return (
+                      <div
+                        key={client.clientName}
+                        className="rounded-2xl border border-slate-200 bg-white shadow-xs transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+                      >
+                        {/* Header do Cliente */}
+                        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-xs font-black text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                              {initials}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                  {client.clientName}
+                                </span>
+                                {client.hasOverdue && (
+                                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                    Vencido
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500">
+                                {client.items.length} {client.items.length === 1 ? 'comanda em aberto' : 'comandas em aberto'}
+                                {client.phone && ` • ${client.phone}`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="text-right">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                Saldo Total Devedor
+                              </span>
+                              <p className="font-mono text-base font-black text-slate-900 dark:text-slate-100">
+                                {client.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setClientModalTarget({
+                                    clientName: client.clientName,
+                                    transactions: client.items,
+                                  })
+                                  setClientModalOpen(true)
+                                }}
+                                className="h-9 gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-black uppercase text-white shadow-xs hover:bg-emerald-700 active:scale-95"
+                              >
+                                <CheckCircle2 size={14} />
+                                <span>Receber Tudo ({client.items.length})</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenWhatsApp(client.phone, client.clientName, client.totalAmount)}
+                                className="h-9 gap-1 rounded-xl border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-400"
+                                title="Enviar cobrança pelo WhatsApp"
+                              >
+                                <MessageCircle size={14} />
+                                <span>WhatsApp</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => toggleClientExpanded(client.clientName)}
+                                className="h-9 w-9 rounded-xl p-0 text-slate-500"
+                                title={isExpanded ? 'Recolher comandas' : 'Ver comandas'}
+                              >
+                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Accordion: Detalhe das Comandas do Cliente */}
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="border-none text-[11px] font-bold text-slate-400">
+                                  <TableHead>Data Compra</TableHead>
+                                  <TableHead>Vencimento</TableHead>
+                                  <TableHead>Descrição / Comanda</TableHead>
+                                  <TableHead className="text-right">Valor</TableHead>
+                                  <TableHead className="w-[120px] text-center">Ação</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {client.items.map((tx) => (
+                                  <TableRow key={tx.id} className="border-slate-200/50 dark:border-slate-800/60">
+                                    <TableCell className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                                      {format(new Date(tx.data_emissao), 'dd/MM/yyyy')}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                                      {format(new Date(tx.data_vencimento || tx.data_emissao), 'dd/MM/yyyy')}
+                                    </TableCell>
+                                    <TableCell className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                                      {tx.description}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs font-black text-slate-900 dark:text-slate-100">
+                                      {Number(tx.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setClientModalTarget({
+                                            clientName: client.clientName,
+                                            transactions: [tx],
+                                          })
+                                          setClientModalOpen(true)
+                                        }}
+                                        className="h-7 rounded-lg text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300"
+                                      >
+                                        Receber Esta
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs font-semibold text-slate-400 dark:border-slate-800 dark:bg-slate-900">
+                    Nenhum cliente com débitos a prazo encontrado para os filtros selecionados.
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* VISÃO 2: LISTA DETALHADA DE COMANDAS */
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-950">
+                    <TableRow>
+                      <TableHead className="text-xs font-black uppercase">Cliente / Contato</TableHead>
+                      <TableHead className="text-xs font-black uppercase">Data Compra</TableHead>
+                      <TableHead className="text-xs font-black uppercase">Vencimento Previsto</TableHead>
+                      <TableHead className="text-xs font-black uppercase">Origem / Comanda</TableHead>
+                      <TableHead className="text-right text-xs font-black uppercase">Valor Devedor</TableHead>
+                      <TableHead className="w-[180px] text-center text-xs font-black uppercase">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClientRows.length > 0 ? (
+                      filteredClientRows.map((tx) => {
+                        let clientName = tx.client?.name || ''
+                        if (!clientName) {
+                          const match = tx.description?.match(/:\s*([^[]+)/) || tx.description?.match(/-\s*([^-]+)$/)
+                          clientName = match ? match[1].trim() : 'Cliente'
+                        }
+                        const clientObj = clients.find((c: any) => c.name?.toLowerCase() === clientName.toLowerCase())
+                        const phone = clientObj?.phone || clientObj?.cellphone || ''
+
+                        const daysDiff = differenceInCalendarDays(new Date(tx.data_vencimento || tx.data_emissao), new Date())
+                        const isOverdue = daysDiff < 0
+                        const isToday = daysDiff === 0
+
+                        return (
+                          <TableRow key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
+                            <TableCell>
+                              <span className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                                {clientName}
+                              </span>
+                              {phone && <span className="text-[10px] text-slate-400">{phone}</span>}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-slate-500">
+                              {format(new Date(tx.data_emissao), 'dd/MM/yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  {format(new Date(tx.data_vencimento || tx.data_emissao), 'dd/MM/yyyy')}
+                                </span>
+                                {isOverdue && (
+                                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                    Vencido há {Math.abs(daysDiff)}d
+                                  </span>
+                                )}
+                                {isToday && (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                    Vence Hoje
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                              {tx.description}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-black text-slate-900 dark:text-slate-100">
+                              {Number(tx.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setClientModalTarget({
+                                      clientName,
+                                      transactions: [tx],
+                                    })
+                                    setClientModalOpen(true)
+                                  }}
+                                  className="h-8 rounded-xl bg-emerald-600 px-2.5 text-xs font-bold text-white hover:bg-emerald-700"
+                                >
+                                  Receber
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleOpenWhatsApp(phone, clientName, Number(tx.amount || 0))}
+                                  className="h-8 w-8 text-emerald-600 hover:bg-emerald-50"
+                                  title="WhatsApp"
+                                >
+                                  <MessageCircle size={15} />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-28 text-center text-xs font-semibold text-slate-400">
+                          Nenhuma comanda encontrada.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ========================================================================= */}
+          {/* ABA 4: VALES DE FUNCIONÁRIOS */}
+          {/* ========================================================================= */}
+          <TabsContent value="employees" className="space-y-4">
+            {/* BANNER REGRAS DE LIQUIDAÇÃO DE VALES */}
+            <div className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50/50 p-3.5 text-xs text-blue-950 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg">💡</span>
+                <p>
+                  <strong>Regras de Liquidação de Vales:</strong> Os consumos e adiantamentos de colaboradores podem ser gerados em PDF para assinatura física, abatidos no holerite ou quitados no balcão em dinheiro/PIX.
+                </p>
+              </div>
+
+              <span className="rounded-xl border border-blue-200 bg-white px-3 py-1 font-bold text-blue-800 shadow-2xs dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300">
+                Total a Descontar: {termSummary.employeeTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </span>
+            </div>
+
+            {/* BARRA DE BUSCA DE FUNCIONÁRIOS */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative max-w-md flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Buscar por colaborador, cargo ou setor..."
+                  value={employeeSearchQuery}
+                  onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                  className="rounded-xl pl-9 text-xs font-semibold bg-slate-50 dark:bg-slate-950"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Select value={employeeDeptFilter} onValueChange={setEmployeeDeptFilter}>
+                  <SelectTrigger className="w-[180px] rounded-xl text-xs font-bold">
+                    <SelectValue placeholder="Departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Departamentos</SelectItem>
+                    <SelectItem value="Cozinha">Cozinha</SelectItem>
+                    <SelectItem value="Salão">Salão</SelectItem>
+                    <SelectItem value="Bar">Bar</SelectItem>
+                    <SelectItem value="Administrativo">Administrativo</SelectItem>
+                    <SelectItem value="Geral">Geral</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* TABELA DE VALES DE FUNCIONÁRIOS */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+              <Table>
+                <TableHeader className="bg-slate-50 dark:bg-slate-950">
+                  <TableRow>
+                    <TableHead className="text-xs font-black uppercase">Colaborador</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Data do Lançamento</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Tipo / Descrição</TableHead>
+                    <TableHead className="text-xs font-black uppercase">Origem</TableHead>
+                    <TableHead className="text-right text-xs font-black uppercase">Valor do Débito</TableHead>
+                    <TableHead className="w-[260px] text-center text-xs font-black uppercase">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingPendingTerms ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-28 text-center text-xs font-bold text-slate-500">
+                        Carregando vales de colaboradores...
+                      </TableCell>
+                    </TableRow>
+                  ) : employeeDebts.length > 0 ? (
+                    employeeDebts.map((item) => {
+                      const empName = item.employeeName || 'Colaborador'
+                      const empObj = employees.find((e: any) => e.name?.toLowerCase() === empName.toLowerCase())
+                      const role = empObj?.role || 'Equipe'
+                      const sector = empObj?.sector?.name || empObj?.department || 'Operação'
+                      const initials = empName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+
+                      return (
+                        <TableRow key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[11px] font-black text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {initials}
+                              </div>
+                              <div>
+                                <span className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                                  {empName}
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  {role} • {sector}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                            {format(new Date(item.data_emissao || item.data_vencimento), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                            {item.description || 'Vale / Consumo'}
+                          </TableCell>
+                          <TableCell>
+                            <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              Caixa Balcão
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-black text-slate-900 dark:text-slate-100">
+                            {Number(item.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEmployeeModalTarget({
+                                    id: item.id,
+                                    name: empName,
+                                    role,
+                                    department: sector,
+                                    items: [item],
+                                    totalAmount: Number(item.amount || 0),
+                                  })
+                                  setEmployeeModalOpen(true)
+                                }}
+                                className="h-8 gap-1 rounded-xl border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200"
+                              >
+                                <Printer size={13} />
+                                <span>Termo (PDF)</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setEmployeeModalTarget({
+                                    id: item.id,
+                                    name: empName,
+                                    role,
+                                    department: sector,
+                                    items: [item],
+                                    totalAmount: Number(item.amount || 0),
+                                  })
+                                  setEmployeeModalOpen(true)
+                                }}
+                                className="h-8 gap-1 rounded-xl bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-700"
+                              >
+                                <CheckCircle2 size={13} />
+                                <span>Baixar / Acertar</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-28 text-center text-xs font-semibold text-slate-400">
+                        Nenhum vale ou consumo de colaborador pendente neste mês.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: ADIANTAR LIQUIDAÇÕES DE CARTÕES */}
-      {/* ========================================================================= */}
+      {/* MODAL 1: LIQUIDAÇÃO DE DÉBITOS DE CLIENTES */}
+      <ClientSettleModal
+        open={clientModalOpen}
+        onOpenChange={setClientModalOpen}
+        target={clientModalTarget}
+        accounts={accounts}
+      />
+
+      {/* MODAL 2: TERMO EM PDF E ACERTO DE VALES DE COLABORADORES */}
+      <EmployeeTermPdfModal
+        open={employeeModalOpen}
+        onOpenChange={setEmployeeModalOpen}
+        employee={employeeModalTarget}
+        accounts={accounts}
+      />
+
+      {/* MODAL 3: ADIANTAMENTO DE CARTÕES EM LOTE */}
       <Dialog open={triggerModalOpen} onOpenChange={setTriggerModalOpen}>
-        <DialogContent className="rounded-3xl p-6 sm:max-w-[560px]">
+        <DialogContent className="rounded-3xl p-6 sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2.5">
-              <div className="shadow-xs flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
                 <Rocket size={18} />
               </div>
-              <div>
-                <span className="text-base font-black">
-                  {selectedTxIds.length > 0
-                    ? `Adiantar ${selectedCardsSummary.count} ${selectedCardsSummary.count === 1 ? 'Liquidação' : 'Liquidações'}`
-                    : todayPendingSummary.count > 0
-                      ? `Liquidações de Hoje (${todayPendingSummary.count})`
-                      : 'Liquidações Pendentes de Hoje'}
-                </span>
-                <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-                  {selectedTxIds.length > 0
-                    ? 'Confira os valores que serão creditados imediatamente na sua conta bancária.'
-                    : 'Efetivação de cartões vencidos até hoje.'}
-                </span>
-              </div>
+              <span className="text-base font-black">
+                Adiantar {selectedCardsSummary.count} {selectedCardsSummary.count === 1 ? 'Cartão' : 'Cartões'}
+              </span>
             </DialogTitle>
           </DialogHeader>
 
-          {/* CARD DE RESUMO FINANCEIRO DO ADIANTAMENTO */}
-          {(() => {
-            const currentSummary =
-              selectedTxIds.length > 0
-                ? selectedCardsSummary
-                : todayPendingSummary
-            const items = currentSummary.items
-
-            return (
-              <div className="flex flex-col gap-4 py-2">
-                <div className="shadow-xs rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50/80 to-white p-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
-                  <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                    <span className="font-semibold">Valor Bruto Total:</span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {currentSummary.gross.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                    <span className="font-semibold">Desconto Taxas MDR:</span>
-                    <span className="font-mono font-bold text-red-500">
-                      -{' '}
-                      {currentSummary.fees.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="my-3 border-t border-dashed border-slate-200 dark:border-slate-800" />
-
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <span className="block text-[11px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        Total Líquido a Receber Agora
-                      </span>
-                      <p className="font-mono text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
-                        {currentSummary.net.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        })}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black uppercase text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      Crédito Imediato
-                    </span>
-                  </div>
-                </div>
-
-                {/* LISTAGEM DAS CONTAS/TRANSAÇÕES SELECIONADAS */}
-                {items.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Transações Selecionadas ({items.length})
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-400">
-                        Vencimento Original
-                      </span>
-                    </div>
-
-                    <div className="max-h-44 divide-y divide-slate-200/60 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950/40">
-                      {items.map((tx: any) => {
-                        const bruto = Number(tx.amount || 0)
-                        const liquido = Number(tx.totalValue ?? tx.amount ?? 0)
-
-                        return (
-                          <div
-                            key={tx.id}
-                            className="flex items-center justify-between py-2 text-xs first:pt-1 last:pb-1"
-                          >
-                            <div className="flex flex-col overflow-hidden pr-2">
-                              <span className="truncate font-semibold text-slate-800 dark:text-slate-200">
-                                {tx.description || 'Venda de Cartão'}
-                              </span>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                                <span className="rounded bg-slate-200/70 px-1.5 py-0.5 font-bold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                  {tx.payment_method}
-                                </span>
-                                <span>
-                                  Venc:{' '}
-                                  {format(
-                                    new Date(tx.data_vencimento),
-                                    'dd/MM/yyyy',
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="shrink-0 text-right">
-                              <span className="block font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                {liquido.toLocaleString('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL',
-                                })}
-                              </span>
-                              {bruto !== liquido && (
-                                <span className="block font-mono text-[10px] text-slate-400 line-through">
-                                  {bruto.toLocaleString('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL',
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-[11px] text-slate-600 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-slate-400">
-                  💡 Os valores líquidos serão integrados instantaneamente ao
-                  saldo disponível das contas financeiras vinculadas.
-                </div>
-
-                <div className="mt-2 flex flex-col gap-2">
-                  <Button
-                    onClick={() =>
-                      triggerSettlement(
-                        selectedTxIds.length > 0 ? selectedTxIds : undefined,
-                      )
-                    }
-                    disabled={isTriggering}
-                    className="h-12 w-full gap-2 rounded-xl bg-blue-600 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 active:scale-95"
-                  >
-                    {isTriggering ? (
-                      'Processando...'
-                    ) : (
-                      <>
-                        <Rocket size={16} />
-                        <span>
-                          Confirmar Adiantamento (
-                          {currentSummary.net.toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })}
-                          )
-                        </span>
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setTriggerModalOpen(false)}
-                    disabled={isTriggering}
-                    className="h-10 rounded-xl text-xs font-bold"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
+          <div className="flex flex-col gap-4 py-2 font-manrope">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                <span>Valor Bruto Total:</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {selectedCardsSummary.gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
               </div>
-            )
-          })()}
-        </DialogContent>
-      </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: RECEBER / DAR BAIXA EM A PRAZO OU PERMUTA */}
-      {/* ========================================================================= */}
-      <Dialog
-        open={termModalOpen}
-        onOpenChange={(open) => {
-          setTermModalOpen(open)
-          if (!open) setSelectedTermTx(null)
-        }}
-      >
-        <DialogContent className="rounded-3xl sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-black text-emerald-700 dark:text-emerald-400">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                <CheckCircle2 size={18} />
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                <span>Taxas MDR:</span>
+                <span className="font-mono font-bold text-red-500">
+                  - {selectedCardsSummary.fees.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
               </div>
-              <span>Acerto de Débito A Prazo</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Registrar o recebimento em dinheiro/conta ou dar baixa por
-              permuta/perdão.
-            </DialogDescription>
-          </DialogHeader>
 
-          {selectedTermTx && (
-            <div className="flex flex-col gap-4 py-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  Referência do Débito
-                </p>
-                <p className="mt-1 text-xs font-bold text-slate-900 dark:text-slate-100">
-                  {selectedTermTx.description}
-                </p>
-                <div className="mt-3 flex items-end justify-between border-t border-slate-200/60 pt-2 dark:border-slate-800">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-slate-500">
-                      Valor Total
-                    </p>
-                    <p className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                      {selectedTermTx.amount.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-orange-700 dark:bg-orange-950 dark:text-orange-300">
-                    Pendente
+              <div className="my-3 border-t border-slate-200 dark:border-slate-800" />
+
+              <div className="flex items-end justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+                    Total Líquido a Creditar no Banco
                   </span>
+                  <p className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {selectedCardsSummary.net.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
                 </div>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <Label className="mb-1 block text-xs font-black uppercase text-slate-500">
-                    Forma de Pagamento Recebida
-                  </Label>
-                  <Select value={actualMethod} onValueChange={setActualMethod}>
-                    <SelectTrigger className="rounded-xl bg-white text-xs font-bold dark:bg-slate-950">
-                      <SelectValue placeholder="Selecione o método" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PIX">⚡ Pix</SelectItem>
-                      <SelectItem value="DINHEIRO">💵 Dinheiro Vivo</SelectItem>
-                      <SelectItem value="CARTÃO DE CRÉDITO">
-                        💳 Cartão de Crédito
-                      </SelectItem>
-                      <SelectItem value="CARTÃO DE DÉBITO">
-                        💳 Cartão de Débito
-                      </SelectItem>
-                      <SelectItem value="TRANSFERÊNCIA">
-                        🏦 Transferência Bancária
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="mb-1 block text-xs font-black uppercase text-slate-500">
-                    Conta Bancária de Destino
-                  </Label>
-                  <Select
-                    value={targetAccountId}
-                    onValueChange={setTargetAccountId}
-                  >
-                    <SelectTrigger className="rounded-xl bg-white text-xs font-bold dark:bg-slate-950">
-                      <SelectValue placeholder="Selecione a conta destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts
-                        ?.filter((a) => !a.is_transit)
-                        .map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="mt-2 flex flex-col gap-2">
-                <Button
-                  onClick={() => handleSettleTerm(false)}
-                  disabled={!targetAccountId || isSettlingTerm}
-                  className="h-11 w-full gap-1.5 rounded-xl bg-emerald-600 text-xs font-black uppercase text-white shadow-md shadow-emerald-600/25 hover:bg-emerald-700"
-                >
-                  {isSettlingTerm
-                    ? 'Processando...'
-                    : 'Confirmar Recebimento (Gerar Saldo)'}
-                </Button>
-
-                <div className="relative my-1">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-slate-200 dark:border-slate-800" />
-                  </div>
-                  <div className="relative flex justify-center text-[10px] font-black uppercase">
-                    <span className="bg-white px-2 text-slate-400 dark:bg-slate-900">
-                      Ou
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  variant="outline"
-                  onClick={() => handleSettleTerm(true)}
-                  disabled={isSettlingTerm}
-                  className="w-full rounded-xl border-orange-200 text-xs font-black uppercase text-orange-700 hover:bg-orange-50 dark:border-orange-900/50 dark:text-orange-400"
-                  title="Remove da lista sem somar dinheiro real no saldo da empresa"
-                >
-                  Baixar Sem Gerar Saldo (Permuta / Perdão)
-                </Button>
               </div>
             </div>
-          )}
+
+            <Button
+              onClick={() => triggerSettlement(selectedTxIds)}
+              disabled={isTriggering}
+              className="h-11 w-full gap-2 rounded-xl bg-blue-600 text-xs font-black uppercase text-white hover:bg-blue-700"
+            >
+              {isTriggering ? 'Processando crédito...' : 'Confirmar Adiantamento'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: GERAR RELATÓRIO / COBRANÇA EM PDF (A PRAZO) */}
-      {/* ========================================================================= */}
+      {/* MODAL 4: RELATÓRIO GERAL EM PDF */}
       <TermReportModal
         open={reportModalOpen}
         onOpenChange={setReportModalOpen}
