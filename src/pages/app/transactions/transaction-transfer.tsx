@@ -122,7 +122,7 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
         operation: 'transfer' as const,
         amount: Number(data.amount),
         account: data.account_origin,
-        destination_account: data.account_destination,
+        destination_account_id: data.account_destination,
         date: data.date,
         description: data.description || 'Transferência entre contas',
         confirmed: true, // Transferências são imediatas por padrão

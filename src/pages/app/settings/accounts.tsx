@@ -1,3 +1,4 @@
+import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -60,6 +61,7 @@ type AdjustBalanceSchema = z.infer<typeof adjustBalanceSchema>
 export function Accounts() {
   const queryClient = useQueryClient()
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false)
+  const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
     null,
   )
@@ -248,85 +250,13 @@ export function Accounts() {
           >
             <FileText className="mr-2 h-5 w-5" /> Ver Histórico Geral
           </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25 transition-all hover:to-primary active:scale-95"
-              >
-                <Plus className="mr-2 h-5 w-5" /> Nova Conta
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Nova Conta Bancária</DialogTitle>
-                <DialogDescription>
-                  Adicione uma conta para controlar entradas e saídas.
-                </DialogDescription>
-              </DialogHeader>
-
-              <form
-                onSubmit={handleSubmit(handleRegisterAccount)}
-                className="space-y-6 py-4"
-              >
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome da Conta</Label>
-                    <Input
-                      id="name"
-                      placeholder="Ex: Nubank, Caixa 01..."
-                      {...register('name')}
-                      className="h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição (Opcional)</Label>
-                    <Input
-                      id="description"
-                      placeholder="Uso principal, reserva..."
-                      {...register('description')}
-                      className="h-11"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="balance">Saldo Inicial</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-3 text-muted-foreground">
-                          R$
-                        </span>
-                        <Input
-                          id="balance"
-                          type="number"
-                          step="0.01"
-                          {...register('balance')}
-                          className="h-11 pl-9"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="goal">Meta (Opcional)</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-3 text-muted-foreground">
-                          R$
-                        </span>
-                        <Input
-                          id="goal"
-                          type="number"
-                          step="0.01"
-                          {...register('goal')}
-                          className="h-11 pl-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <Button type="submit" size="lg" className="w-full">
-                  Criar Conta
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25 transition-all hover:to-primary active:scale-95"
+            onClick={() => setIsCreateAccountOpen(true)}
+          >
+            <Plus className="mr-2 h-5 w-5" /> Nova Conta
+          </Button>
         </div>
       </div>
 

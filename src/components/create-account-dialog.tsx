@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Wallet } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -23,9 +24,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
-interface CreateAccountDialogProps {
+export interface CreateAccountDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: (account: any) => void
@@ -35,7 +35,7 @@ const accountSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
   balance: z.string().default('0'),
-  type: z.enum(['current', 'cash', 'investment']).default('current'), // Not persisted yet but good for UI
+  goal: z.string().optional(),
 })
 
 type AccountForm = z.infer<typeof accountSchema>
@@ -53,18 +53,17 @@ export function CreateAccountDialog({
       name: '',
       description: '',
       balance: '0',
-      type: 'current',
+      goal: '',
     },
   })
 
-  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       form.reset({
         name: '',
         description: '',
         balance: '0',
-        type: 'current',
+        goal: '',
       })
     }
   }, [open, form])
@@ -73,117 +72,76 @@ export function CreateAccountDialog({
     mutationFn: createAccount,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      if (onSuccess) onSuccess(data)
+      queryClient.invalidateQueries({ queryKey: ['general-balance'] })
+      const normalized = (data as any)?.account ?? data
+      if (onSuccess) onSuccess(normalized)
       onOpenChange(false)
       toast.success('Conta criada com sucesso!')
     },
-    onError: () => {
-      toast.error('Erro ao criar conta')
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || 'Erro ao criar conta'
+      toast.error(msg)
     },
   })
 
   async function onSubmit(data: AccountForm) {
-    // Map form data to API payload
-    // Appending Type to description as a workaround if backend doesn't support 'type' field yet
-    const descriptionWithType = data.type
-      ? `${data.description || ''} [Tipo: ${data.type}]`.trim()
-      : data.description
+    const rawBalance = data.balance ? parseFloat(data.balance.toString().replace(',', '.')) : 0
+    const rawGoal = data.goal && data.goal.trim() !== '' ? parseFloat(data.goal.toString().replace(',', '.')) : null
 
     await createNewAccount({
-      name: data.name,
-      description: descriptionWithType || null,
-      balance: parseFloat(data.balance.replace(',', '.')) || 0,
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      balance: isNaN(rawBalance) ? 0 : rawBalance,
+      goal: rawGoal && !isNaN(rawGoal) ? rawGoal : null,
     })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px]"
+        className="sm:max-w-[480px]"
         onPointerDownOutside={(e) => {
-          // Prevent closing parent modal
+          // Impede fechamento acidental de modais pais
           e.preventDefault()
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Nova Conta</DialogTitle>
-          <DialogDescription>
-            Crie uma nova conta para gerenciar seus recursos.
-          </DialogDescription>
+        <DialogHeader className="border-b border-border/50 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold">Nova Conta Bancária</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Adicione uma conta para controlar entradas, saídas e saldos.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.stopPropagation()
+              form.handleSubmit(onSubmit)(e)
+            }}
+            className="space-y-4 pt-2"
+          >
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Conta</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Nubank, Caixa..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="balance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo Inicial</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Nome da Conta <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
+                      placeholder="Ex: Nubank, Caixa Central, Reserva..."
+                      className="h-11 rounded-xl"
+                      autoFocus
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Simulated Type Field */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Tipo de Conta</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="current" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Conta Corrente
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="cash" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Dinheiro / Caixa Físico
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="investment" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Investimento
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -194,26 +152,93 @@ export function CreateAccountDialog({
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição (Opcional)</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Descrição (Opcional)
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="Detalhes adicionais..." {...field} />
+                    <Input
+                      placeholder="Ex: Uso principal, reserva de emergência..."
+                      className="h-11 rounded-xl"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="balance"
+                render={({ field }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      Saldo Inicial
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0,00"
+                          className="h-11 rounded-xl pl-9"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                      Meta (Opcional)
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0,00"
+                          className="h-11 rounded-xl pl-9"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
               <Button
                 variant="outline"
                 type="button"
+                className="h-10 rounded-xl"
                 onClick={() => onOpenChange(false)}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Criando...' : 'Criar Conta'}
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="h-10 rounded-xl bg-primary px-5 font-bold shadow-md shadow-primary/20"
+              >
+                {isPending ? 'Salvando...' : 'Salvar Conta'}
               </Button>
             </div>
           </form>

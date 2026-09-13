@@ -5,6 +5,7 @@ export interface CreateTransactionBody {
   amount: number
   account?: string | null
   destination_account_id?: string | null
+  destination_account?: string | null
   supplier?: string | null
   payment_method?: string | null
   data_vencimento?: Date | null
@@ -51,7 +52,7 @@ export async function createTransaction({
     operation,
     amount,
     account_id: account || null,
-    destination_account_id: destination_account_id || null,
+    destination_account_id: destination_account_id || (destination_account as string) || null,
     data_vencimento,
     data_emissao,
     description: description || null,
