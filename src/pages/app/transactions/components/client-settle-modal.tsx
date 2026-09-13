@@ -85,7 +85,7 @@ export function ClientSettleModal({
       if (!target?.transactions?.length) return
 
       if (isMultiple) {
-        // QuitaÁ„o em lote de todas as comandas do cliente
+        // Quita√ß√£o em lote de todas as comandas do cliente
         const ids = target.transactions.map((tx) => tx.id)
         return settleTermDebt({
           transactionIds: ids,
@@ -94,7 +94,7 @@ export function ClientSettleModal({
           isWriteOff,
         })
       } else {
-        // QuitaÁ„o de uma ˙nica comanda (permite parcial ou total)
+        // Quita√ß√£o de uma √∫nica comanda (permite parcial ou total)
         const txId = target.transactions[0].id
         const isPartial = paymentMode === 'partial' && parsedPartial > 0 && parsedPartial < totalAmount
 
@@ -117,7 +117,7 @@ export function ClientSettleModal({
       onOpenChange(false)
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Erro ao realizar baixa do dÈbito.')
+      toast.error(err?.response?.data?.message || 'Erro ao realizar baixa do d√©bito.')
     },
   })
 
@@ -134,12 +134,12 @@ export function ClientSettleModal({
             <span>Receber Pagamento de Cliente</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-            Acerto de contas a prazo com crÈdito imediato no saldo da empresa.
+            Acerto de contas a prazo com cr√©dito imediato no saldo da empresa.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2 font-manrope">
-          {/* Card Resumo do Cliente e DÌvida */}
+          {/* Card Resumo do Cliente e D√≠vida */}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
             <div className="flex items-center justify-between">
               <div>
@@ -157,7 +157,7 @@ export function ClientSettleModal({
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  Total em DÈbito
+                  Total em D√©bito
                 </span>
                 <p className="font-mono text-xl font-black text-emerald-600 dark:text-emerald-400">
                   {totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -166,11 +166,11 @@ export function ClientSettleModal({
             </div>
           </div>
 
-          {/* OpÁ„o QuitaÁ„o Total vs Parcial (quando comanda ˙nica) */}
+          {/* Op√ß√£o Quita√ß√£o Total vs Parcial (quando comanda √∫nica) */}
           {!isMultiple && (
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase text-slate-500">
-                Tipo de QuitaÁ„o
+                Tipo de Quita√ß√£o
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -182,7 +182,7 @@ export function ClientSettleModal({
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400'
                   }`}
                 >
-                  <span>QuitaÁ„o Total</span>
+                  <span>Quita√ß√£o Total</span>
                   <span className="font-mono text-[11px] font-normal">
                     {totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
@@ -205,7 +205,7 @@ export function ClientSettleModal({
               {paymentMode === 'partial' && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
                   <Label className="mb-1 block text-[11px] font-bold text-amber-900 dark:text-amber-200">
-                    Valor que o cliente est· pagando agora (R$):
+                    Valor que o cliente est√° pagando agora (R$):
                   </Label>
                   <Input
                     type="number"
@@ -219,7 +219,7 @@ export function ClientSettleModal({
                   />
                   {parsedPartial > 0 && (
                     <div className="mt-2 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                      <span>Saldo que continuar· pendente:</span>
+                      <span>Saldo que continuar√° pendente:</span>
                       <span className="font-mono font-black text-rose-600 dark:text-rose-400">
                         {remainingAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
@@ -230,7 +230,7 @@ export function ClientSettleModal({
             </div>
           )}
 
-          {/* SeleÁ„o de MÈtodo e Conta Destino */}
+          {/* Sele√ß√£o de M√©todo e Conta Destino */}
           <div className="space-y-3">
             <div>
               <Label className="mb-1 block text-xs font-black uppercase text-slate-500">
@@ -238,21 +238,21 @@ export function ClientSettleModal({
               </Label>
               <Select value={actualMethod} onValueChange={setActualMethod}>
                 <SelectTrigger className="rounded-xl bg-white text-xs font-bold dark:bg-slate-950">
-                  <SelectValue placeholder="Selecione o mÈtodo" />
+                  <SelectValue placeholder="Selecione o m√©todo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PIX">? Pix</SelectItem>
                   <SelectItem value="DINHEIRO">?? Dinheiro Vivo (Caixa Gaveta)</SelectItem>
-                  <SelectItem value="CART√O DE CR…DITO">?? Cart„o de CrÈdito</SelectItem>
-                  <SelectItem value="CART√O DE D…BITO">?? Cart„o de DÈbito</SelectItem>
-                  <SelectItem value="TRANSFER NCIA">?? TransferÍncia Banc·ria / TED</SelectItem>
+                  <SelectItem value="CART√ÉO DE CR√âDITO">?? Cart√£o de Cr√©dito</SelectItem>
+                  <SelectItem value="CART√ÉO DE D√âBITO">?? Cart√£o de D√©bito</SelectItem>
+                  <SelectItem value="TRANSFER√äNCIA">?? Transfer√™ncia Banc√°ria / TED</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label className="mb-1 block text-xs font-black uppercase text-slate-500">
-                Conta de Destino (Onde o valor ser· creditado)
+                Conta de Destino (Onde o valor ser√° creditado)
               </Label>
               <Select value={targetAccountId} onValueChange={setTargetAccountId}>
                 <SelectTrigger className="rounded-xl bg-white text-xs font-bold dark:bg-slate-950">
@@ -271,7 +271,7 @@ export function ClientSettleModal({
             </div>
           </div>
 
-          {/* Botıes de AÁ„o */}
+          {/* Bot√µes de A√ß√£o */}
           <div className="mt-2 flex flex-col gap-2">
             <Button
               onClick={() => settle(false)}

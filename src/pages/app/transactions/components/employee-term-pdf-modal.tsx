@@ -60,18 +60,18 @@ export function EmployeeTermPdfModal({
       doc.setFontSize(13)
       doc.setTextColor(255, 255, 255)
       doc.setFont('helvetica', 'bold')
-      doc.text('METRICS - TERMO DE VALE E RECONHECIMENTO DE D…BITO', 14, 12)
+      doc.text('METRICS - TERMO DE VALE E RECONHECIMENTO DE D√âBITO', 14, 12)
 
       doc.setFontSize(8)
       doc.setTextColor(148, 163, 184) // Slate-400
       doc.setFont('helvetica', 'normal')
       doc.text(
-        `Documento de controle interno emitido em ${format(new Date(), "dd/MM/yyyy '‡s' HH:mm", { locale: ptBR })}`,
+        `Documento de controle interno emitido em ${format(new Date(), "dd/MM/yyyy '√†s' HH:mm", { locale: ptBR })}`,
         14,
         18,
       )
 
-      // IdentificaÁ„o do Colaborador
+      // Identifica√ß√£o do Colaborador
       doc.setFillColor(248, 250, 252) // Slate-50
       doc.setDrawColor(226, 232, 240) // Slate-200
       doc.roundedRect(14, 32, 182, 22, 2, 2, 'FD')
@@ -80,14 +80,14 @@ export function EmployeeTermPdfModal({
       doc.setTextColor(71, 85, 105) // Slate-600
       doc.setFont('helvetica', 'bold')
       doc.text('COLABORADOR:', 18, 40)
-      doc.text('DATA DE REFER NCIA:', 110, 40)
+      doc.text('DATA DE REFER√äNCIA:', 110, 40)
 
       doc.setFontSize(10)
       doc.setTextColor(15, 23, 42) // Slate-900
       doc.text(employee.name.toUpperCase(), 18, 47)
       doc.text(format(new Date(), "MMMM 'de' yyyy", { locale: ptBR }).toUpperCase(), 110, 47)
 
-      // Tabela de LanÁamentos de Vales / Consumos
+      // Tabela de Lan√ßamentos de Vales / Consumos
       const tableData = employee.items.map((item) => [
         format(new Date(item.data_vencimento || item.data_emissao), 'dd/MM/yyyy'),
         item.description || 'Vale / Consumo de Colaborador',
@@ -97,7 +97,7 @@ export function EmployeeTermPdfModal({
 
       autoTable(doc, {
         startY: 60,
-        head: [['Data', 'DescriÁ„o / Motivo do LanÁamento', 'Origem', 'Valor (R$)']],
+        head: [['Data', 'Descri√ß√£o / Motivo do Lan√ßamento', 'Origem', 'Valor (R$)']],
         body: tableData,
         theme: 'plain',
         headStyles: {
@@ -154,7 +154,7 @@ export function EmployeeTermPdfModal({
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(100, 116, 139)
       const declaracao =
-        'Declaro para os devidos fins ter solicitado e recebido os valores e/ou consumaÁıes acima discriminados, reconhecendo a exatid„o dos lanÁamentos e autorizando o respectivo acerto ou desconto em folha de pagamento.'
+        'Declaro para os devidos fins ter solicitado e recebido os valores e/ou consuma√ß√µes acima discriminados, reconhecendo a exatid√£o dos lan√ßamentos e autorizando o respectivo acerto ou desconto em folha de pagamento.'
       const splitText = doc.splitTextToSize(declaracao, 182)
       doc.text(splitText, 14, sigY)
 
@@ -175,12 +175,12 @@ export function EmployeeTermPdfModal({
       doc.line(120, lineY, 190, lineY)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'bold')
-      doc.text('AdministraÁ„o / GerÍncia', 155, lineY + 5, { align: 'center' })
+      doc.text('Administra√ß√£o / Ger√™ncia', 155, lineY + 5, { align: 'center' })
       doc.setFontSize(7)
       doc.setFont('helvetica', 'normal')
       doc.text('Assinatura e Carimbo', 155, lineY + 9, { align: 'center' })
 
-      // Abre para impress„o direta e visualizaÁ„o
+      // Abre para impress√£o direta e visualiza√ß√£o
       const pdfBlob = doc.output('blob')
       const blobUrl = URL.createObjectURL(pdfBlob)
       window.open(blobUrl, '_blank')
@@ -191,7 +191,7 @@ export function EmployeeTermPdfModal({
     }
   }
 
-  // MutaÁ„o para dar baixa (Abater em Folha ou Receber em Balc„o)
+  // Muta√ß√£o para dar baixa (Abater em Folha ou Receber em Balc√£o)
   const { mutateAsync: settleEmployee, isPending } = useMutation({
     mutationFn: async (isDirectCash: boolean) => {
       if (!employee || !employee.items.length) return
@@ -200,13 +200,13 @@ export function EmployeeTermPdfModal({
       return settleTermDebt({
         transactionIds: ids,
         isPayrollDeducted: !isDirectCash,
-        isWriteOff: !isDirectCash, // N„o gera saldo banc·rio quando abatido em folha
+        isWriteOff: !isDirectCash, // N√£o gera saldo banc√°rio quando abatido em folha
         actualPaymentMethod: isDirectCash ? actualMethod : null,
         targetAccountId: isDirectCash ? targetAccountId : null,
       })
     },
     onSuccess: () => {
-      toast.success('LanÁamento atualizado com sucesso!')
+      toast.success('Lan√ßamento atualizado com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms'] })
       queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms-all'] })
       queryClient.invalidateQueries({ queryKey: ['settlements-terms'] })
@@ -232,7 +232,7 @@ export function EmployeeTermPdfModal({
             <span>Controle de Vales: {employee.name}</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            Emita o termo para assinatura fÌsica ou registre a quitaÁ„o do dÈbito.
+            Emita o termo para assinatura f√≠sica ou registre a quita√ß√£o do d√©bito.
           </DialogDescription>
         </DialogHeader>
 
@@ -242,7 +242,7 @@ export function EmployeeTermPdfModal({
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  LanÁamentos Pendentes
+                  Lan√ßamentos Pendentes
                 </span>
                 <p className="text-sm font-black text-slate-900 dark:text-slate-100">
                   {employee.items.length} {employee.items.length === 1 ? 'vale / consumo' : 'vales / consumos'}
@@ -283,7 +283,7 @@ export function EmployeeTermPdfModal({
             </div>
           </div>
 
-          {/* Bot„o Principal: Gerar PDF de Assinatura */}
+          {/* Bot√£o Principal: Gerar PDF de Assinatura */}
           <Button
             onClick={handleGeneratePdf}
             className="h-11 w-full gap-2 rounded-xl bg-slate-900 text-xs font-black uppercase text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
@@ -292,7 +292,7 @@ export function EmployeeTermPdfModal({
             <span>Gerar Termo em PDF para Assinatura</span>
           </Button>
 
-          {/* Altern‚ncia para Recebimento em Balc„o vs Abater em Folha */}
+          {/* Altern√¢ncia para Recebimento em Balc√£o vs Abater em Folha */}
           {!showCounterPay ? (
             <div className="grid grid-cols-2 gap-2">
               <Button
@@ -312,13 +312,13 @@ export function EmployeeTermPdfModal({
                 className="h-10 rounded-xl border-emerald-200 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/50 dark:text-emerald-300"
               >
                 <DollarSign size={14} className="mr-1" />
-                <span>Receber em Balc„o</span>
+                <span>Receber em Balc√£o</span>
               </Button>
             </div>
           ) : (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
               <span className="mb-2 block text-xs font-black uppercase text-emerald-800 dark:text-emerald-300">
-                Recebimento em Balc„o (Entrada no Caixa)
+                Recebimento em Balc√£o (Entrada no Caixa)
               </span>
 
               <div className="space-y-2">
@@ -333,7 +333,7 @@ export function EmployeeTermPdfModal({
                     <SelectContent>
                       <SelectItem value="PIX">? Pix</SelectItem>
                       <SelectItem value="DINHEIRO">?? Dinheiro Vivo</SelectItem>
-                      <SelectItem value="CART√O DE D…BITO">?? Cart„o de DÈbito</SelectItem>
+                      <SelectItem value="CART√ÉO DE D√âBITO">?? Cart√£o de D√©bito</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
