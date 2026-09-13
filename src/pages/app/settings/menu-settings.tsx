@@ -296,6 +296,7 @@ export function MenuSettings() {
       deliveryTimeMin: 30,
       deliveryTimeMax: 60,
       ifoodMerchantId: '',
+      food99ShopId: '',
       anotaAiApiKey: '',
       googleReviewUrl: '',
       pixKey: '',
@@ -353,6 +354,7 @@ export function MenuSettings() {
         deliveryTimeMin: profile.deliveryTimeMin ?? 30,
         deliveryTimeMax: profile.deliveryTimeMax ?? 60,
         ifoodMerchantId: profile.ifoodMerchantId || '',
+        food99ShopId: profile.food99ShopId || '',
         anotaAiApiKey: profile.anotaAiApiKey || '',
         googleReviewUrl: (profile as any).googleReviewUrl || (profile.deliverySectors as any)?.googleReviewUrl || '',
         pixKey: profile.pixKey || '',
@@ -382,6 +384,61 @@ export function MenuSettings() {
   const [unassignedSearch, setUnassignedSearch] = useState('')
   const [sectorViewMode, setSectorViewMode] = useState<'map' | 'list'>('map')
   const [activeMapSectorId, setActiveMapSectorId] = useState<string | null>(null)
+
+  // Integração com Marketplaces (iFood & 99Food)
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false)
+  const [isConnectingIfood, setIsConnectingIfood] = useState(false)
+  const [ifoodAuthData, setIfoodAuthData] = useState<{
+    userCode: string
+    verificationUrlComplete: string
+  } | null>(null)
+
+  async function handleSyncCatalog() {
+    setIsSyncingCatalog(true)
+    try {
+      const response = await api.post('/delivery/catalog/sync')
+      toast.success(response.data?.message || 'Cardápio sincronizado com sucesso!')
+    } catch (error: any) {
+      console.error('Erro ao sincronizar cardápio:', error)
+      toast.error(
+        error?.response?.data?.details ||
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        'Erro ao sincronizar cardápio com marketplaces.'
+      )
+    } finally {
+      setIsSyncingCatalog(false)
+    }
+  }
+
+  async function handleConnectIfood() {
+    setIsConnectingIfood(true)
+    try {
+      const response = await api.get('/delivery/ifood/usercode')
+      if (response.data?.userCode) {
+        setIfoodAuthData({
+          userCode: response.data.userCode,
+          verificationUrlComplete:
+            response.data.verificationUrlComplete ||
+            response.data.verificationUrl ||
+            'https://portal.ifood.com.br',
+        })
+        toast.success('Código de autorização iFood gerado!')
+      } else {
+        toast.error('Não foi possível obter o código de autorização.')
+      }
+    } catch (error: any) {
+      console.error('Erro ao conectar iFood:', error)
+      toast.error(
+        error?.response?.data?.details ||
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        'Erro ao obter código de autorização do iFood.'
+      )
+    } finally {
+      setIsConnectingIfood(false)
+    }
+  }
 
   // Calcula quais bairros estão vinculados e quais estão disponíveis no banco
   const rawDeliverySectors = watch('deliverySectors')
