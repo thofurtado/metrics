@@ -38,6 +38,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat, formatCurrency } from '@/lib/currency-utils'
 import {
   Popover,
   PopoverContent,
@@ -143,7 +145,7 @@ export function TransactionDetailsModal({
       setReceiptFile(null)
       form.reset({
         description: transaction.description || '',
-        amount: (transaction.totalValue ?? transaction.amount).toFixed(2),
+        amount: formatCurrency((transaction.totalValue ?? transaction.amount).toFixed(2)),
         data_vencimento: new Date(transaction.data_vencimento),
         accountId: transaction.accounts.id,
         sectorId: transaction.sectors?.id || 'none',
@@ -205,7 +207,7 @@ export function TransactionDetailsModal({
       await updateFn({
         id: transaction.id,
         description: data.description,
-        amount: parseFloat(data.amount.replace(',', '.')),
+        amount: parseCurrencyToFloat(data.amount),
         data_vencimento: data.data_vencimento,
         account_id: data.accountId,
         sector_id: data.sectorId === 'none' ? null : data.sectorId || null,

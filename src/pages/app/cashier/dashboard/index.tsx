@@ -413,7 +413,7 @@ export function CashierDashboard() {
       }
 
       await openSessionFn({
-        initial_balance: parseFloat(saldoAbertura) || 0,
+        initial_balance: parseCurrencyToFloat(saldoAbertura),
         opened_at,
         ...(isAdmin && selectedUser ? { user_id: selectedUser } : {}),
       } as any)
@@ -771,12 +771,10 @@ export function CashierDashboard() {
                 <label className="mb-1 block text-xs font-black uppercase text-slate-500 dark:text-slate-400">
                   Saldo Inicial / Fundo de Troco (R$)
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
+                <CurrencyInput
                   value={saldoAbertura}
                   onChange={(e) => setSaldoAbertura(e.target.value)}
-                  placeholder="Ex: 100.00"
+                  placeholder="0,00"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-sm font-bold text-emerald-600 outline-none transition-all focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950"
                 />
               </div>

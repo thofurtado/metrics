@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Select,
   SelectContent,
@@ -218,10 +219,10 @@ export function CompositeProductForm({
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-purple-600">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
+                        <CurrencyInput
+                          placeholder="0,00"
+                          value={field.value}
+                          onValueChange={(val) => field.onChange(val)}
                           className="h-10 rounded-xl pl-9 font-mono text-sm font-black text-purple-600"
                         />
                       </div>

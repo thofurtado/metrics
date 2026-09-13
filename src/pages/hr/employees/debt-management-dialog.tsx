@@ -36,6 +36,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -208,12 +209,11 @@ export function DebtManagementDialog({
                       <FormItem>
                         <FormLabel>Valor (R$)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                          <CurrencyInput
+                            placeholder="0,00"
                             className="bg-background"
-                            {...field}
+                            value={field.value}
+                            onValueChange={(val) => field.onChange(val)}
                           />
                         </FormControl>
                         <FormMessage />

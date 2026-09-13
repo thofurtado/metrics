@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { ResponsiveDialogClose } from '@/components/ui/responsive-dialog'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
@@ -246,11 +247,10 @@ export function ServiceForm({ initialData, onSuccess }: ServiceFormProps) {
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-primary">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          inputMode="decimal"
-                          {...field}
+                        <CurrencyInput
+                          placeholder="0,00"
+                          value={field.value}
+                          onValueChange={(val) => field.onChange(val)}
                           className="h-14 border-primary/30 bg-primary/5 pl-10 text-2xl font-bold tabular-nums text-primary shadow-sm focus-visible:border-primary focus-visible:ring-primary"
                         />
                       </div>

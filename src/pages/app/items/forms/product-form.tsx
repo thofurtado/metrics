@@ -44,6 +44,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   ResponsiveDialog,
   ResponsiveDialogClose,
@@ -845,14 +846,12 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           <span className="mr-1.5 font-mono text-xs font-bold text-muted-foreground">
                             R$
                           </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={field.value ?? ''}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          <CurrencyInput
+                            value={field.value}
+                            onValueChange={(val) => field.onChange(val)}
                             disabled={watchedCompositions.length > 0}
-                            className="w-full bg-transparent font-mono text-base font-bold text-slate-800 focus:outline-none disabled:cursor-not-allowed dark:text-slate-200"
-                            placeholder="0.00"
+                            className="w-full bg-transparent font-mono text-base font-bold text-slate-800 focus:outline-none disabled:cursor-not-allowed dark:text-slate-200 border-none shadow-none focus-visible:ring-0 p-0 h-auto"
+                            placeholder="0,00"
                           />
                         </div>
                       </div>
@@ -872,13 +871,11 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           <span className="mr-1.5 font-mono text-sm font-bold text-primary">
                             R$
                           </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={field.value ?? ''}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-transparent font-mono text-lg font-black text-primary focus:outline-none"
-                            placeholder="0.00"
+                          <CurrencyInput
+                            value={field.value}
+                            onValueChange={(val) => field.onChange(val)}
+                            className="w-full bg-transparent font-mono text-lg font-black text-primary focus:outline-none border-none shadow-none focus-visible:ring-0 p-0 h-auto"
+                            placeholder="0,00"
                           />
                         </div>
                       </div>

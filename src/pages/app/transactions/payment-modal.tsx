@@ -34,6 +34,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import {
   Select,
   SelectContent,
@@ -488,13 +490,10 @@ export function PaymentModal({
                             Juros (+)
                           </FormLabel>
                           <FormControl>
-                            <Input
+                            <CurrencyInput
                               {...field}
-                              onChange={(e) => {
-                                field.onChange(e)
-                                const valStr = e.target.value.replace(',', '.')
-                                if (valStr.endsWith('.')) return
-                                const val = parseFloat(valStr || '0')
+                              onValueChange={(val, formatted) => {
+                                field.onChange(formatted)
                                 const newTotal = Math.max(0, transactionAmount + val + fineNum - discountsNum)
                                 form.setValue('paidAmount', newTotal.toFixed(2))
                               }}
@@ -516,13 +515,10 @@ export function PaymentModal({
                             Multa (+)
                           </FormLabel>
                           <FormControl>
-                            <Input
+                            <CurrencyInput
                               {...field}
-                              onChange={(e) => {
-                                field.onChange(e)
-                                const valStr = e.target.value.replace(',', '.')
-                                if (valStr.endsWith('.')) return
-                                const val = parseFloat(valStr || '0')
+                              onValueChange={(val, formatted) => {
+                                field.onChange(formatted)
                                 const newTotal = Math.max(0, transactionAmount + interestNum + val - discountsNum)
                                 form.setValue('paidAmount', newTotal.toFixed(2))
                               }}
@@ -544,13 +540,10 @@ export function PaymentModal({
                             Desconto (-)
                           </FormLabel>
                           <FormControl>
-                            <Input
+                            <CurrencyInput
                               {...field}
-                              onChange={(e) => {
-                                field.onChange(e)
-                                const valStr = e.target.value.replace(',', '.')
-                                if (valStr.endsWith('.')) return
-                                const val = parseFloat(valStr || '0')
+                              onValueChange={(val, formatted) => {
+                                field.onChange(formatted)
                                 const newTotal = Math.max(0, transactionAmount + interestNum + fineNum - val)
                                 form.setValue('paidAmount', newTotal.toFixed(2))
                               }}
@@ -585,13 +578,10 @@ export function PaymentModal({
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-bold text-slate-400">
                                 R$
                               </span>
-                              <Input
+                              <CurrencyInput
                                 {...field}
-                                onChange={(e) => {
-                                  field.onChange(e)
-                                  const valStr = e.target.value.replace(',', '.')
-                                  if (valStr === '' || valStr.endsWith('.')) return
-                                  const typedVal = parseFloat(valStr || '0')
+                                onValueChange={(typedVal, formatted) => {
+                                  field.onChange(formatted)
                                   const basePlusFine = transactionAmount + fineNum
                                   
                                   if (typedVal > basePlusFine) {

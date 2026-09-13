@@ -36,6 +36,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -165,7 +167,7 @@ export function Accounts() {
     try {
       await adjustBalance({
         id: selectedAccountId,
-        newBalance: data.newBalance,
+        newBalance: typeof data.newBalance === 'number' ? data.newBalance : parseCurrencyToFloat(data.newBalance),
       })
     } catch {
       // handled in onError
@@ -205,12 +207,12 @@ export function Accounts() {
                 <span className="absolute left-3 top-2.5 text-muted-foreground">
                   R$
                 </span>
-                <Input
+                <CurrencyInput
                   id="newBalance"
-                  type="number"
-                  step="0.01"
+                  placeholder="0,00"
                   className="pl-9 text-lg font-medium"
-                  {...registerAdjust('newBalance')}
+                  value={watchAdjust('newBalance')}
+                  onValueChange={(val) => setValueAdjust('newBalance', val)}
                   autoFocus
                 />
               </div>

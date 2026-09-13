@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
@@ -349,14 +350,10 @@ export function ComplementsDialog() {
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.50"
+                        <CurrencyInput
                           placeholder="0,00"
                           value={opt.price}
-                          onChange={(e) =>
-                            handleUpdateOption(idx, 'price', Number(e.target.value))
-                          }
+                          onValueChange={(val) => handleUpdateOption(idx, 'price', val)}
                           className="h-9 rounded-lg border-slate-200 bg-white pl-8 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         />
                       </div>

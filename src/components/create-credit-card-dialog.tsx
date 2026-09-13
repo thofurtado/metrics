@@ -24,6 +24,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import {
   Select,
   SelectContent,
@@ -44,7 +46,7 @@ const creditCardSchema = z.object({
     .string()
     .min(1, 'Limite é obrigatório')
     .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+      (val) => parseCurrencyToFloat(val) > 0,
       'O limite deve ser maior que zero',
     ),
   closing_day: z

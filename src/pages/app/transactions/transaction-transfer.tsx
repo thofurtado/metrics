@@ -38,6 +38,8 @@ import {
   ResponsiveDialogTitle,
 } from '@/components/ui/responsive-dialog'
 import { cn } from '@/lib/utils'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 
 // Schema para Transferência
 const formSchema = z
@@ -49,12 +51,12 @@ const formSchema = z
     account_origin: z.string().min(1, 'Conta de origem é obrigatória'),
     account_destination: z.string().min(1, 'Conta de destino é obrigatória'),
     amount: z
-      .string()
-      .min(1, 'Valor é obrigatório')
-      .refine(
-        (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-        'Valor deve ser maior que zero',
-      ),
+    .string()
+    .min(1, 'Valor é obrigatório')
+    .refine(
+      (val) => parseCurrencyToFloat(val) > 0,
+      'Valor deve ser maior que zero',
+    ),
   })
   .refine((data) => data.account_origin !== data.account_destination, {
     message: 'A conta de destino deve ser diferente da origem',
@@ -120,7 +122,7 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
     try {
       const transactionData = {
         operation: 'transfer' as const,
-        amount: Number(data.amount),
+        amount: parseCurrencyToFloat(data.amount),
         account: data.account_origin,
         destination_account_id: data.account_destination,
         date: data.date,

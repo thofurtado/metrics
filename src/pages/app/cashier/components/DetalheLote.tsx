@@ -297,7 +297,7 @@ export function DetalheLote({
   }
 
   const salvarEdicaoAbertura = () => {
-    onEditarAbertura(parseFloat(valorAberturaTemp) || 0)
+    onEditarAbertura(parseCurrencyToFloat(valorAberturaTemp))
     setEditandoAbertura(false)
   }
 

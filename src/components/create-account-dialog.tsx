@@ -24,6 +24,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 
 export interface CreateAccountDialogProps {
   open: boolean
@@ -85,8 +87,8 @@ export function CreateAccountDialog({
   })
 
   async function onSubmit(data: AccountForm) {
-    const rawBalance = data.balance ? parseFloat(data.balance.toString().replace(',', '.')) : 0
-    const rawGoal = data.goal && data.goal.trim() !== '' ? parseFloat(data.goal.toString().replace(',', '.')) : null
+    const rawBalance = parseCurrencyToFloat(data.balance)
+    const rawGoal = data.goal && data.goal.trim() !== '' ? parseCurrencyToFloat(data.goal) : null
 
     await createNewAccount({
       name: data.name.trim(),
@@ -182,9 +184,7 @@ export function CreateAccountDialog({
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           placeholder="0,00"
                           className="h-11 rounded-xl pl-9"
                           {...field}
@@ -209,9 +209,7 @@ export function CreateAccountDialog({
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           placeholder="0,00"
                           className="h-11 rounded-xl pl-9"
                           {...field}

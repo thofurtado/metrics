@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   ResponsiveDialogClose,
   ResponsiveDialogFooter,
@@ -421,11 +422,10 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-muted-foreground">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           placeholder="0,00"
-                          {...field}
+                          value={field.value}
+                          onValueChange={(val) => field.onChange(val)}
                           className="h-11 bg-white pl-10 font-mono text-base font-bold dark:bg-slate-950"
                         />
                       </div>

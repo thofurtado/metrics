@@ -35,6 +35,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import {
   Select,
   SelectContent,
@@ -55,16 +57,8 @@ const employeeFormSchema = z.object({
       message: 'Data inválida.',
     }),
   pin: z.string().length(4),
-  salary: z.preprocess(
-    (val) =>
-      val === '' || val === undefined || val === null ? 0 : Number(val),
-    z.number().default(0),
-  ),
-  dailyRate: z.preprocess(
-    (val) =>
-      val === '' || val === undefined || val === null ? 0 : Number(val),
-    z.number().default(0),
-  ),
+  salary: z.preprocess((val) => parseCurrencyToFloat(val), z.number().default(0)),
+  dailyRate: z.preprocess((val) => parseCurrencyToFloat(val), z.number().default(0)),
   points: z.preprocess(
     (val) =>
       val === '' || val === undefined || val === null ? 0 : Number(val),
@@ -434,10 +428,8 @@ export function EmployeeFormDialog({
                             : 'Salário Base (R$)'}
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                          <CurrencyInput
+                            placeholder="0,00"
                             {...field}
                             value={
                               currentRegistrationType === 'DAILY'
@@ -472,10 +464,8 @@ export function EmployeeFormDialog({
                           Valor da Diária (R$)
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                          <CurrencyInput
+                            placeholder="0,00"
                             {...field}
                             value={field.value ?? ''}
                             onChange={(e) => field.onChange(e.target.value)}
@@ -495,10 +485,8 @@ export function EmployeeFormDialog({
                       <FormItem>
                         <FormLabel>Vale Transporte (R$)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                          <CurrencyInput
+                            placeholder="0,00"
                             {...field}
                           />
                         </FormControl>

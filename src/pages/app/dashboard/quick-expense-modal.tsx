@@ -18,6 +18,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -115,7 +117,7 @@ export function QuickExpenseModal({
     await createTransactionFn({
       operation: 'expense',
       description: data.description,
-      amount: Number(data.amount.replace(',', '.')),
+      amount: parseCurrencyToFloat(data.amount),
       sector: data.sectorId,
       account: data.accountId,
       data_vencimento: new Date(),

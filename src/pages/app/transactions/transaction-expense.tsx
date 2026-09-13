@@ -85,6 +85,8 @@ import {
 } from '@/components/ui/select'
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { Switch } from '@/components/ui/switch'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { API_BASE_URL } from '@/lib/axios'
 import { calculateCreditCardDueDate } from '@/lib/credit-card-due-date'
 import { cn } from '@/lib/utils'
@@ -101,7 +103,7 @@ const formSchema = z.object({
     .string()
     .min(1, 'Valor é obrigatório')
     .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+      (val) => parseCurrencyToFloat(val) > 0,
       'Valor deve ser maior que zero',
     ),
   supplier: z.string().optional(),
@@ -442,7 +444,7 @@ export function TransactionExpense({
     try {
       const commonData = {
         description: data.description,
-        amount: Number(data.amount),
+        amount: parseCurrencyToFloat(data.amount),
         operation: 'expense' as const,
         account: data.account, // mapped to account_id or account generic
         sector: data.sector, // mapped to sector_id
@@ -474,9 +476,9 @@ export function TransactionExpense({
         interval_frequency: isInstallment ? data.interval_frequency : undefined,
         custom_installments: cleanInstallments,
         credit_card_id: data.credit_card_id || null,
-        interest: data.interest ? Number(data.interest) : undefined,
-        fine: data.fine ? Number(data.fine) : undefined,
-        discount: data.discount ? Number(data.discount) : undefined,
+        interest: data.interest ? parseCurrencyToFloat(data.interest) : undefined,
+        fine: data.fine ? parseCurrencyToFloat(data.fine) : undefined,
+        discount: data.discount ? parseCurrencyToFloat(data.discount) : undefined,
       })
 
       const transactionId = response.data?.transaction?.id || response.data?.id
@@ -720,12 +722,12 @@ export function TransactionExpense({
                           R$
                         </span>
                         <FormControl>
-                          <input
+                          <CurrencyInput
                             {...field}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
-                              const val = parseFloat(e.target.value) || 0
+                              const val = parseCurrencyToFloat(e.target.value)
                               const count =
                                 parseInt(
                                   form.getValues('installments_count') || '1',
@@ -736,11 +738,8 @@ export function TransactionExpense({
                                 setInstallmentValue('')
                               }
                             }}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.01"
                             placeholder="0,00"
-                            className="w-full border-none bg-transparent p-0 text-xl font-black tabular-nums tracking-tight text-slate-900 shadow-none [appearance:textfield] placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            className="w-full border-none bg-transparent p-0 text-xl font-black tabular-nums tracking-tight text-slate-900 shadow-none [appearance:textfield] placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 dark:text-slate-50 dark:placeholder:text-slate-600 h-auto"
                             autoFocus
                           />
                         </FormControl>
@@ -773,11 +772,8 @@ export function TransactionExpense({
                             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none font-bold text-slate-400 dark:text-slate-500">
                               R$
                             </span>
-                            <Input
+                            <CurrencyInput
                               {...field}
-                              type="number"
-                              inputMode="decimal"
-                              step="0.01"
                               placeholder="0,00"
                               className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-9 text-base font-semibold transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                             />

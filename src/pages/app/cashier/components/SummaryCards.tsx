@@ -72,7 +72,7 @@ export function SummaryCards({
   }
 
   const handleSave = () => {
-    const novoValor = parseFloat(tempAbertura)
+    const novoValor = parseCurrencyToFloat(tempAbertura)
     if (!isNaN(novoValor) && onEditAbertura) {
       onEditAbertura(novoValor)
     }

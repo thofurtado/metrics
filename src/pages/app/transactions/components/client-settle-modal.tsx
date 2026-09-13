@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { settleTermDebt } from '@/api/settle-term-debt'
 
@@ -77,7 +79,7 @@ export function ClientSettleModal({
     }
   }, [open])
 
-  const parsedPartial = parseFloat(partialAmount.replace(',', '.')) || 0
+  const parsedPartial = parseCurrencyToFloat(partialAmount)
   const remainingAmount = Math.max(0, totalAmount - parsedPartial)
 
   const { mutateAsync: settle, isPending } = useMutation({

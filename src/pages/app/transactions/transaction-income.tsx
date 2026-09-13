@@ -63,6 +63,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { cn } from '@/lib/utils'
 
 // Schema para Receitas (income)
@@ -80,7 +82,7 @@ const formSchema = z.object({
     .string()
     .min(1, 'Valor é obrigatório')
     .refine(
-      (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+      (val) => parseCurrencyToFloat(val) > 0,
       'Valor deve ser maior que zero',
     ),
   confirmed: z.boolean().default(false),
@@ -220,7 +222,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
 
       const transactionData = {
         operation: 'income' as const,
-        amount: Number(data.amount),
+        amount: parseCurrencyToFloat(data.amount),
         account: data.account,
         data_vencimento: data.data_vencimento,
         data_emissao: data.data_emissao,
@@ -428,12 +430,12 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                           R$
                         </span>
                         <FormControl>
-                          <input
+                          <CurrencyInput
                             {...field}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
-                              const val = parseFloat(e.target.value) || 0
+                              const val = parseCurrencyToFloat(e.target.value)
                               const count =
                                 parseInt(
                                   form.getValues('installments_count') || '1',
@@ -444,11 +446,8 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                                 setInstallmentValue('')
                               }
                             }}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.01"
                             placeholder="0,00"
-                            className="w-full bg-transparent text-4xl font-extrabold tabular-nums tracking-tight text-slate-800 caret-emerald-500 placeholder:text-slate-200 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-700"
+                            className="w-full bg-transparent text-4xl font-extrabold tabular-nums tracking-tight text-slate-800 caret-emerald-500 placeholder:text-slate-200 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-700 border-none shadow-none focus-visible:ring-0 focus-visible:outline-none p-0 h-auto"
                             autoFocus
                           />
                         </FormControl>
