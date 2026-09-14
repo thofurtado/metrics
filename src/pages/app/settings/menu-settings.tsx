@@ -417,7 +417,6 @@ export function MenuSettings() {
   const [isConnectingIfood, setIsConnectingIfood] = useState(false)
     const [ifoodAuthData, setIfoodAuthData] = useState<{
     userCode: string
-    authorizationCodeVerifier: string
     verificationUrlComplete: string
   } | null>(null)
   const [ifoodAuthorizationCode, setIfoodAuthorizationCode] = useState('')
@@ -448,7 +447,6 @@ export function MenuSettings() {
       if (response.data?.userCode) {
         setIfoodAuthData({
                     userCode: response.data.userCode,
-          authorizationCodeVerifier: response.data.authorizationCodeVerifier,
           verificationUrlComplete:
             response.data.verificationUrlComplete ||
             response.data.verificationUrl ||
@@ -472,7 +470,7 @@ export function MenuSettings() {
     }
 
   async function handleExchangeIfoodToken() {
-    if (!ifoodAuthData?.authorizationCodeVerifier || !ifoodAuthorizationCode.trim()) {
+    if (!ifoodAuthData || !ifoodAuthorizationCode.trim()) {
       toast.error('Informe o authorization code recebido após autorizar a loja.')
       return
     }
@@ -481,7 +479,6 @@ export function MenuSettings() {
     try {
       await api.post('/delivery/ifood/token', {
         authorizationCode: ifoodAuthorizationCode.trim(),
-        authorizationCodeVerifier: ifoodAuthData.authorizationCodeVerifier,
       })
       toast.success('Loja iFood autorizada com sucesso.')
       setIfoodAuthorizationCode('')
@@ -2066,7 +2063,7 @@ export function MenuSettings() {
                               </Button>
                             </div>
                             <p className="text-[10px] text-muted-foreground">
-                              O verifier é mantido apenas nesta sessão e não é exibido ao cliente.
+                              O verifier é mantido com segurança no backend e não é enviado pelo navegador.
                             </p>
                           </div>
                         </div>
