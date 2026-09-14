@@ -39,6 +39,7 @@ import {
 } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
 import { PageHeader } from '@/components/page-header'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   AlertDialog,
   AlertDialogCancel,
