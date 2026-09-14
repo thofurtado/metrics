@@ -33,6 +33,7 @@ export async function createTransaction({
   amount,
   account,
   destination_account_id,
+  destination_account,
   supplier,
   payment_method,
   data_vencimento,
