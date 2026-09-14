@@ -1,5 +1,16 @@
 # Regras de Edição de Código
 
+## Versionamento e commits
+- Após cada build de produção concluído com sucesso, criar o commit local imediatamente.
+- As descrições dos commits devem ser em português, claras e voltadas ao cliente.
+- Usar sempre versionamento com quatro níveis no formato `X.Y.Z.W`.
+- N4 (`x.y.z.W`): correção pequena ou hotfix.
+- N3 (`x.y.Z.0`): funcionalidade ou módulo.
+- N2 (`x.Y.0.0`): conjunto maior de recursos.
+- N1 (`X.0.0.0`): marco estrutural.
+- Nunca repetir uma versão já utilizada; atualizar a versão antes do commit correspondente.
+- Não fazer push sem solicitação explícita do Thomás.
+
 - **Preservação de Código:** NUNCA remova partes do código, declarações de variáveis, schemas do Zod (como `const formSchema = z.object(...)`), ou blocos inteiros que não estão diretamente relacionados com a tarefa atual.
 - **Edições Cirúrgicas:** Quando fizer alterações em arquivos existentes, modifique apenas as linhas estritamente necessárias. Preserve as estruturas ao redor.
 - **Verificação Pós-Edição:** Sempre verifique se chaves `{}`, parênteses `()` e declarações fundamentais não foram apagadas acidentalmente durante uma refatoração ou inserção.

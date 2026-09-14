@@ -55,3 +55,19 @@ export async function deleteFileTransaction(id: string) {
   const response = await api.delete(`/uploads/transaction/${id}`)
   return response.data
 }
+
+export async function uploadCompanyProfileFile(
+  field: 'logo_url' | 'banner_url',
+  file: File,
+) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await api.post(`/uploads/company-profile/${field}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
+  return response.data as { logo_url?: string; banner_url?: string }
+}

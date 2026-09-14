@@ -102,6 +102,7 @@ export function Accounts() {
     handleSubmit: handleSubmitAdjust,
     reset: resetAdjust,
     setValue: setValueAdjust,
+    watch: watchAdjust,
   } = useForm<AdjustBalanceSchema>({
     resolver: zodResolver(adjustBalanceSchema),
   })

@@ -30,6 +30,8 @@ import { Controller, useForm as useReactHookForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { uploadCompanyProfileFile } from '@/api/upload-file'
+import { FileUpload } from '@/components/file-upload'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -55,7 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
 import { ImportNeighborhoodsModal } from './components/import-neighborhoods-modal'
 import { DeliveryZoneMap } from '@/components/maps/DeliveryZoneMap'
-import { cn } from '@/lib/utils'
+import { cn, resolveImageUrl } from '@/lib/utils'
 import { getPayments } from '@/api/get-payments'
 import { updatePayment } from '@/api/update-payment'
 
@@ -384,6 +386,31 @@ export function MenuSettings() {
   const [unassignedSearch, setUnassignedSearch] = useState('')
   const [sectorViewMode, setSectorViewMode] = useState<'map' | 'list'>('map')
   const [activeMapSectorId, setActiveMapSectorId] = useState<string | null>(null)
+  const [uploadingBrandAsset, setUploadingBrandAsset] = useState<'logo_url' | 'banner_url' | null>(null)
+
+  async function handleBrandAssetUpload(field: 'logo_url' | 'banner_url', file: File | null) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem.')
+      return
+    }
+
+    setUploadingBrandAsset(field)
+    try {
+      const result = await uploadCompanyProfileFile(field, file)
+      const uploadedUrl = result[field]
+      if (uploadedUrl) {
+        setValue(field, uploadedUrl, { shouldDirty: true })
+        await queryClient.invalidateQueries({ queryKey: ['company-profile'] })
+        await queryClient.invalidateQueries({ queryKey: ['public-profile'] })
+        toast.success(field === 'logo_url' ? 'Logomarca enviada com sucesso.' : 'Banner enviado com sucesso.')
+      }
+    } catch {
+      toast.error('Não foi possível enviar a imagem.')
+    } finally {
+      setUploadingBrandAsset(null)
+    }
+  }
 
   // Integração com Marketplaces (iFood & 99Food)
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false)
@@ -1039,23 +1066,43 @@ export function MenuSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="logo_url">URL da Logomarca</Label>
-                    <Input
-                      id="logo_url"
-                      {...register('logo_url')}
-                      placeholder="https://exemplo.com/logo.png"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="banner_url">URL do Banner / Capa</Label>
-                    <Input
-                      id="banner_url"
-                      {...register('banner_url')}
-                      placeholder="https://exemplo.com/banner.png"
-                    />
-                  </div>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {([
+                    { field: 'logo_url' as const, label: 'Logomarca', placeholder: 'https://exemplo.com/logo.png' },
+                    { field: 'banner_url' as const, label: 'Banner / Capa', placeholder: 'https://exemplo.com/banner.png' },
+                  ]).map(({ field, label, placeholder }) => {
+                    const imageUrl = watch(field)
+                    return (
+                      <div key={field} className="space-y-3 rounded-lg border p-4">
+                        <Label htmlFor={field}>URL da {label}</Label>
+                        <Input
+                          id={field}
+                          {...register(field)}
+                          placeholder={placeholder}
+                        />
+                        {imageUrl && (
+                          <img
+                            src={resolveImageUrl(imageUrl)}
+                            alt={`Pré-visualização da ${label.toLowerCase()}`}
+                            className="max-h-32 w-full rounded-md border object-contain"
+                          />
+                        )}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Ou envie uma imagem</Label>
+                          <FileUpload
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            maxSizeMB={5}
+                            onFileSelect={(file) => handleBrandAssetUpload(field, file)}
+                          />
+                          {uploadingBrandAsset === field && (
+                            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Enviando imagem...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
 
                 <div className="space-y-3">
