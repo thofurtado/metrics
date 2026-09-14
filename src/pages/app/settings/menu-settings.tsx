@@ -415,10 +415,13 @@ export function MenuSettings() {
   // Integração com Marketplaces (iFood & 99Food)
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false)
   const [isConnectingIfood, setIsConnectingIfood] = useState(false)
-  const [ifoodAuthData, setIfoodAuthData] = useState<{
+    const [ifoodAuthData, setIfoodAuthData] = useState<{
     userCode: string
+    authorizationCodeVerifier: string
     verificationUrlComplete: string
   } | null>(null)
+  const [ifoodAuthorizationCode, setIfoodAuthorizationCode] = useState('')
+  const [isExchangingIfoodToken, setIsExchangingIfoodToken] = useState(false)
 
   async function handleSyncCatalog() {
     setIsSyncingCatalog(true)
@@ -444,7 +447,8 @@ export function MenuSettings() {
       const response = await api.get('/delivery/ifood/usercode')
       if (response.data?.userCode) {
         setIfoodAuthData({
-          userCode: response.data.userCode,
+                    userCode: response.data.userCode,
+          authorizationCodeVerifier: response.data.authorizationCodeVerifier,
           verificationUrlComplete:
             response.data.verificationUrlComplete ||
             response.data.verificationUrl ||
@@ -464,6 +468,33 @@ export function MenuSettings() {
       )
     } finally {
       setIsConnectingIfood(false)
+    }
+    }
+
+  async function handleExchangeIfoodToken() {
+    if (!ifoodAuthData?.authorizationCodeVerifier || !ifoodAuthorizationCode.trim()) {
+      toast.error('Informe o authorization code recebido após autorizar a loja.')
+      return
+    }
+
+    setIsExchangingIfoodToken(true)
+    try {
+      await api.post('/delivery/ifood/token', {
+        authorizationCode: ifoodAuthorizationCode.trim(),
+        authorizationCodeVerifier: ifoodAuthData.authorizationCodeVerifier,
+      })
+      toast.success('Loja iFood autorizada com sucesso.')
+      setIfoodAuthorizationCode('')
+      setIfoodAuthData(null)
+      queryClient.invalidateQueries({ queryKey: ['company-profile'] })
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.details ||
+        error?.response?.data?.error ||
+        'Não foi possível concluir a autorização da loja iFood.',
+      )
+    } finally {
+      setIsExchangingIfoodToken(false)
     }
   }
 
@@ -2004,7 +2035,7 @@ export function MenuSettings() {
                               <Copy className="h-3 w-3" /> Copiar
                             </Button>
                           </div>
-                          <Button
+                                                    <Button
                             type="button"
                             size="sm"
                             className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1"
@@ -2012,6 +2043,32 @@ export function MenuSettings() {
                           >
                             <ExternalLink className="h-3.5 w-3.5" /> Abrir Portal iFood para Confirmar
                           </Button>
+                          <div className="space-y-1 pt-1">
+                            <Label htmlFor="ifoodAuthorizationCode" className="text-xs font-semibold">
+                              Authorization Code
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="ifoodAuthorizationCode"
+                                value={ifoodAuthorizationCode}
+                                onChange={(event) => setIfoodAuthorizationCode(event.target.value)}
+                                placeholder="Cole aqui o código recebido do iFood"
+                                className="bg-white text-xs dark:bg-slate-950"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={handleExchangeIfoodToken}
+                                disabled={isExchangingIfoodToken || !ifoodAuthorizationCode.trim()}
+                                className="shrink-0 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
+                              >
+                                {isExchangingIfoodToken ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Concluir'}
+                              </Button>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                              O verifier é mantido apenas nesta sessão e não é exibido ao cliente.
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
