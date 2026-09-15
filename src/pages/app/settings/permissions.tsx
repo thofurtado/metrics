@@ -70,7 +70,11 @@ export function Permissions() {
   const { mutateAsync: saveUser, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (isCreating) {
-        return createUser(formData)
+        const payload: any = { ...formData }
+        if (!payload.pin || payload.pin.trim() === '') {
+          delete payload.pin
+        }
+        return createUser(payload)
       } else if (selectedUser) {
         const payload: any = { id: selectedUser.id, ...formData }
         if (!payload.password || payload.password.trim() === '') {
@@ -300,7 +304,7 @@ export function Permissions() {
           </DialogHeader>
 
           <div className="grid gap-5 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome Completo</Label>
                 <Input
@@ -326,10 +330,10 @@ export function Permissions() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">
-                  {isCreating ? 'Senha de Acesso' : 'Nova Senha (opcional)'}
+                  {isCreating ? 'Senha de Acesso (mín. 6 caracteres)' : 'Nova Senha (opcional, mín. 6)'}
                 </Label>
                 <Input
                   id="password"
@@ -339,13 +343,18 @@ export function Permissions() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                   placeholder={
-                    isCreating ? '******' : 'Deixe em branco para não alterar'
+                    isCreating ? 'Mínimo 6 caracteres' : 'Deixe em branco para não alterar'
                   }
                 />
+                {isCreating && formData.password && formData.password.length < 6 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    A senha deve ter no mínimo 6 caracteres ({formData.password.length}/6).
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pin">
-                  PIN Rápido (4 a 6 dígitos)
+                  PIN Rápido (opcional, 4 a 6 dígitos)
                 </Label>
                 <Input
                   id="pin"
@@ -358,7 +367,7 @@ export function Permissions() {
                     setFormData({ ...formData, pin: val })
                   }}
                   placeholder={
-                    isCreating ? 'Ex: 1234' : 'Deixe em branco para manter'
+                    isCreating ? 'Opcional (Ex: 1234)' : 'Deixe em branco para manter'
                   }
                 />
               </div>
@@ -449,7 +458,7 @@ export function Permissions() {
               disabled={
                 isSaving ||
                 (isCreating &&
-                  (!formData.name || !formData.email || !formData.password))
+                  (!formData.name || !formData.email || !formData.password || formData.password.length < 6))
               }
               className="bg-minsk-600 text-white hover:bg-minsk-700"
             >
