@@ -418,8 +418,15 @@ export function CashierDashboard() {
         opened_at,
         ...(isAdmin && selectedUser ? { user_id: selectedUser } : {}),
       } as any)
-    } catch (error) {
-      alert('Erro ao abrir caixa.')
+    } catch (error: any) {
+      console.error('Erro ao abrir caixa:', error)
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Não foi possível abrir o caixa.'
+      toast.error(message)
+      throw error
     }
   }
 
@@ -790,9 +797,13 @@ export function CashierDashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    handleCriar()
-                    setIsCreateSessionModalOpen(false)
+                  onClick={async () => {
+                    try {
+                      await handleCriar()
+                      setIsCreateSessionModalOpen(false)
+                    } catch {
+                      // A mensagem detalhada já foi exibida no handleCriar.
+                    }
                   }}
                   className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-black uppercase text-white shadow-md shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95"
                 >
