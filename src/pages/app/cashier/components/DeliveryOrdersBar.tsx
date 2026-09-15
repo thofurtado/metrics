@@ -44,7 +44,19 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     refetchInterval: 3000
   })
 
-  const orders: any[] = Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : []
+  // A API pode retornar dados legados ou campos JSON inválidos. Normalize os
+  // arrays aqui para que o drawer nunca tente executar .map/.filter em objeto.
+  const orders: any[] = (Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : [])
+    .filter((order): order is Record<string, any> => !!order && typeof order === 'object')
+    .map((order) => ({
+      ...order,
+      items: Array.isArray(order.items)
+        ? order.items.map((item: any) => ({
+            ...item,
+            complements: Array.isArray(item?.complements) ? item.complements : []
+          }))
+        : []
+    }))
   const profile = data?.profile || null
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
