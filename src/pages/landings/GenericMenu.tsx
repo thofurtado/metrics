@@ -599,7 +599,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     const formatted = formatPhone(e.target.value)
     setCustomerPhone(formatted)
     const raw = formatted.replace(/\D/g, '')
-    if (raw.length >= 10) {
+    // Celulares no Brasil possuem 11 dígitos com 9 no terceiro dígito (ex: 12992193644).
+    // Telefones fixos possuem 10 dígitos (ex: 1239213644).
+    const isMobileComplete = raw.length === 11
+    const isLandlineComplete = raw.length === 10 && raw[2] !== '9'
+    if (isMobileComplete || isLandlineComplete) {
       handlePhoneSearch(raw)
     }
   }
@@ -618,9 +622,25 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setCustomerName(client.name || '')
         setClientFound(true)
 
-        if (client.addresses && client.addresses.length > 0) {
-          setSavedAddresses(client.addresses)
-          const addr = client.addresses[0]
+        // Filtra endereços fictícios de retirada
+        const validAddresses = (client.addresses || []).filter((a: any) =>
+          !a.street?.toLowerCase().includes('retirada') &&
+          !a.neighborhood?.toLowerCase().includes('balcão')
+        )
+        setSavedAddresses(validAddresses)
+
+        // Se for RETIRADA, NUNCA preenche nem exige endereço
+        if (fulfillmentType === 'TAKEOUT') {
+          setZipcode('')
+          setStreet('')
+          setNumber('')
+          setNeighborhood('')
+          setCity('')
+          setState('')
+          setAddressReadonly(false)
+          setIsNewAddress(false)
+        } else if (validAddresses.length > 0) {
+          const addr = validAddresses[0]
           setZipcode(
             addr.zipcode
               ? formatCep(addr.zipcode.toString().padStart(8, '0'))
@@ -631,29 +651,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           setCity(addr.city || '')
           setState(addr.state || '')
 
-          if (fulfillmentType === 'DELIVERY' && availableNeighborhoodsList.length > 0) {
-            const isAllowed = availableNeighborhoodsList.some(
-              (n) => normalizeText(n) === normalizeText(addr.neighborhood)
-            )
-            if (!isAllowed) {
-              setNeighborhood('')
-              setAddressReadonly(false)
-              setIsNewAddress(true)
-              setUnsupportedNeighborhoodModal({
-                isOpen: true,
-                neighborhoodName: addr.neighborhood || '',
-              })
-              setPhoneSearchToast({
-                type: 'info',
-                message: `Seu endereço cadastrado (${addr.neighborhood || ''}) não está na nossa área de entrega padrão.`,
-              })
-              return
-            }
+          // Sincroniza bairro com deliverySectors da empresa
+          const matchedNeighborhood = matchNeighborhoodWithConfig(addr.neighborhood || '')
+          if (matchedNeighborhood) {
+            setNeighborhood(matchedNeighborhood)
+            setAddressReadonly(true)
+            setIsNewAddress(false)
+          } else if (availableNeighborhoodsList.length > 0) {
+            setNeighborhood('')
+            setAddressReadonly(false)
+            setIsNewAddress(true)
+            setUnsupportedNeighborhoodModal({
+              isOpen: true,
+              neighborhoodName: addr.neighborhood || '',
+            })
+            setPhoneSearchToast({
+              type: 'info',
+              message: `Seu endereço cadastrado (${addr.neighborhood || ''}) não está na nossa área de entrega padrão.`,
+            })
+            return
+          } else {
+            setNeighborhood(addr.neighborhood || '')
+            setAddressReadonly(true)
+            setIsNewAddress(false)
           }
-
-          setNeighborhood(addr.neighborhood || '')
-          setAddressReadonly(true)
-          setIsNewAddress(false)
         } else {
           setSavedAddresses([])
           setAddressReadonly(false)
@@ -698,23 +719,23 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const handleSelectSavedAddress = (addr: any) => {
     if (fulfillmentType === 'DELIVERY' && availableNeighborhoodsList.length > 0) {
-      const isAllowed = availableNeighborhoodsList.some(
-        (n) => normalizeText(n) === normalizeText(addr.neighborhood)
-      )
-      if (!isAllowed) {
+      const matched = matchNeighborhoodWithConfig(addr.neighborhood || '')
+      if (!matched) {
         setUnsupportedNeighborhoodModal({
           isOpen: true,
           neighborhoodName: addr.neighborhood || '',
         })
         return
       }
+      setNeighborhood(matched)
+    } else {
+      setNeighborhood(addr.neighborhood || '')
     }
     setZipcode(
       addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '',
     )
     setStreet(addr.street || '')
     setNumber(addr.number ? addr.number.toString() : '')
-    setNeighborhood(addr.neighborhood || '')
     setCity(addr.city || '')
     setState(addr.state || '')
     setAddressReadonly(true)
@@ -863,10 +884,37 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }, [profile])
 
   const matchNeighborhoodWithConfig = (cepNeighborhood: string) => {
-    if (!cepNeighborhood || !availableNeighborhoodsList.length) {
-      return ''
-    }
+    if (!cepNeighborhood) return ''
     const target = normalizeText(cepNeighborhood)
+
+    // 1. Prioriza os setores de entrega configurados com taxa
+    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    if (typeof sectors === 'string') {
+      try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+    }
+    if (!Array.isArray(sectors)) sectors = []
+
+    const sectorNeighborhoods: string[] = []
+    sectors.forEach((s: any) => {
+      if (Array.isArray(s.neighborhoods)) {
+        sectorNeighborhoods.push(...s.neighborhoods)
+      }
+    })
+
+    // Match exato nos setores
+    const exactSector = sectorNeighborhoods.find(
+      (n) => normalizeText(n) === target,
+    )
+    if (exactSector) return exactSector
+
+    // Match parcial nos setores (ex: "Copacabana" -> "Balneário Copacabana")
+    const partialSector = sectorNeighborhoods.find((n) => {
+      const norm = normalizeText(n)
+      return norm.includes(target) || target.includes(norm)
+    })
+    if (partialSector) return partialSector
+
+    // 2. Se não achou nos setores, busca na lista geral de bairros disponíveis
     const exact = availableNeighborhoodsList.find(
       (n) => normalizeText(n) === target,
     )
@@ -1050,12 +1098,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         try { sectors = JSON.parse(sectors) } catch { sectors = [] }
       }
       if (!Array.isArray(sectors)) sectors = []
+
+      const normNeighbor = normalizeText(neighborhood)
       const foundSector = sectors.find((s: any) =>
-        (s.neighborhoods || []).some(
-          (n: string) => normalizeText(n) === normalizeText(neighborhood),
+        Array.isArray(s.neighborhoods) && s.fee !== undefined && s.neighborhoods.some(
+          (n: string) => {
+            const normN = normalizeText(n)
+            return normN === normNeighbor || normN.includes(normNeighbor) || normNeighbor.includes(normN)
+          },
         ),
       )
-      if (foundSector) {
+      if (foundSector && foundSector.fee !== undefined) {
         return Number(foundSector.fee) || 0
       }
     }
@@ -1105,24 +1158,19 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     try {
       const rawPhone = customerPhone.replace(/\D/g, '')
       const rawZipcode = zipcode.replace(/\D/g, '')
+      const isTakeout = fulfillmentType === 'TAKEOUT'
 
       const payload = {
         name: customerName,
         phone: rawPhone,
-        street: fulfillmentType === 'DELIVERY' ? street : 'Retirada no Balcão',
-        number: fulfillmentType === 'DELIVERY' ? number || '0' : '0',
-        neighborhood: fulfillmentType === 'DELIVERY' ? neighborhood : 'Balcão',
-        city:
-          fulfillmentType === 'DELIVERY'
-            ? city || profile?.city || 'Local'
-            : profile?.city || 'Local',
-        state:
-          fulfillmentType === 'DELIVERY'
-            ? state || profile?.state || 'SP'
-            : profile?.state || 'SP',
-        zipcode:
-          fulfillmentType === 'DELIVERY' && rawZipcode ? rawZipcode : undefined,
-        complement: complement || undefined,
+        isTakeout: isTakeout,
+        street: isTakeout ? '' : street,
+        number: isTakeout ? '' : (number || 'S/N'),
+        neighborhood: isTakeout ? '' : neighborhood,
+        city: isTakeout ? '' : (city || profile?.city || 'Local'),
+        state: isTakeout ? '' : (state || profile?.state || 'SP'),
+        zipcode: isTakeout ? undefined : (rawZipcode || undefined),
+        complement: isTakeout ? undefined : (complement || undefined),
         isNewAddress,
       }
 
@@ -1130,7 +1178,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       if (res.data && res.data.client) {
         setClientFound(true)
         if (res.data.client.addresses) {
-          setSavedAddresses(res.data.client.addresses)
+          const validAddrs = res.data.client.addresses.filter((a: any) =>
+            !a.street?.toLowerCase().includes('retirada') &&
+            !a.neighborhood?.toLowerCase().includes('balcão')
+          )
+          setSavedAddresses(validAddrs)
         }
       }
     } catch (clientErr) {
@@ -1189,19 +1241,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       await registerClientInBackend()
 
       let orderApiRes: any = null
+      const isTakeout = fulfillmentType === 'TAKEOUT'
       // 2. Envia pedido para fila de sincronização do PDV
       try {
         orderApiRes = await api.post('/public/orders', {
           client_name: customerName,
           client_phone: customerPhone,
-          street: street || 'Retirada no Balcão',
-          number: number || 'S/N',
-          neighborhood: neighborhood || 'Geral',
-          city: city || 'Local',
-          state: state || 'UF',
-          zipcode: zipcode || undefined,
-          complement: complement || undefined,
-          reference: referencePoint || undefined,
+          origin: isTakeout ? 'Balcão' : 'Delivery',
+          isTakeout: isTakeout,
+          street: isTakeout ? '' : street,
+          number: isTakeout ? '' : (number || 'S/N'),
+          neighborhood: isTakeout ? '' : neighborhood,
+          city: isTakeout ? '' : (city || 'Local'),
+          state: isTakeout ? '' : (state || 'UF'),
+          zipcode: isTakeout ? undefined : (zipcode || undefined),
+          complement: isTakeout ? undefined : (complement || undefined),
+          reference: isTakeout ? undefined : (referencePoint || undefined),
           payment_method_name:
             paymentMethod === 'PIX'
               ? 'PIX'
@@ -1211,9 +1266,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   ? 'Cartão de Débito'
                   : 'Dinheiro',
           change_for: changeAmount ? Number(changeAmount) : undefined,
-          delivery_fee: fulfillmentType === 'DELIVERY' ? resolvedDeliveryFee : 0,
+          delivery_fee: isTakeout ? 0 : resolvedDeliveryFee,
           total_amount: cartTotal,
-          notes: `${fulfillmentType === 'DELIVERY' ? 'Entrega (Delivery)' : 'Retirada no Balcão'}${customReferenceNote ? ` [${customReferenceNote}]` : ''}`,
+          notes: `${isTakeout ? 'Retirada no Balcão' : 'Entrega (Delivery)'}${customReferenceNote ? ` [${customReferenceNote}]` : ''}`,
           items: cartItems.map((item) => ({
             product_id: item.product.id,
             name: item.displayName || item.product.name,

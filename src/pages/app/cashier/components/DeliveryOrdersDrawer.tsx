@@ -39,7 +39,9 @@ import {
   ListOrdered,
   Check,
   Plus,
-  Trash2
+  Trash2,
+  ClipboardCheck,
+  Store
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
@@ -49,7 +51,7 @@ import { api } from '@/lib/axios'
 interface DeliveryOrdersDrawerProps {
   open: boolean
   onClose: () => void
-  initialTab?: 'pending' | 'in_preparation' | 'dispatched' | 'delivered'
+  initialTab?: 'pending' | 'in_preparation' | 'conferencia' | 'dispatched' | 'delivered'
   orders: any[]
   profile?: any
   sessionId?: string
@@ -68,7 +70,7 @@ export function DeliveryOrdersDrawer({
   sessionId,
   onOrderCompleted
 }: DeliveryOrdersDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'pending' | 'in_preparation' | 'dispatched' | 'delivered'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'pending' | 'in_preparation' | 'conferencia' | 'dispatched' | 'delivered'>(initialTab)
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState<number>(Date.now())
   const [checkedDrinks, setCheckedDrinks] = useState<Record<string, boolean>>({})
@@ -146,7 +148,7 @@ export function DeliveryOrdersDrawer({
 
   // Limpa seleções de rota ao trocar de aba
   useEffect(() => {
-    if (activeTab !== 'in_preparation') {
+    if (activeTab !== 'in_preparation' && activeTab !== 'conferencia') {
       setSelectedOrderIdsForRoute([])
     }
   }, [activeTab])
@@ -184,6 +186,7 @@ export function DeliveryOrdersDrawer({
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
+  const conferenciaOrders = orders.filter((o) => o.status === 'conferencia')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
 
   const dispatchedGroupedByDriver = useMemo(() => {
@@ -202,6 +205,8 @@ export function DeliveryOrdersDrawer({
       ? pendingOrders
       : activeTab === 'in_preparation'
       ? inPrepOrders
+      : activeTab === 'conferencia'
+      ? conferenciaOrders
       : activeTab === 'dispatched'
       ? dispatchedOrders
       : deliveredOrders.slice().sort((a: any, b: any) => (b.display_id || 0) - (a.display_id || 0))
@@ -572,6 +577,8 @@ export function DeliveryOrdersDrawer({
 
       if (nextStatus === 'in_preparation') {
         toast.success('Pedido Aceito! Enviado para a produção.')
+      } else if (nextStatus === 'conferencia') {
+        toast.success('Pedido movido para a Conferência!')
       } else if (nextStatus === 'dispatched') {
         toast.success('Pedido Despachado! Saiu em rota de entrega.')
         setDispatchModalOpen(false)
@@ -623,7 +630,7 @@ export function DeliveryOrdersDrawer({
       toast.error('Selecione ao menos 1 pedido para construir a rota!')
       return
     }
-    const selected = inPrepOrders.filter((o) => selectedOrderIdsForRoute.includes(o.id))
+    const selected = [...inPrepOrders, ...conferenciaOrders].filter((o) => selectedOrderIdsForRoute.includes(o.id))
     setRouteOrders(selected)
     if (!routeDriver && shiftMotoboys.length > 0) {
       setRouteDriver(shiftMotoboys[0])
@@ -1152,6 +1159,27 @@ export function DeliveryOrdersDrawer({
             </button>
 
             <button
+              onClick={() => setActiveTab('conferencia')}
+              className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
+                activeTab === 'conferencia'
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Conferência</span>
+                <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                  conferenciaOrders.length > 0
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {conferenciaOrders.length}
+                </span>
+              </div>
+              {activeTab === 'conferencia' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
+            </button>
+
+            <button
               onClick={() => setActiveTab('dispatched')}
               className={`relative flex-1 py-3 text-xs font-bold transition-colors ${
                 activeTab === 'dispatched'
@@ -1190,45 +1218,47 @@ export function DeliveryOrdersDrawer({
             </button>
           </div>
 
-          {/* BARRA SUPERIOR DA PRODUÇÃO */}
-          {activeTab === 'in_preparation' && inPrepOrders.length > 0 && (
-            <div className="sticky top-0 z-20 border-b border-slate-200 bg-orange-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
+          {/* BARRA SUPERIOR DA PRODUÇÃO & CONFERÊNCIA */}
+          {(activeTab === 'in_preparation' || activeTab === 'conferencia') && (activeTab === 'conferencia' ? conferenciaOrders.length > 0 : inPrepOrders.length > 0) && (
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      if (selectedOrderIdsForRoute.length === inPrepOrders.length) {
+                      const candidateList = activeTab === 'conferencia' ? conferenciaOrders.filter((o) => !o.is_takeout) : inPrepOrders;
+                      if (selectedOrderIdsForRoute.length > 0) {
                         setSelectedOrderIdsForRoute([])
                       } else {
-                        setSelectedOrderIdsForRoute(inPrepOrders.map((o) => o.id))
+                        setSelectedOrderIdsForRoute(candidateList.map((o) => o.id))
                       }
                     }}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   >
-                    {selectedOrderIdsForRoute.length === inPrepOrders.length ? (
-                      <CheckSquare className="h-3.5 w-3.5 text-orange-600" />
+                    {selectedOrderIdsForRoute.length > 0 ? (
+                      <CheckSquare className="h-3.5 w-3.5 text-blue-600" />
                     ) : (
                       <Square className="h-3.5 w-3.5 text-slate-400" />
                     )}
                     <span>
-                      {selectedOrderIdsForRoute.length === inPrepOrders.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                      {selectedOrderIdsForRoute.length > 0 ? 'Desmarcar Todos' : 'Selecionar Todos'}
                     </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      const allExpanded = inPrepOrders.every((o) => !!expandedOrderIds[o.id])
+                      const currentActiveOrders = activeTab === 'conferencia' ? conferenciaOrders : inPrepOrders
+                      const allExpanded = currentActiveOrders.every((o) => !!expandedOrderIds[o.id])
                       const nextState: Record<string, boolean> = {}
-                      inPrepOrders.forEach((o) => {
+                      currentActiveOrders.forEach((o) => {
                         nextState[o.id] = !allExpanded
                       })
                       setExpandedOrderIds(nextState)
                     }}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                   >
-                    {inPrepOrders.every((o) => !!expandedOrderIds[o.id]) ? (
+                    {(activeTab === 'conferencia' ? conferenciaOrders : inPrepOrders).every((o) => !!expandedOrderIds[o.id]) ? (
                       <>
                         <ChevronUp className="h-3.5 w-3.5" />
                         <span>Recolher Tudo</span>
@@ -1248,7 +1278,7 @@ export function DeliveryOrdersDrawer({
                   disabled={selectedOrderIdsForRoute.length === 0}
                   className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-black shadow-md transition-all ${
                     selectedOrderIdsForRoute.length > 0
-                      ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-500 hover:to-amber-500 active:scale-98 animate-pulse'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 active:scale-98 animate-pulse'
                       : 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
                   }`}
                 >
@@ -1560,7 +1590,7 @@ export function DeliveryOrdersDrawer({
             {/* ========================================================================= */}
             {/* ABAS PRODUÇÃO & NOVOS: CARDS DE OPERAÇÃO E PREPARO (PADRÃO APROVADO)      */}
             {/* ========================================================================= */}
-            {(activeTab === 'in_preparation' || activeTab === 'pending') && (
+            {(activeTab === 'in_preparation' || activeTab === 'conferencia' || activeTab === 'pending') && (
               currentList.length === 0 ? (
                 <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
                   <PackageCheck className="mb-2 h-12 w-12 opacity-30" />
@@ -1579,8 +1609,13 @@ export function DeliveryOrdersDrawer({
                   const totalItemCount = (order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
 
                   const isProducaoTab = activeTab === 'in_preparation'
+                  const isConferenciaTab = activeTab === 'conferencia'
                   const isNovosTab = activeTab === 'pending'
-                  const isExpanded = isProducaoTab ? !!expandedOrderIds[order.id] : true
+                  const isTakeout = Boolean(order.is_takeout) || 
+                    order.origem === 'Balcão' || 
+                    order.origem === 'Balcao' || 
+                    (Boolean(order.observations) && order.observations.toLowerCase().includes('retirada'))
+                  const isExpanded = (isProducaoTab || isConferenciaTab) ? !!expandedOrderIds[order.id] : true
                   const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
 
                   // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (2 LINHAS)
@@ -1839,14 +1874,76 @@ export function DeliveryOrdersDrawer({
                         )}
 
                         {order.status === 'in_preparation' && (
-                          <button
-                            disabled={loadingOrderId === order.id}
-                            onClick={() => openDispatch(order)}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-400 bg-orange-50/50 py-2 text-xs font-bold text-orange-950 hover:bg-orange-100 dark:bg-orange-950/20 dark:text-orange-200"
-                          >
-                            <Bike className="h-4 w-4" />
-                            <span>Despachar Individual / Saiu com Motoboy</span>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              disabled={loadingOrderId === order.id}
+                              onClick={() => handleUpdateStatus(order.id, 'conferencia')}
+                              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>{isTakeout ? 'Pronto p/ Retirada no Balcão 🥡' : 'Avançar p/ Conferência 📋'}</span>
+                            </button>
+                            {!isTakeout && (
+                              <button
+                                disabled={loadingOrderId === order.id}
+                                onClick={() => openDispatch(order)}
+                                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                title="Despachar direto com Motoboy"
+                              >
+                                <Bike className="h-4 w-4" />
+                                <span>Despachar</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {order.status === 'conferencia' && (
+                          <div className="flex items-center gap-2">
+                            {isTakeout ? (
+                              <button
+                                disabled={loadingOrderId === order.id}
+                                onClick={() => openFinalizeModal(order)}
+                                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-emerald-500 active:scale-98"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span>Entregar no Balcão (Concluir Venda) ✅</span>
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  disabled={loadingOrderId === order.id}
+                                  onClick={() => openDispatch(order)}
+                                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-blue-500 active:scale-98"
+                                >
+                                  <Bike className="h-4 w-4" />
+                                  <span>Despachar com Motoboy 🛵</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedOrderIdsForRoute(prev =>
+                                      prev.includes(order.id)
+                                        ? prev.filter(id => id !== order.id)
+                                        : [...prev, order.id]
+                                    )
+                                  }}
+                                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all ${
+                                    isSelectedForRoute
+                                      ? 'border-blue-500 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20'
+                                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                  title="Incluir na montagem de rota"
+                                >
+                                  {isSelectedForRoute ? (
+                                    <CheckSquare className="h-4 w-4 text-blue-600" />
+                                  ) : (
+                                    <Square className="h-4 w-4" />
+                                  )}
+                                  <span>Na Rota</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

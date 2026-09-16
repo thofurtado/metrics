@@ -9,7 +9,8 @@ import {
   VolumeX,
   Play,
   Check,
-  X
+  X,
+  ClipboardCheck
 } from 'lucide-react'
 import { api, API_BASE_URL } from '@/lib/axios'
 import { DeliveryOrdersDrawer } from './DeliveryOrdersDrawer'
@@ -29,7 +30,7 @@ interface DeliveryOrdersBarProps {
 export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrdersBarProps) {
   const queryClient = useQueryClient()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [selectedTab, setSelectedTab] = useState<'pending' | 'in_preparation' | 'dispatched' | 'delivered'>('pending')
+  const [selectedTab, setSelectedTab] = useState<'pending' | 'in_preparation' | 'conferencia' | 'dispatched' | 'delivered'>('pending')
   const [isMuted, setIsMuted] = useState<boolean>(() => deliveryAlertManager.getIsMuted())
   const [isSoundDropdownOpen, setIsSoundDropdownOpen] = useState(false)
   const [currentSound, setCurrentSound] = useState<SoundType>(() => deliveryAlertManager.getSoundType())
@@ -61,6 +62,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
+  const conferenciaOrders = orders.filter((o) => o.status === 'conferencia')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
   const orphanOrders = orders.filter((o) => !o.caixa_id && !o.cashier_session_id)
@@ -345,7 +347,21 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
               <span>{inPrepOrders.length} Em Produção</span>
             </button>
 
-            {/* 3. Na Rua */}
+            {/* 3. Conferência */}
+            <button
+              type="button"
+              onClick={() => openTab('conferencia')}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                conferenciaOrders.length > 0
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+              }`}
+            >
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              <span>{conferenciaOrders.length} Conferência</span>
+            </button>
+
+            {/* 4. Na Rua */}
             <button
               type="button"
               onClick={() => openTab('dispatched')}
