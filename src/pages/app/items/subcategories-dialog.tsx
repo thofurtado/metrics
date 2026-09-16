@@ -242,21 +242,27 @@ export function SubcategoriesDialog() {
                 className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900/60"
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-slate-900 dark:text-slate-100">
                       {sub.name}
                     </span>
+                    {sub.accepts_fractions ? (
+                      <Badge className="gap-1 border border-emerald-200 bg-emerald-50 text-[11px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        <PieChart className="h-3 w-3" />
+                        Até {sub.max_fractions} Sabores
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 border-slate-200 text-[11px] font-semibold text-slate-500 dark:border-slate-800">
+                        <Layers className="h-3 w-3" />
+                        Sabor Único
+                      </Badge>
+                    )}
                     <Badge
                       variant="outline"
-                      className="border-slate-200 text-[10px] dark:border-slate-800"
+                      className="border-slate-200 text-[10px] text-slate-400 dark:border-slate-800"
                     >
                       {sub.category?.name || 'Sem Categoria'}
                     </Badge>
-                    {sub.accepts_fractions && (
-                      <Badge className="bg-emerald-500/15 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                        Até {sub.max_fractions} Sabores
-                      </Badge>
-                    )}
                   </div>
                 </div>
 

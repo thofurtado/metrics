@@ -5,11 +5,13 @@ import {
   Layers,
   Plus,
   Save,
+  Scale,
   Sliders,
   Trash2,
   UtensilsCrossed,
   X,
 } from 'lucide-react'
+import { EditComplementOptionDialog } from './edit-complement-option-dialog'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -45,6 +47,7 @@ export function ComplementsDialog() {
   const [maxQty, setMaxQty] = useState(1)
   const [freeQty, setFreeQty] = useState(0)
   const [options, setOptions] = useState<ComplementOption[]>([])
+  const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(null)
 
   // Fetch groups
   const { data: groupsData, isLoading } = useQuery({
@@ -148,6 +151,9 @@ export function ComplementsDialog() {
           id: opt.id,
           name: opt.name.trim(),
           price: Number(opt.price || 0),
+          linked_supply_id: opt.linked_supply_id || null,
+          supply_quantity: opt.supply_quantity ? Number(opt.supply_quantity) : null,
+          active: opt.active !== false,
         })),
     }
 
@@ -336,36 +342,54 @@ export function ComplementsDialog() {
                   {options.map((opt, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-2 dark:border-slate-800 dark:bg-slate-900/50"
+                      className="flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-slate-900/50"
                     >
-                      <Input
-                        placeholder="Nome da opção (ex: Bacon Extra)"
-                        value={opt.name}
-                        onChange={(e) =>
-                          handleUpdateOption(idx, 'name', e.target.value)
-                        }
-                        className="h-9 flex-1 rounded-lg border-slate-200 bg-white text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                      />
-                      <div className="relative w-32">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
-                          R$
-                        </span>
-                        <CurrencyInput
-                          placeholder="0,00"
-                          value={opt.price}
-                          onValueChange={(val) => handleUpdateOption(idx, 'price', val)}
-                          className="h-9 rounded-lg border-slate-200 bg-white pl-8 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Nome da opção (ex: Bacon Extra)"
+                          value={opt.name}
+                          onChange={(e) =>
+                            handleUpdateOption(idx, 'name', e.target.value)
+                          }
+                          className="h-9 flex-1 rounded-lg border-slate-200 bg-white text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         />
+                        <div className="relative w-32">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
+                            R$
+                          </span>
+                          <CurrencyInput
+                            placeholder="0,00"
+                            value={opt.price}
+                            onValueChange={(val) => handleUpdateOption(idx, 'price', val)}
+                            className="h-9 rounded-lg border-slate-200 bg-white pl-8 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingOptionIndex(idx)}
+                          className={cn(
+                            "h-9 rounded-lg px-2.5 text-xs font-bold transition-all",
+                            opt.linked_supply_id
+                              ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300"
+                          )}
+                          title="Configurar Ficha Técnica e Insumo de Estoque"
+                        >
+                          <Scale className="mr-1 h-3.5 w-3.5" />
+                          {opt.linked_supply_id ? "Ficha Técnica Ativa" : "Ficha Técnica"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveOption(idx)}
+                          className="h-9 w-9 text-slate-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveOption(idx)}
-                        className="h-9 w-9 text-slate-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -410,6 +434,20 @@ export function ComplementsDialog() {
           )}
         </div>
       </div>
+
+      <EditComplementOptionDialog
+        open={editingOptionIndex !== null}
+        onOpenChange={(isOpen) => !isOpen && setEditingOptionIndex(null)}
+        groupName={groupName || 'Novo Grupo'}
+        option={editingOptionIndex !== null ? options[editingOptionIndex] : null}
+        onSave={(updatedOption) => {
+          if (editingOptionIndex !== null) {
+            const updatedList = [...options]
+            updatedList[editingOptionIndex] = updatedOption
+            setOptions(updatedList)
+          }
+        }}
+      />
     </DialogContent>
   )
 }

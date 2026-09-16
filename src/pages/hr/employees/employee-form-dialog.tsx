@@ -70,6 +70,11 @@ const employeeFormSchema = z.object({
     z.number().min(0).default(0),
   ),
   hasCestaBasica: z.boolean().default(false),
+  allow_term_sales: z.boolean().default(false),
+  term_credit_limit: z.preprocess(
+    (val) => parseCurrencyToFloat(val),
+    z.number().min(0).default(0),
+  ),
 })
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>
@@ -102,6 +107,8 @@ export function EmployeeFormDialog({
       points: 0,
       transportAllowance: 0,
       hasCestaBasica: false,
+      allow_term_sales: false,
+      term_credit_limit: 0,
     },
   })
 
@@ -133,6 +140,12 @@ export function EmployeeFormDialog({
         points: Number(employee?.points) || 0,
         transportAllowance: Number(employee?.transportAllowance) || 0,
         hasCestaBasica: employee?.hasCestaBasica ?? false,
+        allow_term_sales: employee?.allow_term_sales ?? false,
+        term_credit_limit:
+          employee?.term_credit_limit !== null &&
+          employee?.term_credit_limit !== undefined
+            ? Number(employee.term_credit_limit)
+            : 0,
       })
       setEmployeePhoto(null)
     }
@@ -535,6 +548,67 @@ export function EmployeeFormDialog({
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Section: Convênio & Consumo no Restaurante (PDV) */}
+              <div className="space-y-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="h-px flex-1 bg-border" />
+                  Convênio & Consumo no Restaurante (PDV)
+                  <div className="h-px flex-1 bg-border" />
+                </h3>
+
+                <div className="space-y-4 rounded-xl border border-border/80 bg-white p-4 shadow-sm dark:bg-slate-900/60">
+                  <FormField
+                    control={form.control}
+                    name="allow_term_sales"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+                            <span className="inline-block h-2 w-2 rounded-full bg-blue-600" />
+                            Permitir compras a prazo no PDV (Desconto em folha)
+                          </FormLabel>
+                          <FormDescription className="text-xs">
+                            Habilita o colaborador a consumir ou solicitar adiantamentos no PDV com débito automático no holerite.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('allow_term_sales') && (
+                    <FormField
+                      control={form.control}
+                      name="term_credit_limit"
+                      render={({ field }) => (
+                        <FormItem className="border-t border-border/40 pt-2">
+                          <FormLabel className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Limite de Crédito Mensal (R$)
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0,00"
+                              value={field.value ?? 0}
+                              onValueChange={(val) => field.onChange(val)}
+                              className="max-w-xs"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Teto máximo autorizado para compras no PDV durante o ciclo vigente.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Section 4: Foto */}

@@ -64,7 +64,7 @@ import { EditEquipmentModal } from './components/edit-equipment-modal'
 import { ClientCard } from './components/client-card'
 import { formatEquipmentTypeLabel } from './equipment-types'
 
-export function checkIsOnline(equipment: any, maxInactiveMinutes = 6): boolean {
+export function checkIsOnline(equipment: any, maxInactiveMinutes = 15): boolean {
   if (!equipment || !equipment.last_seen_at) return false
   const lastSeenDate = new Date(equipment.last_seen_at)
   if (isNaN(lastSeenDate.getTime())) return false

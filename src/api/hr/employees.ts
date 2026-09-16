@@ -13,6 +13,8 @@ export interface Employee {
   points: number
   transportAllowance: number
   hasCestaBasica: boolean
+  allow_term_sales?: boolean
+  term_credit_limit?: number | null
   photo_url?: string | null
 }
 
@@ -28,6 +30,8 @@ export interface CreateEmployeeInput {
   points: number
   transportAllowance: number
   hasCestaBasica: boolean
+  allow_term_sales?: boolean
+  term_credit_limit?: number | null
 }
 
 export interface UpdateEmployeeInput extends CreateEmployeeInput {

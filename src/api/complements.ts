@@ -6,6 +6,7 @@ export interface ComplementOption {
   price: number
   linked_product_id?: string | null
   linked_supply_id?: string | null
+  supply_quantity?: number | null
   active?: boolean
 }
 
