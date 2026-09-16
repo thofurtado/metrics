@@ -454,13 +454,15 @@ export function DetalheLote({
       </header>
 
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
-        {/* Painel de Auditoria Cega (Blind Checkout) */}
-        <BlindAuditPanel
-          loteAtivo={loteAtivo}
-          resumoLote={resumoLote}
-          onConfirmarFechamento={isAdmin ? onConferirECaixaConferido : undefined}
-          isAdmin={isAdmin}
-        />
+        {/* Painel de Auditoria Cega (Blind Checkout) - Exclusivo para ADMIN e colapsado por padrão */}
+        {isAdmin && (
+          <BlindAuditPanel
+            loteAtivo={loteAtivo}
+            resumoLote={resumoLote}
+            onConfirmarFechamento={onConferirECaixaConferido}
+            isAdmin={isAdmin}
+          />
+        )}
 
         <button
           onClick={() => setExibirSumario(!exibirSumario)}

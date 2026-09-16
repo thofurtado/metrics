@@ -41,8 +41,12 @@ export function BlindAuditPanel({
   onConfirmarFechamento,
   isAdmin = true,
 }: BlindAuditPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [observacaoGerente, setObservacaoGerente] = useState('')
+
+  if (!isAdmin) {
+    return null
+  }
 
   // Valores contados / declarados pelo operador
   const [declaredCash, setDeclaredCash] = useState<number>(0)
