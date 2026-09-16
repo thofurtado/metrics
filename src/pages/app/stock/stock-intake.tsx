@@ -233,7 +233,7 @@ export const StockIntakePage: React.FC = () => {
   }
 
   // Passo 4: Salvar e Concluir no Estoque
-  const handleConfirmAndSave = async () => {
+  const handleConfirmAndSave = async (portioningMap?: Record<string, any>) => {
     setIsSaving(true)
     try {
       const payload = {
@@ -250,6 +250,7 @@ export const StockIntakePage: React.FC = () => {
           saveMapping: true,
           batchNumber: i.lote || null,
           expirationDate: i.validade || null,
+          portioning: portioningMap?.[i.id] || null,
         })),
       }
 
@@ -418,7 +419,7 @@ export const StockIntakePage: React.FC = () => {
           <Step4Conclusion
             header={header}
             items={items}
-            onConfirmAndSave={handleConfirmAndSave}
+            onConfirmAndSave={(portioningData) => handleConfirmAndSave(portioningData)}
             onReviewItems={() => setStep(3)}
             isSaving={isSaving}
           />

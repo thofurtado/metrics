@@ -1,5 +1,14 @@
 import { useState, useCallback } from 'react'
 
+export interface PortioningConfig {
+  enabled: boolean
+  portionSizeGrams: number
+  portionCount: number
+  trimGrams: number
+  costPerPortion: number
+  portionSupplyName: string
+}
+
 export interface StockIntakeItem {
   id: string
   codigoNota: string
@@ -25,6 +34,7 @@ export interface StockIntakeItem {
   lote?: string
   validade?: string
   observacao?: string
+  portioning?: PortioningConfig
 }
 
 export interface StockIntakeDraft {
