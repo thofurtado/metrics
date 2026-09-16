@@ -757,41 +757,83 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }, 100)
   }
 
-  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawCep = e.target.value.replace(/\D/g, '')
-    setZipcode(formatCep(rawCep))
+  const handleSearchCEPCheckout = async (rawCepInput?: string) => {
+    const rawCep = (rawCepInput ?? zipcode).replace(/\D/g, '')
+    if (rawCep.length !== 8) return
 
-    if (rawCep.length === 8) {
-      setIsSearchingCEPCheckout(true)
+    setIsSearchingCEPCheckout(true)
+    try {
+      let streetVal = ''
+      let neighborhoodVal = ''
+      let cityVal = ''
+      let stateVal = ''
+
+      // 1. Tentar ViaCEP (mais rápido e resiliente no Brasil)
       try {
-        const res = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
-        if (!res.ok) throw new Error('CEP não encontrado')
+        const resViaCep = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`)
+        if (resViaCep.ok) {
+          const dataViaCep = await resViaCep.json()
+          if (!dataViaCep.erro) {
+            streetVal = dataViaCep.logradouro || ''
+            neighborhoodVal = dataViaCep.bairro || ''
+            cityVal = dataViaCep.localidade || ''
+            stateVal = dataViaCep.uf || ''
+          }
+        }
+      } catch (errViaCep) {
+        console.warn('ViaCEP indisponível, usando BrasilAPI como fallback...', errViaCep)
+      }
 
-        const data = await res.json()
-        setStreet(data.street || '')
-        setCity(data.city || '')
-        setState(data.state || '')
-        const matched = matchNeighborhoodWithConfig(data.neighborhood || '')
+      // 2. Fallback BrasilAPI caso o ViaCEP não tenha retornado dados
+      if (!streetVal && !neighborhoodVal && !cityVal) {
+        try {
+          const resBrasil = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
+          if (resBrasil.ok) {
+            const dataBrasil = await resBrasil.json()
+            streetVal = dataBrasil.street || ''
+            neighborhoodVal = dataBrasil.neighborhood || ''
+            cityVal = dataBrasil.city || ''
+            stateVal = dataBrasil.state || ''
+          }
+        } catch (errBrasil) {
+          console.warn('BrasilAPI falhou:', errBrasil)
+        }
+      }
+
+      if (streetVal || neighborhoodVal || cityVal) {
+        setStreet(streetVal)
+        setCity(cityVal)
+        setState(stateVal)
+
+        const matched = matchNeighborhoodWithConfig(neighborhoodVal)
         if (matched) {
           setNeighborhood(matched)
         } else {
-          setNeighborhood('')
+          setNeighborhood(neighborhoodVal)
           if (availableNeighborhoodsList.length > 0) {
             setUnsupportedNeighborhoodModal({
               isOpen: true,
-              neighborhoodName: data.neighborhood || '',
+              neighborhoodName: neighborhoodVal,
             })
           }
         }
 
         setTimeout(() => {
-          document.getElementById('number-input')?.focus()
+          document.getElementById('checkout-number-input')?.focus()
         }, 100)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setIsSearchingCEPCheckout(false)
       }
+    } catch (err) {
+      console.error('Erro ao consultar CEP:', err)
+    } finally {
+      setIsSearchingCEPCheckout(false)
+    }
+  }
+
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawCep = e.target.value.replace(/\D/g, '').slice(0, 8)
+    setZipcode(formatCep(rawCep))
+    if (rawCep.length === 8) {
+      handleSearchCEPCheckout(rawCep)
     }
   }
 
@@ -2416,19 +2458,55 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             </span>
                           )}
                         </div>
-                        <input
-                          type="text"
-                          placeholder="00000-000"
-                          value={zipcode}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 8)
-                            setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
-                            if (val.length === 8) {
-                              handleSearchCEPCheckout(val)
-                            }
-                          }}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
-                        />
+                        <div className="relative mt-1 flex items-center">
+                          <input
+                            id="zipcode-input"
+                            type="text"
+                            placeholder="00000-000"
+                            value={zipcode}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 8)
+                              setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
+                              if (val.length === 8) {
+                                handleSearchCEPCheckout(val)
+                              }
+                            }}
+                            onBlur={() => {
+                              const val = zipcode.replace(/\D/g, '')
+                              if (val.length === 8) {
+                                handleSearchCEPCheckout(val)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                const val = zipcode.replace(/\D/g, '')
+                                if (val.length === 8) {
+                                  handleSearchCEPCheckout(val)
+                                }
+                              }
+                            }}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-10 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = zipcode.replace(/\D/g, '')
+                              if (val.length === 8) {
+                                handleSearchCEPCheckout(val)
+                              }
+                            }}
+                            disabled={isSearchingCEPCheckout}
+                            className="absolute right-2 p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-50"
+                            title="Buscar CEP"
+                          >
+                            {isSearchingCEPCheckout ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                            ) : (
+                              <Search className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="col-span-2">
@@ -2438,17 +2516,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             placeholder="Nome da rua"
                             value={street}
                             onChange={(e) => setStreet(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
                         <div>
                           <label className="text-[11px] font-bold text-slate-700">Número</label>
                           <input
+                            id="checkout-number-input"
                             type="text"
                             placeholder="Nº"
                             value={number}
                             onChange={(e) => setNumber(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
                       </div>
