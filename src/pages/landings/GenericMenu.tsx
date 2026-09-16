@@ -572,6 +572,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [isNeighborhoodPickerOpen, setIsNeighborhoodPickerOpen] = useState(false)
   const [customReferenceNote, setCustomReferenceNote] = useState('')
   const [selectedReferenceNeighbor, setSelectedReferenceNeighbor] = useState('')
+  const [acceptedStandardFee, setAcceptedStandardFee] = useState(false)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -878,6 +879,26 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
 
+  const matchedSector = useMemo(() => {
+    if (fulfillmentType !== 'DELIVERY' || !neighborhood) return null
+    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    if (typeof sectors === 'string') {
+      try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+    }
+    if (!Array.isArray(sectors)) return null
+
+    const normNeighbor = normalizeText(neighborhood)
+    return (
+      sectors.find((s: any) =>
+        Array.isArray(s?.neighborhoods) &&
+        s.neighborhoods.some((n: string) => {
+          const normN = normalizeText(n)
+          return normN === normNeighbor || normN.includes(normNeighbor) || normNeighbor.includes(normN)
+        })
+      ) || null
+    )
+  }, [fulfillmentType, neighborhood, profile])
+
   const resolvedDeliveryTime = useMemo(() => {
     if (fulfillmentType !== 'DELIVERY' || !neighborhood) return null
     let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
@@ -1134,6 +1155,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const resolvedDeliveryFee = useMemo(() => {
     if (fulfillmentType !== 'DELIVERY') return 0
 
+    if (matchedSector && matchedSector.fee !== undefined) {
+      return Number(matchedSector.fee) || 0
+    }
+
     if (neighborhood && neighborhood.trim()) {
       let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
       if (typeof sectors === 'string') {
@@ -1156,7 +1181,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
 
     return Number(profile?.deliveryFee || 0)
-  }, [fulfillmentType, neighborhood, profile])
+  }, [fulfillmentType, matchedSector, neighborhood, profile])
 
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
@@ -1263,9 +1288,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setCheckoutWizardStep(2)
         return
       }
-      if (availableNeighborhoodsList.length > 0) {
-        const isAllowed = availableNeighborhoodsList.some(
-          (n) => normalizeText(n) === normalizeText(neighborhood)
+      if (deliverySectorInfo.hasSectors && !acceptedStandardFee) {
+        const isAllowed = matchedSector !== null || deliverySectorInfo.sectors.some(
+          (sec: any) => Array.isArray(sec.neighborhoods) && sec.neighborhoods.some((n: string) => normalizeText(n) === normalizeText(neighborhood))
         )
         if (!isAllowed) {
           setUnsupportedNeighborhoodModal({
@@ -2538,8 +2563,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             type="text"
                             placeholder="Bairro"
                             value={neighborhood}
-                            onChange={(e) => setNeighborhood(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
+                            onChange={(e) => {
+                              setNeighborhood(e.target.value)
+                              setAcceptedStandardFee(false)
+                            }}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
                         <div>
@@ -2549,10 +2577,26 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             placeholder="Apto, bloco, casa 2..."
                             value={complement}
                             onChange={(e) => setComplement(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                         </div>
                       </div>
+                      {matchedSector ? (
+                        <div className="flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-800 shadow-sm">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span>
+                            Atendido pelo <strong>{matchedSector.name}</strong> • Taxa: <strong>R$ {Number(matchedSector.fee || 0).toFixed(2).replace('.', ',')}</strong>
+                            {matchedSector.estimatedTimeMin ? ` • Prazo: ${matchedSector.estimatedTimeMin}-${matchedSector.estimatedTimeMax || 60} min` : ''}
+                          </span>
+                        </div>
+                      ) : neighborhood.trim() && acceptedStandardFee ? (
+                        <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-bold text-amber-800 shadow-sm">
+                          <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                          <span>
+                            Taxa padrão de entrega da loja aceita: <strong>R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}</strong>
+                          </span>
+                        </div>
+                      ) : null}
                       <div>
                         <label className="text-[11px] font-bold text-slate-700">Ponto de Referência (Opcional)</label>
                         <input
@@ -2606,8 +2650,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         return
                       }
                       if (fulfillmentType === 'DELIVERY' && deliverySectorInfo.hasSectors) {
-                        const isAllowed = deliverySectorInfo.sectors.some(
-                          (sec) => normalizeText(sec.neighborhood) === normalizeText(neighborhood)
+                        const isAllowed = matchedSector !== null || acceptedStandardFee || deliverySectorInfo.sectors.some(
+                          (sec: any) => Array.isArray(sec.neighborhoods) && sec.neighborhoods.some((n: string) => normalizeText(n) === normalizeText(neighborhood))
                         )
                         if (!isAllowed) {
                           setUnsupportedNeighborhoodModal({
@@ -3136,6 +3180,36 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               não está em nossa lista automática de rotas rápidas, mas nós podemos entregar para você!
             </DialogDescription>
           </DialogHeader>
+
+          {/* Opção Principal: Continuar com a Taxa Padrão / Máxima da Loja */}
+          <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 text-xs text-amber-950 space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold uppercase tracking-wide text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-md">
+                Entrega Especial Fora da Rota Padrão
+              </span>
+              <span className="font-black text-amber-900 text-sm">
+                R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+              Podemos realizar a entrega no seu endereço cobrando a taxa padrão da loja. O prazo pode variar conforme a distância.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const maxFee = Number(profile?.deliveryFee || 0)
+                const orig = unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''
+                setAcceptedStandardFee(true)
+                setCustomReferenceNote(`Bairro fora dos setores padrão: ${orig} (Taxa padrão R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
+                setUnsupportedNeighborhoodModal(null)
+                setCheckoutWizardStep(3)
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-3 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <Truck className="h-4 w-4" />
+              Continuar com Taxa Padrão (R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')})
+            </button>
+          </div>
 
           {/* Opção Amigável: Selecionar Bairro Vizinho de Referência */}
           {availableNeighborhoodsList.length > 0 && (
