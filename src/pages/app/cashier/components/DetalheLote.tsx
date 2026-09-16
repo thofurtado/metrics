@@ -24,6 +24,7 @@ import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
 import { CaixinhasTable } from './CaixinhasTable'
 import { SummaryCards } from './SummaryCards'
+import { BlindAuditPanel } from './BlindAuditPanel'
 import { DeliveryOrdersBar } from './DeliveryOrdersBar'
 import { TransactionForm } from './TransactionForm'
 
@@ -453,6 +454,14 @@ export function DetalheLote({
       </header>
 
       <div className="mx-auto max-w-[1400px] space-y-4 md:space-y-6">
+        {/* Painel de Auditoria Cega (Blind Checkout) */}
+        <BlindAuditPanel
+          loteAtivo={loteAtivo}
+          resumoLote={resumoLote}
+          onConfirmarFechamento={isAdmin ? onConferirECaixaConferido : undefined}
+          isAdmin={isAdmin}
+        />
+
         <button
           onClick={() => setExibirSumario(!exibirSumario)}
           className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800"

@@ -56,6 +56,10 @@ import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
 import { DivergenceModal } from './components/divergence-modal'
 import { OutflowsModal } from './components/outflows-modal'
+import { LiveTablesView } from '../components/LiveTablesView'
+import { CancellationsAuditView } from '../components/CancellationsAuditView'
+import { UtensilsCrossed } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -87,6 +91,7 @@ export function CashierDashboard() {
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
   const [isOutflowsModalOpen, setIsOutflowsModalOpen] = useState(false)
   const [isCreateSessionModalOpen, setIsCreateSessionModalOpen] = useState(false)
+  const [activeCashierTab, setActiveCashierTab] = useState<'sessions' | 'live_tables' | 'cancellations'>('sessions')
 
   const token = localStorage.getItem('token')
 
@@ -612,6 +617,53 @@ export function CashierDashboard() {
         </div>
       </div>
 
+      {/* Abas da Central de Vendas & Operação */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+        <button
+          onClick={() => setActiveCashierTab('sessions')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all',
+            activeCashierTab === 'sessions'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+          )}
+        >
+          <Wallet className="h-4 w-4" />
+          <span>Turnos de Caixa</span>
+        </button>
+
+        <button
+          onClick={() => setActiveCashierTab('live_tables')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all',
+            activeCashierTab === 'live_tables'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+          )}
+        >
+          <UtensilsCrossed className="h-4 w-4" />
+          <span>Salão & Mesas Ao Vivo</span>
+        </button>
+
+        <button
+          onClick={() => setActiveCashierTab('cancellations')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all',
+            activeCashierTab === 'cancellations'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+          )}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span>Cancelamentos & Desperdício</span>
+        </button>
+      </div>
+
+      {activeCashierTab === 'live_tables' && <LiveTablesView />}
+      {activeCashierTab === 'cancellations' && <CancellationsAuditView />}
+
+      {activeCashierTab === 'sessions' && (
+        <>
       {/* Régua de 4 Cards Gerenciais Autoexplicativos (Decomposição Contábil: Total = Digital + Dinheiro -> Saldo Gaveta) */}
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Faturamento Bruto Total (100%) */}
@@ -1566,6 +1618,9 @@ export function CashierDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+        </>
+      )}
 
       {/* MODAL GERENCIAL DE SAÍDAS (SANGRIAS, DESPESAS E VALES) */}
       <OutflowsModal
