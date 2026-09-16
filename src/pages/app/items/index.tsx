@@ -5,12 +5,13 @@ import {
   Layers,
   Plus,
   ShoppingBasket,
+  PackagePlus,
   Sliders,
   UtensilsCrossed,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
 import { getProducts } from '@/api/get-products'
@@ -51,6 +52,7 @@ export type ItemType =
   | 'SERVICE'
 
 export function Items() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const pageIndex = z.coerce
@@ -200,6 +202,14 @@ export function Items() {
               </span>
             </Button>
           )}
+
+          <Button
+            onClick={() => navigate('/stock/intake')}
+            className="h-10 w-auto rounded-xl bg-emerald-600 px-3.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+          >
+            <PackagePlus className="mr-1.5 h-4 w-4" />
+            Entrada de Estoque (NF-e)
+          </Button>
 
           <Button
             variant="outline"

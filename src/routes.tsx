@@ -1,3 +1,4 @@
+import { StockIntakePage } from './pages/app/stock/stock-intake'
 // routes.tsx
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
@@ -119,6 +120,14 @@ export const router = createBrowserRouter([
       {
         path: 'time-clock',
         element: <TimeClockKiosk />,
+      },
+      {
+        path: 'stock/intake',
+        element: <StockIntakePage />,
+      },
+      {
+        path: 'estoque/entrada',
+        element: <StockIntakePage />,
       },
       {
         path: 'hr/timesheet/:employeeId',

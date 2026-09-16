@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  Boxes,
+  Boxes, PackagePlus,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -47,7 +47,7 @@ export function Sidebar() {
     {
       name: 'Mercadoria',
       path: '/items',
-      icon: Boxes,
+      icon: Boxes, PackagePlus,
       access: hasAccess('items'),
     },
     {
