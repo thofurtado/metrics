@@ -62,6 +62,31 @@ interface DeliveryOrdersDrawerProps {
 // Cache de coordenadas em memória
 const coordsCache: Record<string, [number, number] | null> = {}
 
+function getCleanOrderNotes(obs?: string): string {
+  if (!obs) return ''
+  const parts = obs.split('|').map(p => p.trim())
+  const notesPart = parts.find(p => p.toLowerCase().startsWith('obs:'))
+  if (notesPart) {
+    return notesPart.replace(/^obs:\s*/i, '').trim()
+  }
+  const customParts = parts.filter(p => 
+    !p.toLowerCase().includes('entrega (delivery)') &&
+    !p.toLowerCase().includes('retirada no balcão') &&
+    !p.toLowerCase().startsWith('pagamento:') &&
+    !p.toLowerCase().startsWith('taxa:') &&
+    !p.toLowerCase().startsWith('frete:') &&
+    !p.toLowerCase().startsWith('ref:')
+  )
+  return customParts.join(' | ')
+}
+
+function getOrderReference(obs?: string): string {
+  if (!obs) return ''
+  const parts = obs.split('|').map(p => p.trim())
+  const refPart = parts.find(p => p.toLowerCase().startsWith('ref:'))
+  return refPart ? refPart.replace(/^ref:\s*/i, '').trim() : ''
+}
+
 function isTakeoutOrder(o: any) {
   return Boolean(o.is_takeout) ||
     o.origem === 'Balcão' ||
@@ -1806,19 +1831,26 @@ export function DeliveryOrdersDrawer({
                                       {item.complements.map((c: any) => `+ ${c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name}`).join(', ')}
                                     </div>
                                   )}
-                                  {item.observations && (
-                                    <div className="pl-4 text-[11px] italic text-amber-700 dark:text-amber-400">
-                                      Obs: {item.observations}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                            {order.observations && (
-                              <div className="mt-2 border-t border-orange-200/50 pt-1.5 text-[11px] font-bold text-amber-900 dark:border-slate-800 dark:text-amber-300">
-                                ⚠️ Obs Pedido: {order.observations}
-                              </div>
-                            )}
+                                                                     {Boolean(item.observation || item.observations || item.notes) && (
+                                     <div className="pl-4 mt-0.5 text-[11px] font-bold text-amber-900 bg-amber-100/80 border-l-2 border-amber-500 rounded px-1.5 py-0.5 dark:bg-amber-950/60 dark:text-amber-300">
+                                       💬 Obs: {item.observation || item.observations || item.notes}
+                                     </div>
+                                   )}
+                                 </div>
+                               ))}
+                             </div>
+                             {Boolean(getCleanOrderNotes(order.observations)) && (
+                               <div className="mt-2 rounded-xl bg-amber-100/70 p-2 text-xs font-black text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800 flex items-start gap-1.5">
+                                 <span className="text-sm">⚠️</span>
+                                 <span>Obs do Pedido: {getCleanOrderNotes(order.observations)}</span>
+                               </div>
+                             )}
+                             {Boolean(getOrderReference(order.observations)) && (
+                               <div className="mt-1 rounded-xl bg-blue-50 p-1.5 text-xs font-bold text-blue-900 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 flex items-start gap-1.5">
+                                 <span>📍</span>
+                                 <span>Ponto de Ref: {getOrderReference(order.observations)}</span>
+                               </div>
+                             )}
                           </div>
                         )}
 
@@ -1941,9 +1973,9 @@ export function DeliveryOrdersDrawer({
                                       + {itemComps.map((c: any) => `${c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name || c.optionName}`).join(', ')}
                                     </div>
                                   )}
-                                  {item.observation && (
-                                    <div className="pl-4 text-[10px] text-amber-600 dark:text-amber-400">
-                                      Obs: {item.observation}
+                                  {Boolean(item.observation || item.observations || item.notes) && (
+                                    <div className="pl-4 mt-0.5 text-[11px] font-bold text-amber-900 bg-amber-100/80 border-l-2 border-amber-500 rounded px-1.5 py-0.5 dark:bg-amber-950/60 dark:text-amber-300">
+                                      💬 Obs: {item.observation || item.observations || item.notes}
                                     </div>
                                   )}
                                 </div>
@@ -1953,9 +1985,16 @@ export function DeliveryOrdersDrawer({
                             <p className="text-xs text-slate-400 italic">Sem itens listados</p>
                           )}
 
-                          {order.observations && (
-                            <div className="mt-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                              💬 <em>{order.observations}</em>
+                          {Boolean(getCleanOrderNotes(order.observations)) && (
+                            <div className="mt-2 rounded-xl bg-amber-100/70 p-2 text-xs font-black text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800 flex items-start gap-1.5">
+                              <span className="text-sm">⚠️</span>
+                              <span>Obs do Pedido: {getCleanOrderNotes(order.observations)}</span>
+                            </div>
+                          )}
+                          {Boolean(getOrderReference(order.observations)) && (
+                            <div className="mt-1 rounded-xl bg-blue-50 p-1.5 text-xs font-bold text-blue-900 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 flex items-start gap-1.5">
+                              <span>📍</span>
+                              <span>Ponto de Ref: {getOrderReference(order.observations)}</span>
                             </div>
                           )}
                         </div>
