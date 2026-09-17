@@ -1,8 +1,8 @@
-{
+﻿{
   "homepage": "https://thofurtado.github.io/metrics",
   "name": "metrics-web",
   "private": true,
-  "version": "2.6.18.15",
+  "version": "2.6.18.16",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -98,3 +98,4 @@
     "vite": "^5.1.6"
   }
 }
+

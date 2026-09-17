@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, Monitor, Wrench, Clock, ShieldCheck, Search, Sparkles, Smartphone, CheckCircle2 } from 'lucide-react'
+import { Download, Monitor, Wrench, Clock, ShieldCheck, Search, Sparkles, Smartphone, CheckCircle2, RefreshCw, Utensils } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
@@ -20,35 +20,21 @@ interface DownloadItem {
   version: string
   size: string
   description: string
-  tag: 'Oficial' | 'Sistema' | 'Suporte' | 'Navegador' | 'Drivers' | 'Segurança' | 'Utilitários' | 'Produtividade'
+  tag: 'Oficial' | 'Sistema' | 'Suporte' | 'Navegador' | 'Drivers' | 'SeguranÃ§a' | 'UtilitÃ¡rios' | 'Produtividade'
   isOfficial?: boolean
   downloadUrl: string
   popular?: boolean
   badgeLabel?: string
-  iconType?: 'windy' | 'pdv' | 'ponto' | 'mobile' | 'support' | 'util'
+  iconType?: 'windy' | 'pdv' | 'ponto' | 'sync' | 'mobile' | 'garcom' | 'support' | 'util'
 }
 
-// Os 3 aplicativos oficiais ativos da nossa empresa
+// Aplicativos oficiais do ecossistema Metrics
 const downloadFiles: DownloadItem[] = [
-  {
-    id: 'metrics-windy',
-    name: 'Metrics Windy - Agente de Telemetria & Suporte',
-    fileName: 'Metrics_Windy_Setup.exe',
-    version: 'v2.3.2.2 (Oficial)',
-    size: '60 MB',
-    description: 'Agente inteligente para monitoramento contínuo em tempo real (CPU, RAM, Atividade de Leitura/Escrita de Disco e Sensores Térmicos), suporte remoto integrado e manutenção preventiva do Windows.',
-    tag: 'Oficial',
-    isOfficial: true,
-    downloadUrl: `${API_BASE_URL}/api/public/windy/download`,
-    popular: true,
-    badgeLabel: 'OFICIAL • TELEMETRIA & SUPORTE',
-    iconType: 'windy',
-  },
   {
     id: 'metrics-pdv',
     name: 'Metrics PDV - Frente de Caixa & Emissor Fiscal',
     fileName: 'Instalar_MetricsPDV.exe',
-    version: 'v2.4.0 (Oficial)',
+    version: 'v2.4.1 (Oficial)',
     size: '520 MB',
     description: 'Frente de caixa completo para alta velocidade com emissão de NFC-e/CF-e SAT, contingência offline automática, TEF integrado, controle de mesas e comandas.',
     tag: 'Oficial',
@@ -59,15 +45,43 @@ const downloadFiles: DownloadItem[] = [
     iconType: 'pdv',
   },
   {
-    id: 'metrics-ponto',
-    name: 'Metrics Ponto - Ponto Eletrônico & Gestão',
-    fileName: 'Metrics Setup 0.0.0.exe',
-    version: 'v1.2.0 (Oficial)',
-    size: '85 MB',
-    description: 'Sistema oficial para registro e controle de jornada de trabalho, espelho de ponto digital, banco de horas e conformidade com a Portaria 671.',
+    id: 'metrics-windy',
+    name: 'Metrics Windy - Agente de Telemetria & Suporte',
+    fileName: 'Metrics_Windy_Setup.exe',
+    version: 'v2.3.2.4 (Oficial)',
+    size: '60 MB',
+    description: 'Agente inteligente para monitoramento contínuo em tempo real (CPU, RAM, Atividade de Leitura/Escrita de Disco e Sensores Térmicos), suporte remoto integrado e manutenção preventiva do Windows.',
     tag: 'Oficial',
     isOfficial: true,
-    downloadUrl: `${R2_BASE_URL}/Metrics%20Setup%200.0.0.exe`,
+    downloadUrl: `${API_BASE_URL}/api/public/windy/download`,
+    popular: true,
+    badgeLabel: 'OFICIAL • TELEMETRIA & SUPORTE',
+    iconType: 'windy',
+  },
+  {
+    id: 'metrics-sync',
+    name: 'Metrics Sync - Importação & Sincronização Legada',
+    fileName: 'Metrics_Sync_Setup.exe',
+    version: 'v1.3.2.5 (Oficial)',
+    size: '60 MB',
+    description: 'Ferramenta de alta performance para importação, conversão de caracteres e migração automática de bancos de dados legados (Athos, SvCloud, MemoCash) diretamente para a nuvem Metrics.',
+    tag: 'Oficial',
+    isOfficial: true,
+    downloadUrl: `${API_BASE_URL}/api/public/sync/download`,
+    popular: true,
+    badgeLabel: 'OFICIAL • SINCRONIZAÇÃO & DADOS',
+    iconType: 'sync',
+  },
+  {
+    id: 'metrics-ponto',
+    name: 'Metrics Ponto - Ponto Eletrônico & Gestão',
+    fileName: 'Metrics_Ponto_Setup.exe',
+    version: 'v1.2.0 (Oficial)',
+    size: '65 MB',
+    description: 'Sistema oficial para registro e controle de jornada de trabalho com inteligência offline, modo quiosque/totem em tela cheia e conformidade com a Portaria 671 MTE.',
+    tag: 'Oficial',
+    isOfficial: true,
+    downloadUrl: `${API_BASE_URL}/api/public/ponto/download`,
     popular: true,
     badgeLabel: 'OFICIAL • GESTÃO DE RH',
     iconType: 'ponto',
@@ -77,14 +91,28 @@ const downloadFiles: DownloadItem[] = [
     name: 'Metrics Mobile - Comanda & Gestão Móvel',
     fileName: 'metrics-mobile.apk',
     version: 'v2.0.0 (Oficial)',
-    size: '32 MB',
-    description: 'Aplicativo móvel para garçons e atendimento de mesas, lançamento ágil de pedidos na praça e acompanhamento em tempo real.',
+    size: '22 MB',
+    description: 'Aplicativo móvel para gestores e proprietários, acompanhamento em tempo real de faturamento, vendas e fechamentos.',
     tag: 'Oficial',
     isOfficial: true,
-    downloadUrl: `${R2_BASE_URL}/metrics-mobile.apk`,
+    downloadUrl: `${API_BASE_URL}/api/public/mobile/download`,
     popular: true,
-    badgeLabel: 'OFICIAL • ATENDIMENTO MÓVEL',
+    badgeLabel: 'OFICIAL • GESTÃO MÓVEL',
     iconType: 'mobile',
+  },
+  {
+    id: 'metrics-garcom',
+    name: 'Metrics Garçom - Atendimento LAN & Mesas',
+    fileName: 'metrics-garcom.apk',
+    version: 'v2.0.0 (Oficial)',
+    size: '20 MB',
+    description: 'Aplicativo Android ultrarrápido para equipe de salão, lançamento ágil de pedidos na praça e sincronização direta na rede local com o caixa PDV.',
+    tag: 'Oficial',
+    isOfficial: true,
+    downloadUrl: `${API_BASE_URL}/api/public/garcom/download`,
+    popular: true,
+    badgeLabel: 'OFICIAL • ATENDIMENTO DE SALÃO',
+    iconType: 'garcom',
   },
   // Ferramentas de suporte e utilitários
   {
@@ -93,7 +121,7 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'AnyDesk.exe',
     version: 'Latest',
     size: '6 MB',
-    description: 'Ferramenta leve para acesso remoto e suporte técnico assistido.',
+    description: 'Ferramenta leve para acesso remoto e suporte tÃ©cnico assistido.',
     tag: 'Suporte',
     downloadUrl: `${R2_BASE_URL}/AnyDesk.exe`,
     popular: false,
@@ -117,8 +145,8 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'Lightshot.exe',
     version: 'Latest',
     size: '3 MB',
-    description: 'A forma mais rápida e leve de tirar printscreens personalizáveis.',
-    tag: 'Utilitários',
+    description: 'A forma mais rÃ¡pida e leve de tirar printscreens personalizÃ¡veis.',
+    tag: 'UtilitÃ¡rios',
     downloadUrl: `${R2_BASE_URL}/Lightshot.exe`,
     popular: false,
     iconType: 'util',
@@ -129,7 +157,7 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'Driver Booster Pro 7.rar',
     version: 'v7',
     size: '21 MB',
-    description: 'Pacote para verificação e atualização automática de drivers do sistema.',
+    description: 'Pacote para verificaÃ§Ã£o e atualizaÃ§Ã£o automÃ¡tica de drivers do sistema.',
     tag: 'Drivers',
     downloadUrl: `${R2_BASE_URL}/Driver%20Booster%20Pro%207.rar`,
     popular: false,
@@ -153,8 +181,8 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'Folder_Firewall_Blocker_1.2.1.exe',
     version: 'v1.2.1',
     size: '150 KB',
-    description: 'Bloqueie o acesso à internet de executáveis em pastas específicas com 1 clique.',
-    tag: 'Segurança',
+    description: 'Bloqueie o acesso Ã  internet de executÃ¡veis em pastas especÃ­ficas com 1 clique.',
+    tag: 'SeguranÃ§a',
     downloadUrl: `${R2_BASE_URL}/Folder_Firewall_Blocker_1.2.1.exe`,
     popular: false,
     iconType: 'util',
@@ -165,7 +193,7 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'startup-delayer-v3.0b366.exe',
     version: 'v3.0',
     size: '6 MB',
-    description: 'Otimize o tempo de inicialização do Windows atrasando a abertura de programas.',
+    description: 'Otimize o tempo de inicializaÃ§Ã£o do Windows atrasando a abertura de programas.',
     tag: 'Sistema',
     downloadUrl: `${R2_BASE_URL}/startup-delayer-v3.0b366.exe`,
     popular: false,
@@ -177,8 +205,8 @@ const downloadFiles: DownloadItem[] = [
     fileName: 'RATON.rar',
     version: 'Pack',
     size: '3 MB',
-    description: 'Ferramenta de ativação e utilitários do Windows.',
-    tag: 'Utilitários',
+    description: 'Ferramenta de ativaÃ§Ã£o e utilitÃ¡rios do Windows.',
+    tag: 'UtilitÃ¡rios',
     downloadUrl: `${R2_BASE_URL}/RATON.rar`,
     popular: false,
     iconType: 'util',
@@ -201,12 +229,26 @@ export function DownloadsPage() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState('Todos')
+  const [liveCatalog, setLiveCatalog] = useState<Record<string, any>>({})
 
   useEffect(() => {
     setIsLoaded(true)
+    fetch(`${API_BASE_URL}/api/public/apps-catalog`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.apps && Array.isArray(data.apps)) {
+          const map: Record<string, any> = {}
+          data.apps.forEach((app: any) => {
+            if (app.key) map[app.key] = app
+            if (app.id) map[app.id] = app
+          })
+          setLiveCatalog(map)
+        }
+      })
+      .catch(() => {})
   }, [])
 
-  const tags = ['Todos', 'Oficiais Metrics', 'Suporte', 'Drivers', 'Utilitários']
+  const tags = ['Todos', 'Oficiais Metrics', 'Suporte', 'Drivers', 'UtilitÃ¡rios']
 
   const filteredFiles = downloadFiles.filter((file) => {
     const matchesSearch =
@@ -217,8 +259,8 @@ export function DownloadsPage() {
     if (selectedTag === 'Oficiais Metrics') return matchesSearch && file.isOfficial
     if (selectedTag === 'Suporte') return matchesSearch && file.tag === 'Suporte'
     if (selectedTag === 'Drivers') return matchesSearch && file.tag === 'Drivers'
-    if (selectedTag === 'Utilitários')
-      return matchesSearch && (file.tag === 'Utilitários' || file.tag === 'Segurança' || file.tag === 'Sistema' || file.tag === 'Navegador')
+    if (selectedTag === 'UtilitÃ¡rios')
+      return matchesSearch && (file.tag === 'UtilitÃ¡rios' || file.tag === 'SeguranÃ§a' || file.tag === 'Sistema' || file.tag === 'Navegador')
 
     return matchesSearch
   })
@@ -259,7 +301,7 @@ export function DownloadsPage() {
                     variant="outline"
                     className="border-white/20 bg-white/5 text-white backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-blue-950 text-xs font-bold"
                   >
-                    Voltar ao Início
+                    Voltar ao InÃ­cio
                   </Button>
                 </Link>
                 <Link to="/sign-in">
@@ -287,7 +329,7 @@ export function DownloadsPage() {
               </span>
             </h1>
             <p className="text-sm md:text-base text-slate-300 leading-relaxed">
-              Baixe os instaladores oficiais dos sistemas Metrics (Windy, Ponto e Mobile) distribuídos de forma segura e rápida através da nossa infraestrutura.
+              Baixe os instaladores oficiais dos sistemas Metrics (Windy, Ponto e Mobile) distribuÃ­dos de forma segura e rÃ¡pida atravÃ©s da nossa infraestrutura.
             </p>
 
             {/* BUSCA E FILTROS */}
@@ -318,9 +360,14 @@ export function DownloadsPage() {
             </div>
           </div>
 
-          {/* GRID DE APLICATIVOS */}
+                    {/* GRID DE APLICATIVOS */}
           <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredFiles.map((file) => {
+              const appKey = file.id.replace('metrics-', '')
+              const liveInfo = liveCatalog[file.id] || liveCatalog[appKey]
+              const displayVersion = liveInfo?.version ? `v${liveInfo.version} (Oficial)` : file.version
+              const displaySize = liveInfo?.formattedSize && liveInfo.formattedSize !== '0.0 MB' ? liveInfo.formattedSize : file.size
+              const displayUrl = liveInfo?.downloadUrl || file.downloadUrl
               return (
                 <div
                   key={file.id}
@@ -360,31 +407,31 @@ export function DownloadsPage() {
                       </span>
                       {file.isOfficial && (
                         <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
-                          <CheckCircle2 className="h-3 w-3" /> Produção
+                          <CheckCircle2 className="h-3 w-3" /> ProduÃ§Ã£o
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* TÍTULO E VERSÃO */}
+                  {/* TÃTULO E VERSÃƒO */}
                   <h3 className="mb-1 text-lg font-black text-white group-hover:text-indigo-300 transition-colors">
                     {file.name}
                   </h3>
 
                   <div className="mb-3 flex items-center gap-3 font-mono text-xs text-slate-400">
-                    <span className="font-semibold text-indigo-400">{file.version}</span>
+                    <span className="font-semibold text-indigo-400">{displayVersion}</span>
                     <span className="h-1 w-1 rounded-full bg-slate-600" />
-                    <span>{file.size}</span>
+                    <span>{displaySize}</span>
                   </div>
 
-                  {/* DESCRIÇÃO */}
+                  {/* DESCRIÃ‡ÃƒO */}
                   <p className="mb-6 flex-1 text-xs leading-relaxed text-slate-300">
                     {file.description}
                   </p>
 
-                  {/* BOTÃO DE DOWNLOAD */}
+                  {/* BOTÃƒO DE DOWNLOAD */}
                   <a
-                    href={file.downloadUrl}
+                    href={displayUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-auto"
@@ -406,14 +453,14 @@ export function DownloadsPage() {
         <footer className="relative mt-20 border-t border-slate-800/80 bg-slate-950/80 py-12 text-slate-400">
           <div className="container mx-auto px-6 text-center space-y-3">
             <p className="text-xs">
-              Precisa de ajuda com a instalação ou configuração de algum sistema?
+              Precisa de ajuda com a instalaÃ§Ã£o ou configuraÃ§Ã£o de algum sistema?
               <a
                 href="https://wa.me/5512992193644"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ml-1.5 font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
               >
-                Fale com o Suporte Técnico Eureca ↗
+                Fale com o Suporte TÃ©cnico Eureca â†—
               </a>
             </p>
             <p className="text-[11px] text-slate-500">
