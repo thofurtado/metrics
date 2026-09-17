@@ -1,3 +1,4 @@
+import { StockDashboard } from './pages/app/stock/stock-dashboard'
 import { StockIntakePage } from './pages/app/stock/stock-intake'
 // routes.tsx
 import { lazy, Suspense } from 'react'
@@ -122,12 +123,24 @@ export const router = createBrowserRouter([
         element: <TimeClockKiosk />,
       },
       {
+        path: 'stock',
+        element: (
+          <ModuleGuard module="stock_control">
+            <StockDashboard />
+          </ModuleGuard>
+        ),
+      },
+      {
+        path: 'estoque',
+        element: <Navigate to="/stock" replace />,
+      },
+      {
         path: 'stock/intake',
-        element: <StockIntakePage />,
+        element: <Navigate to="/stock?tab=intake" replace />,
       },
       {
         path: 'estoque/entrada',
-        element: <StockIntakePage />,
+        element: <Navigate to="/stock?tab=intake" replace />,
       },
       {
         path: 'hr/timesheet/:employeeId',

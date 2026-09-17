@@ -46,7 +46,7 @@ export function Sidebar() {
   const menuItems = [
     {
       name: 'Controle de Estoque',
-      path: '/stock/intake',
+      path: '/stock',
       icon: PackagePlus,
       access: hasAccess('stock') || isModuleActive('stock_control'),
     },
