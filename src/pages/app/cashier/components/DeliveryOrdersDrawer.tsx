@@ -267,17 +267,17 @@ export function DeliveryOrdersDrawer({
     )
   }
 
-  // Agrupamento de pedidos por região/bairro na etapa de Produção
-  const neighborhoodCountInPrep = useMemo(() => {
+  // Agrupamento de pedidos por região/bairro na etapa de Conferência (para montagem de rota)
+  const neighborhoodCountInConferencia = useMemo(() => {
     const counts: Record<string, number> = {}
-    inPrepOrders.forEach((o) => {
+    conferenciaOrders.forEach((o) => {
       const b = (o.neighborhood || '').trim().toLowerCase()
-      if (b) {
+      if (b && !o.is_takeout) {
         counts[b] = (counts[b] || 0) + 1
       }
     })
     return counts
-  }, [inPrepOrders])
+  }, [conferenciaOrders])
 
   // Endereço completo do Restaurante para cálculo de rota
   const restaurantFullAddress = useMemo(() => {
@@ -653,11 +653,11 @@ export function DeliveryOrdersDrawer({
   // MONTAGEM DE ROTA & CÁLCULO INTELIGENTE E PRECISO (GPS / PHOTON / NOMINATIM)
   // =========================================================================
   const openRouteBuilder = () => {
-    if (selectedOrderIdsForRoute.length === 0) {
-      toast.error('Selecione ao menos 1 pedido para construir a rota!')
+    const selected = conferenciaOrders.filter((o) => selectedOrderIdsForRoute.includes(o.id) && !o.is_takeout)
+    if (selected.length === 0) {
+      toast.error('Selecione ao menos 1 pedido de entrega em conferência para construir a rota!')
       return
     }
-    const selected = [...inPrepOrders, ...conferenciaOrders].filter((o) => selectedOrderIdsForRoute.includes(o.id))
     setRouteOrders(selected)
     if (!routeDriver && shiftMotoboys.length > 0) {
       setRouteDriver(shiftMotoboys[0])
@@ -1245,22 +1245,59 @@ export function DeliveryOrdersDrawer({
             </button>
           </div>
 
-          {/* BARRA SUPERIOR DA PRODUÇÃO & CONFERÊNCIA */}
-          {(activeTab === 'in_preparation' || activeTab === 'conferencia') && (activeTab === 'conferencia' ? conferenciaOrders.length > 0 : inPrepOrders.length > 0) && (
-            <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/95 p-2.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
+          {/* BARRA SUPERIOR DA PRODUÇÃO (COZINHA) */}
+          {activeTab === 'in_preparation' && inPrepOrders.length > 0 && (
+            <div className="sticky top-0 z-20 border-b border-orange-200 bg-orange-50/95 p-2.5 backdrop-blur-md dark:border-orange-950/60 dark:bg-slate-950/95">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-orange-950 dark:text-orange-300">
+                  <ChefHat className="h-4 w-4 text-orange-600" />
+                  <span>Cozinha / Produção: {inPrepOrders.length} pedido(s) em preparo</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allExpanded = inPrepOrders.every((o) => !!expandedOrderIds[o.id])
+                    const nextState: Record<string, boolean> = {}
+                    inPrepOrders.forEach((o) => {
+                      nextState[o.id] = !allExpanded
+                    })
+                    setExpandedOrderIds(nextState)
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 shadow-sm"
+                >
+                  {inPrepOrders.every((o) => !!expandedOrderIds[o.id]) ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                      <span>Recolher Tudo</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5" />
+                      <span>Expandir Tudo</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BARRA SUPERIOR DA CONFERÊNCIA & EXPEDIÇÃO (MONTAGEM DE ROTA) */}
+          {activeTab === 'conferencia' && conferenciaOrders.length > 0 && (
+            <div className="sticky top-0 z-20 border-b border-blue-200 bg-blue-50/95 p-2.5 backdrop-blur-md dark:border-blue-950/60 dark:bg-slate-950/95">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      const candidateList = activeTab === 'conferencia' ? conferenciaOrders.filter((o) => !o.is_takeout) : inPrepOrders;
+                      const candidateList = conferenciaOrders.filter((o) => !o.is_takeout)
                       if (selectedOrderIdsForRoute.length > 0) {
                         setSelectedOrderIdsForRoute([])
                       } else {
                         setSelectedOrderIdsForRoute(candidateList.map((o) => o.id))
                       }
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-xs font-bold text-blue-900 shadow-sm hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300"
                   >
                     {selectedOrderIdsForRoute.length > 0 ? (
                       <CheckSquare className="h-3.5 w-3.5 text-blue-600" />
@@ -1268,24 +1305,23 @@ export function DeliveryOrdersDrawer({
                       <Square className="h-3.5 w-3.5 text-slate-400" />
                     )}
                     <span>
-                      {selectedOrderIdsForRoute.length > 0 ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                      {selectedOrderIdsForRoute.length > 0 ? 'Desmarcar Todos' : 'Selecionar P/ Rota'}
                     </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
-                      const currentActiveOrders = activeTab === 'conferencia' ? conferenciaOrders : inPrepOrders
-                      const allExpanded = currentActiveOrders.every((o) => !!expandedOrderIds[o.id])
+                      const allExpanded = conferenciaOrders.every((o) => !!expandedOrderIds[o.id])
                       const nextState: Record<string, boolean> = {}
-                      currentActiveOrders.forEach((o) => {
+                      conferenciaOrders.forEach((o) => {
                         nextState[o.id] = !allExpanded
                       })
                       setExpandedOrderIds(nextState)
                     }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 shadow-sm"
                   >
-                    {(activeTab === 'conferencia' ? conferenciaOrders : inPrepOrders).every((o) => !!expandedOrderIds[o.id]) ? (
+                    {conferenciaOrders.every((o) => !!expandedOrderIds[o.id]) ? (
                       <>
                         <ChevronUp className="h-3.5 w-3.5" />
                         <span>Recolher Tudo</span>
@@ -1671,7 +1707,6 @@ export function DeliveryOrdersDrawer({
                   const sla = getSlaInfo(order)
                   const paymentBanner = getUnifiedPaymentBanner(order)
                   const bairro = (order.neighborhood || '').trim()
-                  const hasSharedRegion = activeTab === 'in_preparation' && bairro && neighborhoodCountInPrep[bairro.toLowerCase()] > 1
 
                   const drinkItems = (order.items || []).filter((i: any) => isDrinkItem(i.name || ''))
                   const foodItems = (order.items || []).filter((i: any) => !isDrinkItem(i.name || ''))
@@ -1685,34 +1720,38 @@ export function DeliveryOrdersDrawer({
                     order.origem === 'Balcao' || 
                     (Boolean(order.observations) && order.observations.toLowerCase().includes('retirada'))
                   const isExpanded = (isProducaoTab || isConferenciaTab) ? !!expandedOrderIds[order.id] : true
-                  const isSelectedForRoute = selectedOrderIdsForRoute.includes(order.id)
+                  const isSelectedForRoute = isConferenciaTab && !isTakeout && selectedOrderIdsForRoute.includes(order.id)
+                  const hasSharedRegion = isConferenciaTab && !isTakeout && bairro && (neighborhoodCountInConferencia[bairro.toLowerCase()] || 0) > 1
 
-                  // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (2 LINHAS)
-                  if (isProducaoTab && !isExpanded) {
+                  // VISUALIZAÇÃO COLAPSADA (2 LINHAS) NA PRODUÇÃO OU CONFERÊNCIA
+                  if ((isProducaoTab || isConferenciaTab) && !isExpanded) {
                     return (
                       <div
                         key={order.id}
                         className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
                           isSelectedForRoute
-                            ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                            ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20'
                             : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2.5">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])
-                            }}
-                            className="text-slate-400 hover:text-orange-600 transition-colors"
-                          >
-                            {isSelectedForRoute ? (
-                              <CheckSquare className="h-4 w-4 text-orange-600" />
-                            ) : (
-                              <Square className="h-4 w-4" />
-                            )}
-                          </button>
+                          {isConferenciaTab && !isTakeout && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])
+                              }}
+                              className="text-slate-400 hover:text-blue-600 transition-colors"
+                              title={isSelectedForRoute ? 'Remover da rota' : 'Selecionar para rota'}
+                            >
+                              {isSelectedForRoute ? (
+                                <CheckSquare className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
 
                           <div
                             className="flex-1 min-w-0 cursor-pointer"
@@ -1769,27 +1808,28 @@ export function DeliveryOrdersDrawer({
                     )
                   }
 
-                  // VISUALIZAÇÃO COMPLETA / EXPANDIDA NA PRODUÇÃO OU NOVOS
+                  // VISUALIZAÇÃO COMPLETA / EXPANDIDA
                   return (
                     <div
                       key={order.id}
                       className={`select-text rounded-2xl border bg-white p-4 shadow-sm transition-all dark:bg-slate-950 ${
                         isSelectedForRoute
-                          ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                          ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20'
                           : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
                       }`}
                     >
                       {/* CABEÇALHO DO CARD */}
                       <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
                         <div className="flex items-center gap-2">
-                          {isProducaoTab && (
+                          {isConferenciaTab && !isTakeout && (
                             <button
                               type="button"
                               onClick={() => setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])}
-                              className="mr-1 text-slate-400 hover:text-orange-600 transition-colors"
+                              className="mr-1 text-slate-400 hover:text-blue-600 transition-colors"
+                              title={isSelectedForRoute ? 'Remover da rota' : 'Selecionar para rota'}
                             >
                               {isSelectedForRoute ? (
-                                <CheckSquare className="h-4 w-4 text-orange-600" />
+                                <CheckSquare className="h-4 w-4 text-blue-600" />
                               ) : (
                                 <Square className="h-4 w-4" />
                               )}
@@ -1842,7 +1882,7 @@ export function DeliveryOrdersDrawer({
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
-                          {isProducaoTab && (
+                          {(isProducaoTab || isConferenciaTab) && (
                             <button
                               type="button"
                               onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: false }))}
@@ -1888,16 +1928,16 @@ export function DeliveryOrdersDrawer({
                         </div>
                       </div>
 
-                      {/* ALERTA DE REGIÃO */}
+                      {/* ALERTA DE REGIÃO (CONFERÊNCIA) */}
                       {hasSharedRegion && (
                         <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-xs font-bold text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
                           <MapPinned className="h-4 w-4 shrink-0 text-blue-600" />
-                          <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em produção para este mesmo bairro (Aproveite para juntar na mesma rota!).</span>
+                          <span className="select-text">📍 Região {order.neighborhood}: Há outros pedidos em conferência para este mesmo bairro! Selecione para montar a rota conjunta 🛵.</span>
                         </div>
                       )}
 
-                      {/* BEBIDAS */}
-                      {isProducaoTab && drinkItems.length > 0 && (
+                      {/* BEBIDAS / GELADEIRA (CHECKLIST NA PRODUÇÃO E CONFERÊNCIA) */}
+                      {(isProducaoTab || isConferenciaTab) && drinkItems.length > 0 && (
                         <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-2.5 dark:border-cyan-900/40 dark:bg-cyan-950/20">
                           <div className="flex items-center gap-1.5 text-[11px] font-black text-cyan-900 dark:text-cyan-300 mb-1.5 uppercase tracking-wider">
                             <CupSoda className="h-3.5 w-3.5 text-cyan-600" />
@@ -1969,27 +2009,14 @@ export function DeliveryOrdersDrawer({
                         )}
 
                         {order.status === 'in_preparation' && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              disabled={loadingOrderId === order.id}
-                              onClick={() => handleUpdateStatus(order.id, 'conferencia')}
-                              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span>{isTakeout ? 'Pronto p/ Retirada no Balcão 🥡' : 'Avançar p/ Conferência 📋'}</span>
-                            </button>
-                            {!isTakeout && (
-                              <button
-                                disabled={loadingOrderId === order.id}
-                                onClick={() => openDispatch(order)}
-                                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                                title="Despachar direto com Motoboy"
-                              >
-                                <Bike className="h-4 w-4" />
-                                <span>Despachar</span>
-                              </button>
-                            )}
-                          </div>
+                          <button
+                            disabled={loadingOrderId === order.id}
+                            onClick={() => handleUpdateStatus(order.id, 'conferencia')}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-3 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>{isTakeout ? 'Pronto ➡️ Enviar ao Balcão 🥡' : 'Pronto ➡️ Avançar p/ Conferência 📋'}</span>
+                          </button>
                         )}
 
                         {order.status === 'conferencia' && (

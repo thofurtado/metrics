@@ -37,9 +37,10 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
   const soundDropdownRef = useRef<HTMLDivElement>(null)
 
   const { data } = useQuery({
-    queryKey: ['cashier-online-orders'],
+    queryKey: ['cashier-online-orders', sessionId],
     queryFn: async () => {
-      const res = await api.get('/public/orders/pending')
+      const params = sessionId ? { cashier_session_id: sessionId } : {}
+      const res = await api.get('/public/orders/pending', { params })
       return res.data || { orders: [], profile: null }
     },
     refetchInterval: 3000
@@ -160,7 +161,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     return null
   }
 
-  const openTab = (tab: 'pending' | 'in_preparation' | 'dispatched' | 'delivered') => {
+  const openTab = (tab: 'pending' | 'in_preparation' | 'conferencia' | 'dispatched' | 'delivered') => {
     setSelectedTab(tab)
     setIsDrawerOpen(true)
   }
