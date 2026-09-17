@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 import { getPOSMachines } from '@/api/pos-machines'
+import { getProfile } from '@/api/get-profile'
 import { api } from '@/lib/axios'
 
 interface DeliveryOrdersDrawerProps {
@@ -133,6 +134,32 @@ export function DeliveryOrdersDrawer({
     queryFn: getPOSMachines,
     staleTime: 1000 * 60 * 5,
   })
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getProfile,
+    staleTime: 1000 * 60 * 15,
+  })
+  const isAdmin = userProfile?.role === 'ADMIN'
+
+  const [orderToDelete, setOrderToDelete] = useState<any | null>(null)
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false)
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return
+    setIsDeletingOrder(true)
+    try {
+      await api.delete(`/api/cashier/delivery-orders/${orderToDelete.id}`)
+      toast.success(`Pedido #${orderToDelete.display_id} e lançamentos de caixa vinculados foram excluídos com sucesso.`)
+      setOrderToDelete(null)
+      if (onOrderCompleted) onOrderCompleted()
+    } catch (err: any) {
+      console.error('Erro ao excluir pedido:', err)
+      toast.error(err?.response?.data?.message || 'Erro ao excluir pedido permanentemente.')
+    } finally {
+      setIsDeletingOrder(false)
+    }
+  }
 
   // Atualiza o relógio a cada 10 segundos
   useEffect(() => {
@@ -1432,6 +1459,19 @@ export function DeliveryOrdersDrawer({
                                       <DollarSign className="h-3.5 w-3.5" />
                                       <span>Dar Baixa 🛵</span>
                                     </button>
+                                    {isAdmin && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setOrderToDelete(order)
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 p-2 text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 transition-all active:scale-95"
+                                        title="Excluir permanentemente (Admin)"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1545,6 +1585,19 @@ export function DeliveryOrdersDrawer({
                             <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-bold shrink-0">
                               ⏱️ {tempoEntregaMin}m
                             </span>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOrderToDelete(order)
+                                }}
+                                className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                title="Excluir permanentemente e estornar do caixa (Admin)"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                           </div>
                         </div>
@@ -1576,7 +1629,23 @@ export function DeliveryOrdersDrawer({
 
                             <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
                               <span>✅ Venda Lançada no Caixa com Sucesso</span>
-                              <span>{formaFmt}</span>
+                              <div className="flex items-center gap-2">
+                                <span>{formaFmt}</span>
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setOrderToDelete(order)
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-black text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 transition-colors"
+                                    title="Excluir pedido e remover lançamento do caixa"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    <span>Excluir do Caixa</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1678,6 +1747,19 @@ export function DeliveryOrdersDrawer({
                                 <span className={`rounded-md px-1.5 py-0.2 text-[10px] font-black ${sla.badgeBg}`}>
                                   ⏱️ {sla.minutes}m
                                 </span>
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setOrderToDelete(order)
+                                    }}
+                                    className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                    title="Excluir permanentemente (Admin)"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                               </div>
                             </div>
@@ -1747,6 +1829,19 @@ export function DeliveryOrdersDrawer({
                           <span className={`rounded-lg px-2 py-1 text-xs font-black ${sla.badgeBg}`}>
                             {sla.text}
                           </span>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOrderToDelete(order)
+                              }}
+                              className="rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 transition-colors"
+                              title="Excluir permanentemente (Admin)"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                           {isProducaoTab && (
                             <button
                               type="button"
@@ -2250,6 +2345,78 @@ export function DeliveryOrdersDrawer({
                 className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 py-2.5 text-xs font-black text-white shadow-lg hover:from-orange-500 hover:to-amber-500 disabled:opacity-50"
               >
                 {isDispatchingBatch ? 'Despachando...' : `Despachar Rota (${routeOrders.length} Pedidos) 🚀`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO SEGURA (ADMIN ONLY - Z-INDEX 110)        */}
+      {/* ========================================================================= */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
+                  <Trash2 className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Excluir Delivery #{orderToDelete.display_id}
+                </h3>
+              </div>
+              <button 
+                disabled={isDeletingOrder}
+                onClick={() => setOrderToDelete(null)} 
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3 text-xs dark:border-rose-900/40 dark:bg-rose-950/20">
+                <p className="font-black text-rose-950 dark:text-rose-200 mb-1">
+                  ⚠️ Exclusão Permanente e Segura
+                </p>
+                <p className="text-rose-900 dark:text-rose-300 text-[11px] leading-relaxed">
+                  Esta ação é irreversível e permitida apenas para administradores. O pedido será apagado do sistema e <strong>qualquer lançamento vinculado na conferência do caixa será removido</strong> para manter o saldo consistente.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs dark:border-slate-800 dark:bg-slate-900/60 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Cliente:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{orderToDelete.client_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Valor Total:</span>
+                  <span className="font-black text-emerald-600 dark:text-emerald-400">{formatBRL(orderToDelete.total_amount || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Status Atual:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 capitalize">{orderToDelete.status}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                disabled={isDeletingOrder}
+                onClick={() => setOrderToDelete(null)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingOrder}
+                onClick={handleDeleteOrder}
+                className="flex-1 rounded-xl bg-rose-600 py-2.5 text-xs font-black text-white shadow-lg hover:bg-rose-500 active:scale-98 disabled:opacity-50 transition-all"
+              >
+                {isDeletingOrder ? 'Excluindo...' : 'Sim, Excluir Definitivamente'}
               </button>
             </div>
           </div>

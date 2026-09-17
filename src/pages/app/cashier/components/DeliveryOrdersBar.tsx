@@ -142,6 +142,10 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
       eventSource.addEventListener('order_status_updated', () => {
         queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
       })
+      eventSource.addEventListener('order_deleted', () => {
+        queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
+        queryClient.invalidateQueries({ queryKey: ['cashier-session'] })
+      })
     } catch (e) {
       console.warn('Erro ao conectar SSE no DeliveryOrdersBar:', e)
     }
