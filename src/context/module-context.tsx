@@ -29,11 +29,12 @@ function getTokenSnapshot() {
 export const SYSTEM_CONFIG_TO_SLUG: Record<
   keyof Omit<
     SystemConfig,
-    'cestaBasicaValue' | 'financial_management_profile' | 'dashboard_cards'
+    'cestaBasicaValue' | 'cashierTolerance' | 'financial_management_profile' | 'dashboard_cards'
   >,
   string
 > = {
   merchandise: 'items',
+  stock_control: 'stock',
   financial: 'finance',
   treatments: 'service',
   hr_module: 'hr',
@@ -88,10 +89,13 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
 
   const safeConfig: SystemConfig = systemConfig || {
     merchandise: true,
+    stock_control: false,
     financial: true,
     treatments: true,
+    cashier: false,
     hr_module: false,
     cestaBasicaValue: 0,
+    cashierTolerance: 10,
     financial_management_profile: 'ANALYTICAL',
   }
 

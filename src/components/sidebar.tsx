@@ -45,35 +45,40 @@ export function Sidebar() {
 
   const menuItems = [
     {
-      name: 'Mercadoria',
+      name: 'Controle de Estoque',
+      path: '/stock/intake',
+      icon: PackagePlus,
+      access: hasAccess('stock') || isModuleActive('stock_control'),
+    },
+    {
+      name: 'Mercadorias & Cardápio',
       path: '/items',
-      icon: Boxes, PackagePlus,
-      access: hasAccess('items'),
+      icon: Boxes,
+      access: hasAccess('items') || isModuleActive('merchandise'),
     },
     {
       name: 'Atendimento',
       path: '/treatments',
       icon: ClipboardList,
-      access: hasAccess('service'),
+      access: hasAccess('service') || isModuleActive('treatments'),
     },
     {
       name: 'Financeiro',
       path: '/transactions',
       icon: PiggyBank,
-      access: hasAccess('finance'),
+      access: hasAccess('finance') || isModuleActive('financial'),
     },
     {
       name: 'Conferência Caixa',
       path: '/cashier',
       icon: Wallet,
-      access: hasAccess('cashier'),
+      access: hasAccess('cashier') || isModuleActive('cashier'),
     },
-
     {
       name: 'Recursos Humanos',
       path: '/hr',
       icon: Users,
-      access: hasAccess('hr'),
+      access: hasAccess('hr') || isModuleActive('hr_module'),
     },
   ].filter((item) => {
     if (profile?.role === 'CASHIER') {
