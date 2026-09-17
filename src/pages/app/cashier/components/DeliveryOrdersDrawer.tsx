@@ -1723,8 +1723,119 @@ export function DeliveryOrdersDrawer({
                   const isSelectedForRoute = isConferenciaTab && !isTakeout && selectedOrderIdsForRoute.includes(order.id)
                   const hasSharedRegion = isConferenciaTab && !isTakeout && bairro && (neighborhoodCountInConferencia[bairro.toLowerCase()] || 0) > 1
 
-                  // VISUALIZAÇÃO COLAPSADA (2 LINHAS) NA PRODUÇÃO OU CONFERÊNCIA
-                  if ((isProducaoTab || isConferenciaTab) && !isExpanded) {
+                  // VISUALIZAÇÃO COLAPSADA NA PRODUÇÃO (COM ITENS E BOTÃO DIRETO P/ CONFERÊNCIA)
+                  if (isProducaoTab && !isExpanded) {
+                    return (
+                      <div
+                        key={order.id}
+                        className="select-text rounded-2xl border border-orange-200 bg-white p-3.5 shadow-sm transition-all hover:border-orange-300 dark:border-slate-800 dark:bg-slate-950"
+                      >
+                        {/* CABEÇALHO DO CARD COLAPSADO (CLICÁVEL PARA EXPANDIR DETALHES SE DESEJAR) */}
+                        <div
+                          className="flex items-start justify-between gap-2 cursor-pointer pb-2 border-b border-slate-100 dark:border-slate-800/80"
+                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white shrink-0">
+                              #{order.display_id}
+                            </span>
+                            <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                              {order.client_name}
+                            </span>
+                            {order.neighborhood && (
+                              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                📍 {order.neighborhood}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                              {formatBRL(order.total_amount || 0)}
+                            </span>
+                            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                              ⏱️ {sla.minutes}m
+                            </span>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOrderToDelete(order)
+                                }}
+                                className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                title="Excluir permanentemente (Admin)"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <ChevronDown className="h-4 w-4 text-slate-400 hover:text-slate-600" title="Expandir detalhes" />
+                          </div>
+                        </div>
+
+                        {/* BADGES RÁPIDOS */}
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          {renderQuickProductionBadges(order)}
+                        </div>
+
+                        {/* ITENS DO PEDIDO VISÍVEIS MESMO FECHADO PARA CONFERÊNCIA IMEDIATA DA COZINHA */}
+                        {order.items && order.items.length > 0 && (
+                          <div className="mt-2.5 rounded-xl bg-orange-50/40 border border-orange-100 p-2.5 dark:bg-slate-900/60 dark:border-slate-800">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-orange-950 dark:text-orange-300 mb-1.5">
+                              <span>Itens do Pedido ({totalItemCount}):</span>
+                              <span className="font-normal text-[10px] text-slate-400">toque no cabeçalho p/ mais detalhes</span>
+                            </div>
+                            <div className="space-y-1">
+                              {order.items.map((item: any) => (
+                                <div key={item.id} className="text-xs">
+                                  <div className="flex items-center justify-between font-bold text-slate-900 dark:text-slate-100">
+                                    <span>
+                                      <span className="font-black text-orange-600 dark:text-orange-400 mr-1.5">{item.quantity}x</span>
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                  {item.complements && item.complements.length > 0 && (
+                                    <div className="pl-4 text-[11px] text-emerald-700 dark:text-emerald-400">
+                                      {item.complements.map((c: any) => `+ ${c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name}`).join(', ')}
+                                    </div>
+                                  )}
+                                  {item.observations && (
+                                    <div className="pl-4 text-[11px] italic text-amber-700 dark:text-amber-400">
+                                      Obs: {item.observations}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {order.observations && (
+                              <div className="mt-2 border-t border-orange-200/50 pt-1.5 text-[11px] font-bold text-amber-900 dark:border-slate-800 dark:text-amber-300">
+                                ⚠️ Obs Pedido: {order.observations}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* BOTÃO DIRETO PARA CONFERÊNCIA SEM PRECISAR ABRIR O CARD */}
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            disabled={loadingOrderId === order.id}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleUpdateStatus(order.id, 'conferencia')
+                            }}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-xs font-black text-white shadow-md transition-transform hover:bg-orange-500 active:scale-98"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>{isTakeout ? 'Pronto ➡️ Enviar ao Balcão 🥡' : 'Pronto ➡️ Avançar p/ Conferência 📋'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // VISUALIZAÇÃO COLAPSADA NA CONFERÊNCIA (COM ROTA E RESUMO)
+                  if (isConferenciaTab && !isExpanded) {
                     return (
                       <div
                         key={order.id}
@@ -1735,7 +1846,7 @@ export function DeliveryOrdersDrawer({
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2.5">
-                          {isConferenciaTab && !isTakeout && (
+                          {!isTakeout && (
                             <button
                               type="button"
                               onClick={(e) => {
