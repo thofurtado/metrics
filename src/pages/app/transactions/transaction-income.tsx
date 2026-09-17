@@ -64,7 +64,10 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { parseCurrencyToFloat } from '@/lib/currency-utils'
+import {
+  formatCurrencyFromNumber,
+  parseCurrencyToFloat,
+} from '@/lib/currency-utils'
 import { cn } from '@/lib/utils'
 
 // Schema para Receitas (income)
@@ -441,7 +444,9 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                                   form.getValues('installments_count') || '1',
                                 ) || 1
                               if (!isNaN(val) && !isNaN(count) && count > 0) {
-                                setInstallmentValue((val / count).toFixed(2))
+                                setInstallmentValue(
+                                  formatCurrencyFromNumber(val / count),
+                                )
                               } else {
                                 setInstallmentValue('')
                               }
@@ -517,17 +522,14 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400">
                             R$
                           </span>
-                          <Input
+                          <CurrencyInput
                             {...field}
-                            type="number"
-                            inputMode="decimal"
-                            step="0.01"
-                            placeholder="0.00"
+                            placeholder="0,00"
                             className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               field.onChange(e)
-                              const val = parseFloat(e.target.value) || 0
+                              const val = parseCurrencyToFloat(e.target.value)
                               const count =
                                 parseInt(
                                   form.getValues('installments_count') || '1',
@@ -538,7 +540,9 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                                 !isNaN(count) &&
                                 count > 0
                               ) {
-                                setInstallmentValue((val / count).toFixed(2))
+                                setInstallmentValue(
+                                  formatCurrencyFromNumber(val / count),
+                                )
                               } else if (val === 0) {
                                 setInstallmentValue('')
                               }
@@ -571,14 +575,18 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                             field.onChange(e)
                             const count = parseInt(e.target.value) || 1
                             const total =
-                              parseFloat(form.getValues('amount') || '0') || 0
+                              parseCurrencyToFloat(
+                                form.getValues('amount') || '0',
+                              ) || 0
                             if (
                               !isNaN(total) &&
                               total > 0 &&
                               !isNaN(count) &&
                               count > 0
                             ) {
-                              setInstallmentValue((total / count).toFixed(2))
+                              setInstallmentValue(
+                                formatCurrencyFromNumber(total / count),
+                              )
                             }
                           }}
                         />
@@ -597,18 +605,15 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400">
                         R$
                       </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        inputMode="decimal"
-                        placeholder="0.00"
+                      <CurrencyInput
+                        placeholder="0,00"
                         value={installmentValue}
                         className="h-12 rounded-xl border-border/70 bg-background pl-9 text-base font-medium"
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => {
                           const val = e.target.value
                           setInstallmentValue(val)
-                          const instVal = parseFloat(val) || 0
+                          const instVal = parseCurrencyToFloat(val) || 0
                           const count =
                             parseInt(
                               form.getValues('installments_count') || '1',
@@ -621,9 +626,13 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
                           ) {
                             form.setValue(
                               'amount',
-                              (instVal * count).toFixed(2),
+                              formatCurrencyFromNumber(instVal * count),
                               { shouldValidate: true },
                             )
+                          } else if (instVal === 0) {
+                            form.setValue('amount', '', {
+                              shouldValidate: true,
+                            })
                           }
                         }}
                       />
@@ -969,7 +978,7 @@ export function TransactionIncome({ open }: TransactionIncomeProps) {
         <InstallmentPreviewDialog
           open={previewInstallmentsOpen}
           onOpenChange={setPreviewInstallmentsOpen}
-          totalAmount={Number(form.getValues('amount'))}
+          totalAmount={parseCurrencyToFloat(form.getValues('amount'))}
           installmentsCount={Number(form.getValues('installments_count'))}
           startDate={form.getValues('data_vencimento')}
           frequency={form.getValues('interval_frequency') || 'MONTHLY'}

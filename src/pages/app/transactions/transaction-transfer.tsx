@@ -200,13 +200,10 @@ export function TransactionTransfer({ open }: TransactionTransferProps) {
                       R$
                     </span>
                     <FormControl>
-                      <input
+                      <CurrencyInput
                         {...field}
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
                         placeholder="0,00"
-                        className="w-full border-none bg-transparent p-0 text-2xl font-black tabular-nums tracking-tight text-slate-900 placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none dark:text-slate-50 dark:placeholder:text-slate-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-full border-none bg-transparent p-0 text-2xl font-black tabular-nums tracking-tight text-slate-900 placeholder:text-slate-300 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none dark:text-slate-50 dark:placeholder:text-slate-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none h-auto"
                         autoFocus
                       />
                     </FormControl>

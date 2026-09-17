@@ -86,7 +86,10 @@ import {
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { Switch } from '@/components/ui/switch'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { parseCurrencyToFloat } from '@/lib/currency-utils'
+import {
+  formatCurrencyFromNumber,
+  parseCurrencyToFloat,
+} from '@/lib/currency-utils'
 import { API_BASE_URL } from '@/lib/axios'
 import { calculateCreditCardDueDate } from '@/lib/credit-card-due-date'
 import { cn } from '@/lib/utils'
@@ -345,7 +348,7 @@ export function TransactionExpense({
 
   const installmentPreview = (() => {
     if (activeTab === 'installment' && watchedAmount && watchedCount) {
-      const amt = parseFloat(watchedAmount)
+      const amt = parseCurrencyToFloat(watchedAmount)
       const cnt = parseInt(watchedCount)
       if (!isNaN(amt) && !isNaN(cnt) && cnt > 0) {
         const val = amt / cnt
@@ -579,9 +582,10 @@ export function TransactionExpense({
 
   const applyExtractedData = (data: ExtractedData) => {
     if (data.amount > 0) {
-      form.setValue('amount', data.amount.toString())
-      const count = parseInt(form.getValues('installments_count') || '1')
-      setInstallmentValue((data.amount / count).toFixed(2))
+      form.setValue('amount', formatCurrencyFromNumber(data.amount))
+      const count =
+        parseInt(form.getValues('installments_count') || '1') || 1
+      setInstallmentValue(formatCurrencyFromNumber(data.amount / count))
     }
 
     if (data.dueDate) {
@@ -733,7 +737,9 @@ export function TransactionExpense({
                                   form.getValues('installments_count') || '1',
                                 ) || 1
                               if (!isNaN(val) && !isNaN(count) && count > 0) {
-                                setInstallmentValue((val / count).toFixed(2))
+                                setInstallmentValue(
+                                  formatCurrencyFromNumber(val / count),
+                                )
                               } else {
                                 setInstallmentValue('')
                               }
@@ -838,17 +844,14 @@ export function TransactionExpense({
                             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-bold text-slate-400 dark:text-slate-500">
                               R$
                             </span>
-                            <Input
+                            <CurrencyInput
                               {...field}
-                              type="number"
-                              inputMode="decimal"
-                              step="0.01"
                               placeholder="0,00"
                               className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 text-base font-bold text-slate-900 transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                               onFocus={(e) => e.target.select()}
                               onChange={(e) => {
                                 field.onChange(e)
-                                const val = parseFloat(e.target.value) || 0
+                                const val = parseCurrencyToFloat(e.target.value)
                                 const count =
                                   parseInt(
                                     form.getValues('installments_count') || '1',
@@ -859,7 +862,9 @@ export function TransactionExpense({
                                   !isNaN(count) &&
                                   count > 0
                                 ) {
-                                  setInstallmentValue((val / count).toFixed(2))
+                                  setInstallmentValue(
+                                    formatCurrencyFromNumber(val / count),
+                                  )
                                 } else if (val === 0) {
                                   setInstallmentValue('')
                                 }
@@ -895,14 +900,18 @@ export function TransactionExpense({
                               field.onChange(e)
                               const count = parseInt(e.target.value) || 1
                               const total =
-                                parseFloat(form.getValues('amount') || '0') || 0
+                                parseCurrencyToFloat(
+                                  form.getValues('amount') || '0',
+                                ) || 0
                               if (
                                 !isNaN(total) &&
                                 total > 0 &&
                                 !isNaN(count) &&
                                 count > 0
                               ) {
-                                setInstallmentValue((total / count).toFixed(2))
+                                setInstallmentValue(
+                                  formatCurrencyFromNumber(total / count),
+                                )
                               }
                             }}
                           />
@@ -924,10 +933,7 @@ export function TransactionExpense({
                         <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-bold text-slate-400 dark:text-slate-500">
                           R$
                         </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          inputMode="decimal"
+                        <CurrencyInput
                           placeholder="0,00"
                           value={installmentValue}
                           className="shadow-xs h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 text-base font-bold text-slate-900 transition-all focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
@@ -935,7 +941,7 @@ export function TransactionExpense({
                           onChange={(e) => {
                             const val = e.target.value
                             setInstallmentValue(val)
-                            const instVal = parseFloat(val) || 0
+                            const instVal = parseCurrencyToFloat(val) || 0
                             const count =
                               parseInt(
                                 form.getValues('installments_count') || '1',
@@ -948,9 +954,13 @@ export function TransactionExpense({
                             ) {
                               form.setValue(
                                 'amount',
-                                (instVal * count).toFixed(2),
+                                formatCurrencyFromNumber(instVal * count),
                                 { shouldValidate: true },
                               )
+                            } else if (instVal === 0) {
+                              form.setValue('amount', '', {
+                                shouldValidate: true,
+                              })
                             }
                           }}
                         />
@@ -1390,7 +1400,7 @@ export function TransactionExpense({
       <InstallmentPreviewDialog
         open={previewInstallmentsOpen}
         onOpenChange={setPreviewInstallmentsOpen}
-        totalAmount={Number(form.getValues('amount')) || 0}
+        totalAmount={parseCurrencyToFloat(form.getValues('amount')) || 0}
         installmentsCount={Number(form.getValues('installments_count')) || 1}
         frequency={form.getValues('interval_frequency') || 'MONTHLY'}
         startDate={form.getValues('data_vencimento') || new Date()}

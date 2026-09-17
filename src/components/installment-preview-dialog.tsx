@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Input } from '@/components/ui/input'
 import {
   Popover,
@@ -157,8 +158,7 @@ export function InstallmentPreviewDialog({
     setInstallments(newInstallments)
   }
 
-  function handleAmountChange(index: number, newAmountStr: string) {
-    const newAmount = parseFloat(newAmountStr)
+  function handleAmountChange(index: number, newAmount: number) {
     if (isNaN(newAmount)) return
 
     const updatedInstallments = [...installments]
@@ -367,11 +367,9 @@ export function InstallmentPreviewDialog({
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground/50">
                     R$
                   </span>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={inst.amount}
-                    onChange={(e) => handleAmountChange(idx, e.target.value)}
+                    onValueChange={(val) => handleAmountChange(idx, val)}
                     className="h-12 rounded-lg border-none bg-muted/20 pl-8 text-right text-lg font-bold tabular-nums shadow-none transition-all focus:bg-muted/50 focus-visible:ring-0"
                   />
                 </div>
