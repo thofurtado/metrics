@@ -62,6 +62,16 @@ interface DeliveryOrdersDrawerProps {
 // Cache de coordenadas em memória
 const coordsCache: Record<string, [number, number] | null> = {}
 
+function isTakeoutOrder(o: any) {
+  return Boolean(o.is_takeout) ||
+    o.origem === 'Balcão' ||
+    o.origem === 'Balcao' ||
+    o.origem === 'BalcÃ£o' ||
+    o.origem === 'Retirada' ||
+    o.origem === 'Takeout' ||
+    (Boolean(o.observations) && o.observations.toLowerCase().includes('retirada'))
+}
+
 export function DeliveryOrdersDrawer({
   open,
   onClose,
@@ -214,7 +224,7 @@ export function DeliveryOrdersDrawer({
   const pendingOrders = orders.filter((o) => o.status === 'pending')
   const inPrepOrders = orders.filter((o) => o.status === 'in_preparation')
   const conferenciaOrders = orders.filter((o) => o.status === 'conferencia')
-  const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
+  const dispatchedOrders = orders.filter((o) => o.status === 'dispatched' && !isTakeoutOrder(o))
 
   const dispatchedGroupedByDriver = useMemo(() => {
     const groups: Record<string, any[]> = {}
@@ -653,7 +663,7 @@ export function DeliveryOrdersDrawer({
   // MONTAGEM DE ROTA & CÁLCULO INTELIGENTE E PRECISO (GPS / PHOTON / NOMINATIM)
   // =========================================================================
   const openRouteBuilder = () => {
-    const selected = conferenciaOrders.filter((o) => selectedOrderIdsForRoute.includes(o.id) && !o.is_takeout)
+    const selected = conferenciaOrders.filter((o) => selectedOrderIdsForRoute.includes(o.id) && !isTakeoutOrder(o))
     if (selected.length === 0) {
       toast.error('Selecione ao menos 1 pedido de entrega em conferência para construir a rota!')
       return
@@ -1290,7 +1300,7 @@ export function DeliveryOrdersDrawer({
                   <button
                     type="button"
                     onClick={() => {
-                      const candidateList = conferenciaOrders.filter((o) => !o.is_takeout)
+                      const candidateList = conferenciaOrders.filter((o) => !isTakeoutOrder(o))
                       if (selectedOrderIdsForRoute.length > 0) {
                         setSelectedOrderIdsForRoute([])
                       } else {
@@ -1715,10 +1725,7 @@ export function DeliveryOrdersDrawer({
                   const isProducaoTab = activeTab === 'in_preparation'
                   const isConferenciaTab = activeTab === 'conferencia'
                   const isNovosTab = activeTab === 'pending'
-                  const isTakeout = Boolean(order.is_takeout) || 
-                    order.origem === 'Balcão' || 
-                    order.origem === 'Balcao' || 
-                    (Boolean(order.observations) && order.observations.toLowerCase().includes('retirada'))
+                  const isTakeout = isTakeoutOrder(order)
                   const isExpanded = (isProducaoTab || isConferenciaTab) ? !!expandedOrderIds[order.id] : true
                   const isSelectedForRoute = isConferenciaTab && !isTakeout && selectedOrderIdsForRoute.includes(order.id)
                   const hasSharedRegion = isConferenciaTab && !isTakeout && bairro && (neighborhoodCountInConferencia[bairro.toLowerCase()] || 0) > 1
@@ -1834,86 +1841,180 @@ export function DeliveryOrdersDrawer({
                     )
                   }
 
-                  // VISUALIZAÇÃO COLAPSADA NA CONFERÊNCIA (COM ROTA E RESUMO)
+                                    // VISUALIZAÇÃO COLAPSADA NA CONFERÊNCIA (COM ITENS E BOTÃO DE ENTREGA/DESPACHO DIRETO)
                   if (isConferenciaTab && !isExpanded) {
                     return (
                       <div
                         key={order.id}
-                        className={`select-text rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all dark:bg-slate-950 ${
-                          isSelectedForRoute
-                            ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20'
-                            : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+                        className={`select-text rounded-2xl border p-3.5 shadow-sm transition-all ${
+                          isTakeout
+                            ? 'border-amber-300 bg-amber-50/30 hover:border-amber-400 dark:border-amber-900/40 dark:bg-amber-950/20'
+                            : isSelectedForRoute
+                              ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20'
+                              : 'border-blue-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2.5">
-                          {!isTakeout && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])
-                              }}
-                              className="text-slate-400 hover:text-blue-600 transition-colors"
-                              title={isSelectedForRoute ? 'Remover da rota' : 'Selecionar para rota'}
-                            >
-                              {isSelectedForRoute ? (
-                                <CheckSquare className="h-4 w-4 text-blue-600" />
-                              ) : (
-                                <Square className="h-4 w-4" />
-                              )}
-                            </button>
+                        {/* CABEÇALHO DO CARD COLAPSADO */}
+                        <div
+                          className="flex items-start justify-between gap-2 cursor-pointer pb-2 border-b border-slate-100 dark:border-slate-800/80"
+                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {!isTakeout && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedOrderIdsForRoute(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])
+                                }}
+                                className="mr-0.5 text-slate-400 hover:text-blue-600 transition-colors"
+                                title={isSelectedForRoute ? 'Remover da rota' : 'Selecionar para rota'}
+                              >
+                                {isSelectedForRoute ? (
+                                  <CheckSquare className="h-4 w-4 text-blue-600" />
+                                ) : (
+                                  <Square className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
+                            <span className="rounded-md bg-slate-900 px-2 py-0.5 text-xs font-black text-white shrink-0">
+                              #{order.display_id}
+                            </span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white truncate">
+                              {order.client_name}
+                            </span>
+                            {isTakeout ? (
+                              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 shrink-0">
+                                🥡 RETIRADA NO BALCÃO
+                              </span>
+                            ) : order.neighborhood ? (
+                              <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
+                                📍 {order.neighborhood}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                              {formatBRL(order.total_amount || 0)}
+                            </span>
+                            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${sla.badgeBg}`}>
+                              ⏱️ {sla.minutes}m
+                            </span>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOrderToDelete(order)
+                                }}
+                                className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                title="Excluir permanentemente (Admin)"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                          </div>
+                        </div>
+
+                        {/* LISTA COMPLETA DE ITENS DO PEDIDO (CONFERÊNCIA RÁPIDA) */}
+                        <div
+                          className="my-2.5 space-y-1 rounded-xl bg-slate-50/90 p-2.5 border border-slate-100 dark:border-slate-800/60 dark:bg-slate-900/50 cursor-pointer"
+                          onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
+                        >
+                          {order.items && order.items.length > 0 ? (
+                            order.items.map((item: any, idx: number) => {
+                              const itemComps = Array.isArray(item.complements) ? item.complements : []
+                              return (
+                                <div key={item.id || idx} className="text-xs">
+                                  <div className="flex items-center justify-between text-slate-800 dark:text-slate-200">
+                                    <span className="font-bold">
+                                      <strong className="text-blue-600 dark:text-blue-400">{item.quantity}x</strong> {item.name}
+                                    </span>
+                                    <span className="text-[11px] font-medium text-slate-500 shrink-0">
+                                      {formatBRL((item.price || item.unit_price || 0) * (item.quantity || 1))}
+                                    </span>
+                                  </div>
+                                  {itemComps.length > 0 && (
+                                    <div className="pl-4 text-[10px] text-slate-500 italic">
+                                      + {itemComps.map((c: any) => `${c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name || c.optionName}`).join(', ')}
+                                    </div>
+                                  )}
+                                  {item.observation && (
+                                    <div className="pl-4 text-[10px] text-amber-600 dark:text-amber-400">
+                                      Obs: {item.observation}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">Sem itens listados</p>
                           )}
 
-                          <div
-                            className="flex-1 min-w-0 cursor-pointer"
-                            onClick={() => setExpandedOrderIds((prev) => ({ ...prev, [order.id]: true }))}
-                          >
-                            {/* LINHA 1: Nº Pedido, Nome e Bairro | Valor à extrema direita */}
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 min-w-0 truncate">
-                                <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[11px] font-black text-white shrink-0">
-                                  #{order.display_id}
-                                </span>
-                                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
-                                  {order.client_name}
-                                </span>
-                                {order.neighborhood && (
-                                  <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300 shrink-0">
-                                    📍 {order.neighborhood}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">
-                                {formatBRL(order.total_amount || 0)}
-                              </span>
+                          {order.observations && (
+                            <div className="mt-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                              💬 <em>{order.observations}</em>
                             </div>
+                          )}
+                        </div>
 
-                            {/* LINHA 2: Badges lado a lado e Tempo à direita */}
-                            <div className="mt-1 flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {renderQuickProductionBadges(order)}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <span className={`rounded-md px-1.5 py-0.2 text-[10px] font-black ${sla.badgeBg}`}>
-                                  ⏱️ {sla.minutes}m
-                                </span>
-                                {isAdmin && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setOrderToDelete(order)
-                                    }}
-                                    className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                                    title="Excluir permanentemente (Admin)"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                        {/* BOTÃO DIRETO DE AÇÃO NA CONFERÊNCIA */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                          {isTakeout ? (
+                            <button
+                              type="button"
+                              disabled={loadingOrderId === order.id}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openFinalizeModal(order)
+                              }}
+                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-black text-white shadow-md transition-all hover:bg-emerald-500 active:scale-98"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>Entregar no Balcão (Concluir Venda) ✅</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={loadingOrderId === order.id}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openDispatch(order)
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-black text-white shadow-md transition-all hover:bg-blue-500 active:scale-98"
+                              >
+                                <Bike className="h-4 w-4" />
+                                <span>Despachar com Motoboy 🛵</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedOrderIdsForRoute(prev =>
+                                    prev.includes(order.id)
+                                      ? prev.filter(id => id !== order.id)
+                                      : [...prev, order.id]
+                                  )
+                                }}
+                                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all ${
+                                  isSelectedForRoute
+                                    ? 'border-blue-500 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20'
+                                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                                }`}
+                                title="Incluir na montagem de rota"
+                              >
+                                {isSelectedForRoute ? (
+                                  <CheckSquare className="h-4 w-4 text-blue-600" />
+                                ) : (
+                                  <Square className="h-4 w-4" />
                                 )}
-                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                              </div>
+                                <span>Na Rota</span>
+                              </button>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     )
