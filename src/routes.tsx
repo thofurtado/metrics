@@ -123,26 +123,6 @@ export const router = createBrowserRouter([
         element: <TimeClockKiosk />,
       },
       {
-        path: 'stock',
-        element: (
-          <ModuleGuard module="stock_control">
-            <StockDashboard />
-          </ModuleGuard>
-        ),
-      },
-      {
-        path: 'estoque',
-        element: <Navigate to="/stock" replace />,
-      },
-      {
-        path: 'stock/intake',
-        element: <Navigate to="/stock?tab=intake" replace />,
-      },
-      {
-        path: 'estoque/entrada',
-        element: <Navigate to="/stock?tab=intake" replace />,
-      },
-      {
         path: 'hr/timesheet/:employeeId',
         element: (
           <ModuleGuard module="hr_module">
@@ -217,6 +197,26 @@ export const router = createBrowserRouter([
                 <Items />
               </ModuleGuard>
             ),
+          },
+          {
+            path: 'stock',
+            element: (
+              <ModuleGuard module="stock_control">
+                <StockDashboard />
+              </ModuleGuard>
+            ),
+          },
+          {
+            path: 'estoque',
+            element: <Navigate to="/stock" replace />,
+          },
+          {
+            path: 'stock/intake',
+            element: <Navigate to="/stock?tab=intake" replace />,
+          },
+          {
+            path: 'estoque/entrada',
+            element: <Navigate to="/stock?tab=intake" replace />,
           },
           { path: 'suppliers', element: <SuppliersList /> },
           {
