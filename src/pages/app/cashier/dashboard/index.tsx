@@ -363,7 +363,7 @@ export function CashierDashboard() {
       const lotesParaExportar = sessionsFiltradas.map((s: any) => ({
         id: s.id,
         dataReferencia: s.opened_at,
-        periodo: getPeriodoBRT(s.opened_at, s.period),
+        periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
         lancamentos: (s.entries || []).map((e: any) => ({
@@ -388,7 +388,7 @@ export function CashierDashboard() {
     try {
       const lote = {
         dataReferencia: s.opened_at,
-        periodo: getPeriodoBRT(s.opened_at, s.period),
+        periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
         lancamentos: (s.entries || []).map((e: any) => ({
@@ -1039,7 +1039,7 @@ export function CashierDashboard() {
                                 </h4>
                                 <div className="mt-1 flex items-center gap-1.5">
                                   <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                                    {getPeriodoBRT(s.opened_at, s.period)}
+                                    {getPeriodoBRT(s.opened_at, s.period, s.sequence_number)}
                                   </span>
                                   {s.operator_name && (
                                     <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -1259,7 +1259,7 @@ export function CashierDashboard() {
                                 {getWeekdayBRT(s.opened_at)}, {formatDateBRT(s.opened_at)}
                               </span>
                               <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                                {getPeriodoBRT(s.opened_at, s.period)}
+                                {getPeriodoBRT(s.opened_at, s.period, s.sequence_number)}
                               </span>
                               {s.operator_name && (
                                 <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">

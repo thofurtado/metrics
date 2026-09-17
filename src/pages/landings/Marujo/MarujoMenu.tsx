@@ -228,7 +228,56 @@ function generatePixBRCode({
   return `${dataToCrc}${crcStr}`
 }
 
+
+// Verificação de Loja Aberta/Fechada (Alinhado rigorosamente com o White Label)
+function checkIsOpen(profile: any) {
+  if (!profile) return { isOpen: true, reason: 'Aberto' }
+  if (profile.isOpenManual === false) {
+    return { isOpen: false, reason: 'Pausa manual ativada' }
+  }
+
+  const now = new Date()
+  const currentDayOfWeek = now.getDay()
+  const currentHours = String(now.getHours()).padStart(2, '0')
+  const currentMinutes = String(now.getMinutes()).padStart(2, '0')
+  const currentTime = `${currentHours}:${currentMinutes}`
+
+  const businessHours: any[] = profile.businessHours || []
+  const todaySchedules = businessHours.filter(
+    (bh: any) => bh.dayOfWeek === currentDayOfWeek && bh.isOpen,
+  )
+
+  if (!todaySchedules || todaySchedules.length === 0) {
+    return { isOpen: false, reason: 'Fechado hoje' }
+  }
+
+  const activeShift = todaySchedules.find((schedule: any) => {
+    const { openTime, closeTime } = schedule
+    if (!openTime || !closeTime) return false
+    if (closeTime > openTime) {
+      return currentTime >= openTime && currentTime <= closeTime
+    } else {
+      return currentTime >= openTime || currentTime <= closeTime
+    }
+  })
+
+  if (activeShift) {
+    return { isOpen: true, reason: 'Aberto' }
+  }
+
+  const upcomingToday = todaySchedules
+    .filter((s: any) => s.openTime && s.openTime > currentTime)
+    .sort((a: any, b: any) => a.openTime.localeCompare(b.openTime))[0]
+
+  if (upcomingToday) {
+    return { isOpen: false, reason: `Fechado (Abre às ${upcomingToday.openTime})` }
+  }
+
+  return { isOpen: false, reason: 'Fechado no momento' }
+}
+
 export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
+  const storeStatus = useMemo(() => checkIsOpen(profile), [profile])
   // Ativa dark mode permanente para a experiência Haute Coastal
   useEffect(() => {
     const root = document.documentElement
@@ -454,43 +503,82 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
   }
 
   // Finalização do Pedido
+  
+  // Escuta em tempo real o status do pedido criado
+  useEffect(() => {
+    if (!createdOrderId || checkoutStep !== 4) return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/public/orders/${createdOrderId}/status`)
+        if (res.data?.status) {
+          setLiveOrderStatus(res.data.status)
+        }
+      } catch (e) {
+        // Silencioso
+      }
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [createdOrderId, checkoutStep])
+
   const handleConfirmOrder = async () => {
+    if (!storeStatus.isOpen) {
+      alert(storeStatus.reason)
+      return
+    }
+
     setIsSubmittingOrder(true)
     try {
-      const payload = {
-        fulfillmentType,
-        customerName,
-        customerPhone,
-        address: fulfillmentType === 'DELIVERY' ? {
-          street,
-          number,
-          neighborhood,
-          city,
-          state,
-          zipcode,
-          complement,
-        } : null,
-        paymentMethod,
-        items: cartItems.map((item) => ({
-          productId: item.product.id,
-          name: item.product.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.unitPrice * item.quantity,
-          observation: item.observation,
-          selectedOptions: item.selectedOptions,
-        })),
-        total: cartTotal,
-      }
+      const isTakeout = fulfillmentType === 'TAKEOUT'
+      const resolvedPaymentMethod =
+        paymentMethod === 'PIX'
+          ? 'PIX'
+          : paymentMethod === 'CARD'
+            ? 'Cartão'
+            : 'Dinheiro'
 
       let orderId = `marujo-${Date.now()}`
       let displayId = Math.floor(Math.random() * 900) + 100
+
       try {
-        const res = await api.post('/order', payload)
-        if (res.data?.id) orderId = res.data.id
-        if (res.data?.displayId) displayId = res.data.displayId
-      } catch (err) {
-        console.warn('Backend /order offline, continuando em modo demonstração:', err)
+        const res = await api.post('/public/orders', {
+          client_name: customerName,
+          client_phone: customerPhone,
+          origin: isTakeout ? 'Balcão' : 'Delivery',
+          street: isTakeout ? '' : street,
+          number: isTakeout ? '' : (number || 'S/N'),
+          neighborhood: isTakeout ? '' : neighborhood,
+          city: isTakeout ? '' : (city || 'Local'),
+          state: isTakeout ? '' : (state || 'SP'),
+          zipcode: isTakeout ? undefined : (zipcode || undefined),
+          complement: isTakeout ? undefined : (complement || undefined),
+          payment_method_name: resolvedPaymentMethod,
+          delivery_fee: isTakeout ? 0 : deliveryFee,
+          total_amount: cartTotal,
+          notes: isTakeout ? 'Retirada na Marina (Balcão)' : 'Entrega Expressa Gourmet (Delivery)',
+          items: cartItems.map((item) => ({
+            product_id: item.product.id,
+            name: item.product.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            notes: item.observation || undefined,
+            complements: (item.selectedOptions || []).map((o) => ({
+              name: o.name,
+              price: o.price,
+              quantity: 1,
+            })),
+          })),
+        })
+
+        const orderData = res.data?.order || res.data
+        if (orderData?.id) orderId = orderData.id
+        if (orderData?.display_id) displayId = orderData.display_id
+      } catch (err: any) {
+        console.error('Erro ao enviar pedido para o caixa:', err)
+        const errorMsg = err?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
+        alert(`Não foi possível registrar o pedido no caixa: ${errorMsg}`)
+        return
       }
 
       setCreatedOrderId(orderId)
@@ -499,7 +587,7 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
       setLiveOrderStatus('pending')
 
       const itemsText = cartItems.map((i) => `• ${i.quantity}x ${i.product.name} (R$ ${(i.unitPrice * i.quantity).toFixed(2)})`).join('\n')
-      const msg = `*⚓ PEDIDO #${displayId} - MARUJO GASTRO BAR*\n\n*Cliente:* ${customerName}\n*Telefone:* ${customerPhone}\n*Modalidade:* ${fulfillmentType === 'DELIVERY' ? 'Entrega Expressa Gourmet' : 'Retirada na Marina'}\n${fulfillmentType === 'DELIVERY' ? `*Endereço:* ${street}, ${number} - ${neighborhood}${complement ? ` (${complement})` : ''}\n` : ''}*Pagamento:* ${paymentMethod}\n\n*Itens do Pedido:*\n${itemsText}\n\n*Total:* R$ ${cartTotal.toFixed(2)}`
+      const msg = `*⚓ NOVO PEDIDO #${displayId} - MARUJO GASTRO BAR*\n\n*Cliente:* ${customerName}\n*Telefone:* ${customerPhone}\n*Modalidade:* ${isTakeout ? 'Retirada na Marina' : 'Entrega Expressa Gourmet'}\n${!isTakeout ? `*Endereço:* ${street}, ${number || 'S/N'} - ${neighborhood}${complement ? ` (${complement})` : ''}\n` : ''}*Pagamento:* ${resolvedPaymentMethod}\n\n*Itens do Pedido:*\n${itemsText}\n\n*Total:* R$ ${cartTotal.toFixed(2)}\n\n_✅ Pedido registrado no sistema Metrics_`
       setLastOrderText(msg)
 
       setCart({})

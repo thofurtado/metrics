@@ -219,7 +219,7 @@ export function CashierSessionDetails() {
   const loteAtivo = {
     id: session.id,
     dataReferencia: session.opened_at,
-    periodo: getPeriodo(session.opened_at),
+    periodo: getPeriodo(session.opened_at, session.period, session.sequence_number),
     valorAbertura: session.initial_balance,
     status: mapStatus(session.status),
     lancamentos: mappedLancamentos,
