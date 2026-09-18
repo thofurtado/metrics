@@ -242,6 +242,19 @@ export function ItemCustomizerDialog({
     })
   }
 
+  // Grupos de escolha única (máximo 1): tocar numa opção troca a escolhida; em grupo opcional, tocar de novo desmarca
+  const handleSelectSingleOption = (group: ComplementGroup, option: ComplementOption, isMandatory: boolean) => {
+    const wasSelected = (selectedOptionsQty[option.id] || 0) > 0
+    setSelectedOptionsQty((prev) => {
+      const next = { ...prev }
+      group.options.forEach((o) => {
+        delete next[o.id]
+      })
+      if (!wasSelected || isMandatory) next[option.id] = 1
+      return next
+    })
+  }
+
   // Atalhos de observação rápidos (toggle chip)
   const handleToggleShortcut = (chip: string) => {
     setObservation((prev) => {
@@ -263,7 +276,7 @@ export function ItemCustomizerDialog({
   }
 
   // Cálculo do Preço Unitário Total
-  const { unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
+  const { unitPrice, isReadyToConfirm, validationError, missingGroup } = useMemo(() => {
     // 1. Preço Base dos Sabores: padrão de pizzarias/delivery é cobrar pelo MAIOR preço entre as metades
     let baseFlavorPrice = product.price
     if (acceptsFractions && fractionCount > 1) {
@@ -292,6 +305,7 @@ export function ItemCustomizerDialog({
 
     // 3. Validações de Obrigatórios
     let error: string | null = null
+    let missingGroup: ComplementGroup | null = null
 
     if (acceptsFractions && fractionCount > 1) {
       const hasMissingFlavor = selectedFlavors.some((f) => f === null)
@@ -308,6 +322,7 @@ export function ItemCustomizerDialog({
         )
         if (group.min_quantity > 0 && totalInGroup < group.min_quantity) {
           error = `O grupo "${group.name}" requer no mínimo ${group.min_quantity} opção(ões).`
+          missingGroup = group
           break
         }
       }
@@ -317,13 +332,17 @@ export function ItemCustomizerDialog({
       unitPrice: finalUnitPrice,
       isReadyToConfirm: !error,
       validationError: error,
+      missingGroup,
     }
   }, [product, acceptsFractions, fractionCount, selectedFlavors, groups, selectedOptionsQty])
 
   // Montagem e Confirmação do Pedido Customizado
   const handleConfirm = () => {
     if (!isReadyToConfirm) {
-      if (validationError) {
+      // Leva o cliente direto ao grupo que falta (o cartão já fica destacado em âmbar)
+      if (missingGroup) {
+        document.getElementById(`group-${missingGroup.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else if (validationError) {
         alert(validationError)
       }
       return
@@ -399,9 +418,11 @@ export function ItemCustomizerDialog({
           <X className="h-5 w-5 stroke-[2.5]" />
         </button>
 
+        {/* ÁREA ROLÁVEL ÚNICA: foto, título e opções rolam juntos (só o rodapé fica fixo) */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
         {/* HERO BANNER COM PREÇO FLUTUANTE */}
         {product.imageUrl ? (
-          <div className="relative h-60 sm:h-72 md:h-80 w-full shrink-0 overflow-hidden bg-slate-900">
+          <div className="relative h-[min(15rem,28dvh)] sm:h-72 md:h-80 w-full shrink-0 overflow-hidden bg-slate-900">
             <img
               src={resolveImageUrl(product.imageUrl)}
               alt={product.name}
@@ -411,14 +432,14 @@ export function ItemCustomizerDialog({
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
             {/* Pílula de Preço Flutuante Fiel ao Stitch */}
-            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-md backdrop-blur-md tracking-tight">
+            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3.5 py-1.5 text-sm font-black text-slate-900 shadow-md backdrop-blur-md tracking-tight">
               A PARTIR DE {formatBRL(product.price)}
             </div>
           </div>
         ) : (
           <div className="relative border-b border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between pr-16">
             <div className="flex items-center gap-2">
-              <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+              <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
                 <Sparkles className="h-3 w-3" /> {product.category || 'ITEM'}
               </span>
               <span className="text-xs font-extrabold text-slate-700">
@@ -432,24 +453,24 @@ export function ItemCustomizerDialog({
         <div className="shrink-0 px-5 sm:px-6 pt-4 pb-2 bg-white border-b border-slate-100">
           {product.imageUrl && (
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-800">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-800">
                 <Sparkles className="h-3 w-3 text-emerald-600" />
                 {product.category || 'ITEM'}
               </span>
             </div>
           )}
-          <DialogTitle className="mt-1 text-xl sm:text-2xl font-black tracking-tight text-slate-900 leading-tight">
+          <DialogTitle className="mt-1 break-words pr-12 text-2xl font-black tracking-tight text-slate-900 leading-tight">
             {product.name}
           </DialogTitle>
           {product.description && (
-            <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-2xl">
+            <p className="mt-1 text-sm text-slate-600 leading-relaxed max-w-2xl">
               {product.description}
             </p>
           )}
         </div>
 
         {/* CONTEÚDO SCROLLÁVEL */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 bg-slate-50/50">
+        <div className="px-4 sm:px-6 py-4 space-y-4 bg-slate-50/50">
           {/* SEÇÃO 1: FRACIONAMENTO / MEIO-A-MEIO (FIEL AO STITCH) */}
           {acceptsFractions && (
             <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-4">
@@ -514,12 +535,12 @@ export function ItemCustomizerDialog({
                       <h4 className="text-xs sm:text-sm font-black text-slate-900">
                         Pizza Meio a Meio (50% / 50%)
                       </h4>
-                      <p className="text-[11px] text-slate-500 truncate">
+                      <p className="text-xs text-slate-500 truncate">
                         2 metades equilibradas no mesmo disco grande (8 pedaços)
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-1 text-[10px] font-black text-emerald-800 shrink-0">
+                  <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-1 text-xs font-black text-emerald-800 shrink-0">
                     {selectedFlavors.filter(Boolean).length}/2 Selecionados
                   </span>
                 </div>
@@ -532,14 +553,14 @@ export function ItemCustomizerDialog({
                     <Check className="h-3.5 w-3.5 stroke-[3]" />
                   </span>
                   <div className="min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700 block">
                       1º SABOR (1/{fractionCount}) • {fractionCount === 1 ? '100%' : '50%'}
                     </span>
                     <p className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
                       {selectedFlavors[0]?.name || product.name}
                     </p>
                     {selectedFlavors[0]?.description && (
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                         {selectedFlavors[0].description}
                       </p>
                     )}
@@ -553,7 +574,7 @@ export function ItemCustomizerDialog({
                     <button
                       type="button"
                       onClick={() => setActiveFlavorStep(0)}
-                      className="text-[11px] font-bold text-emerald-700 hover:underline inline-flex items-center gap-0.5"
+                      className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-0.5"
                     >
                       Alterar <ChevronDown className="h-3 w-3" />
                     </button>
@@ -607,7 +628,7 @@ export function ItemCustomizerDialog({
                                 setActiveFlavorStep(null)
                                 setFlavorSearch('')
                               }}
-                              className="text-[11px] font-bold text-slate-400 hover:text-slate-700 flex items-center gap-0.5"
+                              className="text-xs font-bold text-slate-400 hover:text-slate-700 flex items-center gap-0.5"
                             >
                               Fechar <ChevronUp className="h-3.5 w-3.5" />
                             </button>
@@ -669,13 +690,13 @@ export function ItemCustomizerDialog({
                                       {sp.name}
                                     </p>
                                     {isMaisPedida && (
-                                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black text-emerald-800">
+                                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs font-black text-emerald-800">
                                         Mais Pedida
                                       </span>
                                     )}
                                   </div>
                                   {sp.description && (
-                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                    <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                                       {sp.description}
                                     </p>
                                   )}
@@ -718,14 +739,14 @@ export function ItemCustomizerDialog({
                             <Check className="h-3.5 w-3.5 stroke-[3]" />
                           </span>
                           <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                            <span className="text-xs font-black uppercase tracking-wider text-emerald-700 block">
                               {idx + 1}º SABOR (1/{fractionCount}) • 50%
                             </span>
                             <p className="text-xs sm:text-sm font-black text-slate-900 truncate">
                               {selectedFlavor.name}
                             </p>
                             {selectedFlavor.description && (
-                              <p className="text-[11px] text-slate-500 truncate max-w-sm">
+                              <p className="text-xs text-slate-500 truncate max-w-sm">
                                 {selectedFlavor.description}
                               </p>
                             )}
@@ -735,7 +756,7 @@ export function ItemCustomizerDialog({
                           <span className="text-xs font-black text-slate-800">
                             {formatBRL(selectedFlavor.price)}
                           </span>
-                          <span className="text-[11px] font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">
+                          <span className="text-xs font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">
                             Alterar <ChevronDown className="h-3.5 w-3.5" />
                           </span>
                         </div>
@@ -758,7 +779,7 @@ export function ItemCustomizerDialog({
                           {idx + 1}
                         </span>
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block">
+                          <span className="text-xs font-black uppercase tracking-wider text-amber-700 block">
                             {idx + 1}º Sabor (1/{fractionCount}) • OBRIGATÓRIO
                           </span>
                           <p className="text-xs font-black text-amber-900">
@@ -775,7 +796,7 @@ export function ItemCustomizerDialog({
             </div>
           )}
 
-          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS ESTILO STITCH (OBRIGATÓRIOS DESTACADOS NO TOPO) */}
+          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS (OBRIGATÓRIOS NO TOPO; ESCOLHA ÚNICA VIRA LISTA DE SELEÇÃO) */}
           {groups.map((group) => {
             const totalQtyInGroup = group.options.reduce(
               (sum, opt) => sum + (selectedOptionsQty[opt.id] || 0),
@@ -783,6 +804,7 @@ export function ItemCustomizerDialog({
             )
             const isMandatory = (group.min_quantity && group.min_quantity > 0) || (group as any).is_required
             const isSatisfied = isMandatory ? totalQtyInGroup >= group.min_quantity : true
+            const isSingle = group.max_quantity === 1
 
             return (
               <div
@@ -794,25 +816,29 @@ export function ItemCustomizerDialog({
                     : 'border-slate-200/90'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">{group.name}</h4>
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-slate-100 pb-3">
+                  <div className="min-w-0 flex-1 basis-[10rem]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="break-words text-lg font-black text-slate-900 tracking-tight">{group.name}</h4>
                       {group.free_quantity > 0 && (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-extrabold text-emerald-800">
                           {group.free_quantity === 1 ? '1º Grátis' : `${group.free_quantity} Grátis`}
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[11px] font-medium text-slate-500">
-                      {isMandatory
-                        ? `Escolha no mínimo ${group.min_quantity} e no máximo ${group.max_quantity}`
-                        : `Escolha até ${group.max_quantity} opções`}
+                    <p className="mt-0.5 text-sm font-medium text-slate-600">
+                      {isSingle
+                        ? 'Escolha 1 opção'
+                        : isMandatory
+                          ? group.min_quantity === group.max_quantity
+                            ? `Escolha ${group.max_quantity} opções`
+                            : `Escolha de ${group.min_quantity} a ${group.max_quantity} opções`
+                          : `Escolha até ${group.max_quantity} opções`}
                     </p>
                   </div>
                   {isMandatory && (
                     <span
-                      className={`shrink-0 rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-all ${
+                      className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-all ${
                         isSatisfied
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-500 text-white shadow-xs'
@@ -823,9 +849,9 @@ export function ItemCustomizerDialog({
                   )}
                 </div>
 
-                {group.free_quantity > 0 && (
-                  <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5 text-[11px] text-emerald-900">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                {group.free_quantity > 0 && !isSingle && (
+                  <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5 text-sm text-emerald-900">
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                     <span>
                       {group.free_quantity === 1
                         ? 'O primeiro item é por nossa conta! Demais são cobrados à parte.'
@@ -834,43 +860,77 @@ export function ItemCustomizerDialog({
                   </div>
                 )}
 
-                <div className="divide-y divide-slate-100 pt-1">
+                <div
+                  className="divide-y divide-slate-100 pt-1"
+                  role={isSingle ? 'radiogroup' : undefined}
+                  aria-label={group.name}
+                >
                   {group.options.map((opt) => {
                     const qty = selectedOptionsQty[opt.id] || 0
                     const canAdd = totalQtyInGroup < group.max_quantity
+                    const priceLabel = opt.price > 0 ? `+ ${formatBRL(opt.price)}` : 'Grátis'
+
+                    if (isSingle) {
+                      const selected = qty > 0
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => handleSelectSingleOption(group, opt, Boolean(isMandatory))}
+                          className="flex min-h-14 w-full items-center gap-3 py-3 text-left transition-colors active:bg-slate-50"
+                        >
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                              selected ? 'border-transparent text-white' : 'border-slate-300 bg-white'
+                            }`}
+                            style={selected ? { backgroundColor: primaryColor } : undefined}
+                          >
+                            {selected && <Check className="h-4 w-4 stroke-[3]" />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block break-words text-base font-black leading-snug text-slate-900">
+                              {opt.name}
+                            </span>
+                            <span className="block text-sm font-semibold text-slate-600">{priceLabel}</span>
+                          </span>
+                        </button>
+                      )
+                    }
 
                     return (
                       <div
                         key={opt.id}
-                        className="flex items-center justify-between py-2.5 sm:py-3"
+                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3"
                       >
-                        <div>
-                          <p className="text-sm sm:text-base font-black text-slate-900 leading-snug">{opt.name}</p>
-                          <p className="text-[11px] font-semibold text-slate-500">
-                            {opt.price > 0 ? `+ ${formatBRL(opt.price)}` : 'Grátis'}
-                          </p>
+                        <div className="min-w-0 flex-1 basis-[9rem]">
+                          <p className="break-words text-base font-black text-slate-900 leading-snug">{opt.name}</p>
+                          <p className="text-sm font-semibold text-slate-600">{priceLabel}</p>
                         </div>
 
-                        <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
                           <button
                             type="button"
+                            aria-label={`Diminuir ${opt.name}`}
                             onClick={() => handleDecreaseOption(opt)}
                             disabled={qty === 0}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-800 border border-slate-200 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-20 active:scale-90"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-800 border border-slate-200 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-20 active:scale-90"
                           >
-                            <Minus className="h-3.5 w-3.5 stroke-[3]" />
+                            <Minus className="h-5 w-5 stroke-[3]" />
                           </button>
-                          <span className="w-6 text-center text-sm font-black text-slate-900">
+                          <span className="min-w-8 text-center text-lg font-black text-slate-900">
                             {qty}
                           </span>
                           <button
                             type="button"
+                            aria-label={`Aumentar ${opt.name}`}
                             onClick={() => handleIncreaseOption(group, opt)}
                             disabled={!canAdd}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-xs transition-all disabled:opacity-20 active:scale-90"
+                            className="flex h-11 w-11 items-center justify-center rounded-full text-white shadow-xs transition-all disabled:opacity-20 active:scale-90"
                             style={{ backgroundColor: primaryColor }}
                           >
-                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                            <Plus className="h-5 w-5 stroke-[3]" />
                           </button>
                         </div>
                       </div>
@@ -880,25 +940,24 @@ export function ItemCustomizerDialog({
               </div>
             )
           })}
-
           {/* SEÇÃO 3: OBSERVAÇÕES PARA PRODUÇÃO COM ATALHOS FREQUENTES (FIEL À IMAGEM 2) */}
           <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-3">
             {/* Header com ícone de edição */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
                   <Edit3 className="h-5 w-5 stroke-[2.2]" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm sm:text-base font-black text-slate-900">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h4 className="text-base font-black text-slate-900">
                       Observações para Produção
                     </h4>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
                       Opcional
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-sm text-slate-600">
                     Avise sobre pontos da carne, remoção de ingredientes ou alergias
                   </p>
                 </div>
@@ -907,15 +966,15 @@ export function ItemCustomizerDialog({
 
             {/* Atalhos Frequentes Chips */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  ATALHOS FREQUENTES
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  Atalhos frequentes
                 </span>
-                <span className="text-[10px] font-bold text-slate-500">
-                  Toque para adicionar rápido
+                <span className="text-xs font-bold text-slate-500">
+                  Toque para adicionar
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {FREQUENT_SHORTCUTS.map((chip) => {
                   const isSelected = observation.toLowerCase().includes(chip.toLowerCase())
                   return (
@@ -923,7 +982,7 @@ export function ItemCustomizerDialog({
                       key={chip}
                       type="button"
                       onClick={() => handleToggleShortcut(chip)}
-                      className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all border ${
+                      className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-all border ${
                         isSelected
                           ? 'bg-emerald-100 text-emerald-900 border-emerald-300 shadow-xs'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -942,12 +1001,12 @@ export function ItemCustomizerDialog({
                 placeholder="Ex: Tirar cebola, carne bem passada, enviar sachês..."
                 value={observation}
                 onChange={(e) => setObservation(e.target.value.slice(0, 140))}
-                className="w-full h-20 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none font-medium"
+                className="w-full h-24 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none font-medium"
                 maxLength={140}
               />
-              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] text-slate-400">
-                <div className="flex items-center gap-1 text-slate-400">
-                  <Info className="h-3 w-3" />
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                <div className="flex items-center gap-1 text-slate-500">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
                   <span>Não informe dados sensíveis ou pagamento aqui</span>
                 </div>
                 <span className="font-bold">{observation.length}/140</span>
@@ -969,6 +1028,8 @@ export function ItemCustomizerDialog({
           </div>
         </div>
 
+        </div>
+
         {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO */}
         <div className="border-t border-slate-100 bg-white p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
           {acceptsFractions && fractionCount > 1 && selectedFlavors.filter(Boolean).length === fractionCount && (
@@ -977,50 +1038,50 @@ export function ItemCustomizerDialog({
             </p>
           )}
 
-          {validationError && (
-            <p className="mb-2 text-center text-xs font-bold text-amber-700">
-              ⚠️ {validationError}
-            </p>
-          )}
+            {/* Quantidade do prato + confirmar (quebra em duas linhas quando a tela é estreita) */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-xs">
+                <button
+                  type="button"
+                  aria-label="Diminuir quantidade"
+                  onClick={() => setItemQuantity((q) => Math.max(1, q - 1))}
+                  disabled={itemQuantity <= 1}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all disabled:opacity-30 active:scale-95"
+                >
+                  <Minus className="h-5 w-5 stroke-[2.5]" />
+                </button>
+                <span className="min-w-8 text-center text-lg font-black text-slate-900">
+                  {itemQuantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Aumentar quantidade"
+                  onClick={() => setItemQuantity((q) => q + 1)}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all active:scale-95"
+                >
+                  <Plus className="h-5 w-5 stroke-[2.5]" />
+                </button>
+              </div>
 
-          <div className="flex items-center justify-between gap-3">
-            {/* Contador de Quantidade do Prato */}
-            <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-xs">
               <button
                 type="button"
-                onClick={() => setItemQuantity((q) => Math.max(1, q - 1))}
-                disabled={itemQuantity <= 1}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all disabled:opacity-30 active:scale-95"
+                onClick={handleConfirm}
+                className={`flex min-h-12 min-w-[8rem] flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-black text-white shadow-md transition-all active:scale-[0.98] touch-manipulation cursor-pointer ${
+                  isReadyToConfirm ? 'hover:brightness-105' : 'bg-amber-600 hover:bg-amber-500'
+                }`}
+                style={isReadyToConfirm ? { backgroundColor: primaryColor } : undefined}
               >
-                <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
-              </button>
-              <span className="w-6 text-center text-sm font-black text-slate-900">
-                {itemQuantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => setItemQuantity((q) => q + 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all active:scale-95"
-              >
-                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                <ShoppingBag className="h-5 w-5 shrink-0" />
+                <span className="text-center leading-tight">
+                  {isReadyToConfirm
+                    ? `Adicionar · ${formatBRL(unitPrice * itemQuantity)}`
+                    : missingGroup
+                      ? `Escolha: ${missingGroup.name}`
+                      : 'Escolha as opções obrigatórias'}
+                </span>
               </button>
             </div>
-
-            {/* Botão de Adicionar à Sacola */}
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98] touch-manipulation cursor-pointer ${
-                isReadyToConfirm ? 'hover:brightness-105' : 'bg-amber-600 hover:bg-amber-500'
-              }`}
-              style={isReadyToConfirm ? { backgroundColor: primaryColor } : undefined}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              <span>{isReadyToConfirm ? 'ADICIONAR À SACOLA' : 'SELECIONE OS OBRIGATÓRIOS'}</span>
-              <span className="ml-1 opacity-90">{formatBRL(unitPrice * itemQuantity)}</span>
-            </button>
           </div>
-        </div>
       </DialogContent>
     </Dialog>
   )

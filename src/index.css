@@ -14,6 +14,37 @@ html {
   }
 }
 
+/* ==========================================================================
+   CARDÁPIO PÚBLICO: ESCALA FLUIDA (ativada por GenericMenu via html.menu-fluid)
+   Todo o cardápio é desenhado em rem; ao escalar a raiz, texto, ícones e
+   espaçamentos crescem juntos. --menu-text-scale é a preferência do cliente
+   (Normal 1 / Grande 1.15 / Maior 1.3). Sem rolagem horizontal em nenhum caso.
+   ========================================================================== */
+html.menu-fluid {
+  font-size: calc(clamp(17px, 2.4vw + 8px, 19px) * var(--menu-text-scale, 1));
+  max-width: 100%;
+  overflow-x: clip;
+}
+html.menu-fluid body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+@media (min-width: 640px) {
+  html.menu-fluid {
+    font-size: calc(17px * var(--menu-text-scale, 1));
+  }
+}
+@media (min-width: 1024px) {
+  html.menu-fluid {
+    font-size: calc(16px * var(--menu-text-scale, 1));
+  }
+}
+@media (min-width: 1920px) {
+  html.menu-fluid {
+    font-size: calc(20px * var(--menu-text-scale, 1));
+  }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -194,5 +225,15 @@ input[type="number"] {
 
   input:focus, select:focus, textarea:focus {
     @apply border-primary ring-2 ring-primary/25 dark:ring-primary/40 outline-none;
+  }
+}
+/* Rolagem horizontal sem barra visível (chips de categoria, listas de atalhos) */
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

@@ -218,6 +218,9 @@ interface CartItem {
   }[]
 }
 
+// Níveis de tamanho do texto do cardápio (multiplicam a escala fluida definida em index.css)
+const MENU_TEXT_SCALES = [1, 1.15, 1.3]
+
 const DAYS_OF_WEEK = [
   'Domingo',
   'Segunda-feira',
@@ -532,6 +535,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [isCartModalOpen, setIsCartModalOpen] = useState(false)
   const [isStoreInfoOpen, setIsStoreInfoOpen] = useState(false)
+
+  // Acessibilidade: tamanho do texto do cardápio (3 níveis), lembrado no aparelho do cliente
+  const [textLevel, setTextLevel] = useState<number>(() => {
+    try {
+      const saved = Number(localStorage.getItem('menu_text_level'))
+      return saved >= 0 && saved < MENU_TEXT_SCALES.length ? saved : 0
+    } catch {
+      return 0
+    }
+  })
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.add('menu-fluid')
+    root.style.setProperty('--menu-text-scale', String(MENU_TEXT_SCALES[textLevel]))
+    try {
+      localStorage.setItem('menu_text_level', String(textLevel))
+    } catch {
+      /* sem armazenamento: apenas não lembra a preferência */
+    }
+    return () => {
+      root.classList.remove('menu-fluid')
+      root.style.removeProperty('--menu-text-scale')
+    }
+  }, [textLevel])
 
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
@@ -2059,7 +2086,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   </>
                 )}
               </div>
-              <span className="text-[11px] font-semibold text-slate-500 shrink-0">
+              <span className="text-xs font-semibold text-slate-500 shrink-0">
                 Mínimo: {formatCurrency(minOrderValue)}
               </span>
             </div>
@@ -2158,7 +2185,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
               SUBTOTAL
             </span>
-            <p className="text-[11px] text-slate-400">Taxa de entrega calculada a seguir</p>
+            <p className="text-xs text-slate-400">Taxa de entrega calculada a seguir</p>
           </div>
           <span className="text-2xl font-black text-slate-900 tracking-tight">
             {formatCurrency(cartSubtotal)}
@@ -2189,59 +2216,69 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
             {/* Conteúdo Posicionado Sobre o Header (Fiel à Imagem 3 Mobile e Imagem 4 Desktop) */}
             <div className="relative z-20 flex flex-col gap-3 text-white">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Logo circular com aro dourado refinado */}
-                  <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-full border-2 border-amber-400/90 bg-black/40 shadow-xl p-0.5">
-                    {profile?.logo_url ? (
-                      <img
-                        src={resolveImageUrl(profile.logo_url)}
-                        alt="Logo"
-                        className="h-full w-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <Store className="h-full w-full p-2.5 text-amber-400" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <span className="block text-[10px] font-black uppercase tracking-widest text-amber-300">
-                      DELIVERY & TAKEOUT
-                    </span>
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-black leading-tight tracking-tight text-white truncate">
-                      {profile?.tradeName || tenantName}
-                    </h1>
-                    <p className="mt-0.5 text-xs text-white/80 font-medium truncate max-w-md sm:max-w-xl">
-                      {profile?.description || profile?.subtitle || 'Culinária artesanal com ingredientes nobres'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Botão Informações no topo direito */}
+              {/* Ferramentas: tamanho do texto e informações da loja */}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTextLevel((l) => (l + 1) % MENU_TEXT_SCALES.length)}
+                  aria-label="Mudar o tamanho do texto"
+                  className="flex min-h-11 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-4 text-white backdrop-blur-md transition-all hover:bg-white/25 active:scale-95"
+                >
+                  <span className="flex items-baseline font-black leading-none">
+                    <span className="text-sm">A</span>
+                    <span className="text-lg">A</span>
+                  </span>
+                  <span className="text-xs font-bold text-white/80">
+                    {textLevel === 0 ? 'Normal' : textLevel === 1 ? 'Grande' : 'Maior'}
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsStoreInfoOpen(true)}
-                  className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-md transition-all hover:bg-white/25 hover:text-white shadow-sm"
+                  className="flex min-h-11 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-4 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/25 active:scale-95"
                 >
-                  <Info className="h-3.5 w-3.5" /> Informações
+                  <Info className="h-4 w-4" /> Informações
                 </button>
               </div>
 
+              <div className="flex min-w-0 items-center gap-3">
+                {/* Logo circular com aro dourado refinado */}
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-amber-400/90 bg-black/40 p-0.5 shadow-xl">
+                  {profile?.logo_url ? (
+                    <img
+                      src={resolveImageUrl(profile.logo_url)}
+                      alt="Logo"
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <Store className="h-full w-full p-2.5 text-amber-400" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h1 className="break-words text-2xl font-black leading-tight tracking-tight text-white line-clamp-3 lg:text-3xl">
+                    {profile?.tradeName || tenantName}
+                  </h1>
+                  <p className="mt-0.5 line-clamp-2 max-w-xl text-sm font-medium text-white/85">
+                    {profile?.description || profile?.subtitle || 'Culinária artesanal com ingredientes nobres'}
+                  </p>
+                </div>
+              </div>
               {/* Badges de Atendimento */}
               <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 {!storeStatus.isOpen ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
                     {storeStatus.reason}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#10b981] px-3.5 py-1 text-[11px] font-black uppercase tracking-wider text-white shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#10b981] px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-sm">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
                     ABERTO AGORA
                   </span>
                 )}
 
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-md">
                   <Clock className="h-3.5 w-3.5 text-emerald-300" />
                   {resolvedDeliveryTime ? (
                     <span>{resolvedDeliveryTime.min}-{resolvedDeliveryTime.max} min</span>
@@ -2259,7 +2296,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       setIsNeighborhoodPickerOpen(true)
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md hover:bg-black/50 transition-all cursor-pointer shadow-sm text-left"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-md hover:bg-black/50 transition-all cursor-pointer shadow-sm text-left"
                   title="Clique para consultar taxa do seu bairro"
                 >
                   <Truck className="h-3.5 w-3.5 text-emerald-300" />
@@ -2286,10 +2323,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <Search className="h-5 w-5 text-slate-400 shrink-0" />
               <input
                 type="text"
-                placeholder="O que você está desejando hoje?"
+                placeholder="Buscar no cardápio"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-sm font-medium text-slate-800 placeholder-slate-400 outline-none"
+                className="w-full bg-transparent text-base font-medium text-slate-800 placeholder-slate-400 outline-none"
               />
               {searchQuery && (
                 <button
@@ -2318,7 +2355,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     key={cat}
                     type="button"
                     onClick={() => setActiveCategory(cat)}
-                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                    className={`shrink-0 min-h-11 rounded-full px-5 py-2 text-sm font-bold transition-all ${
                       isActive
                         ? 'text-white shadow-sm ring-1 ring-black/10'
                         : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -2360,11 +2397,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <section key={catName}>
                   {!searchQuery && (
                     <div className="mb-4 flex items-center gap-2.5">
-                      <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
+                      <h2 className="break-words text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
                         {catName}
                       </h2>
-                      <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-extrabold text-slate-700">
-                        {prods.length} itens
+                      <span className="shrink-0 rounded-full bg-slate-200/80 px-2.5 py-0.5 text-sm font-extrabold text-slate-700">
+                        {prods.length} {prods.length === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
                   )}
@@ -2379,26 +2416,30 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       const metaLabel = getProductMetaLabel(product)
 
                       const renderActionButton = (isCompact = false) => {
+                        const btnBase =
+                          'flex items-center justify-center gap-2 font-black text-white shadow-sm transition-transform active:scale-95 touch-manipulation cursor-pointer'
+                        const btnSize = isCompact
+                          ? 'w-full min-h-12 rounded-2xl px-4 text-base'
+                          : 'min-h-11 rounded-xl px-4 text-sm'
+
                         if (isCustomizable) {
                           return (
                             <button
                               type="button"
                               onClick={() => handleProductClick(product)}
-                              className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 touch-manipulation cursor-pointer ${
-                                isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
-                              }`}
+                              className={`${btnBase} ${btnSize}`}
                               style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
                             >
                               {totalInCart > 0 ? (
                                 <>
-                                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[10px] font-black">
+                                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/25 px-1 text-xs font-black">
                                     {totalInCart}
                                   </span>
                                   Adicionar
                                 </>
                               ) : (
                                 <>
-                                  <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                                  <Plus className="h-5 w-5 stroke-[3]" />
                                   Adicionar
                                 </>
                               )}
@@ -2407,25 +2448,32 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         }
 
                         if (cart[product.id]) {
+                          const stepBtn = isCompact ? 'h-11 w-11' : 'h-9 w-9'
                           return (
-                            <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
+                            <div
+                              className={`flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 p-1 ${
+                                isCompact ? 'w-full justify-between' : ''
+                              }`}
+                            >
                               <button
                                 type="button"
+                                aria-label="Diminuir quantidade"
                                 onClick={() => handleRemoveFromCart(product.id)}
-                                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95 touch-manipulation cursor-pointer"
+                                className={`flex ${stepBtn} items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95 touch-manipulation cursor-pointer`}
                               >
-                                <Minus className="h-3 w-3 stroke-[3]" />
+                                <Minus className="h-5 w-5 stroke-[3]" />
                               </button>
-                              <span className="w-5 text-center text-xs font-black text-slate-900">
+                              <span className="min-w-8 text-center text-lg font-black text-slate-900">
                                 {cart[product.id].quantity}
                               </span>
                               <button
                                 type="button"
+                                aria-label="Aumentar quantidade"
                                 onClick={() => handleAddToCart(product)}
-                                className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer"
+                                className={`flex ${stepBtn} items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer`}
                                 style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
                               >
-                                <Plus className="h-3 w-3 stroke-[3]" />
+                                <Plus className="h-5 w-5 stroke-[3]" />
                               </button>
                             </div>
                           )
@@ -2435,67 +2483,68 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           <button
                             type="button"
                             onClick={() => handleAddToCart(product)}
-                            className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 touch-manipulation cursor-pointer ${
-                              isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
-                            }`}
+                            className={`${btnBase} ${btnSize}`}
                             style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
                           >
-                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                            <Plus className="h-5 w-5 stroke-[3]" />
                             Adicionar
                           </button>
                         )
                       }
 
+                      const metaShort = String(metaLabel || '').replace(/^UNIT[ÁA]RIO\s*(•\s*)?/i, '').trim()
+
                       return (
                         <Fragment key={product.id}>
-                          {/* 1. CARD MOBILE (EXCLUSIVO MOBILE - FIEL À IMAGEM 3) */}
-                          <div className="sm:hidden group relative flex items-center gap-3.5 p-3 rounded-3xl border border-slate-100 bg-white shadow-xs hover:shadow-sm transition-all">
-                            {/* Thumbnail Quadrada à Esquerda */}
-                            <div
-                              className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-100 cursor-pointer"
-                              onClick={() => handleProductClick(product)}
-                            >
-                              {product.imageUrl ? (
-                                <img
-                                  src={resolveImageUrl(product.imageUrl)}
-                                  alt={product.name}
-                                  onError={(e) => {
-                                    (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
-                                  }}
-                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-slate-300">
-                                  <UtensilsCrossed className="h-8 w-8 opacity-30" />
-                                </div>
-                              )}
-                            </div>
+                          {/* 1. CARD MOBILE: foto + texto e botão de largura total (alvo de toque grande) */}
+                          <div className="sm:hidden group relative space-y-3 rounded-3xl border border-slate-100 bg-white p-3 shadow-xs transition-all hover:shadow-sm">
+                            <div className="flex items-start gap-3">
+                              {/* Foto: largura fluida, nunca esmaga o texto */}
+                              <div
+                                className="aspect-square w-[28%] min-w-[4.5rem] max-w-[7.5rem] shrink-0 cursor-pointer overflow-hidden rounded-2xl bg-slate-100"
+                                onClick={() => handleProductClick(product)}
+                              >
+                                {product.imageUrl ? (
+                                  <img
+                                    src={resolveImageUrl(product.imageUrl)}
+                                    alt={product.name}
+                                    onError={(e) => {
+                                      (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
+                                    }}
+                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                    <UtensilsCrossed className="h-8 w-8 opacity-30" />
+                                  </div>
+                                )}
+                              </div>
 
-                            {/* Conteúdo do Produto à Direita */}
-                            <div className="flex flex-1 min-w-0 flex-col justify-between self-stretch py-0.5">
-                              <div onClick={() => handleProductClick(product)} className="cursor-pointer">
-                                <h3 className="text-sm font-extrabold leading-snug text-slate-900 line-clamp-1">
+                              <div
+                                onClick={() => handleProductClick(product)}
+                                className="min-w-0 flex-1 cursor-pointer space-y-1"
+                              >
+                                <h3 className="break-words text-lg font-extrabold leading-snug text-slate-900 line-clamp-3">
                                   {product.name}
                                 </h3>
                                 {product.description && (
-                                  <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 leading-snug">
+                                  <p className="break-words text-sm leading-snug text-slate-600 line-clamp-2">
                                     {product.description}
                                   </p>
                                 )}
-                                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                                  {metaLabel}
-                                </span>
-                              </div>
-
-                              <div className="mt-1.5 flex items-center justify-between gap-2">
-                                <span className="text-base font-black tracking-tight text-slate-900">
+                                {metaShort && (
+                                  <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    {metaShort}
+                                  </span>
+                                )}
+                                <span className="block text-xl font-black tracking-tight text-slate-900">
                                   {formatCurrency(product.price)}
                                 </span>
-                                <div>{renderActionButton(true)}</div>
                               </div>
                             </div>
-                          </div>
 
+                            {renderActionButton(true)}
+                          </div>
                           {/* 2. CARD DESKTOP (EXCLUSIVO DESKTOP - FIEL À IMAGEM 4) */}
                           <div className="hidden sm:flex group relative flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs hover:shadow-md transition-all">
                             {/* Imagem Proporcional no Topo */}
@@ -2522,26 +2571,23 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             {/* Corpo do Card com Metadados e Título */}
                             <div className="flex flex-1 flex-col justify-between p-4 space-y-2">
                               <div>
-                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                                  {metaLabel}
-                                </span>
+                                {metaShort && (
+                                  <span className="mb-1 block text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                    {metaShort}
+                                  </span>
+                                )}
                                 <h3
                                   onClick={() => handleProductClick(product)}
-                                  className="text-base font-extrabold leading-snug text-slate-900 line-clamp-2 min-h-[44px] cursor-pointer"
+                                  className="min-h-[3rem] cursor-pointer break-words text-lg font-extrabold leading-snug text-slate-900 line-clamp-2"
                                 >
                                   {product.name}
                                 </h3>
                               </div>
 
-                              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] font-bold uppercase text-slate-400">
-                                    Valor
-                                  </span>
-                                  <span className="text-lg font-black tracking-tight text-slate-900">
-                                    {formatCurrency(product.price)}
-                                  </span>
-                                </div>
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                                <span className="text-xl font-black tracking-tight text-slate-900">
+                                  {formatCurrency(product.price)}
+                                </span>
                                 <div>{renderActionButton(false)}</div>
                               </div>
                             </div>
@@ -2557,12 +2603,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         </div>
 
         {/* Rodapé da Página Desktop/Geral (Fiel à Imagem 4) */}
-        <footer className="mt-auto border-t border-slate-200/80 bg-white px-6 py-6 text-xs text-slate-500">
+        <footer className="mt-auto border-t border-slate-200/80 bg-white px-6 py-6 text-sm text-slate-500">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-center text-slate-500 sm:text-left">
               © {new Date().getFullYear()} {profile?.tradeName || tenantName}. Todos os direitos reservados.
             </p>
-            <div className="flex items-center gap-6 font-medium text-slate-500">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-medium text-slate-500">
               <a href="#termos" onClick={(e) => { e.preventDefault(); alert('Termos de Uso do Estabelecimento.'); }} className="hover:text-slate-800 transition-colors">Termos de Uso</a>
               <span>•</span>
               <a href="#privacidade" onClick={(e) => { e.preventDefault(); alert('Políticas de Privacidade e Proteção de Dados.'); }} className="hover:text-slate-800 transition-colors">Políticas de Privacidade</a>
@@ -2587,27 +2633,27 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', bounce: 0.2 }}
-            className="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto lg:hidden"
+            className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-40 max-w-md mx-auto lg:hidden"
           >
             <button
               type="button"
               onClick={() => setIsCartModalOpen(true)}
-              className="flex w-full items-center justify-between rounded-2xl p-3 px-4.5 bg-[#101828] text-white shadow-2xl transition-transform active:scale-[0.98] border border-slate-800 touch-manipulation cursor-pointer"
+              className="flex min-h-14 w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-2xl bg-[#101828] px-4 py-3 text-white shadow-2xl transition-transform active:scale-[0.98] border border-slate-800 touch-manipulation cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white font-black text-xs shadow-inner">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-white font-black text-sm shadow-inner">
                   {cartCount}
                 </div>
                 <div className="text-left">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400 leading-tight">
                     Subtotal
                   </p>
-                  <p className="text-base font-black text-white leading-tight">
+                  <p className="text-lg font-black text-white leading-tight">
                     {formatCurrency(cartSubtotal)}
                   </p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-sm font-black text-amber-400 hover:text-amber-300 transition-colors">
+              <span className="flex items-center gap-1 text-base font-black text-amber-400 hover:text-amber-300 transition-colors">
                 <span>Ver Sacola</span>
                 <ChevronRight className="h-4 w-4 stroke-[3]" />
               </span>
@@ -2744,39 +2790,36 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
           {/* Cabeçalho Fiel ao Stitch */}
           <DialogHeader className="pb-2 border-b border-slate-100">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-100/80 shadow-2xs">
-                  <ShoppingBag className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <DialogTitle className="text-base sm:text-lg font-black text-slate-900 leading-tight truncate">
-                    {checkoutWizardStep === 1 && 'Checkout Recebimento'}
-                    {checkoutWizardStep === 2 && 'Checkout Identificação'}
-                    {checkoutWizardStep === 3 && 'Checkout Entrega'}
-                    {checkoutWizardStep === 4 && 'Ponto Exato de Entrega'}
-                    {checkoutWizardStep === 5 && 'Checkout Pagamento'}
-                    {checkoutWizardStep === 6 && 'Acompanhamento do Pedido'}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs font-semibold text-slate-500 truncate">
-                    {profile?.name || tenantName || 'Alta Gastronomia Express'}
-                  </DialogDescription>
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-[9rem] flex-1">
+                <DialogTitle className="text-xl font-black leading-tight text-slate-900">
+                  {checkoutWizardStep === 1 && 'Como receber'}
+                  {checkoutWizardStep === 2 && 'Seus dados'}
+                  {checkoutWizardStep === 3 && 'Endereço'}
+                  {checkoutWizardStep === 4 && 'Local no mapa'}
+                  {checkoutWizardStep === 5 && 'Pagamento'}
+                  {checkoutWizardStep === 6 && 'Seu pedido'}
+                </DialogTitle>
+                <DialogDescription className="text-sm font-semibold text-slate-500 line-clamp-2">
+                  {profile?.name || tenantName || 'Alta Gastronomia Express'}
+                </DialogDescription>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
+                  aria-label="Meus dados"
                   onClick={() => {
                     if (customerPhone) setCheckoutWizardStep(2)
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-800 text-white hover:bg-emerald-900 transition-all shadow-xs"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 text-white shadow-xs transition-all hover:bg-emerald-900"
                   title={customerName ? `Identificado: ${customerName}` : 'Identificação'}
                 >
-                  <User className="h-4 w-4" />
+                  <User className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
+                  aria-label="Fechar"
                   onClick={() => {
                     if (checkoutWizardStep === 6) {
                       handleFinishAndReset()
@@ -2784,64 +2827,40 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       setIsCheckoutStepOpen(false)
                     }
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-all hover:bg-slate-200"
                   title="Fechar"
                 >
-                  <X className="h-4 w-4 stroke-[2.5]" />
+                  <X className="h-5 w-5 stroke-[2.5]" />
                 </button>
               </div>
             </div>
 
-            {/* Barra de Progresso em 4 Etapas Fiel ao Stitch */}
-            {checkoutWizardStep < 6 && (
-              <div className="pt-2.5 pb-1">
-                <div className={`grid gap-2 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-5'}`}>
-                  {/* Etapa 1: Sacola */}
-                  <div>
-                    <div className="h-1.5 rounded-full bg-emerald-700 transition-all" />
-                    <span className="block text-center text-[10px] font-black text-emerald-800 mt-1">
-                      1. Sacola
-                    </span>
+            {/* Progresso: barras + um único rótulo do passo atual (não quebra em telas estreitas) */}
+            {checkoutWizardStep < 6 && (() => {
+              const stepNames =
+                fulfillmentType === 'TAKEOUT'
+                  ? ['Sacola', 'Dados', 'Pagamento']
+                  : ['Sacola', 'Dados', 'Entrega', 'Mapa', 'Pagamento']
+              const currentIdx =
+                fulfillmentType === 'TAKEOUT'
+                  ? checkoutWizardStep === 1 ? 0 : checkoutWizardStep === 2 ? 1 : 2
+                  : checkoutWizardStep - 1
+              return (
+                <div className="pt-2.5 pb-1">
+                  <div className="flex gap-2">
+                    {stepNames.map((name, i) => (
+                      <div
+                        key={name}
+                        className={`h-2 flex-1 rounded-full transition-all ${i <= currentIdx ? 'bg-emerald-700' : 'bg-slate-200'}`}
+                      />
+                    ))}
                   </div>
-
-                  {/* Etapa 2: Dados */}
-                  <div>
-                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 2 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
-                      2. Dados
-                    </span>
-                  </div>
-
-                  {/* Etapa 3: Entrega (apenas se Delivery) */}
-                  {fulfillmentType === 'DELIVERY' && (
-                    <div>
-                      <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                      <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 3 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
-                        3. Entrega
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Etapa 4: Mapa (apenas Delivery) */}
-                  {fulfillmentType === 'DELIVERY' && (
-                    <div>
-                      <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                      <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 4 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
-                        4. Mapa
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Etapa 5: Pagamento */}
-                  <div>
-                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 5 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 5 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
-                      {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '5. Pagamento'}
-                    </span>
-                  </div>
+                  <p className="mt-1.5 text-sm font-bold text-slate-600">
+                    Passo {currentIdx + 1} de {stepNames.length} · <span className="text-emerald-800">{stepNames[currentIdx]}</span>
+                  </p>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </DialogHeader>
 
           {/* ============================================================ */}
@@ -2976,7 +2995,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               </div>
 
               {/* Barra inferior fixa: total dos itens (sem taxa presumida) + frete */}
-              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex items-center justify-between gap-4 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
+              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
                 <div>
                   <span className="block text-2xl font-black leading-tight text-slate-950">{formatCurrency(cartSubtotal)}</span>
                   {fulfillmentType === 'DELIVERY' && (
@@ -2995,7 +3014,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={() => setCheckoutWizardStep(2)}
-                  className="flex items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                  className="flex min-h-12 min-w-[8rem] flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-black text-white shadow-lg transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
                 >
                   <span>Continuar</span>
                   <ChevronRight className="h-4 w-4 stroke-[3]" />
@@ -3154,7 +3173,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           </div>
                         </div>
                         {outOfArea && (
-                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
                             Fora da área
                           </span>
                         )}
@@ -3421,7 +3440,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <X className="h-4 w-4 stroke-[2.5]" />
                     </button>
 
-                    <span className="rounded-full bg-slate-100/90 border border-slate-200/80 px-3.5 py-1 text-[11px] font-black uppercase tracking-wider text-slate-600">
+                    <span className="rounded-full bg-slate-100/90 border border-slate-200/80 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-slate-600">
                       ETAPA OPCIONAL
                     </span>
 
@@ -3488,7 +3507,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         <Home className="h-5 w-5 stroke-[2.2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1">
                           ENDEREÇO DE ENTREGA <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
                         </span>
                         <h4 className="text-sm sm:text-base font-black text-slate-900 truncate mt-0.5">
@@ -3503,7 +3522,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     {/* CHIPS DE OUTROS ENDEREÇOS SALVOS CASO HAJA MAIS DE UM */}
                     {savedAddresses && savedAddresses.length > 1 && (
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-bold text-slate-500 block">
+                        <span className="text-xs font-bold text-slate-500 block">
                           Trocar para outro salvo:
                         </span>
                         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -3587,12 +3606,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${opt.tint}`}>
+                        <div className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl min-[400px]:flex ${opt.tint}`}>
                           <opt.Icon className="h-6 w-6" />
                         </div>
                         <div className="min-w-0">
-                          <span className="block truncate text-base font-black text-slate-900">{opt.title}</span>
-                          <p className="mt-0.5 truncate text-sm text-slate-500">{opt.desc}</p>
+                          <span className="block break-words text-base font-black leading-snug text-slate-900">{opt.title}</span>
+                          <p className="mt-0.5 break-words text-sm leading-snug text-slate-600">{opt.desc}</p>
                         </div>
                       </div>
                       <div
@@ -3808,7 +3827,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             <StatusIconComponent className="h-6 w-6 stroke-[2.2]" />
                           </div>
                           <div className="min-w-0">
-                            <span className="mb-1 block text-[10px] font-black uppercase leading-none tracking-wider text-slate-400">
+                            <span className="mb-1 block text-xs font-black uppercase leading-none tracking-wider text-slate-400">
                               Status atual
                             </span>
                             <span className="flex items-center gap-2 text-base font-black leading-tight text-slate-900">
@@ -3830,7 +3849,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       {/* Progresso */}
                       <div className="space-y-2.5 pt-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                          <span className="text-xs font-black uppercase tracking-wider text-slate-800">
                             Progresso do pedido
                           </span>
                           <span className="text-xs font-black text-emerald-700">Etapa {currentStage} de 5</span>
@@ -3864,9 +3883,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                                     {isPassed ? <Check className="h-4 w-4 stroke-[3]" /> : st.num}
                                   </div>
                                   <span
-                                    className={`text-center text-[10px] leading-tight ${
+                                    className={`text-center text-xs leading-tight ${
                                       isCompletedOrActive ? 'font-black text-slate-900' : 'font-medium text-slate-400'
-                                    }`}
+                                    } ${isCurrent ? '' : 'hidden min-[430px]:block'}`}
                                   >
                                     {st.label}
                                   </span>
@@ -3900,7 +3919,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             <p className="text-sm font-black leading-tight text-slate-900">
                               {isOrderItemsOpen ? 'Seu pedido' : `${lastOrderItemsCount} ${lastOrderItemsCount === 1 ? 'item' : 'itens'} · ver detalhes`}
                             </p>
-                            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                            <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
                               Previsão: {isTakeoutOrder ? '15–25 min' : '30–45 min'}
                             </p>
                           </div>
@@ -4057,7 +4076,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         {addr.street}, {addr.number}
                       </p>
                       {addr.is_main && (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase text-primary">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-black uppercase text-primary">
                           Principal
                         </span>
                       )}
@@ -4066,7 +4085,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       {addr.neighborhood} - {addr.city}/{addr.state}
                     </p>
                     {addr.zipcode && (
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         CEP:{' '}
                         {formatCep(addr.zipcode.toString().padStart(8, '0'))}
                       </p>
