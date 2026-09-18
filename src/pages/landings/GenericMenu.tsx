@@ -997,6 +997,31 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       .trim()
   }
 
+  const parseDeliveryFee = (value: unknown, fallback = 0) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    const normalized = String(value ?? '').replace(/[^0-9,.-]/g, '').replace(',', '.')
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  const findDeliverySector = (value: string) => {
+    if (!value?.trim()) return null
+    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
+    if (typeof sectors === 'string') {
+      try { sectors = JSON.parse(sectors) } catch { sectors = [] }
+    }
+    if (!Array.isArray(sectors)) return null
+
+    const normalizedValue = normalizeText(value)
+    return sectors.find((sector: any) =>
+      Array.isArray(sector?.neighborhoods) && sector.neighborhoods.some((name: string) => {
+        const normalizedName = normalizeText(name)
+        return normalizedName === normalizedValue ||
+          normalizedName.includes(normalizedValue) ||
+          normalizedValue.includes(normalizedName)
+      }),
+    ) || null
+  }
+
   const availableNeighborhoodsList = useMemo(() => {
     let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
     if (typeof sectors === 'string') {
@@ -1016,26 +1041,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
 
-  const matchedSector = useMemo(() => {
-    if (fulfillmentType !== 'DELIVERY' || !neighborhood) return null
-    let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
-    if (typeof sectors === 'string') {
-      try { sectors = JSON.parse(sectors) } catch { sectors = [] }
-    }
-    if (!Array.isArray(sectors)) return null
-
-    const normNeighbor = normalizeText(neighborhood)
-    return (
-      sectors.find((s: any) =>
-        Array.isArray(s?.neighborhoods) &&
-        s.neighborhoods.some((n: string) => {
-          const normN = normalizeText(n)
-          return normN === normNeighbor || normN.includes(normNeighbor) || normNeighbor.includes(normN)
-        })
-      ) || null
-    )
-  }, [fulfillmentType, neighborhood, profile])
-
+  const matchedSector = useMemo(
+    () => findDeliverySector(neighborhood),
+    [fulfillmentType, neighborhood, profile],
+  )
   const resolvedDeliveryTime = useMemo(() => {
     if (fulfillmentType !== 'DELIVERY' || !neighborhood) return null
     let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
@@ -1075,9 +1084,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
     if (!Array.isArray(sectors)) sectors = []
     if (sectors.length === 0) {
-      return { hasSectors: false, minFee: Number(profile?.deliveryFee || 0) }
+      return { hasSectors: false, minFee: parseDeliveryFee(profile?.deliveryFee) }
     }
-    const fees = sectors.map((s: any) => Number(s.fee) || 0)
+    const fees = sectors.map((s: any) => parseDeliveryFee(s.fee))
     const minFee = Math.min(...fees)
     const maxFee = Math.max(...fees)
     return { hasSectors: true, minFee, maxFee, sectors }
@@ -1291,35 +1300,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const resolvedDeliveryFee = useMemo(() => {
     if (fulfillmentType !== 'DELIVERY') return 0
-
-    if (matchedSector && matchedSector.fee !== undefined) {
-      return Number(matchedSector.fee) || 0
-    }
-
-    if (neighborhood && neighborhood.trim()) {
-      let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
-      if (typeof sectors === 'string') {
-        try { sectors = JSON.parse(sectors) } catch { sectors = [] }
-      }
-      if (!Array.isArray(sectors)) sectors = []
-
-      const normNeighbor = normalizeText(neighborhood)
-      const foundSector = sectors.find((s: any) =>
-        Array.isArray(s.neighborhoods) && s.fee !== undefined && s.neighborhoods.some(
-          (n: string) => {
-            const normN = normalizeText(n)
-            return normN === normNeighbor || normN.includes(normNeighbor) || normNeighbor.includes(normN)
-          },
-        ),
-      )
-      if (foundSector && foundSector.fee !== undefined) {
-        return Number(foundSector.fee) || 0
-      }
-    }
-
-    return Number(profile?.deliveryFee || 0)
-  }, [fulfillmentType, matchedSector, neighborhood, profile])
-
+    return matchedSector?.fee !== undefined
+      ? parseDeliveryFee(matchedSector.fee)
+      : parseDeliveryFee(profile?.deliveryFee)
+  }, [fulfillmentType, matchedSector, profile])
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
@@ -3199,7 +3183,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         Taxa de Entrega ({matchedSector?.name || 'Setor Local'})
                       </span>
                       <span className="text-sm font-black">
-                        {Number(deliveryFee || 0) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
+                        {parseDeliveryFee(deliveryFee) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
@@ -3702,7 +3686,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <div className="flex items-center justify-between text-slate-600 font-semibold">
                   <span>Taxa de entrega</span>
                   <span className="font-bold text-slate-800">
-                    {fulfillmentType === 'TAKEOUT' || Number(deliveryFee || 0) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
+                    {fulfillmentType === 'TAKEOUT' || parseDeliveryFee(deliveryFee) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
@@ -4063,7 +4047,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <Check className="h-3 w-3 stroke-[3]" /> Entrega sob encomenda
               </span>
               <span className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-black text-emerald-900">
-                Taxa: R$ {Number(profile?.deliveryFee || 30).toFixed(2).replace('.', ',')}
+                Taxa: R$ {parseDeliveryFee(profile?.deliveryFee).toFixed(2).replace('.', ',')}
               </span>
             </div>
 
@@ -4074,7 +4058,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             <button
               type="button"
               onClick={() => {
-                const maxFee = Number(profile?.deliveryFee || 30)
+                const maxFee = parseDeliveryFee(profile?.deliveryFee)
                 const orig = unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''
                 setAcceptedStandardFee(true)
                 setCustomReferenceNote(`Bairro sob encomenda: ${orig} (Taxa especial R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
