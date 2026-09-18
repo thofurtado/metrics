@@ -75,6 +75,7 @@ import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
+import { CheckoutAddressMap } from '@/components/maps/CheckoutAddressMap'
 
 
 function playChimeAlert() {
@@ -2754,61 +2755,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   Onde vamos entregar?
                 </h3>
                 <p className="text-xs text-slate-600 mt-1 leading-snug">
-                  Digite seu CEP para localizar e confirme o número da sua residência.
+                  Digite seu CEP para localizar ou escolha um dos endereços no mapa.
                 </p>
               </div>
-
-              {/* SELEÇÃO RÁPIDA DE ENDEREÇOS SALVOS (CLIENTES RECONHECIDOS) */}
-              {clientFound && Array.isArray(clientFound.addresses) && clientFound.addresses.length > 0 && (
-                <div className="space-y-2 pb-1">
-                  <label className="text-xs font-bold text-slate-700 block">Endereços cadastrados:</label>
-                  <div className="space-y-1.5">
-                    {clientFound.addresses.map((addr: any, i: number) => {
-                      const isSel = street === addr.street && number === addr.number && neighborhood === addr.neighborhood
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            setStreet(addr.street || '')
-                            setNumber(addr.number || '')
-                            setNeighborhood(addr.neighborhood || '')
-                            setComplement(addr.complement || '')
-                            setReferencePoint(addr.referencePoint || addr.reference_point || '')
-                            setZipcode(addr.zipcode || '')
-                            setCity(addr.city || '')
-                            setState(addr.state || '')
-                          }}
-                          className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
-                            isSel
-                              ? 'border-emerald-600 bg-emerald-50/70 ring-1 ring-emerald-600/30'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 shrink-0">
-                              <MapPin className="h-4 w-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-black text-slate-900 truncate">
-                                {addr.street}, nº {addr.number}
-                              </p>
-                              <p className="text-[11px] text-slate-500 truncate">
-                                {addr.neighborhood} {addr.complement ? `• ${addr.complement}` : ''}
-                              </p>
-                            </div>
-                          </div>
-                          {isSel && (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
-                              <Check className="h-3 w-3 stroke-[3]" />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
 
               {/* BUSCA POR CEP */}
               <div className="space-y-1.5">
@@ -2867,12 +2816,61 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
-              {/* FORMULÁRIO DE ENDEREÇO DIRETO (SEM MAPA MUNDI FAKE E SEM FECHAR EM CARD INACESSÍVEL) */}
+              {/* MAPA INTERATIVO REAL (LEAFLET + OPENSTREETMAP NO BRASIL) COM SELEÇÃO DE ENDEREÇOS */}
+              <CheckoutAddressMap
+                street={street}
+                number={number}
+                neighborhood={neighborhood}
+                city={city || profile?.city || 'Caraguatatuba'}
+                savedAddresses={clientFound?.addresses || []}
+                onSelectSavedAddress={(addr) => {
+                  setStreet(addr.street || '')
+                  setNumber(addr.number || '')
+                  setNeighborhood(addr.neighborhood || '')
+                  setComplement(addr.complement || '')
+                  setReferencePoint(addr.referencePoint || '')
+                }}
+              />
+
+              {/* SELEÇÃO RÁPIDA DE ENDEREÇOS SALVOS CASO HAJA MAIS DE UM */}
+              {clientFound && Array.isArray(clientFound.addresses) && clientFound.addresses.length > 1 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-500 block">Outros endereços cadastrados:</span>
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {clientFound.addresses.map((addr: any, i: number) => {
+                      const isSel = street === addr.street && number === addr.number
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setStreet(addr.street || '')
+                            setNumber(addr.number || '')
+                            setNeighborhood(addr.neighborhood || '')
+                            setComplement(addr.complement || '')
+                            setReferencePoint(addr.referencePoint || addr.reference_point || '')
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition-all flex items-center gap-1.5 ${
+                            isSel
+                              ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <MapPin className="h-3 w-3" />
+                          <span>{addr.street ? `${addr.street}, ${addr.number}` : `Endereço ${i + 1}`}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* FORMULÁRIO DE ENDEREÇO DIRETO E EDITÁVEL (FOCO DIRETO NO NÚMERO AO DIGITAR CEP) */}
               <div className="rounded-3xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-emerald-700" />
-                    Endereço de Entrega
+                    Dados do Endereço
                   </span>
                   {street && (
                     <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
