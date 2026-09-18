@@ -537,7 +537,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
-  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1)
+  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1)
   const [lastOrderText, setLastOrderText] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [lastOrderTotal, setLastOrderTotal] = useState<number>(0)
@@ -673,7 +673,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [isNeighborhoodHelpOpen, setIsNeighborhoodHelpOpen] = useState(false)
 
   useEffect(() => {
-    if (checkoutWizardStep === 4 && paymentMethod === 'PIX') {
+    if (checkoutWizardStep === 5 && paymentMethod === 'PIX') {
       const timer = setInterval(() => {
         setPixTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0))
       }, 1000)
@@ -708,7 +708,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [acceptedStandardFee, setAcceptedStandardFee] = useState(false)
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [gpsTriggerNonce, setGpsTriggerNonce] = useState(0)
-  const [deliveryStepView, setDeliveryStepView] = useState<'ADDRESS' | 'MAP_CONFIRM'>('ADDRESS')
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -1625,7 +1624,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       setLastOrderTotal(cartTotal);
       setLastOrderText(text);
       setCart({});
-      setCheckoutWizardStep(5);
+      setCheckoutWizardStep(6);
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
@@ -1708,7 +1707,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Efeito de escuta periódica do status do pedido criado (Live Tracking em tempo real)
   useEffect(() => {
-    if (!createdOrderId || checkoutWizardStep !== 5) return;
+    if (!createdOrderId || checkoutWizardStep !== 6) return;
 
     const interval = setInterval(async () => {
       try {
@@ -2515,7 +2514,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       {/* Modal de Checkout Robusto em Etapas (Design Fiel ao Stitch) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={(open) => {
         setIsCheckoutStepOpen(open)
-        if (!open && checkoutWizardStep === 5) {
+        if (!open && checkoutWizardStep === 6) {
           handleFinishAndReset()
         }
       }}>
@@ -2535,8 +2534,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     {checkoutWizardStep === 1 && 'Checkout Recebimento'}
                     {checkoutWizardStep === 2 && 'Checkout Identificação'}
                     {checkoutWizardStep === 3 && 'Checkout Entrega'}
-                    {checkoutWizardStep === 4 && 'Checkout Pagamento'}
-                    {checkoutWizardStep === 5 && 'Acompanhamento do Pedido'}
+                    {checkoutWizardStep === 4 && 'Ponto Exato de Entrega'}
+                    {checkoutWizardStep === 5 && 'Checkout Pagamento'}
+                    {checkoutWizardStep === 6 && 'Acompanhamento do Pedido'}
                   </DialogTitle>
                   <DialogDescription className="text-xs font-semibold text-slate-500 truncate">
                     {profile?.name || tenantName || 'Alta Gastronomia Express'}
@@ -2558,7 +2558,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    if (checkoutWizardStep === 5) {
+                    if (checkoutWizardStep === 6) {
                       handleFinishAndReset()
                     } else {
                       setIsCheckoutStepOpen(false)
@@ -2573,9 +2573,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </div>
 
             {/* Barra de Progresso em 4 Etapas Fiel ao Stitch */}
-            {checkoutWizardStep < 5 && (
+            {checkoutWizardStep < 6 && (
               <div className="pt-2.5 pb-1">
-                <div className={`grid gap-2 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                <div className={`grid gap-2 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-5'}`}>
                   {/* Etapa 1: Sacola */}
                   <div>
                     <div className="h-1.5 rounded-full bg-emerald-700 transition-all" />
@@ -2602,11 +2602,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     </div>
                   )}
 
-                  {/* Etapa 4: Pagamento */}
+                  {/* Etapa 4: Mapa (apenas Delivery) */}
+                  {fulfillmentType === 'DELIVERY' && (
+                    <div>
+                      <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
+                      <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 4 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
+                        4. Mapa
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Etapa 5: Pagamento */}
                   <div>
-                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 4 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
-                      {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '4. Pagamento'}
+                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 5 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
+                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 5 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
+                      {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '5. Pagamento'}
                     </span>
                   </div>
                 </div>
@@ -2914,14 +2924,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       return
                     }
                     if (fulfillmentType === 'TAKEOUT') {
-                      setCheckoutWizardStep(4) // Balcão pula direto para pagamento!
+                      setCheckoutWizardStep(5) // Balcão pula direto para pagamento!
                     } else {
-                      if (street.trim().length > 2 && number.trim().length > 0 && number !== '0') {
-                        setDeliveryStepView('MAP_CONFIRM')
-                        setGpsTriggerNonce((prev) => prev + 1)
-                      } else {
-                        setDeliveryStepView('ADDRESS')
-                      }
                       setCheckoutWizardStep(3) // Delivery vai para endereço!
                     }
                   }}
@@ -2958,9 +2962,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, x: -20 }}
               className="py-1 text-sm"
             >
-              {/* SUB-ETAPA 3A: FORMULÁRIO DE ENDEREÇO LIMPO E SEM POLUIÇÃO */}
-              {deliveryStepView === 'ADDRESS' && (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   <div>
                     <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
                       Onde vamos entregar?
@@ -3227,7 +3229,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           alert('Por favor, selecione ou informe o seu bairro.')
                           return
                         }
-                        setDeliveryStepView('MAP_CONFIRM')
+                        setCheckoutWizardStep(4)
                         setGpsTriggerNonce((prev) => prev + 1)
                       }}
                       className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
@@ -3253,7 +3255,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           alert('Por favor, selecione ou informe o seu bairro.')
                           return
                         }
-                        setCheckoutWizardStep(4)
+                        setCheckoutWizardStep(5)
                       }}
                       className="w-full flex items-center justify-center gap-1.5 rounded-2xl py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all active:scale-[0.98]"
                     >
@@ -3272,16 +3274,29 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     </div>
                   </div>
                 </div>
-              )}
+            </motion.div>
+          )}
 
-              {/* SUB-ETAPA 3B: AJUSTE FINO NO MAPA (ETAPA OPCIONAL - FIEL À IMAGEM 3) */}
-              {deliveryStepView === 'MAP_CONFIRM' && (
+          {/* ============================================================ */}
+          {/* ETAPA 4: AJUSTE FINO NO MAPA (ETAPA OPCIONAL)                */}
+          {/* ============================================================ */}
+          {checkoutWizardStep === 4 && fulfillmentType === 'DELIVERY' && (
+            <motion.div
+              key="step4-map"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="py-1 text-sm"
+            >
+
+              {/* AJUSTE FINO NO MAPA (ETAPA OPCIONAL - FIEL À IMAGEM 3) */}
+
                 <div className="space-y-3.5 py-1">
                   {/* CABEÇALHO SUPERIOR FIEL AO MOCKUP (IMAGEM 3) */}
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
-                      onClick={() => setDeliveryStepView('ADDRESS')}
+                      onClick={() => setCheckoutWizardStep(3)}
                       className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all active:scale-95"
                       title="Voltar para editar endereço"
                     >
@@ -3294,7 +3309,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                     <button
                       type="button"
-                      onClick={() => setCheckoutWizardStep(4)}
+                      onClick={() => setCheckoutWizardStep(5)}
                       className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors px-1.5 py-1"
                     >
                       Pular
@@ -3408,7 +3423,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     {/* BOTÃO PRINCIPAL: CONFIRMAR LOCALIZAÇÃO */}
                     <button
                       type="button"
-                      onClick={() => setCheckoutWizardStep(4)}
+                      onClick={() => setCheckoutWizardStep(5)}
                       className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm sm:text-base font-black text-white shadow-lg shadow-emerald-700/20 transition-all active:scale-[0.98] bg-emerald-600 hover:bg-emerald-700"
                     >
                       <span>Confirmar Localização</span>
@@ -3419,7 +3434,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     <div className="text-center pt-0.5">
                       <button
                         type="button"
-                        onClick={() => setCheckoutWizardStep(4)}
+                        onClick={() => setCheckoutWizardStep(5)}
                         className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors py-1"
                       >
                         Continuar sem ajustar pino
@@ -3427,13 +3442,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     </div>
                   </div>
                 </div>
-              )}
             </motion.div>
           )}
 
-          {checkoutWizardStep === 4 && (
+          {checkoutWizardStep === 6 && (
             <motion.div
-              key="step4"
+              key="step6"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -3740,9 +3754,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           {/* ============================================================ */}
           {/* ETAPA 5: PEDIDO CONCLUÍDO / ACOMPANHAMENTO AO VIVO          */}
           {/* ============================================================ */}
-          {checkoutWizardStep === 5 && (
+          {checkoutWizardStep === 6 && (
             <motion.div
-              key="step5"
+              key="step6"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -4065,7 +4079,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 setAcceptedStandardFee(true)
                 setCustomReferenceNote(`Bairro sob encomenda: ${orig} (Taxa especial R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
                 setUnsupportedNeighborhoodModal(null)
-                setCheckoutWizardStep(4)
+                setCheckoutWizardStep(5)
               }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black text-white shadow-md bg-emerald-700 hover:bg-emerald-800 transition-all active:scale-[0.98]"
             >
@@ -4105,7 +4119,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 setNumber('0')
                 setComplement('')
                 setZipcode('')
-                setCheckoutWizardStep(4)
+                setCheckoutWizardStep(5)
               }}
               className="w-full flex items-center justify-center gap-1.5 rounded-2xl border border-slate-300 bg-white py-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-xs transition-all active:scale-[0.99]"
             >
