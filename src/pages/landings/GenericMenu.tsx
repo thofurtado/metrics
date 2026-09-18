@@ -942,9 +942,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setState(stateVal)
 
         const matched = matchNeighborhoodWithConfig(neighborhoodVal)
+        const sameAsCity = normalizeText(neighborhoodVal) === normalizeText(cityVal)
         if (matched) {
           setNeighborhood(matched)
-        } else {
+        } else if (neighborhoodVal && !sameAsCity) {
           setNeighborhood(neighborhoodVal)
           if (availableNeighborhoodsList.length > 0) {
             setUnsupportedNeighborhoodModal({
@@ -1500,88 +1501,129 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
       const formattedTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-      let text = `🧾 *NOVO PEDIDO - ${(profile?.tradeName || tenantName).toUpperCase()}*\n`
-      text += `📅 _${formattedDate} às ${formattedTime}_\n`
-      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
-      text += `👤 *Cliente:* ${customerName}\n`
-      text += `📱 *WhatsApp:* ${customerPhone}\n`
+      let text = `🧾 *NOVO PEDIDO - ${(profile?.tradeName || tenantName).toUpperCase()}*
+`
+      text += `📅 _${formattedDate} às ${formattedTime}_
+`
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━
+
+`
+      text += `👤 *Cliente:* ${customerName}
+`
+      text += `📱 *WhatsApp:* ${customerPhone}
+`
       text += `🛵 *Tipo:* ${
         fulfillmentType === 'DELIVERY'
           ? 'Entrega (Delivery)'
           : fulfillmentType === 'TAKEOUT'
             ? 'Retirada no Balcão'
             : 'Consumo no Local'
-      }\n`
+      }
+`
 
       if (fulfillmentType === 'DELIVERY') {
-        text += `\n📍 *Endereço de Entrega:*\n`
-        text += `> ${street}, ${number || 'S/N'}\n`
-        if (complement) text += `> Complemento: ${complement}\n`
-        text += `> ${neighborhood} - ${city || profile?.city || 'Local'}/${state || profile?.state || 'SP'}\n`
-        if (zipcode) text += `> CEP: ${zipcode}\n`
+        text += `
+📍 *Endereço de Entrega:*
+`
+        text += `> ${street}, ${number || 'S/N'}
+`
+        if (complement) text += `> Complemento: ${complement}
+`
+        text += `> ${neighborhood} - ${city || profile?.city || 'Local'}/${state || profile?.state || 'SP'}
+`
+        if (zipcode) text += `> CEP: ${zipcode}
+`
         if (deliveryCoords) {
-          text += `> 🗺️ Localização GPS: https://maps.google.com/?q=${deliveryCoords.lat},${deliveryCoords.lng}\n`
+          text += `> 🗺️ Localização GPS: https://maps.google.com/?q=${deliveryCoords.lat},${deliveryCoords.lng}
+`
         }
         if (customReferenceNote) {
-          text += `> ⚠️ *${customReferenceNote}*\n`
+          text += `> ⚠️ *${customReferenceNote}*
+`
         }
       }
 
-      text += `\n━━━━━━━━━━━━━━━━━━━━━━━━\n`
-      text += `📋 *ITENS DO PEDIDO:*\n\n`
+      text += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+`
+      text += `📋 *ITENS DO PEDIDO:*
+
+`
 
       cartItems.forEach((item) => {
         const itemTitle = item.displayName || item.product.name
         const itemTotal = item.unitPrice * item.quantity
-        text += `▪️ *${item.quantity}x* ${itemTitle}\n`
-        text += `   _${formatCurrency(itemTotal)}_\n`
+        text += `▪️ *${item.quantity}x* ${itemTitle}
+`
+        text += `   _${formatCurrency(itemTotal)}_
+`
         if (item.observation) {
-          text += `   ↳ 💬 _Obs: ${item.observation}_\n`
+          text += `   ↳ 💬 _Obs: ${item.observation}_
+`
         }
         if (item.selectedOptions && item.selectedOptions.length > 0) {
           item.selectedOptions.forEach((opt) => {
-            text += `   ↳ ➕ ${opt.quantity > 1 ? `${opt.quantity}x ` : ''}${opt.optionName} (${formatCurrency(opt.price * opt.quantity)})\n`
+            text += `   ↳ ➕ ${opt.quantity > 1 ? `${opt.quantity}x ` : ''}${opt.optionName} (${formatCurrency(opt.price * opt.quantity)})
+`
           })
         }
         if (item.fractions && item.fractions.length > 0) {
-          text += `   ↳ 🍕 Sabores: ${item.fractions.join(' / ')}\n`
+          text += `   ↳ 🍕 Sabores: ${item.fractions.join(' / ')}
+`
         }
-        text += `\n`
+        text += `
+`
       })
 
-      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`
-      text += `💵 Subtotal: *${formatCurrency(cartSubtotal)}*\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━
+`
+      text += `💵 Subtotal: *${formatCurrency(cartSubtotal)}*
+`
       if (fulfillmentType === 'DELIVERY' && resolvedDeliveryFee > 0) {
-        text += `🛵 Taxa de Entrega: *${formatCurrency(resolvedDeliveryFee)}*\n`
+        text += `🛵 Taxa de Entrega: *${formatCurrency(resolvedDeliveryFee)}*
+`
       } else if (fulfillmentType === 'DELIVERY') {
-        text += `🛵 Taxa de Entrega: *Grátis*\n`
+        text += `🛵 Taxa de Entrega: *Grátis*
+`
       }
-      text += `💰 *TOTAL: ${formatCurrency(cartTotal)}*\n\n`
+      text += `💰 *TOTAL: ${formatCurrency(cartTotal)}*
+
+`
 
       if (paymentMethod === 'PIX') {
-        text += `💳 *Forma de Pagamento:* Pix\n`
+        text += `💳 *Forma de Pagamento:* Pix
+`
       } else if (paymentMethod === 'CREDIT') {
-        text += `💳 *Forma de Pagamento:* Cartão de Crédito (na entrega)\n`
+        text += `💳 *Forma de Pagamento:* Cartão de Crédito (na entrega)
+`
       } else if (paymentMethod === 'DEBIT') {
-        text += `💳 *Forma de Pagamento:* Cartão de Débito (na entrega)\n`
+        text += `💳 *Forma de Pagamento:* Cartão de Débito (na entrega)
+`
       } else if (paymentMethod === 'VOUCHER') {
-        text += `💳 *Forma de Pagamento:* ${availablePaymentMethods.voucherName || 'Vale Refeição'} (na entrega)\n`
+        text += `💳 *Forma de Pagamento:* ${availablePaymentMethods.voucherName || 'Vale Refeição'} (na entrega)
+`
       } else if (paymentMethod === 'CASH') {
         const trocoNum = parseFloat((changeAmount || '0').replace(',', '.'))
         if (trocoNum > cartTotal) {
           const levarTroco = trocoNum - cartTotal
-          text += `💳 *Forma de Pagamento:* Dinheiro\n`
-          text += `💵 *Troco para:* ${formatCurrency(trocoNum)} _(Levar ${formatCurrency(levarTroco)} de troco)_\n`
+          text += `💳 *Forma de Pagamento:* Dinheiro
+`
+          text += `💵 *Troco para:* ${formatCurrency(trocoNum)} _(Levar ${formatCurrency(levarTroco)} de troco)_
+`
         } else if (changeAmount) {
-          text += `💳 *Forma de Pagamento:* Dinheiro (Troco para R$ ${changeAmount})\n`
+          text += `💳 *Forma de Pagamento:* Dinheiro (Troco para R$ ${changeAmount})
+`
         } else {
-          text += `💳 *Forma de Pagamento:* Dinheiro (Sem troco)\n`
+          text += `💳 *Forma de Pagamento:* Dinheiro (Sem troco)
+`
         }
       } else {
-        text += `💳 *Forma de Pagamento:* ${paymentMethod} (na entrega)\n`
+        text += `💳 *Forma de Pagamento:* ${paymentMethod} (na entrega)
+`
       }
 
-      text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`
+      text += `━━━━━━━━━━━━━━━━━━━━━━━━
+`
       text += `_✅ Pedido gerado via Cardápio Digital Metrics_`
 
       const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
@@ -3329,7 +3371,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       }
                       if (resolved.neighborhood) {
                         const matched = matchNeighborhoodWithConfig(resolved.neighborhood)
-                        setNeighborhood(matched || resolved.neighborhood)
+                        if (matched) setNeighborhood(matched)
                       }
                       if (resolved.zipcode && !zipcode) {
                         setZipcode(formatCep(resolved.zipcode.replace(/\D/g, '')))
