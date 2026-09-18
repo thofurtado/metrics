@@ -1174,6 +1174,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     )
   }, [filteredProducts])
 
+  // Garante que cliques/toques estejam sempre liberados quando os modais estiverem fechados
+  useEffect(() => {
+    if (!isCustomizerOpen && !isCartModalOpen && !isCheckoutStepOpen) {
+      document.body.style.pointerEvents = ''
+    }
+  }, [isCustomizerOpen, isCartModalOpen, isCheckoutStepOpen])
+
   const handleProductClick = (product: Product) => {
     // Abre o customizador para qualquer produto, permitindo escolher frações, adicionais ou observações de produção com atalhos frequentes
     setCustomizingProduct(product as ProductItem)
@@ -1799,7 +1806,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         <button
           type="button"
           onClick={() => setIsCartModalOpen(false)}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all lg:hidden"
         >
           <X className="h-4 w-4 stroke-[2.5]" />
         </button>
@@ -1889,7 +1896,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => handleRemoveFromCart(item.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95 touch-manipulation cursor-pointer"
                       >
                         <Minus className="h-3 w-3 stroke-[2.5]" />
                       </button>
@@ -1899,7 +1906,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <button
                         type="button"
                         onClick={() => handleIncrementCartItem(item.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                       >
                         <Plus className="h-3 w-3 stroke-[2.5]" />
                       </button>
@@ -2156,7 +2163,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             <button
                               type="button"
                               onClick={() => handleProductClick(product)}
-                              className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 ${
+                              className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 touch-manipulation cursor-pointer ${
                                 isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
                               }`}
                               style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
@@ -2184,7 +2191,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFromCart(product.id)}
-                                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+                                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95 touch-manipulation cursor-pointer"
                               >
                                 <Minus className="h-3 w-3 stroke-[3]" />
                               </button>
@@ -2194,7 +2201,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               <button
                                 type="button"
                                 onClick={() => handleAddToCart(product)}
-                                className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95"
+                                className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95 touch-manipulation cursor-pointer"
                                 style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
                               >
                                 <Plus className="h-3 w-3 stroke-[3]" />
@@ -2207,7 +2214,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           <button
                             type="button"
                             onClick={() => handleAddToCart(product)}
-                            className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 ${
+                            className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 touch-manipulation cursor-pointer ${
                               isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
                             }`}
                             style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
@@ -2351,35 +2358,42 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </aside>
 
       {/* Botão Flutuante Mobile Estilo Stitch (Fiel à Imagem 3) */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto lg:hidden">
-          <motion.button
-            initial={{ y: 50, opacity: 0 }}
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            key="mobile-floating-cart-bar"
+            initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', bounce: 0.2 }}
-            onClick={() => setIsCartModalOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl p-3 px-4.5 bg-[#101828] text-white shadow-2xl transition-transform active:scale-[0.98] border border-slate-800"
+            className="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto lg:hidden"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white font-black text-xs shadow-inner">
-                {cartCount}
+            <button
+              type="button"
+              onClick={() => setIsCartModalOpen(true)}
+              className="flex w-full items-center justify-between rounded-2xl p-3 px-4.5 bg-[#101828] text-white shadow-2xl transition-transform active:scale-[0.98] border border-slate-800 touch-manipulation cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white font-black text-xs shadow-inner">
+                  {cartCount}
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">
+                    Subtotal
+                  </p>
+                  <p className="text-base font-black text-white leading-tight">
+                    {formatCurrency(cartSubtotal)}
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">
-                  Total estimado
-                </p>
-                <p className="text-base font-black text-white leading-tight">
-                  {formatCurrency(cartTotal)}
-                </p>
-              </div>
-            </div>
-            <span className="flex items-center gap-1 text-sm font-black text-amber-400 hover:text-amber-300 transition-colors">
-              <span>Ver Sacola</span>
-              <ChevronRight className="h-4 w-4 stroke-[3]" />
-            </span>
-          </motion.button>
-        </div>
-      )}
+              <span className="flex items-center gap-1 text-sm font-black text-amber-400 hover:text-amber-300 transition-colors">
+                <span>Ver Sacola</span>
+                <ChevronRight className="h-4 w-4 stroke-[3]" />
+              </span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Drawer Carrinho Mobile */}
       <AnimatePresence>
@@ -2399,18 +2413,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
               className="fixed bottom-0 left-0 right-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl lg:hidden"
             >
-              <div className="relative flex items-center justify-between border-b border-slate-100 p-6 pt-8">
-                <div className="absolute left-1/2 top-3 h-1.5 w-12 -translate-x-1/2 rounded-full bg-slate-200" />
-                <h2 className="text-2xl font-black tracking-tight text-slate-900">
-                  Seu Pedido
-                </h2>
-                <button
-                  onClick={() => setIsCartModalOpen(false)}
-                  className="rounded-full bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+              <div className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-slate-200 shrink-0" />
               <div className="flex-1 overflow-hidden">
                 {renderCartSection()}
               </div>
@@ -2420,9 +2423,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </AnimatePresence>
 
       <ItemCustomizerDialog
-        key={customizingProduct ? customizingProduct.id : 'empty'}
         open={isCustomizerOpen}
-        onOpenChange={setIsCustomizerOpen}
+        onOpenChange={(open) => {
+          setIsCustomizerOpen(open)
+          if (!open) {
+            document.body.style.pointerEvents = ''
+          }
+        }}
         product={customizingProduct}
         allProducts={products || []}
         onConfirm={handleConfirmCustomizedItem}

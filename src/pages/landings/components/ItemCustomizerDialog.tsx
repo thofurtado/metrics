@@ -125,6 +125,13 @@ export function ItemCustomizerDialog({
     }
   }, [open, product])
 
+  // Garante liberação de cliques/toques ao fechar modal
+  useEffect(() => {
+    if (!open) {
+      document.body.style.pointerEvents = ''
+    }
+  }, [open])
+
   // Lista de produtos irmãos (mesma categoria/subcategoria que aceitem fracionamento)
   const siblingProducts = useMemo(() => {
     if (!product) return []
@@ -193,10 +200,17 @@ export function ItemCustomizerDialog({
     }
   }
 
-  // Grupos de adicionais / complementos vinculados
+  // Grupos de adicionais / complementos vinculados (Obrigatórios vêm no topo)
   const groups: ComplementGroup[] = useMemo(() => {
     if (!product.complementGroups || !Array.isArray(product.complementGroups)) return []
-    return product.complementGroups
+    return [...product.complementGroups].sort((a, b) => {
+      const aReq = ((a.min_quantity && a.min_quantity > 0) || (a as any).is_required) ? 1 : 0
+      const bReq = ((b.min_quantity && b.min_quantity > 0) || (b as any).is_required) ? 1 : 0
+      if (aReq !== bReq) {
+        return bReq - aReq // Obrigatórios primeiro!
+      }
+      return ((a as any).sort_order ?? 0) - ((b as any).sort_order ?? 0)
+    })
   }, [product])
 
   // Controle de Adicionais (Incremento / Decremento)
@@ -308,7 +322,12 @@ export function ItemCustomizerDialog({
 
   // Montagem e Confirmação do Pedido Customizado
   const handleConfirm = () => {
-    if (!isReadyToConfirm) return
+    if (!isReadyToConfirm) {
+      if (validationError) {
+        alert(validationError)
+      }
+      return
+    }
 
     let displayName = product.name
     const flavorNames = selectedFlavors.filter((f): f is ProductItem => f !== null).map((f) => f.name)
@@ -363,8 +382,24 @@ export function ItemCustomizerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden">
-        {/* HERO BANNER COM PREÇO FLUTUANTE E BOTÃO FECHAR */}
+      <DialogContent
+        onCloseAutoFocus={(e) => {
+          e.preventDefault()
+          document.body.style.pointerEvents = ''
+        }}
+        className="max-h-[94vh] sm:max-h-[90vh] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden relative"
+      >
+        {/* BOTÃO FECHAR FIXO NO TOPO DIREITO (SEMPRE ACESSÍVEL E CLICÁVEL, NUNCA SOME NO SCROLL) */}
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-slate-900/75 text-white backdrop-blur-md shadow-xl transition-all hover:bg-slate-900 hover:scale-105 active:scale-95 touch-manipulation cursor-pointer border border-white/20"
+          aria-label="Fechar"
+        >
+          <X className="h-5 w-5 stroke-[2.5]" />
+        </button>
+
+        {/* HERO BANNER COM PREÇO FLUTUANTE */}
         {product.imageUrl ? (
           <div className="relative h-60 sm:h-72 md:h-80 w-full shrink-0 overflow-hidden bg-slate-900">
             <img
@@ -372,18 +407,8 @@ export function ItemCustomizerDialog({
               alt={product.name}
               className="h-full w-full object-cover"
             />
-            {/* Gradiente sutil inferior */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-            {/* Botão Fechar X Circular Flutuante */}
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 backdrop-blur-md shadow-lg transition-all hover:bg-white active:scale-95 z-10"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5 stroke-[2.5]" />
-            </button>
+            {/* Gradiente sutil inferior sem interceptar cliques */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
             {/* Pílula de Preço Flutuante Fiel ao Stitch */}
             <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-md backdrop-blur-md tracking-tight">
@@ -391,7 +416,7 @@ export function ItemCustomizerDialog({
             </div>
           </div>
         ) : (
-          <div className="relative border-b border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between">
+          <div className="relative border-b border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between pr-16">
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
                 <Sparkles className="h-3 w-3" /> {product.category || 'ITEM'}
@@ -400,14 +425,6 @@ export function ItemCustomizerDialog({
                 A partir de {formatBRL(product.price)}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition-all hover:bg-slate-300"
-              aria-label="Fechar"
-            >
-              <X className="h-4 w-4 stroke-[2.5]" />
-            </button>
           </div>
         )}
 
@@ -758,18 +775,24 @@ export function ItemCustomizerDialog({
             </div>
           )}
 
-          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS ESTILO STITCH */}
+          {/* SEÇÃO 2: GRUPOS DE ADICIONAIS ESTILO STITCH (OBRIGATÓRIOS DESTACADOS NO TOPO) */}
           {groups.map((group) => {
             const totalQtyInGroup = group.options.reduce(
               (sum, opt) => sum + (selectedOptionsQty[opt.id] || 0),
               0,
             )
-            const isMandatory = group.min_quantity > 0
+            const isMandatory = (group.min_quantity && group.min_quantity > 0) || (group as any).is_required
+            const isSatisfied = isMandatory ? totalQtyInGroup >= group.min_quantity : true
 
             return (
               <div
                 key={group.id}
-                className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs"
+                id={`group-${group.id}`}
+                className={`rounded-3xl border bg-white p-4 sm:p-5 shadow-xs transition-all ${
+                  isMandatory && !isSatisfied
+                    ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300'
+                    : 'border-slate-200/90'
+                }`}
               >
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
@@ -788,8 +811,14 @@ export function ItemCustomizerDialog({
                     </p>
                   </div>
                   {isMandatory && (
-                    <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800">
-                      Obrigatório
+                    <span
+                      className={`shrink-0 rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-all ${
+                        isSatisfied
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-500 text-white shadow-xs'
+                      }`}
+                    >
+                      {isSatisfied ? '✓ Obrigatório' : 'Obrigatório'}
                     </span>
                   )}
                 </div>
@@ -981,12 +1010,13 @@ export function ItemCustomizerDialog({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!isReadyToConfirm}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]"
-              style={{ backgroundColor: primaryColor }}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98] touch-manipulation cursor-pointer ${
+                isReadyToConfirm ? 'hover:brightness-105' : 'bg-amber-600 hover:bg-amber-500'
+              }`}
+              style={isReadyToConfirm ? { backgroundColor: primaryColor } : undefined}
             >
               <ShoppingBag className="h-4 w-4" />
-              <span>ADICIONAR À SACOLA</span>
+              <span>{isReadyToConfirm ? 'ADICIONAR À SACOLA' : 'SELECIONE OS OBRIGATÓRIOS'}</span>
               <span className="ml-1 opacity-90">{formatBRL(unitPrice * itemQuantity)}</span>
             </button>
           </div>
