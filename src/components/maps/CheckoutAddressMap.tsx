@@ -21,6 +21,7 @@ interface CheckoutAddressMapProps {
   number: string
   neighborhood: string
   city?: string
+  zipcode?: string
   savedAddresses?: SavedAddressItem[]
   onSelectSavedAddress?: (addr: SavedAddressItem) => void
   onCoordinatesChange?: (coords: { lat: number; lng: number }) => void
@@ -34,6 +35,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
   number,
   neighborhood,
   city = 'Caraguatatuba',
+  zipcode,
   savedAddresses = [],
   onSelectSavedAddress,
   onCoordinatesChange,
@@ -42,6 +44,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersGroupRef = useRef<L.LayerGroup | null>(null)
   const activeMarkerRef = useRef<L.Marker | null>(null)
+  const lastGeocodedKeyRef = useRef<string>('')
 
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>(() => {
     if (neighborhood) {
@@ -53,37 +56,74 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
     return DEFAULT_CENTER
   })
 
-  // 1. Resolução e Geocodificação das Coordenadas da Rua com Fallback de Bairro
+  // 1. Resolução e Geocodificação das Coordenadas da Rua com Alta Precisão (ArcGIS -> Nominatim -> Bairro)
   useEffect(() => {
     let isMounted = true
 
     async function resolveCoordinates() {
-      // 1.1 Tenta primeiro geocodificar a RUA completa no OpenStreetMap Nominatim
-      if (street && street.trim().length > 3) {
-        try {
-          const cleanStreet = street.replace(/^(Rua|Avenida|Av\.?|R\.?)\s+/i, '').trim()
-          const query = `${cleanStreet}, ${neighborhood ? `${neighborhood}, ` : ''}${city || 'Caraguatatuba'}, SP, Brasil`
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-            { headers: { 'Accept-Language': 'pt-BR' } }
-          )
+      if (!street || street.trim().length < 3) return
+      const currentKey = `${street.trim()}|${(number || '').trim()}|${(neighborhood || '').trim()}|${(zipcode || '').trim()}|${(city || '').trim()}`
+      if (currentKey === lastGeocodedKeyRef.current) return
+      lastGeocodedKeyRef.current = currentKey
+
+      // 1.1 Tenta PRIMEIRO o ArcGIS World Geocoding (Líder em precisão no Brasil, resolve números e ruas de loteamento)
+      try {
+        const queryParts = [
+          street ? `${street}${number ? `, ${number}` : ''}` : '',
+          neighborhood || '',
+          zipcode ? zipcode.replace(/\D/g, '') : '',
+          city || 'Caraguatatuba',
+          'SP, Brasil',
+        ].filter(Boolean)
+        const query = queryParts.join(', ')
+
+        const arcgisUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(
+          query
+        )}&maxLocations=1`
+        const res = await fetch(arcgisUrl)
+        if (res.ok) {
           const data = await res.json()
-          if (isMounted && Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
-            const lat = parseFloat(data[0].lat)
-            const lng = parseFloat(data[0].lon)
-            setCurrentCoords({ lat, lng })
-            if (mapInstanceRef.current) {
-              mapInstanceRef.current.setView([lat, lng], 17, { animate: true })
+          if (isMounted && Array.isArray(data.candidates) && data.candidates.length > 0) {
+            const candidate = data.candidates[0]
+            if (candidate.score >= 70 && candidate.location?.x && candidate.location?.y) {
+              const lat = candidate.location.y
+              const lng = candidate.location.x
+              setCurrentCoords({ lat, lng })
+              if (mapInstanceRef.current) {
+                mapInstanceRef.current.setView([lat, lng], 17, { animate: true })
+              }
+              if (onCoordinatesChange) onCoordinatesChange({ lat, lng })
+              return
             }
-            if (onCoordinatesChange) onCoordinatesChange({ lat, lng })
-            return
           }
-        } catch {
-          // Continua para o fallback
         }
+      } catch (err) {
+        console.warn('ArcGIS geocoding fallback:', err)
       }
 
-      // 1.2 Fallback: Catálogo local geocodificado de Caraguatatuba
+      // 1.2 Fallback: OpenStreetMap Nominatim com consulta estruturada e completa
+      try {
+        const query = `${street}${number ? ` ${number}` : ''}, ${neighborhood ? `${neighborhood}, ` : ''}${city || 'Caraguatatuba'}, SP, Brasil`
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'pt-BR' } }
+        )
+        const data = await res.json()
+        if (isMounted && Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
+          const lat = parseFloat(data[0].lat)
+          const lng = parseFloat(data[0].lon)
+          setCurrentCoords({ lat, lng })
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setView([lat, lng], 17, { animate: true })
+          }
+          if (onCoordinatesChange) onCoordinatesChange({ lat, lng })
+          return
+        }
+      } catch {
+        // Continua para o fallback de bairro
+      }
+
+      // 1.3 Fallback: Catálogo local geocodificado de Caraguatatuba
       if (neighborhood) {
         const norm = neighborhood.toLowerCase().trim()
         const match = CARAGUATATUBA_NEIGHBORHOODS.find((n) => {
@@ -106,7 +146,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
     return () => {
       isMounted = false
     }
-  }, [street, neighborhood, city])
+  }, [street, number, neighborhood, city, zipcode])
 
   // 2. Inicialização do Mapa Leaflet
   useEffect(() => {

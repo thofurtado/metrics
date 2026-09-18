@@ -1522,6 +1522,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         if (complement) text += `> Complemento: ${complement}\n`
         text += `> ${neighborhood} - ${city || profile?.city || 'Local'}/${state || profile?.state || 'SP'}\n`
         if (zipcode) text += `> CEP: ${zipcode}\n`
+        if (deliveryCoords) {
+          text += `> 🗺️ Localização GPS: https://maps.google.com/?q=${deliveryCoords.lat},${deliveryCoords.lng}\n`
+        }
         if (customReferenceNote) {
           text += `> ⚠️ *${customReferenceNote}*\n`
         }
@@ -2123,17 +2126,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 ([catName, prods]) => (
                 <section key={catName}>
                   {!searchQuery && (
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
-                          {catName}
-                        </h2>
-                        <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-extrabold text-slate-700">
-                          {prods.length} itens
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                        {catName.toUpperCase()}
+                    <div className="mb-4 flex items-center gap-2.5">
+                      <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
+                        {catName}
+                      </h2>
+                      <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-extrabold text-slate-700">
+                        {prods.length} itens
                       </span>
                     </div>
                   )}
@@ -3012,13 +3010,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 number={number}
                 neighborhood={neighborhood}
                 city={city || profile?.city || 'Caraguatatuba'}
+                zipcode={zipcode}
                 savedAddresses={savedAddresses}
+                onCoordinatesChange={(coords) => setDeliveryCoords(coords)}
                 onSelectSavedAddress={(addr) => {
                   setStreet(addr.street || '')
                   setNumber(addr.number || '')
                   setNeighborhood(addr.neighborhood || '')
                   setComplement(addr.complement || '')
                   setReferencePoint(addr.referencePoint || '')
+                  if (addr.zipcode) {
+                    setZipcode(formatCep(addr.zipcode.toString().padStart(8, '0')))
+                  }
                 }}
               />
 
@@ -3039,6 +3042,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                             setNeighborhood(addr.neighborhood || '')
                             setComplement(addr.complement || '')
                             setReferencePoint(addr.referencePoint || addr.reference_point || '')
+                            if (addr.zipcode) {
+                              setZipcode(formatCep(addr.zipcode.toString().padStart(8, '0')))
+                            }
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition-all flex items-center gap-1.5 ${
                             isSel
