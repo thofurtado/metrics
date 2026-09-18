@@ -1916,6 +1916,11 @@ export function DeliveryOrdersDrawer({
                             <span className="text-sm font-black text-slate-900 dark:text-white truncate">
                               {order.client_name}
                             </span>
+                            {isNovosTab && order.client_name && (
+                              <button type="button" onClick={(e) => copyToClipboard(order.client_name, 'Nome do cliente', e)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600" title="Copiar nome do cliente" aria-label="Copiar nome do cliente">
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             {isTakeout ? (
                               <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 shrink-0">
                                 🥡 RETIRADA NO BALCÃO
@@ -2112,6 +2117,11 @@ export function DeliveryOrdersDrawer({
                                   <MessageCircle className="h-3 w-3" />
                                   <span>WhatsApp: {order.client_phone}</span>
                                 </a>
+                                {isNovosTab && (
+                                  <button type="button" onClick={(e) => copyToClipboard(order.client_phone, 'Telefone', e)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600" title="Copiar telefone" aria-label="Copiar telefone">
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2158,6 +2168,11 @@ export function DeliveryOrdersDrawer({
                             </span>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            {isNovosTab && (
+                              <button type="button" onClick={(e) => copyToClipboard(`${order.address}${order.city && !order.address.includes(order.city) ? `, ${order.city}` : ''}`, 'Endere?o', e)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-blue-600" title="Copiar endere?o" aria-label="Copiar endere?o">
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             <a
                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address + (order.city ? `, ${order.city}` : ''))}`}
                               target="_blank"
@@ -2230,17 +2245,26 @@ export function DeliveryOrdersDrawer({
                         {order.items?.map((item: any) => (
                           <div key={item.id} className="text-xs">
                             <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
-                              <span>{item.quantity}x {item.name}</span>
+                              <span className="flex items-center gap-1">
+                                <span>{item.quantity}x {item.name}</span>
+                                {isNovosTab && (
+                                  <button type="button" onClick={(e) => copyToClipboard(`${item.quantity}x ${item.name}`, 'Item', e)} className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-blue-600" title="Copiar item" aria-label="Copiar item">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </span>
                               <span>{formatBRL(item.price * item.quantity)}</span>
                             </div>
                             {item.complements?.map((c: any, idx: number) => (
-                              <div key={idx} className="pl-4 text-[11px] text-emerald-700 dark:text-emerald-400">
-                                + {c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}
+                              <div key={idx} className="flex items-center gap-1 pl-4 text-[11px] text-emerald-700 dark:text-emerald-400">
+                                <span>+ {c.quantity > 1 ? `${c.quantity}x ` : ''}{c.name}</span>
+                                {isNovosTab && <button type="button" onClick={(e) => copyToClipboard(`${c.quantity > 1 ? `${c.quantity}x ` : ''}${c.name}`, 'Complemento', e)} className="rounded p-0.5 text-emerald-500 hover:bg-emerald-100" title="Copiar complemento" aria-label="Copiar complemento"><Copy className="h-3 w-3" /></button>}
                               </div>
                             ))}
-                            {item.observations && (
-                              <div className="pl-4 text-[11px] italic text-amber-700 dark:text-amber-400">
-                                Obs: {item.observations}
+                            {(item.observations || item.observation || item.notes) && (
+                              <div className="flex items-center gap-1 pl-4 text-[11px] italic text-amber-700 dark:text-amber-400">
+                                <span>Obs: {item.observations || item.observation || item.notes}</span>
+                                {isNovosTab && <button type="button" onClick={(e) => copyToClipboard(item.observations || item.observation || item.notes, 'Observa??o do item', e)} className="rounded p-0.5 text-amber-500 hover:bg-amber-100" title="Copiar observa??o do item" aria-label="Copiar observa??o do item"><Copy className="h-3 w-3" /></button>}
                               </div>
                             )}
                           </div>
