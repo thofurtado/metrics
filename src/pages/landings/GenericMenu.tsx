@@ -2754,11 +2754,63 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   Onde vamos entregar?
                 </h3>
                 <p className="text-xs text-slate-600 mt-1 leading-snug">
-                  Digite seu CEP para localizar ou escolha um endereço.
+                  Digite seu CEP para localizar e confirme o número da sua residência.
                 </p>
               </div>
 
-              {/* BUSCA POR CEP (O CEP É O REI) */}
+              {/* SELEÇÃO RÁPIDA DE ENDEREÇOS SALVOS (CLIENTES RECONHECIDOS) */}
+              {clientFound && Array.isArray(clientFound.addresses) && clientFound.addresses.length > 0 && (
+                <div className="space-y-2 pb-1">
+                  <label className="text-xs font-bold text-slate-700 block">Endereços cadastrados:</label>
+                  <div className="space-y-1.5">
+                    {clientFound.addresses.map((addr: any, i: number) => {
+                      const isSel = street === addr.street && number === addr.number && neighborhood === addr.neighborhood
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setStreet(addr.street || '')
+                            setNumber(addr.number || '')
+                            setNeighborhood(addr.neighborhood || '')
+                            setComplement(addr.complement || '')
+                            setReferencePoint(addr.referencePoint || addr.reference_point || '')
+                            setZipcode(addr.zipcode || '')
+                            setCity(addr.city || '')
+                            setState(addr.state || '')
+                          }}
+                          className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
+                            isSel
+                              ? 'border-emerald-600 bg-emerald-50/70 ring-1 ring-emerald-600/30'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 shrink-0">
+                              <MapPin className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-slate-900 truncate">
+                                {addr.street}, nº {addr.number}
+                              </p>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {addr.neighborhood} {addr.complement ? `• ${addr.complement}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          {isSel && (
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* BUSCA POR CEP */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
@@ -2770,7 +2822,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     onClick={() => setIsManualAddressMode(!isManualAddressMode)}
                     className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
                   >
-                    {isManualAddressMode ? 'Buscar por CEP' : 'Não sei meu CEP'}
+                    {isManualAddressMode ? 'Usar busca por CEP' : 'Não sei meu CEP'}
                   </button>
                 </div>
 
@@ -2815,225 +2867,133 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
-              {/* MINI-MAPA INTERATIVO / PREVIEW DE LOCALIZAÇÃO (STITCH MOCKUP) */}
-              {(street || neighborhood) && (
-                <div className="relative w-full h-36 sm:h-40 rounded-3xl overflow-hidden border border-slate-200/80 shadow-inner bg-slate-100 group">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-90 transition-transform duration-700 group-hover:scale-105"
-                    style={{
-                      backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&auto=format&fit=crop&q=80")',
-                      filter: 'saturate(1.2) contrast(1.05)'
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-900/20 to-transparent" />
-
-                  {/* Pino Central de Localização */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-2 pointer-events-none">
-                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-800 px-3 py-1 text-[11px] font-black text-white shadow-xl ring-2 ring-white/80 animate-bounce">
-                      <span>🏠 Casa (Selecionado)</span>
-                    </div>
-                    <div className="flex h-8 w-8 items-center justify-center text-emerald-600 drop-shadow-md">
-                      <MapPin className="h-8 w-8 fill-emerald-600 text-white stroke-[2]" />
-                    </div>
-                    <div className="h-1.5 w-4 rounded-full bg-slate-900/40 blur-[1px]" />
-                  </div>
-
-                  {/* Tarja Flutuante Inferior com Endereço Destacado */}
-                  <div className="absolute bottom-2.5 inset-x-3 flex items-center justify-center">
-                    <div className="flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md px-4 py-1.5 text-xs font-black text-slate-800 shadow-md border border-slate-200/60 max-w-full truncate">
-                      <Rocket className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">
-                        Entregar aqui: {street ? `${street}, ${number || 'S/N'}` : 'Localizando seu endereço...'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* CARD DE ENDEREÇO CONFIRMADO (BORDA VERDE LATERAL E CHECK) */}
-              {(street || neighborhood) && (
-                <div className="relative rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm border-l-4 border-l-emerald-600 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/90 border border-emerald-200 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-900">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-700" />
-                      {zipcode ? 'Endereço Confirmado via CEP' : 'Endereço Selecionado'}
+              {/* FORMULÁRIO DE ENDEREÇO DIRETO (SEM MAPA MUNDI FAKE E SEM FECHAR EM CARD INACESSÍVEL) */}
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4 text-emerald-700" />
+                    Endereço de Entrega
+                  </span>
+                  {street && (
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      {city || profile?.city || 'Localizado'}
                     </span>
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white">
-                      <Check className="h-3 w-3 stroke-[3]" />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 pt-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-slate-900 truncate">
-                        {street || 'Nome da rua'}, nº {number || 'S/N'}
-                      </h4>
-                      <p className="text-xs text-slate-600 truncate mt-0.5">
-                        {complement ? `${complement} • ` : ''}{neighborhood || 'Bairro'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                        {city || profile?.city || 'Cidade'} - {state || profile?.state || 'SP'} {zipcode ? `• CEP ${zipcode}` : ''}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Ações Rápidas: Alterar número/complemento e Trocar endereço */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs font-bold text-emerald-700">
-                    <button
-                      type="button"
-                      onClick={() => setIsManualAddressMode(true)}
-                      className="flex items-center gap-1 hover:text-emerald-900 transition-colors"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      <span>Alterar número/complemento</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setZipcode('')
-                        setStreet('')
-                        setNumber('')
-                        setNeighborhood('')
-                        setComplement('')
-                        setIsManualAddressMode(false)
-                        setTimeout(() => document.getElementById('zipcode-input')?.focus(), 100)
-                      }}
-                      className="flex items-center gap-1 text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      <span>Trocar endereço</span>
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {/* FORMULÁRIO MANUAL COM SELECT DE BAIRRO */}
-              {isManualAddressMode && (
-                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 shadow-inner">
-                  <div className="flex items-center justify-between pb-1">
-                    <span className="text-xs font-black text-slate-900">Preencher Endereço Manualmente</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsManualAddressMode(false)}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-800"
-                    >
-                      Fechar ✕
-                    </button>
-                  </div>
+                {/* RUA / LOGRADOURO */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block pb-1">
+                    Rua / Logradouro <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="checkout-street-input"
+                    type="text"
+                    placeholder="Ex: Rua das Flores, Av. Brasil"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="text-[11px] font-bold text-slate-700">Rua / Logradouro</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Rua das Flores"
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700">Número</label>
-                      <input
-                        id="checkout-number-input"
-                        type="text"
-                        placeholder="Nº"
-                        value={number}
-                        onChange={(e) => setNumber(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-700">Bairro</label>
-                        <button
-                          type="button"
-                          onClick={() => setIsNeighborhoodHelpOpen(true)}
-                          className="flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline"
-                          title="Não achou seu bairro?"
-                        >
-                          <Info className="h-3 w-3" />
-                          <span>Não achou?</span>
-                        </button>
-                      </div>
-
-                      {availableNeighborhoodsList.length > 0 ? (
-                        <select
-                          value={neighborhood}
-                          onChange={(e) => {
-                            setNeighborhood(e.target.value)
-                            setAcceptedStandardFee(false)
-                          }}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                        >
-                          <option value="">Selecione seu bairro...</option>
-                          {availableNeighborhoodsList.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                          <option value="__outro__">Outro bairro (digitar)</option>
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          placeholder="Digite seu bairro"
-                          value={neighborhood}
-                          onChange={(e) => setNeighborhood(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                        />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700">Complemento</label>
-                      <input
-                        type="text"
-                        placeholder="Apto, bloco, casa 2..."
-                        value={complement}
-                        onChange={(e) => setComplement(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
+                {/* NÚMERO E COMPLEMENTO LADO A LADO COM TABINDEX SEQUENCIAL */}
+                <div className="grid grid-cols-3 gap-2.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700">Ponto de Referência (Opcional)</label>
+                    <label className="text-[11px] font-bold text-slate-700 block pb-1">
+                      Número <span className="text-red-500">*</span>
+                    </label>
                     <input
+                      id="checkout-number-input"
+                      tabIndex={1}
                       type="text"
-                      placeholder="Ex: Próximo à padaria, portão cinza"
-                      value={referencePoint}
-                      onChange={(e) => setReferencePoint(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                      placeholder="Nº"
+                      value={number}
+                      onChange={(e) => setNumber(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="text-[11px] font-bold text-slate-700 block pb-1">
+                      Complemento (Apto, Bloco...)
+                    </label>
+                    <input
+                      id="checkout-complement-input"
+                      tabIndex={2}
+                      type="text"
+                      placeholder="Ex: Apto 42B, Bloco 2"
+                      value={complement}
+                      onChange={(e) => setComplement(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
-              )}
 
-              {/* Botão Secundário: Cadastrar novo endereço */}
-              <button
-                type="button"
-                onClick={() => {
-                  setZipcode('')
-                  setStreet('')
-                  setNumber('')
-                  setNeighborhood('')
-                  setComplement('')
-                  setIsManualAddressMode(true)
-                }}
-                className="w-full flex items-center justify-center gap-1.5 rounded-2xl border border-indigo-100 bg-indigo-50/60 py-3 text-xs font-bold text-indigo-900 hover:bg-indigo-100/70 transition-colors"
-              >
-                <Plus className="h-4 w-4 text-indigo-600" />
-                <span>Cadastrar novo endereço</span>
-              </button>
+                {/* BAIRRO */}
+                <div>
+                  <div className="flex items-center justify-between pb-1">
+                    <label className="text-[11px] font-bold text-slate-700">
+                      Bairro <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsNeighborhoodHelpOpen(true)}
+                      className="flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline"
+                      title="Não achou seu bairro?"
+                    >
+                      <Info className="h-3 w-3" />
+                      <span>Não achou seu bairro?</span>
+                    </button>
+                  </div>
 
-              {/* Card de Taxa e Tempo de Rota (Stitch Mockup) */}
+                  {availableNeighborhoodsList.length > 0 ? (
+                    <select
+                      value={neighborhood}
+                      onChange={(e) => {
+                        setNeighborhood(e.target.value)
+                        setAcceptedStandardFee(false)
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="">Selecione seu bairro atendido...</option>
+                      {availableNeighborhoodsList.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                      {neighborhood && !availableNeighborhoodsList.includes(neighborhood) && (
+                        <option value={neighborhood}>{neighborhood} (Bairro informado)</option>
+                      )}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Digite seu bairro"
+                      value={neighborhood}
+                      onChange={(e) => setNeighborhood(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                    />
+                  )}
+                </div>
+
+                {/* PONTO DE REFERÊNCIA (TABINDEX 3) */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block pb-1">
+                    Ponto de Referência (Opcional)
+                  </label>
+                  <input
+                    id="checkout-reference-input"
+                    tabIndex={3}
+                    type="text"
+                    placeholder="Ex: Próximo à padaria, portão cinza"
+                    value={referencePoint}
+                    onChange={(e) => setReferencePoint(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-medium text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* CARD DE TAXA E TEMPO DE ROTA */}
               <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-black text-emerald-900">
                   <span className="flex items-center gap-1.5">
@@ -3052,18 +3012,19 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
-              {/* Botões de Ação */}
+              {/* BOTÕES DE AÇÃO */}
               <div className="pt-2 space-y-2">
                 <button
                   type="button"
                   onClick={() => {
                     if (!street.trim()) {
                       alert('Por favor, informe o logradouro/rua ou digite seu CEP.')
+                      document.getElementById('checkout-street-input')?.focus()
                       return
                     }
-                    if (!number.trim() || number === '0') {
+                    if (!number.trim() || number === '0' || number.toLowerCase() === 's/n') {
                       alert('Por favor, informe o número da sua residência.')
-                      setTimeout(() => document.getElementById('checkout-number-input')?.focus(), 100)
+                      document.getElementById('checkout-number-input')?.focus()
                       return
                     }
                     if (!neighborhood.trim()) {
@@ -3091,9 +3052,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </motion.div>
           )}
 
-          {/* ============================================================ */}
-          {/* ETAPA 4: FORMA DE PAGAMENTO (FIEL AO STITCH)                 */}
-          {/* ============================================================ */}
           {checkoutWizardStep === 4 && (
             <motion.div
               key="step4"
@@ -3346,7 +3304,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 space-y-2 text-xs">
                 <div className="flex items-center justify-between text-slate-600 font-semibold">
                   <span>Subtotal dos itens</span>
-                  <span className="font-bold text-slate-800">{formatCurrency(subtotal)}</span>
+                  <span className="font-bold text-slate-800">{formatCurrency(cartSubtotal)}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 font-semibold">
                   <span>Taxa de entrega</span>

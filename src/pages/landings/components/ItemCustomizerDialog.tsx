@@ -560,7 +560,7 @@ export function ItemCustomizerDialog({
                               {selectedFlavor.name}
                             </p>
                             {selectedFlavor.description && (
-                              <p className="text-[11px] font-medium text-slate-500 truncate max-w-sm">
+                              <p className="text-xs sm:text-sm font-medium text-slate-500 truncate max-w-sm">
                                 {selectedFlavor.description}
                               </p>
                             )}
@@ -630,7 +630,7 @@ export function ItemCustomizerDialog({
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-black text-slate-900">{group.name}</h4>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">{group.name}</h4>
                       {group.free_quantity > 0 && (
                         <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
                           {group.free_quantity === 1 ? '1º Grátis' : `${group.free_quantity} Grátis`}
@@ -673,7 +673,7 @@ export function ItemCustomizerDialog({
                         className="flex items-center justify-between py-2.5"
                       >
                         <div>
-                          <p className="text-xs font-bold text-slate-800">{opt.name}</p>
+                          <p className="text-sm sm:text-base font-black text-slate-900 leading-snug">{opt.name}</p>
                           <p className="text-[11px] font-semibold text-slate-500">
                             {opt.price > 0 ? `+ ${formatBRL(opt.price)}` : 'Grátis'}
                           </p>
@@ -684,20 +684,20 @@ export function ItemCustomizerDialog({
                             type="button"
                             onClick={() => handleDecreaseOption(opt)}
                             disabled={qty === 0}
-                            className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition-all hover:bg-slate-100 disabled:opacity-30 active:scale-95"
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-800 border border-slate-200 shadow-sm transition-all hover:bg-slate-100 disabled:opacity-20 active:scale-90"
                           >
-                            <Minus className="h-3 w-3 stroke-[3]" />
+                            <Minus className="h-4 w-4 stroke-[3]" />
                           </button>
-                          <span className="w-5 text-center text-xs font-black text-slate-900">
+                          <span className="w-6 text-center text-sm font-black text-slate-900">
                             {qty}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleIncreaseOption(group, opt)}
                             disabled={!canAdd}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-white shadow-sm transition-all disabled:opacity-30 active:scale-95" style={{ backgroundColor: primaryColor }}
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-md transition-all disabled:opacity-20 active:scale-90" style={{ backgroundColor: primaryColor }}
                           >
-                            <Plus className="h-3 w-3 stroke-[3]" />
+                            <Plus className="h-4 w-4 stroke-[3]" />
                           </button>
                         </div>
                       </div>
