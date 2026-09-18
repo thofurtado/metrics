@@ -899,43 +899,59 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
     setIsSearchingCEPCheckout(true)
     try {
-      let streetVal = ''
-      let neighborhoodVal = ''
-      let cityVal = ''
-      let stateVal = ''
-
-      // 1. Tentar ViaCEP (mais rápido e resiliente no Brasil)
-      try {
-        const resViaCep = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`)
-        if (resViaCep.ok) {
-          const dataViaCep = await resViaCep.json()
-          if (!dataViaCep.erro) {
-            streetVal = dataViaCep.logradouro || ''
-            neighborhoodVal = dataViaCep.bairro || ''
-            cityVal = dataViaCep.localidade || ''
-            stateVal = dataViaCep.uf || ''
-          }
-        }
-      } catch (errViaCep) {
-        console.warn('ViaCEP indisponível, usando BrasilAPI como fallback...', errViaCep)
+      type CepResult = {
+        street: string
+        neighborhood: string
+        city: string
+        state: string
       }
 
-      // 2. Fallback BrasilAPI caso o ViaCEP não tenha retornado dados
-      if (!streetVal && !neighborhoodVal && !cityVal) {
-        try {
-          const resBrasil = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`)
-          if (resBrasil.ok) {
-            const dataBrasil = await resBrasil.json()
-            streetVal = dataBrasil.street || ''
-            neighborhoodVal = dataBrasil.neighborhood || ''
-            cityVal = dataBrasil.city || ''
-            stateVal = dataBrasil.state || ''
-          }
-        } catch (errBrasil) {
-          console.warn('BrasilAPI falhou:', errBrasil)
-        }
+      const requests = await Promise.allSettled([
+        fetch(`https://viacep.com.br/ws/${rawCep}/json/`).then(async (response) => {
+          if (!response.ok) throw new Error(`ViaCEP HTTP ${response.status}`)
+          const data = await response.json()
+          if (data.erro) throw new Error('CEP não encontrado no ViaCEP')
+          return {
+            street: data.logradouro || '',
+            neighborhood: data.bairro || '',
+            city: data.localidade || '',
+            state: data.uf || '',
+          } satisfies CepResult
+        }),
+        fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`).then(async (response) => {
+          if (!response.ok) throw new Error(`BrasilAPI HTTP ${response.status}`)
+          const data = await response.json()
+          return {
+            street: data.street || '',
+            neighborhood: data.neighborhood || '',
+            city: data.city || '',
+            state: data.state || '',
+          } satisfies CepResult
+        }),
+      ])
+
+      const cepResults = requests
+        .filter((result): result is PromiseFulfilledResult<CepResult> => result.status === 'fulfilled')
+        .map((result) => result.value)
+        .filter((result) => result.street || result.neighborhood || result.city)
+
+      if (requests.some((result) => result.status === 'rejected')) {
+        console.warn('Uma das APIs de CEP não respondeu:', requests.filter((result) => result.status === 'rejected'))
       }
 
+      const cityFromResults = cepResults.find((result) => result.city)?.city || ''
+      const validNeighborhoodResults = cepResults.filter((result) =>
+        result.neighborhood && normalizeText(result.neighborhood) !== normalizeText(result.city || cityFromResults),
+      )
+      const configuredNeighborhoodResult = validNeighborhoodResults.find((result) =>
+        matchNeighborhoodWithConfig(result.neighborhood),
+      )
+      const selectedResult = configuredNeighborhoodResult || validNeighborhoodResults[0] || cepResults[0]
+
+      const streetVal = cepResults.find((result) => result.street)?.street || ''
+      const neighborhoodVal = selectedResult?.neighborhood || ''
+      const cityVal = selectedResult?.city || cityFromResults
+      const stateVal = selectedResult?.state || cepResults.find((result) => result.state)?.state || ''
       if (streetVal || neighborhoodVal || cityVal) {
         setStreet(streetVal)
         setCity(cityVal)
