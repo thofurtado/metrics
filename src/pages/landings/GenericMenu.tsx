@@ -541,6 +541,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [lastOrderTotal, setLastOrderTotal] = useState<number>(0)
   const [lastOrderItemsSummary, setLastOrderItemsSummary] = useState<string>('')
   const [lastOrderItemsCount, setLastOrderItemsCount] = useState<number>(1)
+  const [lastOrderItems, setLastOrderItems] = useState<CartItem[]>([])
+  const [isOrderItemsOpen, setIsOrderItemsOpen] = useState(false)
   const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
   const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
@@ -1835,6 +1837,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
       const itemsSummaryText = cartItems.map((item) => `${item.quantity}x ${item.displayName || item.product.name}`).join(' + ');
+      setLastOrderItems(cartItems);
+      setIsOrderItemsOpen(false);
       setLastOrderItemsCount(totalItemsCount || 1);
       setLastOrderItemsSummary(itemsSummaryText || 'Pedido');
       setLastOrderTotal(cartTotal);
@@ -2971,11 +2975,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </button>
               </div>
 
-              {/* Barra Inferior Fixa com Total e Continuar */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-4">
+              {/* Barra inferior fixa: total dos itens (sem taxa presumida) + frete */}
+              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex items-center justify-between gap-4 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">Total do Pedido</span>
-                  <span className="text-xl font-black text-slate-950">{formatCurrency(cartTotal)}</span>
+                  <span className="block text-2xl font-black leading-tight text-slate-950">{formatCurrency(cartSubtotal)}</span>
+                  {fulfillmentType === 'DELIVERY' && (
+                    <button
+                      type="button"
+                      disabled={availableNeighborhoodsList.length === 0}
+                      onClick={() => setIsNeighborhoodPickerOpen(true)}
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-900 disabled:text-slate-500"
+                    >
+                      {neighborhood.trim()
+                        ? (resolvedDeliveryFee > 0 ? `+ ${formatCurrency(resolvedDeliveryFee)} de frete` : '+ entrega grátis')
+                        : '+ frete · consultar bairro'}
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -3731,23 +3746,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, scale: 0.95 }}
               className="py-4 text-center text-sm"
             >
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm animate-bounce">
-                <CheckCircle2 className="h-9 w-9" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <CheckCircle2 className="h-8 w-8" />
               </div>
 
-              <h3 className="mt-3 text-xl font-black text-slate-900">
-                Pedido Realizado com Sucesso! 🎉
-              </h3>
-              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                Seu pedido foi registrado no sistema e a janela do WhatsApp foi aberta para você enviar a confirmação.
-              </p>
-              {paymentMethod === 'PIX' && (
-                <p className="mx-auto mt-3 max-w-sm rounded-2xl bg-amber-50 px-3.5 py-3 text-sm font-bold text-amber-900">
-                  Envie o comprovante do Pix na conversa do WhatsApp para liberarmos seu pedido.
-                </p>
-              )}
+              <h3 className="mt-3 text-xl font-black text-slate-900">Pedido realizado!</h3>
 
-              {/* CARD DE ACOMPANHAMENTO DO STATUS DO PEDIDO (LIVE TRACKING - FIEL AO STITCH IMAGEM 3) */}
+              {/* Acompanhamento do pedido (a lógica de status/polling fica no efeito acima; aqui só a apresentação) */}
               {(() => {
                 const isTakeoutOrder = fulfillmentType === 'TAKEOUT'
                 const s = (liveOrderStatus || '').toLowerCase().trim()
@@ -3784,7 +3789,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   iconColorClasses = 'bg-orange-100 text-orange-800 border-orange-300'
                 }
 
-                // 5 etapas fixas fiéis ao Stitch: 1. Aguardando, 2. Produção, 3. Conferência, 4. Na Rua / Balcão, 5. Entregue / Retirado
+                // 5 etapas: 1. Aguardando, 2. Produção, 3. Conferência, 4. Na Rua / Balcão, 5. Entregue / Retirado
                 const stagesList = [
                   { num: 1, label: 'Aguardando' },
                   { num: 2, label: 'Produção' },
@@ -3794,65 +3799,48 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 ]
 
                 return (
-                  <div className="mt-5 space-y-3">
-                    {/* Card Principal de Acompanhamento ao Vivo com Borda Verde Suave */}
-                    <div className="rounded-3xl border-2 border-emerald-300/80 bg-white p-4 sm:p-5 text-left space-y-4 shadow-sm">
-                      {/* Linha de Cabeçalho: Ponto Pulsante + ACOMPANHAMENTO AO VIVO + #1 */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="relative flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                          </span>
-                          <span className="text-xs font-black uppercase tracking-wider text-slate-900">
-                            ACOMPANHAMENTO AO VIVO
-                          </span>
+                  <div className="mt-4 space-y-3">
+                    <div className="space-y-4 rounded-3xl border-2 border-emerald-300/80 bg-white p-4 text-left shadow-sm sm:p-5">
+                      {/* Status atual (o ponto pulsante indica que atualiza sozinho) */}
+                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white p-3.5">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${iconColorClasses}`}>
+                            <StatusIconComponent className="h-6 w-6 stroke-[2.2]" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="mb-1 block text-[10px] font-black uppercase leading-none tracking-wider text-slate-400">
+                              Status atual
+                            </span>
+                            <span className="flex items-center gap-2 text-base font-black leading-tight text-slate-900">
+                              <span className="truncate">{statusLabel}</span>
+                              {currentStage < 5 && (
+                                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                </span>
+                              )}
+                            </span>
+                          </div>
                         </div>
-                        <span className="rounded-full bg-slate-900 px-3 py-0.5 text-xs font-black text-white shadow-xs">
+                        <span className="shrink-0 rounded-full bg-slate-900 px-3 py-0.5 text-xs font-black text-white">
                           #{createdDisplayId || 1}
                         </span>
                       </div>
 
-                      {/* Box do Status Atual */}
-                      <div className="rounded-2xl border border-emerald-100 bg-white p-3.5 flex items-center justify-between gap-3 shadow-2xs">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-xs ${iconColorClasses}`}>
-                            <StatusIconComponent className="h-6 w-6 stroke-[2.2]" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none mb-1">
-                              STATUS ATUAL
-                            </span>
-                            <span className="text-sm sm:text-base font-black text-slate-900 leading-tight block truncate">
-                              {statusLabel}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 shrink-0 shadow-2xs animate-pulse">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          ATUALIZANDO
-                        </span>
-                      </div>
-
-                      {/* PROGRESSO DA COZINHA (STEPPER COM 5 CÍRCULOS NUMERADOS E LINHAS) */}
+                      {/* Progresso */}
                       <div className="space-y-2.5 pt-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                            PROGRESSO DA COZINHA
+                            Progresso do pedido
                           </span>
-                          <span className="text-xs font-black text-emerald-700">
-                            Etapa {currentStage} de 5
-                          </span>
+                          <span className="text-xs font-black text-emerald-700">Etapa {currentStage} de 5</span>
                         </div>
 
-                        {/* Stepper de 5 Círculos Conectados */}
                         <div className="py-2">
-                          <div className="flex items-center justify-between relative">
-                            {/* Linhas conectoras de fundo */}
-                            <div className="absolute left-4 right-4 top-4 -translate-y-1/2 h-1 bg-slate-200 z-0" />
-                            {/* Linha preenchida de progresso ativo */}
+                          <div className="relative flex items-center justify-between">
+                            <div className="absolute left-4 right-4 top-4 z-0 h-1 -translate-y-1/2 bg-slate-200" />
                             <div
-                              className="absolute left-4 top-4 -translate-y-1/2 h-1 bg-emerald-600 transition-all duration-500 z-0"
+                              className="absolute left-4 top-4 z-0 h-1 -translate-y-1/2 bg-emerald-600 transition-all duration-500"
                               style={{
                                 width: `${((Math.min(currentStage, 5) - 1) / 4) * 100}%`,
                                 maxWidth: 'calc(100% - 32px)'
@@ -3865,18 +3853,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               const isCompletedOrActive = isPassed || isCurrent
 
                               return (
-                                <div key={st.num} className="flex flex-col items-center gap-1.5 relative z-10">
+                                <div key={st.num} className="relative z-10 flex flex-col items-center gap-1.5">
                                   <div
-                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all shadow-xs ${
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all ${
                                       isCompletedOrActive
                                         ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                                        : 'bg-slate-100 text-slate-400 border border-slate-200'
-                                    }`}
+                                        : 'border border-slate-200 bg-slate-100 text-slate-400'
+                                    } ${isCurrent && st.num < 5 ? 'animate-pulse' : ''}`}
                                   >
                                     {isPassed ? <Check className="h-4 w-4 stroke-[3]" /> : st.num}
                                   </div>
                                   <span
-                                    className={`text-[10px] text-center leading-tight ${
+                                    className={`text-center text-[10px] leading-tight ${
                                       isCompletedOrActive ? 'font-black text-slate-900' : 'font-medium text-slate-400'
                                     }`}
                                   >
@@ -3889,44 +3877,78 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         </div>
                       </div>
 
-                      {/* Mensagem Explicativa Importante */}
-                      <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 flex items-start gap-2.5 text-xs text-amber-900 shadow-2xs">
-                        <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-                        <p className="leading-snug">
-                          <strong>Atenção:</strong> Se você deseja acompanhar o status em tempo real, <strong>não feche esta janela</strong>. Atualizamos automaticamente assim que a cozinha avançar as etapas.
-                        </p>
-                      </div>
+                      {/* Aviso curto e discreto */}
+                      <p className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+                        <Info className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                        Mantenha esta janela aberta para acompanhar.
+                      </p>
                     </div>
 
-                    {/* MINI-CARD DE RESUMO DO PEDIDO (FIEL AO STITCH IMAGEM 3) */}
-                    <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-800 font-black text-xs border border-slate-200 shadow-2xs">
-                          {lastOrderItemsCount}x
+                    {/* Resumo do pedido: toque para conferir itens, complementos e observações */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-left shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => setIsOrderItemsOpen((v) => !v)}
+                        aria-expanded={isOrderItemsOpen}
+                        className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs font-black text-slate-800">
+                            {lastOrderItemsCount}x
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black leading-tight text-slate-900">
+                              {isOrderItemsOpen ? 'Seu pedido' : `${lastOrderItemsCount} ${lastOrderItemsCount === 1 ? 'item' : 'itens'} · ver detalhes`}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                              Previsão: {isTakeoutOrder ? '15–25 min' : '30–45 min'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-black text-slate-900 truncate leading-tight">
-                            {lastOrderItemsSummary || 'Itens do Pedido'}
-                          </p>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
-                            Previsão: {fulfillmentType === 'TAKEOUT' ? '15–25 min • Retirada no Balcão' : '30–45 min • Entrega Express'}
-                          </p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="text-base font-black text-slate-900">{formatCurrency(lastOrderTotal)}</span>
+                          <ChevronRight
+                            className={`h-4 w-4 text-slate-400 transition-transform ${isOrderItemsOpen ? 'rotate-90' : ''}`}
+                          />
                         </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none mb-1">Total</span>
-                        <span className="text-sm sm:text-base font-black text-slate-900 leading-tight">
-                          {formatCurrency(lastOrderTotal)}
-                        </span>
-                      </div>
+                      </button>
+
+                      {isOrderItemsOpen && (
+                        <ul className="space-y-3 border-t border-slate-100 px-3.5 py-3">
+                          {lastOrderItems.map((item) => (
+                            <li key={item.id} className="text-sm">
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="font-bold text-slate-900">
+                                  {item.quantity}x {item.displayName || item.product.name}
+                                </span>
+                                <span className="shrink-0 font-semibold text-slate-700">
+                                  {formatCurrency(item.unitPrice * item.quantity)}
+                                </span>
+                              </div>
+                              {item.fractions && item.fractions.length > 0 && (
+                                <p className="text-xs text-slate-500">{item.fractions.join(' + ')}</p>
+                              )}
+                              {item.selectedOptions?.map((opt, i) => (
+                                <p key={i} className="text-xs text-slate-500">
+                                  + {opt.quantity > 1 ? `${opt.quantity}x ` : ''}
+                                  {opt.optionName}
+                                </p>
+                              ))}
+                              {item.observation && (
+                                <p className="text-xs italic text-slate-500">“{item.observation}”</p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 )
               })()}
 
-              {/* Botão de Reenviar Mensagem WhatsApp caso tenha fechado sem querer */}
+              {/* Ação sugerida no WhatsApp (mesma mensagem do pedido) */}
               {lastOrderText && (
-                <div className="mt-4">
+                <div className="sticky bottom-0 -mx-5 mt-4 border-t border-slate-100 bg-white px-5 pb-1 pt-3 sm:-mx-6 sm:px-6">
                   <button
                     type="button"
                     onClick={() => {
@@ -3934,10 +3956,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       const url = `https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(lastOrderText)}`
                       window.open(url, '_blank')
                     }}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 bg-white py-3.5 text-xs font-black text-emerald-800 shadow-sm transition-all hover:bg-emerald-50 active:scale-[0.98]"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-800 text-sm font-black text-white shadow-lg ring-4 ring-emerald-500/25 transition-all hover:bg-emerald-900 active:scale-[0.98]"
                   >
-                    <span>Reenviar Mensagem via WhatsApp</span>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs">💬</span>
+                    <MessageCircle className="h-5 w-5" />
+                    <span>{paymentMethod === 'PIX' ? 'Enviar comprovante do Pix' : 'Fale conosco e confirme seu pedido'}</span>
                   </button>
                 </div>
               )}
@@ -3978,7 +4000,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   )}
                 >
                   <span>{bairro}</span>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                  <span className="flex items-center gap-2 text-slate-500">
+                    {feeLabelForNeighborhood(bairro)}
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </span>
                 </button>
               ))}
             </div>
