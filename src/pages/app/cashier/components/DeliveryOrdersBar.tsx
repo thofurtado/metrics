@@ -61,8 +61,9 @@ export function DeliveryOrdersBar({ sessionId, sessionDate, sessionStatus, onOrd
   const { data } = useQuery({
     queryKey: ['cashier-online-orders', sessionId, extractDateString(sessionDate)],
     queryFn: async () => {
-      const params: Record<string, any> = {}
-      if (sessionId) params.cashier_session_id = sessionId
+            const params: Record<string, any> = {}
+      // A gestão é compartilhada entre os caixas: o vínculo com o caixa só
+      // acontece na baixa da venda. A listagem usa exclusivamente a data.
       const dateStr = extractDateString(sessionDate)
       if (dateStr) params.date = dateStr
       const res = await api.get('/public/orders/pending', { params })
@@ -85,41 +86,18 @@ export function DeliveryOrdersBar({ sessionId, sessionDate, sessionStatus, onOrd
         : []
     }))
 
-  // Filtro rígido por sessão e data para evitar vazamento entre caixas de dias diferentes
+    // A gestão de pedidos é compartilhada entre todos os caixas do mesmo dia.
+  // cashier_session_id/caixa_id só deve ser definido no momento da baixa;
+  // nunca restringe a visualização dos pedidos.
   const orders: any[] = React.useMemo(() => {
     const sessionDateStr = extractDateString(sessionDate)
-    const isSessionOpen =
-      sessionStatus === 'ABERTO' ||
-      sessionStatus === 'OPEN' ||
-      sessionStatus === 'Aberto'
+    if (!sessionDateStr) return rawOrders
 
     return rawOrders.filter((order) => {
-      // 1. Se o pedido já possui cashier_session_id ou caixa_id explicitamente gravado:
-      if (order.cashier_session_id || order.caixa_id) {
-        const orderSessionId = String(order.cashier_session_id || order.caixa_id)
-        if (sessionId) {
-          return orderSessionId === String(sessionId)
-        }
-        return true
-      }
-
-      // 2. Se o pedido NÃO tem caixa vinculado (pedido online novo / órfão):
-      // - Nunca deve aparecer em caixas que já foram fechados ou conferidos
-      if (sessionId && !isSessionOpen) {
-        return false
-      }
-
-      // - Deve pertencer à mesma data de referência do caixa atual
-      if (sessionDateStr && order.created_at) {
-        const orderDateStr = extractDateString(order.created_at)
-        if (orderDateStr && orderDateStr !== sessionDateStr) {
-          return false
-        }
-      }
-
-      return true
+      const orderDateStr = extractDateString(order.created_at)
+      return !orderDateStr || orderDateStr === sessionDateStr
     })
-  }, [rawOrders, sessionId, sessionDate, sessionStatus])
+  }, [rawOrders, sessionDate])
   const profile = data?.profile || null
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
@@ -127,27 +105,7 @@ export function DeliveryOrdersBar({ sessionId, sessionDate, sessionStatus, onOrd
   const conferenciaOrders = orders.filter((o) => o.status === 'conferencia')
   const dispatchedOrders = orders.filter((o) => o.status === 'dispatched')
   const deliveredOrders = orders.filter((o) => o.status === 'delivered')
-  const orphanOrders = orders.filter((o) => !o.caixa_id && !o.cashier_session_id)
-  const [associatingOrphans, setAssociatingOrphans] = useState(false)
 
-  const handleAssociateOrphans = async () => {
-    if (!sessionId) return
-    setAssociatingOrphans(true)
-    try {
-      const res = await api.post('/public/orders/associate-orphans', {
-        cashier_session_id: sessionId,
-        order_ids: orphanOrders.map((o) => o.id)
-      })
-      toast.success(res.data.message || 'Pedidos vinculados com sucesso ao caixa!')
-      queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
-      queryClient.invalidateQueries({ queryKey: ['cashier-session', sessionId] })
-      if (onOrderCompleted) onOrderCompleted()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erro ao vincular pedidos órfãos.')
-    } finally {
-      setAssociatingOrphans(false)
-    }
-  }
 
   // Sincroniza o alerta sonoro: toca APENAS enquanto houver pedidos pendentes (Novos)
   // Se a contagem for 0, silencia e limpa o timer imediatamente.
@@ -247,24 +205,7 @@ export function DeliveryOrdersBar({ sessionId, sessionDate, sessionStatus, onOrd
 
   return (
     <>
-      {sessionId && orphanOrders.length > 0 && (
-        <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200 animate-fade-in shadow-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-base">⚠️</span>
-            <span>
-              Existem <strong>{orphanOrders.length}</strong> pedido(s) de delivery de hoje sem caixa vinculado.
-            </span>
-          </div>
-          <button
-            type="button"
-            disabled={associatingOrphans}
-            onClick={handleAssociateOrphans}
-            className="rounded-lg bg-amber-600 px-3 py-1 text-[11px] font-black text-white hover:bg-amber-500 transition-all active:scale-98 shadow"
-          >
-            {associatingOrphans ? 'Vinculando...' : 'Vincular a este Caixa'}
-          </button>
-        </div>
-      )}
+
       <div className="my-3 overflow-visible rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900/90">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Cabeçalho Harmônico: GESTOR DE ENTREGAS / 5 pedidos hoje */}
