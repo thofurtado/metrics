@@ -3531,114 +3531,84 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           }
         }}
       >
-        <DialogContent className="rounded-3xl p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl">
-          <DialogHeader className="text-center sm:text-left space-y-2">
-            <div className="mx-auto sm:mx-0 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
-              <Bike className="h-6 w-6" />
-            </div>
-            <DialogTitle className="text-lg font-black text-slate-900 leading-tight">
-              Localizamos seu endereço! 🛵
-            </DialogTitle>
-            <DialogDescription className="text-xs font-medium text-slate-600 leading-relaxed">
-              O bairro{' '}
-              <strong className="text-slate-900 font-bold">
-                "{unsupportedNeighborhoodModal?.neighborhoodName || 'informado'}"
-              </strong>{' '}
-              não está em nossa lista automática de rotas rápidas, mas nós podemos entregar para você!
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="rounded-3xl p-5 sm:p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl [&>button]:hidden">
+          {/* Alça superior estilo folha nativa */}
+          <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-1 mb-2" />
 
-          {/* Opção Principal: Continuar com a Taxa Padrão / Máxima da Loja */}
-          <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 text-xs text-amber-950 space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold uppercase tracking-wide text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-md">
-                Entrega Especial Fora da Rota Padrão
+          {/* Botão fechar X circular */}
+          <button
+            type="button"
+            onClick={() => setUnsupportedNeighborhoodModal(null)}
+            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+          >
+            <X className="h-4 w-4 stroke-[2.5]" />
+          </button>
+
+          {/* Cabeçalho com Ícone Centralizado e Texto Acolhedor */}
+          <div className="text-center pt-1 space-y-2">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-2xs">
+              <Bike className="h-7 w-7" />
+            </div>
+            <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
+              Estamos quase lá! 🛵
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
+              O bairro <strong className="text-slate-900 font-bold">"{unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || 'informado'}"</strong> fica um pouquinho fora da nossa rota diária, mas nós queremos muito te atender!
+            </DialogDescription>
+          </div>
+
+          {/* CARD 1: ENTREGA SOB ENCOMENDA / TAXA ESPECIAL (FIEL AO STITCH) */}
+          <div className="rounded-3xl border border-emerald-200 bg-white p-4 space-y-3 shadow-xs mt-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-900">
+                <Check className="h-3 w-3 stroke-[3]" /> Entrega sob encomenda
               </span>
-              <span className="font-black text-amber-900 text-sm">
-                R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}
+              <span className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-black text-emerald-900">
+                Taxa: R$ {Number(profile?.deliveryFee || 30).toFixed(2).replace('.', ',')}
               </span>
             </div>
-            <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
-              Podemos realizar a entrega no seu endereço cobrando a taxa padrão da loja. O prazo pode variar conforme a distância.
+
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Você pode concluir seu pedido agora! Nossa equipe verifica o motoboy e alinha o horário com carinho pelo WhatsApp.
             </p>
+
             <button
               type="button"
               onClick={() => {
-                const maxFee = Number(profile?.deliveryFee || 0)
+                const maxFee = Number(profile?.deliveryFee || 30)
                 const orig = unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''
                 setAcceptedStandardFee(true)
-                setCustomReferenceNote(`Bairro fora dos setores padrão: ${orig} (Taxa padrão R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
+                setCustomReferenceNote(`Bairro sob encomenda: ${orig} (Taxa especial R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
                 setUnsupportedNeighborhoodModal(null)
                 setCheckoutWizardStep(4)
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-3 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99] cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black text-white shadow-md bg-emerald-700 hover:bg-emerald-800 transition-all active:scale-[0.98]"
             >
-              <Truck className="h-4 w-4" />
-              Continuar com Taxa Padrão (R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')})
+              <span>Continuar com Taxa Especial</span>
+              <ChevronRight className="h-4 w-4 stroke-[3]" />
             </button>
           </div>
 
-          {/* Opção Amigável: Selecionar Bairro Vizinho de Referência */}
-          {availableNeighborhoodsList.length > 0 && (
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 text-xs text-indigo-950 space-y-2.5">
-              <p className="font-bold flex items-center gap-1.5 text-indigo-900">
-                <span>📍</span> Escolha o bairro atendido mais próximo de você:
-              </p>
-              <select
-                value={selectedReferenceNeighbor}
-                onChange={(e) => setSelectedReferenceNeighbor(e.target.value)}
-                className="w-full rounded-xl border border-indigo-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">-- Selecione o bairro vizinho mais perto --</option>
-                {availableNeighborhoodsList.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-indigo-800 leading-relaxed">
-                ℹ️ Usaremos esse bairro vizinho como base para a rota e taxa. Sua entrega será confirmada pela nossa equipe logo após o envio do pedido.
-              </p>
-              <button
-                type="button"
-                disabled={!selectedReferenceNeighbor}
-                onClick={() => {
-                  const orig = unsupportedNeighborhoodModal?.neighborhoodName || ''
-                  setNeighborhood(selectedReferenceNeighbor)
-                  setCustomReferenceNote(`Bairro original informado: ${orig} (Bairro de referência utilizado: ${selectedReferenceNeighbor} - sujeito a confirmação de entrega)`)
-                  setUnsupportedNeighborhoodModal(null)
-                  setSelectedReferenceNeighbor('')
-                  setTimeout(() => {
-                    document.getElementById('number-input')?.focus()
-                  }, 150)
-                }}
-                className={cn(
-                  'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white shadow-md transition-all',
-                  selectedReferenceNeighbor
-                    ? 'bg-primary hover:bg-primary/90 cursor-pointer'
-                    : 'bg-slate-300 cursor-not-allowed opacity-60'
-                )}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Continuar Pedido com Bairro de Referência
-              </button>
+          {/* CARD 2: PREFERE NÃO PAGAR TAXA? RETIRAR NO BALCÃO */}
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-700 shadow-2xs">
+                  <Store className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                    Prefere não pagar taxa?
+                  </h4>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Retire seu pedido quentinho direto no balcão da loja sem custo.
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5">
+                Grátis
+              </span>
             </div>
-          )}
-
-          <div className="space-y-2 pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                const storePhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
-                const clientText = `Olá! Estou montando um pedido no cardápio online e gostaria de saber se vocês conseguem entregar no bairro ${unsupportedNeighborhoodModal?.neighborhoodName || ''}?`
-                const link = `https://wa.me/55${storePhone}?text=${encodeURIComponent(clientText)}`
-                window.open(link, '_blank')
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors cursor-pointer"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Tirar dúvida no WhatsApp da loja
-            </button>
 
             <button
               type="button"
@@ -3652,26 +3622,43 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 setZipcode('')
                 setCheckoutWizardStep(4)
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 rounded-2xl border border-slate-300 bg-white py-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-xs transition-all active:scale-[0.99]"
             >
-              <Store className="h-4 w-4 text-primary" />
-              Prefiro Retirar no Balcão
+              <span>Mudar para Retirar no Balcão</span>
             </button>
+          </div>
 
+          {/* LINKS INFERIORES */}
+          <div className="pt-2 text-center space-y-2">
             <button
               type="button"
               onClick={() => {
-                setUnsupportedNeighborhoodModal(null)
-                setNeighborhood('')
-                setSelectedReferenceNeighbor('')
-                setTimeout(() => {
-                  document.getElementById('neighborhood')?.focus()
-                }, 150)
+                const storePhone = (profile?.whatsappNumber || profile?.whatsapp_number || '').replace(/\D/g, '')
+                const clientText = `Olá! Estou montando um pedido no cardápio online e gostaria de saber se vocês conseguem entregar no bairro ${unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''}?`
+                const link = `https://wa.me/55${storePhone}?text=${encodeURIComponent(clientText)}`
+                window.open(link, '_blank')
               }}
-              className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-700 pt-1 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 transition-colors"
             >
-              Voltar e escolher outro endereço
+              <MessageCircle className="h-4 w-4" />
+              <span>Tirar dúvida no WhatsApp da loja</span>
             </button>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnsupportedNeighborhoodModal(null)
+                  setNeighborhood('')
+                  setTimeout(() => {
+                    document.getElementById('checkout-street-input')?.focus()
+                  }, 150)
+                }}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Voltar e alterar endereço de entrega
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
