@@ -44,7 +44,6 @@ import {
   Home,
   Info,
   Loader2,
-  Lock,
   MapPin,
   MessageCircle,
   Minus,
@@ -60,12 +59,10 @@ import {
   Ticket,
   Truck,
   User,
-  Sparkles,
   UtensilsCrossed,
   X,
-  Zap,
 } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   Dialog,
@@ -743,6 +740,32 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       handlePhoneSearch(raw)
     }
   }
+
+  // Etapa 2 (identificação): telefone completo -> busca cadastro; sem cadastro -> pede só o nome
+  const phoneInputRef = useRef<HTMLInputElement>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const rawPhoneDigits = customerPhone.replace(/\D/g, '')
+  const phoneReady =
+    rawPhoneDigits.length === 11 || (rawPhoneDigits.length === 10 && rawPhoneDigits[2] !== '9')
+  const showNameField = phoneReady && !isLoadingPhone && !clientFound
+  const canAdvanceIdentification =
+    phoneReady && !isLoadingPhone && customerName.trim().length > 1
+
+  const handleAdvanceIdentification = () => {
+    if (!canAdvanceIdentification) return
+    // Balcão pula direto para pagamento; delivery vai para endereço
+    setCheckoutWizardStep(fulfillmentType === 'TAKEOUT' ? 5 : 3)
+  }
+
+  useEffect(() => {
+    if (!isCheckoutStepOpen || checkoutWizardStep !== 2) return
+    const t = setTimeout(() => {
+      if (showNameField && !customerName.trim()) nameInputRef.current?.focus()
+      else if (!phoneReady) phoneInputRef.current?.focus()
+    }, 150)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckoutStepOpen, checkoutWizardStep, showNameField, phoneReady])
 
   const handlePhoneSearch = async (overrideRawPhone?: string) => {
     const rawPhone = (overrideRawPhone || customerPhone).replace(/\D/g, '')
@@ -2826,169 +2849,93 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-                  Seus Dados de Contato
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 leading-snug">
-                  Utilizamos seu WhatsApp para confirmar o pedido e enviar o rastreio em tempo real.
-                </p>
+              {/* Telefone: ao completar, busca o cadastro sozinho */}
+              <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3.5 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                <span className="mr-2.5 shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
+                  +55
+                </span>
+                <input
+                  ref={phoneInputRef}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  placeholder="WhatsApp com DDD"
+                  aria-label="WhatsApp com DDD"
+                  value={customerPhone}
+                  onChange={handlePhoneChange}
+                  className="w-full bg-transparent text-base font-bold text-slate-900 placeholder:font-medium placeholder:text-slate-400 outline-none"
+                />
+                {isLoadingPhone ? (
+                  <Loader2 className="ml-2 h-5 w-5 shrink-0 animate-spin text-emerald-600" />
+                ) : phoneReady ? (
+                  <div className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white">
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </div>
+                ) : null}
               </div>
 
-              {/* Card de Boas-Vindas Ultra-Visual e Chamativo (Cliente Reconhecido) */}
-              {clientFound && customerName ? (
-                <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-400 bg-gradient-to-br from-emerald-50 via-teal-50/70 to-emerald-100/60 p-4 shadow-md">
-                  <div className="flex items-start gap-3.5">
-                    {/* Avatar com Iniciais e Selo Verificado */}
-                    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-white font-black text-base shadow-md ring-2 ring-emerald-500/30">
-                      {customerName.trim().split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
-                      <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white border-2 border-white shadow-xs">
-                        <Check className="h-3 w-3 stroke-[3]" />
-                      </div>
+              {/* Cliente identificado: uma linha, sem explicação */}
+              {clientFound && customerName && !isLoadingPhone && (
+                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-3.5 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white">
+                    <Check className="h-4 w-4 stroke-[3]" />
+                  </div>
+                  <span className="truncate text-base font-black text-slate-950">{customerName}</span>
+                </div>
+              )}
+
+              {/* Não identificado: pede só o nome */}
+              {showNameField && (
+                <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3.5 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                  <User className="mr-2.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    autoComplete="name"
+                    enterKeyHint="next"
+                    placeholder="Seu nome"
+                    aria-label="Seu nome"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && canAdvanceIdentification) handleAdvanceIdentification()
+                    }}
+                    className="w-full bg-transparent text-base font-bold text-slate-900 placeholder:font-medium placeholder:text-slate-400 outline-none"
+                  />
+                  {customerName.trim().length > 1 && (
+                    <div className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white">
+                      <Check className="h-3 w-3 stroke-[3]" />
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-700 text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-2xs">
-                          <Sparkles className="h-3 w-3" /> Cliente Reconhecido
-                        </span>
-                        {savedAddresses.length > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
-                            <MapPin className="h-2.5 w-2.5" /> {savedAddresses.length} endereço(s)
-                          </span>
-                        )}
-                      </div>
-
-                      <h4 className="text-base font-black text-slate-950 truncate">
-                        Que bom ter você de volta, {customerName}! ✨
-                      </h4>
-                      <p className="text-xs text-emerald-900 font-medium mt-0.5 leading-snug">
-                        Seu cadastro foi localizado com sucesso. Seus dados e endereços já estão carregados para você finalizar rapidinho.
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              ) : customerName ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-700 font-bold text-sm">
-                    <User className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800">Identificação: {customerName}</h4>
-                    <p className="text-[11px] text-slate-500">Preencha seus dados para prosseguir com o pedido.</p>
-                  </div>
-                </div>
-              ) : null}
+              )}
 
-              {/* Campos de Dados */}
-              <div className="space-y-3.5 pt-1">
-                {/* WHATSAPP / CELULAR COM PREENCHIMENTO RÁPIDO */}
-                <div>
-                  <div className="flex items-center justify-between pb-1">
-                    <label className="text-xs font-bold text-slate-800">
-                      WhatsApp / Celular <span className="text-red-500">*</span>
-                    </label>
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-                      <Zap className="h-3 w-3 fill-emerald-600 text-emerald-600" /> Preenchimento rápido
-                    </span>
-                  </div>
-
-                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
-                    <span className="mr-2.5 flex items-center rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 shrink-0">
-                      BR +55
-                    </span>
-                    <input
-                      type="tel"
-                      placeholder="(00) 00000-0000"
-                      value={customerPhone}
-                      onChange={handlePhoneChange}
-                      className="w-full bg-transparent text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
-                    />
-                    {isLoadingPhone ? (
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-bold ml-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600 shrink-0" />
-                        <span className="hidden sm:inline">Buscando...</span>
-                      </div>
-                    ) : clientFound ? (
-                      <div className="flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-[11px] font-black text-emerald-800 shrink-0 ml-2">
-                        <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-700" />
-                        <span>Cadastrado</span>
-                      </div>
-                    ) : customerPhone.replace(/\D/g, '').length >= 10 ? (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
-                        <Check className="h-3 w-3 stroke-[3]" />
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* NOME COMPLETO */}
-                <div>
-                  <label className="text-xs font-bold text-slate-800 block pb-1">
-                    Nome Completo <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
-                    <User className="h-4 w-4 text-slate-400 mr-2.5 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Como podemos te chamar?"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full bg-transparent text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
-                    />
-                    {customerName.trim().length > 2 && (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
-                        <Check className="h-3 w-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Nota de Privacidade */}
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium pt-0.5">
-                  <Lock className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
-                  <span>Seus dados estão protegidos e não compartilhamos com terceiros.</span>
-                </div>
-              </div>
-
-              {/* Botão de Avançar e Link de Voltar */}
-              <div className="pt-3 space-y-2">
+              {/* Ação principal fixa no rodapé: acende quando o passo está completo */}
+              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex items-center gap-2 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
                 <button
                   type="button"
+                  aria-label="Voltar para a sacola"
                   onClick={() => {
-                    const cleanPhone = customerPhone.replace(/\D/g, '')
-                    if (cleanPhone.length < 10) {
-                      alert('Por favor, informe um número de WhatsApp válido com DDD.')
-                      return
-                    }
-                    if (!customerName.trim()) {
-                      alert('Por favor, informe o seu nome para identificação.')
-                      return
-                    }
-                    if (fulfillmentType === 'TAKEOUT') {
-                      setCheckoutWizardStep(5) // Balcão pula direto para pagamento!
-                    } else {
-                      setCheckoutWizardStep(3) // Delivery vai para endereço!
-                    }
+                    setIsCheckoutStepOpen(false)
+                    setIsCartModalOpen(true)
                   }}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
                 >
-                  <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Avançar para Entrega'}</span>
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canAdvanceIdentification}
+                  onClick={handleAdvanceIdentification}
+                  className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl text-sm font-black transition-all ${
+                    canAdvanceIdentification
+                      ? 'bg-emerald-800 text-white shadow-lg ring-4 ring-emerald-500/25 hover:bg-emerald-900 active:scale-[0.98]'
+                      : 'bg-slate-200 text-slate-400'
+                  }`}
+                >
+                  <span>Continuar</span>
                   <ChevronRight className="h-4 w-4 stroke-[3]" />
                 </button>
-
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCheckoutStepOpen(false)
-                      setIsCartModalOpen(true)
-                    }}
-                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Sacola
-                  </button>
-                </div>
               </div>
             </motion.div>
           )}
