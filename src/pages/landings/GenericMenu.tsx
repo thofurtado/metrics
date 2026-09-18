@@ -510,7 +510,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Estados do Modal de Checkout Robusto (iFood / Anota AI / Marujo Standard)
   const [isCheckoutStepOpen, setIsCheckoutStepOpen] = useState(false)
-  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4>(1)
+  const [checkoutWizardStep, setCheckoutWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [lastOrderText, setLastOrderText] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [lastOrderTotal, setLastOrderTotal] = useState<number>(0)
@@ -642,7 +642,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [pixTimerSeconds, setPixTimerSeconds] = useState(15 * 60)
 
   useEffect(() => {
-    if (checkoutWizardStep === 3 && paymentMethod === 'PIX') {
+    if (checkoutWizardStep === 4 && paymentMethod === 'PIX') {
       const timer = setInterval(() => {
         setPixTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0))
       }, 1000)
@@ -1317,7 +1317,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       alert(`O valor mínimo para pedido é de ${formatCurrency(minOrderValue)}.`)
       return
     }
-    setCheckoutWizardStep(2)
+    setCheckoutWizardStep(1)
     setIsCheckoutStepOpen(true)
     setIsCartModalOpen(false)
   }
@@ -1582,7 +1582,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       setLastOrderTotal(cartTotal);
       setLastOrderText(text);
       setCart({});
-      setCheckoutWizardStep(4);
+      setCheckoutWizardStep(5);
     } catch (err) {
       console.error('Erro ao enviar pedido:', err)
       alert('Ocorreu um problema ao registrar seu pedido, tente novamente.')
@@ -1665,7 +1665,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   // Efeito de escuta periódica do status do pedido criado (Live Tracking)
   useEffect(() => {
-    if (!createdOrderId || checkoutWizardStep !== 4) return;
+    if (!createdOrderId || checkoutWizardStep !== 5) return;
 
     const interval = setInterval(async () => {
       try {
@@ -2351,131 +2351,221 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       {/* Modal de Checkout Robusto em Etapas (Design Fiel ao Stitch) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-2 text-lg font-black text-slate-900">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center justify-between gap-2 text-base sm:text-lg font-black text-slate-900">
               <span className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                   <ShoppingBag className="h-4 w-4" />
                 </div>
                 Finalizar Pedido
               </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                Etapa {checkoutWizardStep} de 4
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600 whitespace-nowrap">
+                {checkoutWizardStep === 5
+                  ? 'Concluído'
+                  : fulfillmentType === 'TAKEOUT'
+                    ? `Etapa ${checkoutWizardStep === 1 ? 1 : checkoutWizardStep === 2 ? 2 : 3} de 3`
+                    : `Etapa ${checkoutWizardStep} de 4`}
               </span>
             </DialogTitle>
 
-            {/* Barra de Progresso das 4 Etapas com Rótulos */}
-            <div className="pt-2">
-              <div className="grid grid-cols-4 gap-1.5">
-                <div
-                  className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                />
-                <div
-                  className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                />
-                <div
-                  className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                />
-                <div
-                  className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                />
+            {/* Barra de Progresso Progressiva */}
+            {checkoutWizardStep < 5 && (
+              <div className="pt-2">
+                <div className={`grid gap-1.5 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                  {fulfillmentType === 'DELIVERY' && (
+                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                  )}
+                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                </div>
+                <div className={`grid text-center text-[10px] font-semibold text-slate-500 pt-1 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                  <span className={checkoutWizardStep >= 1 ? 'text-emerald-700 font-bold' : ''}>1. Recebimento</span>
+                  <span className={checkoutWizardStep >= 2 ? 'text-emerald-700 font-bold' : ''}>2. Identificação</span>
+                  {fulfillmentType === 'DELIVERY' && (
+                    <span className={checkoutWizardStep >= 3 ? 'text-emerald-700 font-bold' : ''}>3. Endereço</span>
+                  )}
+                  <span className={checkoutWizardStep >= 4 ? 'text-emerald-700 font-bold' : ''}>
+                    {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '4. Pagamento'}
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-4 text-center text-[10px] font-semibold text-slate-500 pt-1">
-                <span className={checkoutWizardStep >= 1 ? 'text-indigo-600 font-bold' : ''}>Entrega</span>
-                <span className={checkoutWizardStep >= 2 ? 'text-indigo-600 font-bold' : ''}>Identificação</span>
-                <span className={checkoutWizardStep >= 3 ? 'text-indigo-600 font-bold' : ''}>Pagamento</span>
-                <span className={checkoutWizardStep >= 4 ? 'text-indigo-600 font-bold' : ''}>Conclusão</span>
-              </div>
-            </div>
+            )}
           </DialogHeader>
 
-          {/* ETAPA 2: FORMA DE RECEBIMENTO, IDENTIFICAÇÃO E ENDEREÇO (STITCH) */}
+          {/* ============================================================ */}
+          {/* ETAPA 1: FORMA DE RECEBIMENTO (DELIVERY VS BALCÃO)          */}
+          {/* ============================================================ */}
+          {checkoutWizardStep === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4 py-2 text-sm"
+            >
+              <div className="text-center pb-1">
+                <h3 className="text-base font-black text-slate-900 tracking-tight">
+                  Como deseja receber seu pedido?
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Escolha se prefere receber no seu endereço ou retirar na loja
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                {/* CARD ENTREGA DELIVERY */}
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('DELIVERY')}
+                  className={`w-full relative flex items-start p-4 rounded-2xl border-2 transition-all text-left shadow-sm ${
+                    fulfillmentType === 'DELIVERY'
+                      ? 'border-emerald-600 bg-emerald-50/40 ring-1 ring-emerald-600/30'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="absolute -top-2.5 right-4 rounded-full bg-indigo-600 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm whitespace-nowrap">
+                    Mais Escolhido
+                  </span>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mr-3.5 mt-0.5">
+                    <Rocket className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900">
+                        Entrega Delivery
+                      </h4>
+                      {fulfillmentType === 'DELIVERY' && (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0 ml-2">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 leading-snug">
+                      Receba quentinho e com rapidez no seu endereço
+                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 mt-2.5">
+                      <Clock className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                      <span>{profile?.estimatedDeliveryTime || 'Tempo estimado: 35 - 50 min'}</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* CARD RETIRAR NO BALCÃO */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFulfillmentType('TAKEOUT')
+                    setNeighborhood('Balcão')
+                    setStreet('Retirada no Balcão')
+                    setNumber('0')
+                  }}
+                  className={`w-full relative flex items-start p-4 rounded-2xl border-2 transition-all text-left shadow-sm ${
+                    fulfillmentType === 'TAKEOUT'
+                      ? 'border-emerald-600 bg-emerald-50/40 ring-1 ring-emerald-600/30'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="absolute -top-2.5 right-4 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm whitespace-nowrap">
+                    Sem Taxa de Entrega
+                  </span>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 mr-3.5 mt-0.5">
+                    <Store className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900">
+                        Retirar no Balcão
+                      </h4>
+                      {fulfillmentType === 'TAKEOUT' && (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0 ml-2">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 leading-snug">
+                      Você retira diretamente no restaurante assim que estiver pronto
+                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 mt-2.5">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <span>Taxa R$ 0,00 • Economia garantida</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Rodapé da Etapa 1 */}
+              <div className="pt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCheckoutStepOpen(false)
+                      setIsCartModalOpen(true)
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Voltar ao Cardápio
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutWizardStep(2)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                  >
+                    <span>Continuar</span>
+                    <ChevronRight className="h-4 w-4 stroke-[3]" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ============================================================ */}
+          {/* ETAPA 2: IDENTIFICAÇÃO DO CLIENTE (WHATSAPP E NOME)          */}
+          {/* ============================================================ */}
           {checkoutWizardStep === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4 py-3 text-sm"
+              className="space-y-4 py-2 text-sm"
             >
-              {/* FORMA DE RECEBIMENTO */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold uppercase tracking-wider text-slate-500">
-                    FORMA DE RECEBIMENTO
-                  </span>
-                  <span className="text-indigo-600 font-semibold text-[11px]">
-                    Toque para alternar
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  {/* Delivery */}
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('DELIVERY')}
-                    className={`relative flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      fulfillmentType === 'DELIVERY'
-                        ? 'border-indigo-600 bg-indigo-50/20 shadow-sm ring-1 ring-indigo-600/30'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="absolute -top-2.5 left-3 rounded-full bg-indigo-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
-                      MAIS ESCOLHIDO
-                    </span>
-                    <div className="flex items-center gap-2 mb-1 mt-1">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
-                        <Rocket className="h-4 w-4" />
-                      </div>
-                      <span className="text-xs font-black text-slate-900">Entrega Delivery</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      Receba com rapidez no seu endereço
-                    </p>
-                  </button>
-
-                  {/* Retirar no Balcão */}
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('TAKEOUT')}
-                    className={`relative flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      fulfillmentType === 'TAKEOUT'
-                        ? 'border-indigo-600 bg-indigo-50/20 shadow-sm ring-1 ring-indigo-600/30'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1 mt-1">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                        <Store className="h-4 w-4" />
-                      </div>
-                      <span className="text-xs font-black text-slate-900">Retirar no Balcão</span>
-                    </div>
-                    <p className="text-[11px] font-bold text-emerald-600 leading-tight">
-                      Sem taxa de entrega
-                    </p>
-                  </button>
-                </div>
+              <div className="text-center pb-1">
+                <h3 className="text-base font-black text-slate-900 tracking-tight">
+                  Identificação do Cliente
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Informe seu WhatsApp para confirmar o pedido e acompanhar em tempo real
+                </p>
               </div>
 
-              {/* 1. IDENTIFICAÇÃO RÁPIDA */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-indigo-600" />
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                      1. IDENTIFICAÇÃO RÁPIDA
-                    </h4>
+              {/* Resumo da Escolha de Recebimento */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-slate-700 shadow-2xs shrink-0">
+                    {fulfillmentType === 'DELIVERY' ? <Rocket className="h-3.5 w-3.5 text-indigo-600" /> : <Store className="h-3.5 w-3.5 text-emerald-600" />}
                   </div>
-                  {clientFound && (
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                      <Check className="h-3 w-3 stroke-[3]" /> Cliente Reconhecido
-                    </span>
-                  )}
+                  <span className="font-extrabold text-slate-800 truncate">
+                    {fulfillmentType === 'DELIVERY' ? 'Entrega Delivery' : 'Retirar no Balcão'}
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutWizardStep(1)}
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline shrink-0 ml-2"
+                >
+                  Alterar
+                </button>
+              </div>
 
+              {/* CARD DE IDENTIFICAÇÃO */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3.5">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700">Seu WhatsApp / Telefone</label>
-                  <div className="mt-1 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
+                  <label className="text-xs font-bold text-slate-700">Seu WhatsApp / Telefone</label>
+                  <div className="mt-1 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
                     <span className="mr-2 flex items-center gap-1 text-xs font-bold text-slate-600 shrink-0 border-r border-slate-200 pr-2">
                       🇧🇷 +55
                     </span>
@@ -2484,266 +2574,63 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       placeholder="(00) 00000-0000"
                       value={customerPhone}
                       onChange={handlePhoneChange}
-                      className="w-full bg-transparent text-xs font-bold text-slate-900 placeholder:text-slate-400 outline-none"
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
                     />
-                    {isLoadingPhone && <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600 shrink-0" />}
+                    {isLoadingPhone && <Loader2 className="h-4 w-4 animate-spin text-emerald-600 shrink-0" />}
                   </div>
-                  {clientFound && customerName && (
-                    <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                      <Check className="h-3 w-3 stroke-[3]" />
-                      Bem-vindo de volta, <strong>{customerName}</strong>! Seus dados foram localizados.
-                    </p>
-                  )}
                 </div>
 
+                {/* Cliente VIP Reconhecido */}
+                {clientFound && customerName && (
+                  <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-black text-sm shadow-sm">
+                        {customerName ? customerName.slice(0, 2).toUpperCase() : 'VIP'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                            {customerName}
+                          </h4>
+                          <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2 py-0.2 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
+                            Reconhecido
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                          Bem-vindo de volta! Seus dados foram localizados.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nome do Cliente */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700">Seu Nome Completo</label>
+                  <label className="text-xs font-bold text-slate-700">Seu Nome Completo</label>
                   <input
                     type="text"
                     placeholder="Como gostaria de ser chamado?"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              {/* 2. ENDEREÇO DE ENTREGA (Quando for Delivery) */}
-              {fulfillmentType === 'DELIVERY' && (
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-indigo-600" />
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                        2. ENDEREÇO DE ENTREGA
-                      </h4>
-                    </div>
-                    {savedAddresses.length > 0 && (
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-extrabold text-slate-600">
-                        {savedAddresses.length} {savedAddresses.length === 1 ? 'salvo' : 'salvos'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Card de Endereço Selecionado */}
-                  {savedAddresses.length > 0 && !isNewAddress ? (
-                    <div className="relative rounded-xl border-2 border-indigo-200 bg-indigo-50/20 p-3.5 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[9px] font-black uppercase text-indigo-800">
-                          ENDEREÇO SELECIONADO
-                        </span>
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
-                          <Check className="h-3 w-3 stroke-[3]" />
-                        </div>
-                      </div>
-
-                      <p className="text-xs font-black text-slate-900">
-                        {street}, {number}
-                      </p>
-                      <p className="text-[11px] font-medium text-slate-600">
-                        {neighborhood} • {city}/{state}
-                      </p>
-                      {zipcode && (
-                        <p className="text-[10px] text-slate-400">CEP: {zipcode}</p>
-                      )}
-
-                      <div className="border-t border-indigo-100 pt-2 flex items-center justify-between text-xs">
-                        {savedAddresses.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setIsAddressesModalOpen(true)}
-                            className="flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900"
-                          >
-                            <RefreshCw className="h-3 w-3" /> Trocar endereço
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsNewAddress(true)
-                            setStreet('')
-                            setNumber('')
-                            setComplement('')
-                            setZipcode('')
-                          }}
-                          className="flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900 ml-auto"
-                        >
-                          <Plus className="h-3 w-3" /> Digitar outro endereço
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Formulário de Novo Endereço */
-                    <div className="space-y-2.5">
-                      {savedAddresses.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setIsNewAddress(false)}
-                          className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
-                        >
-                          ← Usar endereço salvo ({savedAddresses.length})
-                        </button>
-                      )}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-bold text-slate-700">CEP (Opcional)</label>
-                          {isSearchingCEPCheckout && (
-                            <span className="flex items-center gap-1 text-[10px] text-primary">
-                              <Loader2 className="h-3 w-3 animate-spin" /> Buscando CEP...
-                            </span>
-                          )}
-                        </div>
-                        <div className="relative mt-1 flex items-center">
-                          <input
-                            id="zipcode-input"
-                            type="text"
-                            placeholder="00000-000"
-                            value={zipcode}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, '').slice(0, 8)
-                              setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
-                              if (val.length === 8) {
-                                handleSearchCEPCheckout(val)
-                              }
-                            }}
-                            onBlur={() => {
-                              const val = zipcode.replace(/\D/g, '')
-                              if (val.length === 8) {
-                                handleSearchCEPCheckout(val)
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                const val = zipcode.replace(/\D/g, '')
-                                if (val.length === 8) {
-                                  handleSearchCEPCheckout(val)
-                                }
-                              }
-                            }}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-10 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const val = zipcode.replace(/\D/g, '')
-                              if (val.length === 8) {
-                                handleSearchCEPCheckout(val)
-                              }
-                            }}
-                            disabled={isSearchingCEPCheckout}
-                            className="absolute right-2 p-1 text-slate-400 hover:text-indigo-600 disabled:opacity-50"
-                            title="Buscar CEP"
-                          >
-                            {isSearchingCEPCheckout ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-                            ) : (
-                              <Search className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="col-span-2">
-                          <label className="text-[11px] font-bold text-slate-700">Rua / Logradouro</label>
-                          <input
-                            type="text"
-                            placeholder="Nome da rua"
-                            value={street}
-                            onChange={(e) => setStreet(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-700">Número</label>
-                          <input
-                            id="checkout-number-input"
-                            type="text"
-                            placeholder="Nº"
-                            value={number}
-                            onChange={(e) => setNumber(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-700">Bairro</label>
-                          <input
-                            type="text"
-                            placeholder="Bairro"
-                            value={neighborhood}
-                            onChange={(e) => {
-                              setNeighborhood(e.target.value)
-                              setAcceptedStandardFee(false)
-                            }}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-bold text-slate-700">Complemento</label>
-                          <input
-                            type="text"
-                            placeholder="Apto, bloco, casa 2..."
-                            value={complement}
-                            onChange={(e) => setComplement(e.target.value)}
-                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-                      {matchedSector ? (
-                        <div className="flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-800 shadow-sm">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                          <span>
-                            Atendido pelo <strong>{matchedSector.name}</strong> • Taxa: <strong>R$ {Number(matchedSector.fee || 0).toFixed(2).replace('.', ',')}</strong>
-                            {matchedSector.estimatedTimeMin ? ` • Prazo: ${matchedSector.estimatedTimeMin}-${matchedSector.estimatedTimeMax || 60} min` : ''}
-                          </span>
-                        </div>
-                      ) : neighborhood.trim() && acceptedStandardFee ? (
-                        <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-bold text-amber-800 shadow-sm">
-                          <Truck className="h-4 w-4 text-amber-600 shrink-0" />
-                          <span>
-                            Taxa padrão de entrega da loja aceita: <strong>R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}</strong>
-                          </span>
-                        </div>
-                      ) : null}
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700">Ponto de Referência (Opcional)</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: Próximo à padaria, portão branco, em frente ao mercado"
-                          value={referencePoint}
-                          onChange={(e) => setReferencePoint(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Rodapé da Etapa 2 */}
-              <div className="pt-2 space-y-2">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>Ambiente seguro • Próximo passo: Pagamento</span>
-                </div>
-
+              <div className="pt-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsCheckoutStepOpen(false)
-                      setIsCartModalOpen(true)
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                    onClick={() => setCheckoutWizardStep(1)}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
                   >
                     <ChevronLeft className="h-4 w-4" /> Voltar
                   </button>
 
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       if (!customerPhone.trim()) {
                         alert('Por favor, informe seu WhatsApp ou telefone.')
                         return
@@ -2752,14 +2639,294 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         alert('Por favor, informe seu nome.')
                         return
                       }
-                      if (
-                        fulfillmentType === 'DELIVERY' &&
-                        (!street.trim() || !number.trim() || !neighborhood.trim())
-                      ) {
+
+                      // Se for Retirada no Balcão, avança direto para Pagamento (Etapa 4)!
+                      if (fulfillmentType === 'TAKEOUT') {
+                        setCheckoutWizardStep(4)
+                        registerClientInBackend().catch((err: any) => {
+                          console.warn('Sincronização em background do cliente:', err)
+                        })
+                        return
+                      }
+
+                      // Se for Delivery, avança para Endereço (Etapa 3)
+                      setCheckoutWizardStep(3)
+                      registerClientInBackend().catch((err: any) => {
+                        console.warn('Sincronização em background do cliente:', err)
+                      })
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                  >
+                    <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Avançar para Endereço'}</span>
+                    <ChevronRight className="h-4 w-4 stroke-[3]" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ============================================================ */}
+          {/* ETAPA 3: ENDEREÇO DE ENTREGA (SOMENTE DELIVERY)              */}
+          {/* ============================================================ */}
+          {checkoutWizardStep === 3 && fulfillmentType === 'DELIVERY' && (
+            <motion.div
+              key="step3-address"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 py-2 text-sm"
+            >
+              <div className="text-center pb-1">
+                <h3 className="text-base font-black text-slate-900 tracking-tight">
+                  Endereço de Entrega
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Onde levaremos seu pedido quentinho?
+                </p>
+              </div>
+
+              {/* CARD DE ENDEREÇO SELECIONADO OU FORMULÁRIO */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
+                {savedAddresses.length > 0 && !isNewAddress ? (
+                  <div className="relative rounded-2xl border-2 border-emerald-600 bg-emerald-50/20 p-4 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
+                        Endereço Confirmado
+                      </span>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
+                        <Check className="h-3 w-3 stroke-[3]" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-black text-slate-900 leading-tight">
+                        {street}, {number}{complement ? ` (${complement})` : ''}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                        {neighborhood} • {city || profile?.city || 'Local'}/{state || profile?.state || 'SP'}
+                      </p>
+                      {zipcode && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">CEP: {zipcode}</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-emerald-100/80 pt-2.5 flex items-center justify-between text-xs gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewAddress(true)
+                        }}
+                        className="text-xs font-bold text-slate-700 hover:text-slate-900 underline"
+                      >
+                        Editar dados
+                      </button>
+
+                      {savedAddresses.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAddressesModalOpen(true)}
+                          className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900"
+                        >
+                          <RefreshCw className="h-3 w-3" /> Trocar endereço
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewAddress(true)
+                          setStreet('')
+                          setNumber('')
+                          setComplement('')
+                          setZipcode('')
+                        }}
+                        className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900 ml-auto"
+                      >
+                        <Plus className="h-3 w-3" /> Digitar outro endereço
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Formulário de Endereço */
+                  <div className="space-y-3">
+                    {savedAddresses.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsNewAddress(false)}
+                        className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                      >
+                        ← Usar endereço salvo ({savedAddresses.length})
+                      </button>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700">CEP (Opcional)</label>
+                        {isSearchingCEPCheckout && (
+                          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Buscando CEP...
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative mt-1 flex items-center">
+                        <input
+                          id="zipcode-input"
+                          type="text"
+                          placeholder="00000-000"
+                          value={zipcode}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 8)
+                            setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
+                            if (val.length === 8) {
+                              handleSearchCEPCheckout(val)
+                            }
+                          }}
+                          onBlur={() => {
+                            const val = zipcode.replace(/\D/g, '')
+                            if (val.length === 8) {
+                              handleSearchCEPCheckout(val)
+                            }
+                          }}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const val = zipcode.replace(/\D/g, '')
+                            if (val.length === 8) {
+                              handleSearchCEPCheckout(val)
+                            }
+                          }}
+                          disabled={isSearchingCEPCheckout}
+                          className="absolute right-2 p-1 text-slate-400 hover:text-emerald-600 disabled:opacity-50"
+                          title="Buscar CEP"
+                        >
+                          {isSearchingCEPCheckout ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold text-slate-700">Rua / Logradouro</label>
+                        <input
+                          type="text"
+                          placeholder="Nome da rua"
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-700">Número</label>
+                        <input
+                          id="checkout-number-input"
+                          type="text"
+                          placeholder="Nº"
+                          value={number}
+                          onChange={(e) => setNumber(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700">Bairro</label>
+                        <input
+                          type="text"
+                          placeholder="Bairro"
+                          value={neighborhood}
+                          onChange={(e) => {
+                            setNeighborhood(e.target.value)
+                            setAcceptedStandardFee(false)
+                          }}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-700">Complemento</label>
+                        <input
+                          type="text"
+                          placeholder="Apto, bloco, casa 2..."
+                          value={complement}
+                          onChange={(e) => setComplement(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Setor de Entrega Atendido */}
+                    {matchedSector ? (
+                      <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-bold text-emerald-900 shadow-sm">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>
+                          Atendido por <strong>{matchedSector.name}</strong> • Taxa: <strong>R$ {Number(matchedSector.fee || 0).toFixed(2).replace('.', ',')}</strong>
+                          {matchedSector.estimatedTimeMin ? ` • Prazo: ${matchedSector.estimatedTimeMin}-${matchedSector.estimatedTimeMax || 60} min` : ''}
+                        </span>
+                      </div>
+                    ) : neighborhood.trim() && acceptedStandardFee ? (
+                      <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs font-bold text-amber-900 shadow-sm">
+                        <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span>
+                          Taxa padrão da loja: <strong>R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}</strong>
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-700">Ponto de Referência (Opcional)</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Próximo à padaria, portão branco, em frente ao mercado"
+                        value={referencePoint}
+                        onChange={(e) => setReferencePoint(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card de Tempo Estimado */}
+              <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-xs shrink-0">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-extrabold text-slate-900">
+                    {profile?.estimatedDeliveryTime || 'Tempo estimado: 35 - 50 min'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Previsão média após a confirmação pela cozinha da loja.
+                  </p>
+                </div>
+              </div>
+
+              {/* Rodapé da Etapa 3 */}
+              <div className="pt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutWizardStep(2)}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Voltar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
                         alert('Por favor, informe os dados completos do endereço de entrega.')
                         return
                       }
-                      if (fulfillmentType === 'DELIVERY' && deliverySectorInfo.hasSectors) {
+                      if (deliverySectorInfo.hasSectors) {
                         const isAllowed = matchedSector !== null || acceptedStandardFee || deliverySectorInfo.sectors.some(
                           (sec: any) => Array.isArray(sec.neighborhoods) && sec.neighborhoods.some((n: string) => normalizeText(n) === normalizeText(neighborhood))
                         )
@@ -2771,17 +2938,17 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           return
                         }
                       }
-                      // Avanço instantâneo sem congelar a interface do cliente
-                      setCheckoutWizardStep(3)
 
-                      // Sincroniza cliente no backend de forma assíncrona em background
+                      // Avança instantâneo para o Pagamento (Etapa 4)
+                      setCheckoutWizardStep(4)
                       registerClientInBackend().catch((err: any) => {
                         console.warn('Sincronização em background do cliente:', err)
                       })
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
+                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                   >
-                    <span>AVANÇAR PARA PAGAMENTO</span>
+                    <span>Avançar para Pagamento</span>
                     <ChevronRight className="h-4 w-4 stroke-[3]" />
                   </button>
                 </div>
@@ -2789,20 +2956,31 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </motion.div>
           )}
 
-          {/* ETAPA 3: FORMA DE PAGAMENTO & PIX OFICIAL (STITCH) */}
-          {checkoutWizardStep === 3 && (
+          {/* ============================================================ */}
+          {/* ETAPA 4: FORMA DE PAGAMENTO & PIX OFICIAL (STITCH)           */}
+          {/* ============================================================ */}
+          {checkoutWizardStep === 4 && (
             <motion.div
-              key="step3"
+              key="step4-payment"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4 py-3 text-sm"
+              className="space-y-4 py-2 text-sm"
             >
-              {/* GRID DE FORMAS DE PAGAMENTO */}
-              <div className="space-y-2">
+              <div className="text-center pb-1">
+                <h3 className="text-base font-black text-slate-900 tracking-tight">
+                  Forma de Pagamento
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Escolha como prefere pagar o seu pedido
+                </p>
+              </div>
+
+              {/* GRID DE FORMAS DE PAGAMENTO DINÂMICO */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-extrabold uppercase tracking-wider text-slate-900">
-                    FORMA DE PAGAMENTO
+                    OPÇÕES DISPONÍVEIS
                   </span>
                   <span className="text-slate-400 text-[11px]">Escolha uma opção</span>
                 </div>
@@ -2819,7 +2997,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
+                      <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm whitespace-nowrap">
                         Aprovação Imediata
                       </span>
                       <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5 mt-1">
@@ -2902,7 +3080,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         <span className="text-[10px] text-slate-500">Aceito na maquininha na entrega</span>
                       </div>
                     </div>
-                    <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                    <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 whitespace-nowrap">
                       Pague na entrega
                     </span>
                   </button>
@@ -2924,7 +3102,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       <CreditCard className="h-4 w-4 text-slate-600 shrink-0" />
                       <span className="text-xs font-black text-slate-900">{ext.name}</span>
                     </div>
-                    <span className="text-[11px] text-slate-500">Opção da loja</span>
+                    <span className="text-[11px] text-slate-500 whitespace-nowrap">Opção da loja</span>
                   </button>
                 ))}
               </div>
@@ -3049,12 +3227,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
-              {/* AÇÕES DA ETAPA 3 */}
+              {/* AÇÕES DA ETAPA 4 */}
               <div className="pt-2 space-y-2">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setCheckoutWizardStep(2)}
+                    onClick={() => setCheckoutWizardStep(fulfillmentType === 'TAKEOUT' ? 2 : 3)}
                     className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
                   >
                     <ChevronLeft className="h-4 w-4" /> Voltar
@@ -3064,7 +3242,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     type="button"
                     disabled={isSubmittingOrder}
                     onClick={handleFinalizeOrder}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                   >
                     {isSubmittingOrder ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -3085,8 +3264,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </motion.div>
           )}
 
-          {/* PASSO 4: Sucesso e Parabéns pelo Pedido */}
-          {checkoutWizardStep === 4 && (
+          {/* ============================================================ */}
+          {/* PASSO 5: SUCESSO E PARABÉNS PELO PEDIDO                      */}
+          {/* ============================================================ */}
+          {checkoutWizardStep === 5 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -3378,7 +3559,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 setAcceptedStandardFee(true)
                 setCustomReferenceNote(`Bairro fora dos setores padrão: ${orig} (Taxa padrão R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
                 setUnsupportedNeighborhoodModal(null)
-                setCheckoutWizardStep(3)
+                setCheckoutWizardStep(4)
               }}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-3 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99] cursor-pointer"
             >
@@ -3459,7 +3640,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 setNumber('0')
                 setComplement('')
                 setZipcode('')
-                setCheckoutWizardStep(3)
+                setCheckoutWizardStep(4)
               }}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
             >
