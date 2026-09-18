@@ -23,6 +23,7 @@ interface CheckoutAddressMapProps {
   city?: string
   zipcode?: string
   savedAddresses?: SavedAddressItem[]
+  gpsTriggerNonce?: number
   onSelectSavedAddress?: (addr: SavedAddressItem) => void
   onCoordinatesChange?: (coords: { lat: number; lng: number }) => void
   onAddressResolved?: (resolved: {
@@ -44,6 +45,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
   city = 'Caraguatatuba',
   zipcode,
   savedAddresses = [],
+  gpsTriggerNonce,
   onSelectSavedAddress,
   onCoordinatesChange,
   onAddressResolved,
@@ -325,9 +327,15 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
     if (mapInstanceRef.current) mapInstanceRef.current.zoomOut()
   }
 
-  const handleGetGpsLocation = () => {
+    useEffect(() => {
+    if (gpsTriggerNonce && gpsTriggerNonce > 0) {
+      handleGetGpsLocation(false)
+    }
+  }, [gpsTriggerNonce])
+
+  const handleGetGpsLocation = (isUserClick = true) => {
     if (!navigator.geolocation) {
-      alert('Seu navegador ou celular não possui suporte à localização GPS.')
+      if (isUserClick) alert('Seu navegador ou celular não possui suporte à localização GPS.')
       return
     }
 
@@ -381,14 +389,12 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
       (err) => {
         setIsLocatingGps(false)
         console.warn('GPS error:', err)
-        if (err.code === 1) {
-          alert('Permissão de localização negada. Ative o GPS e permita o acesso à localização no navegador para usar o localizador.')
-        } else if (err.code === 2) {
-          alert('Sinal de GPS indisponível no momento. Toque no mapa ou arraste o pino para indicar seu endereço.')
-        } else if (err.code === 3) {
-          alert('Tempo esgotado ao buscar sinal GPS. Tente novamente ou arraste o pino no mapa.')
-        } else {
-          alert('Não foi possível obter a localização GPS. Toque no mapa para marcar seu endereço.')
+        if (isUserClick) {
+          if (err.code === 1) {
+            alert('Permissão de localização negada. Ative o GPS nas configurações do celular para usar essa função.')
+          } else {
+            alert('Sinal de GPS indisponível no momento. Toque no mapa ou arraste o pino para indicar seu endereço.')
+          }
         }
       },
       {

@@ -27,6 +27,7 @@ import {
   Compass,
   Flame,
   Navigation,
+  Crosshair,
   Banknote,
   Bell,
   Bike,
@@ -705,6 +706,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [selectedReferenceNeighbor, setSelectedReferenceNeighbor] = useState('')
   const [acceptedStandardFee, setAcceptedStandardFee] = useState(false)
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [gpsTriggerNonce, setGpsTriggerNonce] = useState(0)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -951,6 +953,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           }
         }
 
+        // Fluxo guiado: ao localizar o CEP, ativa automaticamente a detecção de GPS do aparelho
+        setGpsTriggerNonce((prev) => prev + 1)
         setTimeout(() => {
           document.getElementById('checkout-number-input')?.focus()
         }, 100)
@@ -3005,6 +3009,57 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </div>
               </div>
 
+              {/* CARD DE EXPERIÊNCIA GUIADA (GPS DO CELULAR PARA O MOTOBOY) */}
+              <div className="rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 p-3.5 shadow-xs space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                      <Navigation className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-black text-slate-900">
+                          {deliveryCoords ? 'Localização Exata Confirmada!' : 'Localização Exata para o Motoboy'}
+                        </h4>
+                        <span className="rounded-full bg-emerald-200/80 px-2 py-0.5 text-[9px] font-extrabold text-emerald-950 uppercase">
+                          {deliveryCoords ? 'GPS Ativo' : 'Recomendado'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                        {deliveryCoords
+                          ? 'O motoboy receberá este ponto exato no Google Maps para entregar direto no seu portão.'
+                          : 'Use o GPS do seu celular para marcar a posição exata da sua casa no mapa.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {!deliveryCoords ? (
+                  <button
+                    type="button"
+                    onClick={() => setGpsTriggerNonce((prev) => prev + 1)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-2.5 px-4 text-xs font-black shadow-sm transition-all"
+                  >
+                    <Crosshair className="h-4 w-4" />
+                    <span>Usar Localização do Celular (GPS)</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                      <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-600" />
+                      Ponto fixado no mapa com sucesso!
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setGpsTriggerNonce((prev) => prev + 1)}
+                      className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-900 underline"
+                    >
+                      Recalibrar GPS
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* MAPA INTERATIVO REAL (LEAFLET + OPENSTREETMAP NO BRASIL) COM SELEÇÃO DE ENDEREÇOS */}
               <CheckoutAddressMap
                 street={street}
@@ -3013,6 +3068,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 city={city || profile?.city || 'Caraguatatuba'}
                 zipcode={zipcode}
                 savedAddresses={savedAddresses}
+                gpsTriggerNonce={gpsTriggerNonce}
                 onCoordinatesChange={(coords) => setDeliveryCoords(coords)}
                 onAddressResolved={(resolved) => {
                   if (resolved.street && (!street || street.trim().length < 3)) {
