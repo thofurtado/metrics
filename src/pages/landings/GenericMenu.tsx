@@ -41,6 +41,7 @@ import {
   FileText,
   Info,
   Loader2,
+  Lock,
   MapPin,
   MessageCircle,
   Minus,
@@ -2445,7 +2446,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           </DialogHeader>
 
           {/* ============================================================ */}
-          {/* ETAPA 1: ESCOLHA DE RECEBIMENTO (DELIVERY VS BALCÃO)          */}
+          {/* ETAPA 1: ESCOLHA DE RECEBIMENTO (FIEL AO CANVAS DO STITCH)   */}
           {/* ============================================================ */}
           {checkoutWizardStep === 1 && (
             <motion.div
@@ -2499,15 +2500,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     </div>
                   </div>
 
-                  {/* Pills de Entrega */}
-                  <div className="flex items-center gap-2 mt-3.5 flex-wrap">
-                    <span className="flex items-center gap-1.5 rounded-xl bg-blue-100/70 px-3 py-1 text-xs font-bold text-blue-950">
-                      <Clock className="h-3.5 w-3.5 text-blue-700" />
-                      {matchedSector?.estimatedTimeMin
-                        ? `${matchedSector.estimatedTimeMin} – ${matchedSector.estimatedTimeMax || 60} min`
-                        : profile?.deliveryEstimatedTime || '35 – 45 min'}
-                    </span>
-                    <span className="flex items-center gap-1 rounded-xl bg-emerald-100/80 px-3 py-1 text-xs font-bold text-emerald-950">
+                  {/* Pill de Entrega (Somente Mais Escolhido como no Canvas do Stitch) */}
+                  <div className="flex items-center gap-2 mt-3.5">
+                    <span className="flex items-center gap-1 rounded-xl bg-emerald-100/90 px-3 py-1 text-xs font-bold text-emerald-950">
                       🔥 Mais escolhido
                     </span>
                   </div>
@@ -2558,7 +2553,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       {profile?.takeoutEstimatedTime ||
                         (profile?.preparationTimeMin
                           ? `${profile.preparationTimeMin} – ${profile.preparationTimeMax || profile.preparationTimeMin + 5} min`
-                          : '15 – 20 min')}
+                          : '15 - 20 min')}
                     </span>
                     <span className="flex items-center gap-1 rounded-xl bg-indigo-100/70 px-3 py-1 text-xs font-bold text-indigo-950">
                       🏷️ Sem taxa de entrega
@@ -2567,47 +2562,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </button>
               </div>
 
-              {/* Selo de Garantia e Qualidade */}
-              <div className="rounded-2xl border border-blue-100/60 bg-blue-50/40 p-4 flex items-start gap-3 shadow-2xs">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h5 className="text-xs sm:text-sm font-black text-slate-900">
-                    Padrão Alta Gastronomia
-                  </h5>
-                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                    Embalagens isotérmicas seladas e lacradas para preservar aromas e textura até o consumo.
-                  </p>
-                </div>
-              </div>
-
-              {/* Fotos Ilustrativas de Alta Gastronomia */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-slate-200">
-                  <img
-                    src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80"
-                    alt="Embalagem Selada"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
-                    <span className="text-white text-xs font-black drop-shadow-sm">Embalagem Selada</span>
-                  </div>
-                </div>
-                <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-slate-200">
-                  <img
-                    src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80"
-                    alt="Direto da Cozinha"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
-                    <span className="text-white text-xs font-black drop-shadow-sm">Direto da Cozinha</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Voltar ao Cardápio */}
-              <div className="pt-2 text-center">
+              <div className="pt-3 text-center">
                 <button
                   type="button"
                   onClick={() => {
@@ -2639,7 +2595,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           )}
 
           {/* ============================================================ */}
-          {/* ETAPA 2: IDENTIFICAÇÃO DO CLIENTE (WHATSAPP E NOME)          */}
+          {/* ETAPA 2: IDENTIFICAÇÃO DO CLIENTE (SEUS DADOS DE CONTATO)   */}
           {/* ============================================================ */}
           {checkoutWizardStep === 2 && (
             <motion.div
@@ -2651,93 +2607,101 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             >
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-                  Identificação do Cliente
+                  Seus Dados de Contato
                 </h3>
                 <p className="text-xs text-slate-600 mt-1 leading-snug">
-                  Informe seu WhatsApp para confirmar o pedido e acompanhar em tempo real.
+                  Utilizamos seu WhatsApp para confirmar o pedido e enviar o rastreio em tempo real.
                 </p>
               </div>
 
-              {/* Resumo da Escolha de Recebimento com Link de Alterar */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-2xs shrink-0">
-                    {fulfillmentType === 'DELIVERY' ? <Rocket className="h-4 w-4 text-emerald-700" /> : <Store className="h-4 w-4 text-emerald-700" />}
+              {/* Card de Boas-Vindas Personalizado (Stitch VIP Card) */}
+              {(clientFound || customerName) && (
+                <div className="rounded-2xl border border-emerald-100/90 bg-emerald-50/70 p-4 flex items-center gap-3.5 shadow-2xs">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-white font-black text-sm shadow-xs">
+                    {customerName
+                      ? customerName.trim().split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+                      : 'TF'}
                   </div>
-                  <span className="font-extrabold text-slate-800 truncate">
-                    {fulfillmentType === 'DELIVERY' ? 'Entrega Delivery' : 'Retirar no Balcão'}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-black text-slate-900 truncate">
+                      Olá, {customerName || 'Cliente VIP'}!
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Estamos prontos para a próxima etapa!
+                    </p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCheckoutWizardStep(1)}
-                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline shrink-0 ml-2"
-                >
-                  Alterar modalidade
-                </button>
-              </div>
+              )}
 
-              {/* Card de Identificação */}
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3.5">
+              {/* Campos de Dados */}
+              <div className="space-y-3.5 pt-1">
+                {/* WHATSAPP / CELULAR COM PREENCHIMENTO RÁPIDO */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700">Seu WhatsApp / Telefone</label>
-                  <div className="mt-1 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
-                    <span className="mr-2 flex items-center gap-1 text-xs font-bold text-slate-600 shrink-0 border-r border-slate-200 pr-2">
-                      🇧🇷 +55
+                  <div className="flex items-center justify-between pb-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      WhatsApp / Celular <span className="text-red-500">*</span>
+                    </label>
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                      <Zap className="h-3 w-3 fill-emerald-600 text-emerald-600" /> Preenchimento rápido
+                    </span>
+                  </div>
+
+                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                    <span className="mr-2.5 flex items-center rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 shrink-0">
+                      BR +55
                     </span>
                     <input
                       type="tel"
                       placeholder="(00) 00000-0000"
                       value={customerPhone}
                       onChange={handlePhoneChange}
-                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
+                      className="w-full bg-transparent text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
                     />
-                    {isLoadingPhone && <Loader2 className="h-4 w-4 animate-spin text-emerald-600 shrink-0" />}
+                    {isLoadingPhone ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600 shrink-0 ml-2" />
+                    ) : customerPhone.replace(/\D/g, '').length >= 10 ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
+                        <Check className="h-3 w-3 stroke-[3]" />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Cliente VIP Reconhecido */}
-                {clientFound && customerName && (
-                  <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white font-black text-sm shadow-sm">
-                        {customerName ? customerName.slice(0, 2).toUpperCase() : 'VIP'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                            {customerName}
-                          </h4>
-                          <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2 py-0.2 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
-                            Reconhecido
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                          Bem-vindo de volta! Seus dados foram localizados.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+                {/* NOME COMPLETO */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700">Seu Nome Completo</label>
-                  <input
-                    type="text"
-                    placeholder="Como podemos te chamar?"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
+                  <label className="text-xs font-bold text-slate-800 block pb-1">
+                    Nome Completo <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-xs focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                    <User className="h-4 w-4 text-slate-400 mr-2.5 shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Como podemos te chamar?"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full bg-transparent text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none"
+                    />
+                    {customerName.trim().length > 2 && (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white shrink-0 ml-2">
+                        <Check className="h-3 w-3 stroke-[3]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Nota de Privacidade */}
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium pt-0.5">
+                  <Lock className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                  <span>Seus dados estão protegidos e não compartilhamos com terceiros.</span>
                 </div>
               </div>
 
-              {/* Botões de Navegação */}
-              <div className="pt-2 space-y-2">
+              {/* Botão de Avançar e Link de Voltar */}
+              <div className="pt-3 space-y-2">
                 <button
                   type="button"
                   onClick={() => {
-                    const cleanPhone = customerPhone.replace(/D/g, '')
+                    const cleanPhone = customerPhone.replace(/\D/g, '')
                     if (cleanPhone.length < 10) {
                       alert('Por favor, informe um número de WhatsApp válido com DDD.')
                       return
@@ -2754,17 +2718,20 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   }}
                   className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
                 >
-                  <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Continuar para Entrega'}</span>
+                  <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Avançar para Entrega'}</span>
                   <ChevronRight className="h-4 w-4 stroke-[3]" />
                 </button>
 
                 <div className="text-center pt-1">
                   <button
                     type="button"
-                    onClick={() => setCheckoutWizardStep(1)}
+                    onClick={() => {
+                      setIsCheckoutStepOpen(false)
+                      setIsCartModalOpen(true)
+                    }}
                     className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Recebimento
+                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Sacola
                   </button>
                 </div>
               </div>
@@ -3547,53 +3514,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               </button>
             </motion.div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* MODAL HUMANIZADO: ÁREA DE ENTREGA E BAIRROS ATENDIDOS */}
-      <Dialog open={isNeighborhoodHelpOpen} onOpenChange={setIsNeighborhoodHelpOpen}>
-        <DialogContent className="sm:max-w-md !bg-white text-slate-900 rounded-3xl p-6 border border-slate-100 shadow-2xl">
-          <DialogHeader className="space-y-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
-              <MapPin className="h-6 w-6" />
-            </div>
-            <DialogTitle className="text-lg font-black text-slate-900">
-              Não encontrou seu bairro?
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 leading-relaxed pt-1">
-              Caso seu bairro não se encontre nessa lista é porque <strong>não trabalhamos com entregas nessa localidade no momento</strong>.
-              <br /><br />
-              Para que as refeições cheguem sempre <strong>quentinhas, crocantes e na textura ideal</strong>, mantemos um raio de entrega rigorosamente planejado.
-              <br /><br />
-              💡 <strong>Dica especial:</strong> Você pode optar pela modalidade <strong>Retirar no Balcão</strong>! Preparamos seu pedido com carinho para você buscar sem taxa de entrega e sem fila de espera.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="pt-4 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsNeighborhoodHelpOpen(false)
-                setFulfillmentType('TAKEOUT')
-                setNeighborhood('Balcão')
-                setStreet('Retirada no Balcão')
-                setNumber('0')
-                setCheckoutWizardStep(4)
-              }}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md bg-emerald-800 hover:bg-emerald-900 transition-all"
-            >
-              <Store className="h-4 w-4" />
-              <span>Mudar para Retirar no Balcão</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsNeighborhoodHelpOpen(false)}
-              className="w-full rounded-2xl border border-slate-200 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
-            >
-              Entendido, vou verificar meu endereço
-            </button>
-          </div>
         </DialogContent>
       </Dialog>
 {/* Modal Dialog: Escolha Rápida de Bairro no Topo */}
