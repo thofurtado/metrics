@@ -767,12 +767,83 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCheckoutStepOpen, checkoutWizardStep, showNameField, phoneReady])
 
+  // Etapa 3 (endereço): com cadastro -> escolhe entre salvos; sem cadastro -> CEP + formulário
+  const [wantsNewAddress, setWantsNewAddress] = useState(false)
+  const cepInputRef = useRef<HTMLInputElement>(null)
+  const showSavedAddressList = savedAddresses.length > 0 && !wantsNewAddress
+  const zipDigits = zipcode.replace(/\D/g, '')
+  const showAddressFields =
+    isManualAddressMode || !!street.trim() || (zipDigits.length === 8 && !isSearchingCEPCheckout)
+  const isAddressValid =
+    !!street.trim() &&
+    !!number.trim() &&
+    number.trim() !== '0' &&
+    !/^s\/?n$/i.test(number.trim()) &&
+    !!neighborhood.trim()
+  const addrLabelCls = 'block pb-1.5 text-sm font-bold text-slate-700'
+  const addrInputCls =
+    'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-base font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500'
+
+  const selectSavedAddress = (addr: any) => {
+    setStreet(addr.street || '')
+    setNumber(addr.number ? String(addr.number) : '')
+    setComplement(addr.complement || '')
+    setReferencePoint(addr.referencePoint || addr.reference_point || '')
+    setCity(addr.city || '')
+    setState(addr.state || '')
+    setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
+    setAcceptedStandardFee(false)
+    setIsNewAddress(false)
+    const matched = matchNeighborhoodWithConfig(addr.neighborhood || '')
+    if (matched) {
+      setNeighborhood(matched)
+      setAddressReadonly(true)
+    } else if (availableNeighborhoodsList.length > 0) {
+      setNeighborhood('')
+      setAddressReadonly(false)
+      setUnsupportedNeighborhoodModal({ isOpen: true, neighborhoodName: addr.neighborhood || '' })
+    } else {
+      setNeighborhood(addr.neighborhood || '')
+      setAddressReadonly(true)
+    }
+  }
+
+  const startNewAddress = () => {
+    setWantsNewAddress(true)
+    setIsNewAddress(true)
+    setAddressReadonly(false)
+    setAcceptedStandardFee(false)
+    setIsManualAddressMode(false)
+    setZipcode('')
+    setStreet('')
+    setNumber('')
+    setComplement('')
+    setNeighborhood('')
+    setReferencePoint('')
+    setCity('')
+    setState('')
+  }
+
+  const backToSavedAddresses = () => {
+    setWantsNewAddress(false)
+    if (savedAddresses[0]) selectSavedAddress(savedAddresses[0])
+  }
+
+  useEffect(() => {
+    if (!isCheckoutStepOpen || checkoutWizardStep !== 3 || showSavedAddressList) return
+    if (street.trim()) return
+    const t = setTimeout(() => cepInputRef.current?.focus(), 150)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckoutStepOpen, checkoutWizardStep, showSavedAddressList])
+
   const handlePhoneSearch = async (overrideRawPhone?: string) => {
     const rawPhone = (overrideRawPhone || customerPhone).replace(/\D/g, '')
     if (rawPhone.length < 10) return
 
     setIsLoadingPhone(true)
     setPhoneSearchToast(null)
+    setWantsNewAddress(false)
 
     try {
       const res = await api.get(`/public/clients/phone/${rawPhone}`)
@@ -2949,320 +3020,273 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="py-1 text-sm"
+              className="space-y-4 py-2 text-sm"
             >
-              <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-                      Onde vamos entregar?
-                    </h3>
-                    <p className="text-xs text-slate-600 mt-1 leading-snug">
-                      Digite seu CEP para localizar ou preencha seu endereço abaixo.
-                    </p>
-                  </div>
-
-                  {/* SELEÇÃO RÁPIDA DE ENDEREÇOS SALVOS (CASO HAJA MAIS DE UM) */}
-                  {savedAddresses && savedAddresses.length > 1 && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-slate-500 block">Endereços salvos cadastrados:</span>
-                      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                        {savedAddresses.map((addr: any, i: number) => {
-                          const isSel = street === addr.street && number === addr.number
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => {
-                                setStreet(addr.street || '')
-                                setNumber(addr.number || '')
-                                setNeighborhood(addr.neighborhood || '')
-                                setComplement(addr.complement || '')
-                                setReferencePoint(addr.referencePoint || addr.reference_point || '')
-                                if (addr.zipcode) {
-                                  setZipcode(formatCep(addr.zipcode.toString().padStart(8, '0')))
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition-all flex items-center gap-1.5 ${
-                                isSel
-                                  ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              <MapPin className="h-3 w-3" />
-                              <span>{addr.street ? `${addr.street}, ${addr.number}` : `Endereço ${i + 1}`}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* BUSCA POR CEP */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-emerald-700" />
-                        Buscar por CEP
-                      </label>
+              {showSavedAddressList ? (
+                /* Cliente com cadastro: escolhe um endereço salvo (1 toque) */
+                <div className="space-y-2.5">
+                  {savedAddresses.map((addr: any, i: number) => {
+                    const isSel =
+                      !!street && street === (addr.street || '') && number === (addr.number ? String(addr.number) : '')
+                    const outOfArea =
+                      availableNeighborhoodsList.length > 0 &&
+                      !matchNeighborhoodWithConfig(addr.neighborhood || '')
+                    return (
                       <button
+                        key={addr.id || i}
                         type="button"
-                        onClick={() => setIsManualAddressMode(!isManualAddressMode)}
-                        className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
+                        onClick={() => selectSavedAddress(addr)}
+                        className={`flex w-full items-center gap-3 rounded-2xl border-2 px-3.5 py-3.5 text-left transition-all active:scale-[0.99] ${
+                          isSel
+                            ? 'border-emerald-600 bg-emerald-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
                       >
-                        {isManualAddressMode ? 'Usar busca por CEP' : 'Não sei meu CEP'}
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                            isSel ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {isSel ? <Check className="h-4 w-4 stroke-[3]" /> : <MapPin className="h-4 w-4" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-base font-black text-slate-950">
+                            {addr.street ? `${addr.street}, ${addr.number || 's/n'}` : `Endereço ${i + 1}`}
+                          </div>
+                          <div className="truncate text-sm font-medium text-slate-500">
+                            {[addr.neighborhood, addr.complement].filter(Boolean).join(' · ')}
+                          </div>
+                        </div>
+                        {outOfArea && (
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                            Fora da área
+                          </span>
+                        )}
                       </button>
-                    </div>
+                    )
+                  })}
 
+                  <button
+                    type="button"
+                    onClick={startNewAddress}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 py-3.5 text-sm font-black text-emerald-800 transition-colors hover:bg-emerald-50"
+                  >
+                    <Plus className="h-4 w-4 stroke-[3]" />
+                    Novo endereço
+                  </button>
+                </div>
+              ) : (
+                /* Sem cadastro (ou novo endereço): CEP primeiro, depois o resto */
+                <div className="space-y-3.5">
+                  <div>
+                    <div className="flex items-center justify-between pb-1.5">
+                      <label htmlFor="zipcode-input" className={addrLabelCls + ' !pb-0'}>
+                        CEP
+                      </label>
+                      {!showAddressFields && (
+                        <button
+                          type="button"
+                          onClick={() => setIsManualAddressMode(true)}
+                          className="text-sm font-bold text-emerald-700 hover:text-emerald-900"
+                        >
+                          Não sei meu CEP
+                        </button>
+                      )}
+                    </div>
                     <div className="relative flex items-center">
                       <input
+                        ref={cepInputRef}
                         id="zipcode-input"
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
                         placeholder="00000-000"
                         value={zipcode}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, '').slice(0, 8)
                           setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
-                          if (val.length === 8) {
-                            handleSearchCEPCheckout(val)
-                          }
+                          if (val.length === 8) handleSearchCEPCheckout(val)
                         }}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-3 pr-28 text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className={addrInputCls + ' pr-12'}
                       />
+                      <div className="absolute right-3 flex items-center">
+                        {isSearchingCEPCheckout ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+                        ) : street && zipDigits.length === 8 ? (
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white">
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
 
-                      <div className="absolute right-2.5 flex items-center gap-1.5">
-                        {street && zipcode ? (
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1 text-[11px] font-black">
-                            <Check className="h-3 w-3 stroke-[3]" /> Localizado
-                          </span>
-                        ) : isSearchingCEPCheckout ? (
-                          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold px-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </span>
+                  {showAddressFields && (
+                    <>
+                      <div>
+                        <label htmlFor="checkout-street-input" className={addrLabelCls}>
+                          Rua / Avenida
+                        </label>
+                        <input
+                          id="checkout-street-input"
+                          type="text"
+                          autoComplete="street-address"
+                          placeholder="Ex: Rua das Flores"
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
+                          className={addrInputCls}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-5 gap-3">
+                        <div className="col-span-2">
+                          <label htmlFor="checkout-number-input" className={addrLabelCls}>
+                            Número
+                          </label>
+                          <input
+                            id="checkout-number-input"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Nº"
+                            value={number}
+                            onChange={(e) => setNumber(e.target.value)}
+                            className={addrInputCls}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <label htmlFor="checkout-complement-input" className={addrLabelCls}>
+                            Complemento <span className="font-medium text-slate-400">(opcional)</span>
+                          </label>
+                          <input
+                            id="checkout-complement-input"
+                            type="text"
+                            placeholder="Apto 42, Bloco B"
+                            value={complement}
+                            onChange={(e) => setComplement(e.target.value)}
+                            className={addrInputCls}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="checkout-neighborhood-input" className={addrLabelCls}>
+                          Bairro
+                        </label>
+                        {availableNeighborhoodsList.length > 0 ? (
+                          <>
+                            <select
+                              id="checkout-neighborhood-input"
+                              value={neighborhood}
+                              onChange={(e) => {
+                                setNeighborhood(e.target.value)
+                                setAcceptedStandardFee(false)
+                              }}
+                              className={addrInputCls}
+                            >
+                              <option value="">Selecione seu bairro</option>
+                              {availableNeighborhoodsList.map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                              {neighborhood && !availableNeighborhoodsList.includes(neighborhood) && (
+                                <option value={neighborhood}>{neighborhood}</option>
+                              )}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUnsupportedNeighborhoodModal({ isOpen: true, neighborhoodName: '' })
+                              }
+                              className="mt-1.5 text-sm font-bold text-emerald-700 hover:text-emerald-900"
+                            >
+                              Não achou seu bairro?
+                            </button>
+                          </>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const val = zipcode.replace(/\D/g, '')
-                              if (val.length === 8) handleSearchCEPCheckout(val)
-                            }}
-                            className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                          >
-                            <Search className="h-4 w-4" />
-                          </button>
+                          <input
+                            id="checkout-neighborhood-input"
+                            type="text"
+                            placeholder="Seu bairro"
+                            value={neighborhood}
+                            onChange={(e) => setNeighborhood(e.target.value)}
+                            className={addrInputCls}
+                          />
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* FORMULÁRIO DE ENDEREÇO DIRETO E EDITÁVEL */}
-                  <div className="rounded-3xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4 text-emerald-700" />
-                        Dados do Endereço
-                      </span>
-                      {street && (
-                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                          {city || profile?.city || 'Localizado'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* RUA / LOGRADOURO */}
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block pb-1">
-                        Rua / Logradouro <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="checkout-street-input"
-                        type="text"
-                        placeholder="Ex: Rua das Flores, Av. Brasil"
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    {/* NÚMERO E COMPLEMENTO LADO A LADO */}
-                    <div className="grid grid-cols-3 gap-2.5">
                       <div>
-                        <label className="text-[11px] font-bold text-slate-700 block pb-1">
-                          Número <span className="text-red-500">*</span>
+                        <label htmlFor="checkout-reference-input" className={addrLabelCls}>
+                          Ponto de referência <span className="font-medium text-slate-400">(opcional)</span>
                         </label>
                         <input
-                          id="checkout-number-input"
-                          tabIndex={1}
+                          id="checkout-reference-input"
                           type="text"
-                          placeholder="Nº"
-                          value={number}
-                          onChange={(e) => setNumber(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="Ex: Próximo à padaria, portão cinza"
+                          value={referencePoint}
+                          onChange={(e) => setReferencePoint(e.target.value)}
+                          className={addrInputCls}
                         />
                       </div>
+                    </>
+                  )}
 
-                      <div className="col-span-2">
-                        <label className="text-[11px] font-bold text-slate-700 block pb-1">
-                          Complemento (Apto, Bloco...)
-                        </label>
-                        <input
-                          id="checkout-complement-input"
-                          tabIndex={2}
-                          type="text"
-                          placeholder="Ex: Apto 42B, Bloco 2"
-                          value={complement}
-                          onChange={(e) => setComplement(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* BAIRRO */}
-                    <div>
-                      <div className="flex items-center justify-between pb-1">
-                        <label className="text-[11px] font-bold text-slate-700">
-                          Bairro <span className="text-red-500">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setIsNeighborhoodHelpOpen(true)}
-                          className="flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline"
-                          title="Não achou seu bairro?"
-                        >
-                          <Info className="h-3 w-3" />
-                          <span>Não achou seu bairro?</span>
-                        </button>
-                      </div>
-
-                      {availableNeighborhoodsList.length > 0 ? (
-                        <select
-                          value={neighborhood}
-                          onChange={(e) => {
-                            setNeighborhood(e.target.value)
-                            setAcceptedStandardFee(false)
-                          }}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                        >
-                          <option value="">Selecione seu bairro atendido...</option>
-                          {availableNeighborhoodsList.map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                          {neighborhood && !availableNeighborhoodsList.includes(neighborhood) && (
-                            <option value={neighborhood}>{neighborhood} (Bairro informado)</option>
-                          )}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          placeholder="Digite seu bairro"
-                          value={neighborhood}
-                          onChange={(e) => setNeighborhood(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* PONTO DE REFERÊNCIA */}
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block pb-1">
-                        Ponto de Referência (Opcional)
-                      </label>
-                      <input
-                        id="checkout-reference-input"
-                        tabIndex={3}
-                        type="text"
-                        placeholder="Ex: Próximo à padaria, portão cinza"
-                        value={referencePoint}
-                        onChange={(e) => setReferencePoint(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-medium text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* CARD DE TAXA E TEMPO DE ROTA */}
-                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-black text-emerald-900">
-                      <span className="flex items-center gap-1.5">
-                        <Bike className="h-4 w-4 text-emerald-600 shrink-0" />
-                        Taxa de Entrega ({matchedSector?.name || 'Setor Local'})
-                      </span>
-                      <span className="text-sm font-black">
-                        {parseDeliveryFee(deliveryFee) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
-                      <Clock className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                      <span>
-                        Tempo estimado de rota: {matchedSector?.estimatedTimeMin ? `${matchedSector.estimatedTimeMin} - ${matchedSector.estimatedTimeMax || 50} min após o preparo` : '35 - 50 min após o preparo'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* BOTÕES DE AÇÃO NA SUB-ETAPA DE ENDEREÇO */}
-                  <div className="pt-2 space-y-2.5">
+                  {savedAddresses.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!street.trim()) {
-                          alert('Por favor, informe o logradouro/rua ou digite seu CEP.')
-                          document.getElementById('checkout-street-input')?.focus()
-                          return
-                        }
-                        if (!number.trim() || number === '0' || number.toLowerCase() === 's/n') {
-                          alert('Por favor, informe o número da sua residência.')
-                          document.getElementById('checkout-number-input')?.focus()
-                          return
-                        }
-                        if (!neighborhood.trim()) {
-                          alert('Por favor, selecione ou informe o seu bairro.')
-                          return
-                        }
-                        setCheckoutWizardStep(4)
-                        setGpsTriggerNonce((prev) => prev + 1)
-                      }}
-                      className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                      onClick={backToSavedAddresses}
+                      className="text-sm font-bold text-emerald-700 hover:text-emerald-900"
                     >
-                      <span>Avançar para Localização no Mapa (Opcional)</span>
-                      <ChevronRight className="h-4 w-4 stroke-[3]" />
+                      Usar um endereço salvo
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!street.trim()) {
-                          alert('Por favor, informe o logradouro/rua ou digite seu CEP.')
-                          document.getElementById('checkout-street-input')?.focus()
-                          return
-                        }
-                        if (!number.trim() || number === '0' || number.toLowerCase() === 's/n') {
-                          alert('Por favor, informe o número da sua residência.')
-                          document.getElementById('checkout-number-input')?.focus()
-                          return
-                        }
-                        if (!neighborhood.trim()) {
-                          alert('Por favor, selecione ou informe o seu bairro.')
-                          return
-                        }
-                        setCheckoutWizardStep(5)
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-2xl py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all active:scale-[0.98]"
-                    >
-                      <span>Pular mapa e ir direto para o Pagamento</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-
-                    <div className="text-center pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutWizardStep(2)}
-                        className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Identificação
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
+              )}
+
+              {/* Taxa e tempo: só quando o endereço está completo */}
+              {isAddressValid && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <Bike className="h-5 w-5 shrink-0 text-emerald-700" />
+                    Entrega ·{' '}
+                    {matchedSector?.estimatedTimeMin
+                      ? `${matchedSector.estimatedTimeMin}–${matchedSector.estimatedTimeMax || 50} min`
+                      : '35–50 min'}
+                  </span>
+                  <span className="text-lg font-black text-slate-950">
+                    {parseDeliveryFee(deliveryFee) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
+                  </span>
+                </div>
+              )}
+
+              {/* Ação principal fixa no rodapé: acende quando o endereço está completo */}
+              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex items-center gap-2 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
+                <button
+                  type="button"
+                  aria-label="Voltar para os dados"
+                  onClick={() => setCheckoutWizardStep(2)}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!isAddressValid}
+                  onClick={() => {
+                    if (!isAddressValid) return
+                    setCheckoutWizardStep(4)
+                    setGpsTriggerNonce((prev) => prev + 1)
+                  }}
+                  className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl text-sm font-black transition-all ${
+                    isAddressValid
+                      ? 'bg-emerald-800 text-white shadow-lg ring-4 ring-emerald-500/25 hover:bg-emerald-900 active:scale-[0.98]'
+                      : 'bg-slate-200 text-slate-400'
+                  }`}
+                >
+                  <span>Continuar</span>
+                  <ChevronRight className="h-4 w-4 stroke-[3]" />
+                </button>
+              </div>
             </motion.div>
           )}
 
