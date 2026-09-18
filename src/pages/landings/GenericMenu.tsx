@@ -1434,7 +1434,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             isOpen: true,
             neighborhoodName: neighborhood,
           })
-          setCheckoutWizardStep(2)
+          setCheckoutWizardStep(3)
           return
         }
       }
@@ -1504,7 +1504,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             isOpen: true,
             neighborhoodName: neighborhood,
           })
-          setCheckoutWizardStep(2)
+          setCheckoutWizardStep(3)
         } else {
           alert(`Não foi possível registrar o pedido no caixa: ${errorMsg}`)
         }
@@ -3445,9 +3445,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             </motion.div>
           )}
 
-          {checkoutWizardStep === 6 && (
+          {checkoutWizardStep === 5 && (
             <motion.div
-              key="step6"
+              key="step5"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
