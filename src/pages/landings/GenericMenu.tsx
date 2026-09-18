@@ -532,8 +532,110 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [complement, setComplement] = useState('')
   const [referencePoint, setReferencePoint] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<
-    'PIX' | 'CREDIT' | 'DEBIT' | 'CASH'
+    'PIX' | 'CREDIT' | 'DEBIT' | 'CASH' | 'VOUCHER' | string
   >('PIX')
+
+  // Mapeamento dinâmico das formas de pagamento ativas da loja (vindas do perfil público da empresa)
+  const availablePaymentMethods = useMemo(() => {
+    const methods = profile?.paymentMethods
+    if (Array.isArray(methods)) {
+      const hasPix = methods.some((p: any) => (p.name || '').toLowerCase().includes('pix'))
+      const hasCredit = methods.some((p: any) => {
+        const n = (p.name || '').toLowerCase()
+        return n.includes('crédito') || n.includes('credito')
+      })
+      const hasDebit = methods.some((p: any) => {
+        const n = (p.name || '').toLowerCase()
+        return n.includes('débito') || n.includes('debito')
+      })
+      const hasCash = methods.some((p: any) => (p.name || '').toLowerCase().includes('dinheiro') || (p.name || '').toLowerCase().includes('cash'))
+      const voucherItem = methods.find((p: any) => {
+        const n = (p.name || '').toLowerCase()
+        return (
+          n.includes('vale') ||
+          n.includes('voucher') ||
+          n.includes('refei') ||
+          n.includes('ticket') ||
+          n.includes('sodexo') ||
+          n.includes('alelo') ||
+          n.includes('vr') ||
+          n.includes('ben') ||
+          n.includes('pluxee')
+        )
+      })
+
+      const isKnown = (name: string) => {
+        const n = (name || '').toLowerCase()
+        return (
+          n.includes('pix') ||
+          n.includes('crédito') ||
+          n.includes('credito') ||
+          n.includes('débito') ||
+          n.includes('debito') ||
+          n.includes('dinheiro') ||
+          n.includes('cash') ||
+          n.includes('vale') ||
+          n.includes('voucher') ||
+          n.includes('refei') ||
+          n.includes('ticket') ||
+          n.includes('sodexo') ||
+          n.includes('alelo') ||
+          n.includes('vr') ||
+          n.includes('ben') ||
+          n.includes('pluxee')
+        )
+      }
+
+      const extraMethods = methods.filter((p: any) => !isKnown(p.name))
+
+      return {
+        hasCustomConfig: true,
+        pix: hasPix,
+        credit: hasCredit,
+        debit: hasDebit,
+        cash: hasCash,
+        voucher: !!voucherItem,
+        voucherName: voucherItem?.name || 'Vale Refeição (VR, Sodexo, Alelo)',
+        extraMethods,
+        methodsList: methods,
+      }
+    }
+
+    return {
+      hasCustomConfig: false,
+      pix: true,
+      credit: true,
+      debit: true,
+      cash: true,
+      voucher: false, // Se a loja não configurou voucher, NUNCA exibe!
+      voucherName: 'Vale Refeição (VR, Sodexo, Alelo)',
+      extraMethods: [],
+      methodsList: [],
+    }
+  }, [profile?.paymentMethods])
+
+  // Garante que o método selecionado seja sempre um dos permitidos e ativos da loja
+  useEffect(() => {
+    if (!availablePaymentMethods) return
+    const isCurrentValid =
+      (paymentMethod === 'PIX' && availablePaymentMethods.pix) ||
+      (paymentMethod === 'CREDIT' && availablePaymentMethods.credit) ||
+      (paymentMethod === 'DEBIT' && availablePaymentMethods.debit) ||
+      (paymentMethod === 'CASH' && availablePaymentMethods.cash) ||
+      (paymentMethod === 'VOUCHER' && availablePaymentMethods.voucher) ||
+      (availablePaymentMethods.extraMethods?.some((m: any) => m.name === paymentMethod))
+
+    if (!isCurrentValid) {
+      if (availablePaymentMethods.pix) setPaymentMethod('PIX')
+      else if (availablePaymentMethods.credit) setPaymentMethod('CREDIT')
+      else if (availablePaymentMethods.debit) setPaymentMethod('DEBIT')
+      else if (availablePaymentMethods.cash) setPaymentMethod('CASH')
+      else if (availablePaymentMethods.voucher) setPaymentMethod('VOUCHER')
+      else if (availablePaymentMethods.extraMethods && availablePaymentMethods.extraMethods.length > 0) {
+        setPaymentMethod(availablePaymentMethods.extraMethods[0].name)
+      }
+    }
+  }, [availablePaymentMethods, paymentMethod])
   const [changeAmount, setChangeAmount] = useState('')
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
   const [isCopiedPix, setIsCopiedPix] = useState(false)
@@ -1331,7 +1433,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 ? 'Cartão de Crédito'
                 : paymentMethod === 'DEBIT'
                   ? 'Cartão de Débito'
-                  : 'Dinheiro',
+                  : paymentMethod === 'VOUCHER'
+                    ? (availablePaymentMethods.voucherName || 'Vale Refeição')
+                    : paymentMethod === 'CASH'
+                      ? 'Dinheiro'
+                      : paymentMethod,
           change_for: changeAmount ? Number(changeAmount) : undefined,
           delivery_fee: isTakeout ? 0 : resolvedDeliveryFee,
           total_amount: cartTotal,
@@ -1436,7 +1542,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         text += `💳 *Forma de Pagamento:* Cartão de Crédito (na entrega)\n`
       } else if (paymentMethod === 'DEBIT') {
         text += `💳 *Forma de Pagamento:* Cartão de Débito (na entrega)\n`
-      } else {
+      } else if (paymentMethod === 'VOUCHER') {
+        text += `💳 *Forma de Pagamento:* ${availablePaymentMethods.voucherName || 'Vale Refeição'} (na entrega)\n`
+      } else if (paymentMethod === 'CASH') {
         const trocoNum = parseFloat((changeAmount || '0').replace(',', '.'))
         if (trocoNum > cartTotal) {
           const levarTroco = trocoNum - cartTotal
@@ -1447,6 +1555,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         } else {
           text += `💳 *Forma de Pagamento:* Dinheiro (Sem troco)\n`
         }
+      } else {
+        text += `💳 *Forma de Pagamento:* ${paymentMethod} (na entrega)\n`
       }
 
       text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`
@@ -2661,20 +2771,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                           return
                         }
                       }
-                      try {
-                        await registerClientInBackend()
-                        setCheckoutWizardStep(3)
-                      } catch (err: any) {
-                        const msg = err?.response?.data?.message || 'Erro ao cadastrar cliente.'
-                        if (msg.toLowerCase().includes('área de entrega') || msg.toLowerCase().includes('bairro')) {
-                          setUnsupportedNeighborhoodModal({
-                            isOpen: true,
-                            neighborhoodName: neighborhood,
-                          })
-                        } else {
-                          alert(msg)
-                        }
-                      }
+                      // Avanço instantâneo sem congelar a interface do cliente
+                      setCheckoutWizardStep(3)
+
+                      // Sincroniza cliente no backend de forma assíncrona em background
+                      registerClientInBackend().catch((err: any) => {
+                        console.warn('Sincronização em background do cliente:', err)
+                      })
                     }}
                     className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
                   >
@@ -2706,89 +2809,158 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
                 <div className="grid grid-cols-2 gap-2.5">
                   {/* PIX */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('PIX')}
-                    className={`relative flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === 'PIX'
-                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
-                      Aprovação Imediata
-                    </span>
-                    <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5 mt-1">
-                      <Zap className="h-4 w-4 text-amber-500 fill-amber-500" /> Pix
-                    </div>
-                    <p className="text-[11px] text-slate-500">Pagamento instantâneo</p>
-                  </button>
+                  {availablePaymentMethods.pix && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('PIX')}
+                      className={`relative flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
+                        paymentMethod === 'PIX'
+                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm">
+                        Aprovação Imediata
+                      </span>
+                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5 mt-1">
+                        <Zap className="h-4 w-4 text-amber-500 fill-amber-500" /> Pix
+                      </div>
+                      <p className="text-[11px] text-slate-500">Pagamento instantâneo</p>
+                    </button>
+                  )}
 
                   {/* CARTÃO CRÉDITO */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('CREDIT')}
-                    className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === 'CREDIT'
-                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                      <CreditCard className="h-4 w-4 text-indigo-600" /> Cartão Crédito
-                    </div>
-                    <p className="text-[11px] text-slate-500">Pague na entrega</p>
-                  </button>
+                  {availablePaymentMethods.credit && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CREDIT')}
+                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
+                        paymentMethod === 'CREDIT'
+                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
+                        <CreditCard className="h-4 w-4 text-indigo-600" /> Cartão Crédito
+                      </div>
+                      <p className="text-[11px] text-slate-500">Pague na entrega</p>
+                    </button>
+                  )}
 
                   {/* CARTÃO DÉBITO */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('DEBIT')}
-                    className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === 'DEBIT'
-                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                      <CreditCard className="h-4 w-4 text-blue-600" /> Cartão Débito
-                    </div>
-                    <p className="text-[11px] text-slate-500">Maquininha na porta</p>
-                  </button>
+                  {availablePaymentMethods.debit && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('DEBIT')}
+                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
+                        paymentMethod === 'DEBIT'
+                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
+                        <CreditCard className="h-4 w-4 text-blue-600" /> Cartão Débito
+                      </div>
+                      <p className="text-[11px] text-slate-500">Maquininha na porta</p>
+                    </button>
+                  )}
 
                   {/* DINHEIRO */}
+                  {availablePaymentMethods.cash && (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('CASH')}
+                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
+                        paymentMethod === 'CASH'
+                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
+                        <Banknote className="h-4 w-4 text-emerald-600" /> Dinheiro
+                      </div>
+                      <p className="text-[11px] text-slate-500">Com opção de troco</p>
+                    </button>
+                  )}
+                </div>
+
+                {/* VALE REFEIÇÃO / VOUCHER (Renderiza SOMENTE se a loja tiver cadastrado e ativo!) */}
+                {availablePaymentMethods.voucher && (
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('CASH')}
-                    className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === 'CASH'
+                    onClick={() => setPaymentMethod('VOUCHER')}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left ${
+                      paymentMethod === 'VOUCHER'
                         ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                      <Banknote className="h-4 w-4 text-emerald-600" /> Dinheiro
+                    <div className="flex items-center gap-2.5">
+                      <Ticket className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div>
+                        <span className="text-xs font-black text-slate-900 block">{availablePaymentMethods.voucherName}</span>
+                        <span className="text-[10px] text-slate-500">Aceito na maquininha na entrega</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-500">Com opção de troco</p>
+                    <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                      Pague na entrega
+                    </span>
                   </button>
-                </div>
+                )}
 
-                {/* VALE REFEIÇÃO (Full width) */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('DEBIT')}
-                  className="w-full flex items-center justify-between p-3 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <Ticket className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs font-black text-slate-900">Vale Refeição</span>
-                    <span className="text-[11px] text-slate-500">(VR, Sodexo, Alelo)</span>
-                  </div>
-                </button>
+                {/* OUTRAS FORMAS ADICIONAIS ATIVAS NA LOJA */}
+                {availablePaymentMethods.extraMethods?.map((ext: any) => (
+                  <button
+                    key={ext.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(ext.name)}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left ${
+                      paymentMethod === ext.name
+                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CreditCard className="h-4 w-4 text-slate-600 shrink-0" />
+                      <span className="text-xs font-black text-slate-900">{ext.name}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500">Opção da loja</span>
+                  </button>
+                ))}
               </div>
 
+              {/* MENSAGEM INFORMATIVA DE CARTÃO DE CRÉDITO */}
+              {paymentMethod === 'CREDIT' && (
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3.5 flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-indigo-600 shrink-0" />
+                  <p className="text-xs text-indigo-950 font-medium leading-relaxed">
+                    O pagamento com <strong>Cartão de Crédito</strong> será realizado no ato da entrega com a maquininha do entregador.
+                  </p>
+                </div>
+              )}
+
+              {/* MENSAGEM INFORMATIVA DE CARTÃO DE DÉBITO */}
+              {paymentMethod === 'DEBIT' && (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-blue-600 shrink-0" />
+                  <p className="text-xs text-blue-950 font-medium leading-relaxed">
+                    O pagamento com <strong>Cartão de Débito</strong> será realizado no ato da entrega com a maquininha do entregador.
+                  </p>
+                </div>
+              )}
+
+              {/* MENSAGEM INFORMATIVA DE VALE REFEIÇÃO */}
+              {paymentMethod === 'VOUCHER' && (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 flex items-center gap-3">
+                  <Ticket className="h-5 w-5 text-amber-600 shrink-0" />
+                  <p className="text-xs text-amber-950 font-medium leading-relaxed">
+                    O pagamento com <strong>{availablePaymentMethods.voucherName}</strong> será realizado no ato da entrega com a maquininha do entregador.
+                  </p>
+                </div>
+              )}
+
               {/* DETALHES DO PIX OFICIAL */}
-              {(paymentMethod === 'PIX' || fulfillmentType === 'TAKEOUT') && (
+              {paymentMethod === 'PIX' && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-950">
@@ -3062,7 +3234,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         ? '💳 Cartão de Crédito'
                         : paymentMethod === 'DEBIT'
                           ? '💳 Cartão de Débito'
-                          : '💵 Dinheiro'}
+                          : paymentMethod === 'VOUCHER'
+                            ? `🎫 ${availablePaymentMethods.voucherName || 'Vale Refeição'}`
+                            : paymentMethod === 'CASH'
+                              ? '💵 Dinheiro'
+                              : paymentMethod}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm">

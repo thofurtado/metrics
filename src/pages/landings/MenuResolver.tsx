@@ -23,6 +23,12 @@ interface CompanyProfile {
   banner_url: string | null
   isOpenManual: boolean
   businessHours: any[]
+  paymentMethods?: Array<{
+    id: string
+    name: string
+    in_sight: boolean
+    installment_limit: number
+  }>
 }
 
 async function fetchTenantInfo() {
