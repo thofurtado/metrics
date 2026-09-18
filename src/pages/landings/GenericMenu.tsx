@@ -33,6 +33,7 @@ import {
   Check,
   CheckCircle2,
   ChefHat,
+  ClipboardCheck,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -538,6 +539,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [lastOrderText, setLastOrderText] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [lastOrderTotal, setLastOrderTotal] = useState<number>(0)
+  const [lastOrderItemsSummary, setLastOrderItemsSummary] = useState<string>('')
+  const [lastOrderItemsCount, setLastOrderItemsCount] = useState<number>(1)
   const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
   const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
@@ -1167,16 +1170,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }, [filteredProducts])
 
   const handleProductClick = (product: Product) => {
-    const hasComplements =
-      product.complementGroups && product.complementGroups.length > 0
-    const acceptsFractions = Boolean(product.subcategory?.accepts_fractions)
-
-    if (hasComplements || acceptsFractions) {
-      setCustomizingProduct(product as ProductItem)
-      setIsCustomizerOpen(true)
-    } else {
-      handleAddToCart(product)
-    }
+    // Abre o customizador para qualquer produto, permitindo escolher frações, adicionais ou observações de produção com atalhos frequentes
+    setCustomizingProduct(product as ProductItem)
+    setIsCustomizerOpen(true)
   }
 
   const handleConfirmCustomizedItem = (result: CustomizedItemResult) => {
@@ -1605,6 +1601,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         }
       }
 
+      const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+      const itemsSummaryText = cartItems.map((item) => `${item.quantity}x ${item.displayName || item.product.name}`).join(' + ');
+      setLastOrderItemsCount(totalItemsCount || 1);
+      setLastOrderItemsSummary(itemsSummaryText || 'Pedido');
       setLastOrderTotal(cartTotal);
       setLastOrderText(text);
       setCart({});
@@ -1689,33 +1689,61 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     }
   };
 
-  // Efeito de escuta periódica do status do pedido criado (Live Tracking)
+  // Efeito de escuta periódica do status do pedido criado (Live Tracking em tempo real)
   useEffect(() => {
     if (!createdOrderId || checkoutWizardStep !== 5) return;
 
     const interval = setInterval(async () => {
       try {
         const res = await api.get(`/public/orders/${createdOrderId}/status`);
-        if (res.data && res.data.status) {
-          const newStatus = res.data.status;
+        const statusVal = res.data?.status || res.data?.order?.status || res.data?.data?.status;
+        if (statusVal) {
+          const newStatus = String(statusVal).toLowerCase().trim();
           setLiveOrderStatus((prev) => {
             if (prev !== newStatus) {
-              // Dispara notificação via Service Worker nativo (seguro em Android, iOS e PC)
-              const notifTag = 'order-' + (res.data.id || createdOrderId) + '-' + newStatus;
-              if (newStatus === 'in_preparation') {
-                showBrowserNotification(`👨‍🍳 Pedido #${res.data.display_id || ''} Confirmado!`, {
-                  body: 'O restaurante aceitou seu pedido e já está preparando tudo com carinho!',
+              const displayId = res.data?.display_id || res.data?.order?.display_id || createdDisplayId || '';
+              const notifTag = 'order-' + (res.data?.id || createdOrderId) + '-' + newStatus;
+
+              if (newStatus === 'in_preparation' || newStatus === 'in_production') {
+                showBrowserNotification(`👨‍🍳 Pedido #${displayId} Confirmado!`, {
+                  body: 'O restaurante aceitou seu pedido e a cozinha já está preparando tudo com carinho!',
                   icon: '/favicon.svg',
                   tag: notifTag,
                 });
+              } else if (newStatus === 'conferencia') {
+                showBrowserNotification(`📋 Pedido #${displayId} em Conferência!`, {
+                  body: 'Sua refeição está sendo conferida e embalada com todo cuidado.',
+                  icon: '/favicon.svg',
+                  tag: notifTag,
+                });
+              } else if (newStatus === 'ready') {
+                showBrowserNotification(
+                  fulfillmentType === 'TAKEOUT'
+                    ? `🛍️ Pedido #${displayId} Pronto para Retirada!`
+                    : `📦 Pedido #${displayId} Pronto para Expedição!`,
+                  {
+                    body: fulfillmentType === 'TAKEOUT'
+                      ? 'Seu pedido está pronto no balcão aguardando sua retirada!'
+                      : 'Seu pedido está embalado e aguardando o entregador.',
+                    icon: '/favicon.svg',
+                    tag: notifTag,
+                  }
+                );
               } else if (newStatus === 'dispatched') {
-                showBrowserNotification(`🛵 Pedido #${res.data.display_id || ''} a Caminho!`, {
-                  body: 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
-                  icon: '/favicon.svg',
-                  tag: notifTag,
-                });
-              } else if (newStatus === 'delivered') {
-                const storeName = profile?.tradeName || 'Restaurante';
+                showBrowserNotification(
+                  fulfillmentType === 'TAKEOUT'
+                    ? `🛍️ Pedido #${displayId} Pronto no Balcão!`
+                    : `🛵 Pedido #${displayId} a Caminho!`,
+                  {
+                    body: fulfillmentType === 'TAKEOUT'
+                      ? 'Você já pode vir retirar seu pedido no balcão!'
+                      : 'O motoboy acabou de sair com o seu pedido. Prepare-se para receber!',
+                    icon: '/favicon.svg',
+                    tag: notifTag,
+                  }
+                );
+              } else if (newStatus === 'delivered' || newStatus === 'completed') {
+                const storeName = profile?.tradeName || profile?.name || 'Restaurante';
                 const reviewUrl = (profile as any)?.googleReviewUrl || 
                   `https://www.google.com/search?q=${encodeURIComponent(storeName + ' avaliações')}`;
 
@@ -1735,10 +1763,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       } catch (err) {
         console.warn('Erro ao verificar status do pedido:', err);
       }
-    }, 4000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [createdOrderId, checkoutWizardStep]);
+  }, [createdOrderId, checkoutWizardStep, createdDisplayId, fulfillmentType, profile]);
 
   const handleFinishAndReset = () => {
     setCart({})
@@ -2473,8 +2501,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       </Dialog>
 
       {/* Modal de Checkout Robusto em Etapas (Design Fiel ao Stitch) */}
-      <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl p-5 sm:p-6 rounded-3xl">
+      <Dialog open={isCheckoutStepOpen} onOpenChange={(open) => {
+        setIsCheckoutStepOpen(open)
+        if (!open && checkoutWizardStep === 5) {
+          handleFinishAndReset()
+        }
+      }}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl p-5 sm:p-6 rounded-3xl [&>button.absolute]:hidden">
           {/* Alça superior estilo folha nativa mobile */}
           <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-1 mb-3" />
 
@@ -2512,7 +2545,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsCheckoutStepOpen(false)}
+                  onClick={() => {
+                    if (checkoutWizardStep === 5) {
+                      handleFinishAndReset()
+                    } else {
+                      setIsCheckoutStepOpen(false)
+                    }
+                  }}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
                   title="Fechar"
                 >
@@ -3529,69 +3568,182 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 Seu pedido foi registrado no sistema e a janela do WhatsApp foi aberta para você enviar a confirmação.
               </p>
 
-              {/* CARD DE ACOMPANHAMENTO DO STATUS DO PEDIDO (LIVE TRACKING) */}
-              <div className="mt-5 rounded-3xl border-2 border-emerald-200/90 bg-emerald-50/40 p-4 text-left space-y-3.5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
-                      Acompanhamento ao Vivo
-                    </span>
-                  </div>
-                  {createdDisplayId && (
-                    <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-xs font-black text-white shadow-xs">
-                      #{createdDisplayId}
-                    </span>
-                  )}
-                </div>
+              {/* CARD DE ACOMPANHAMENTO DO STATUS DO PEDIDO (LIVE TRACKING - FIEL AO STITCH IMAGEM 3) */}
+              {(() => {
+                const isTakeoutOrder = fulfillmentType === 'TAKEOUT'
+                const s = (liveOrderStatus || '').toLowerCase().trim()
 
-                {/* Status Badge */}
-                <div className="rounded-2xl bg-white border border-emerald-100 p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                      {liveOrderStatus === 'completed' ? (
-                        <Check className="h-5 w-5 stroke-[3]" />
-                      ) : liveOrderStatus === 'delivering' ? (
-                        <Rocket className="h-5 w-5" />
-                      ) : liveOrderStatus === 'ready' ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : liveOrderStatus === 'in_production' ? (
-                        <ChefHat className="h-5 w-5" />
-                      ) : (
-                        <Clock className="h-5 w-5" />
-                      )}
+                let currentStage = 1
+                let statusLabel = 'Aguardando Confirmação'
+                let StatusIconComponent = Clock
+                let iconColorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+
+                if (s === 'delivered' || s === 'completed' || s === 'finalizado') {
+                  currentStage = 5
+                  statusLabel = isTakeoutOrder ? 'Pedido Retirado / Concluído 🎉' : 'Pedido Entregue / Finalizado 🎉'
+                  StatusIconComponent = Check
+                  iconColorClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                } else if (s === 'dispatched' || s === 'delivering' || s === 'em_rota') {
+                  currentStage = 4
+                  statusLabel = isTakeoutOrder ? 'Pronto no Balcão para Retirada! 🛍️' : 'Saiu para Entrega 🛵'
+                  StatusIconComponent = isTakeoutOrder ? ShoppingBag : Rocket
+                  iconColorClasses = 'bg-purple-100 text-purple-800 border-purple-300'
+                } else if (s === 'ready' || s === 'pronto') {
+                  currentStage = 4
+                  statusLabel = isTakeoutOrder ? 'Pronto no Balcão para Retirada! 🛍️' : 'Pronto para Expedição 📦'
+                  StatusIconComponent = CheckCircle2
+                  iconColorClasses = 'bg-teal-100 text-teal-800 border-teal-300'
+                } else if (s === 'conferencia' || s === 'conferência' || s === 'conference') {
+                  currentStage = 3
+                  statusLabel = 'Em Conferência e Embalagem 📋'
+                  StatusIconComponent = ClipboardCheck
+                  iconColorClasses = 'bg-blue-100 text-blue-800 border-blue-300'
+                } else if (s === 'in_preparation' || s === 'in_production' || s === 'preparing' || s === 'producao') {
+                  currentStage = 2
+                  statusLabel = 'Na Cozinha em Preparo 👨‍🍳'
+                  StatusIconComponent = ChefHat
+                  iconColorClasses = 'bg-orange-100 text-orange-800 border-orange-300'
+                }
+
+                // 5 etapas fixas fiéis ao Stitch: 1. Aguardando, 2. Produção, 3. Conferência, 4. Na Rua / Balcão, 5. Entregue / Retirado
+                const stagesList = [
+                  { num: 1, label: 'Aguardando' },
+                  { num: 2, label: 'Produção' },
+                  { num: 3, label: 'Conferência' },
+                  { num: 4, label: isTakeoutOrder ? 'No Balcão' : 'Na Rua' },
+                  { num: 5, label: isTakeoutOrder ? 'Retirado' : 'Entregue' }
+                ]
+
+                return (
+                  <div className="mt-5 space-y-3">
+                    {/* Card Principal de Acompanhamento ao Vivo com Borda Verde Suave */}
+                    <div className="rounded-3xl border-2 border-emerald-300/80 bg-white p-4 sm:p-5 text-left space-y-4 shadow-sm">
+                      {/* Linha de Cabeçalho: Ponto Pulsante + ACOMPANHAMENTO AO VIVO + #1 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                          </span>
+                          <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                            ACOMPANHAMENTO AO VIVO
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-slate-900 px-3 py-0.5 text-xs font-black text-white shadow-xs">
+                          #{createdDisplayId || 1}
+                        </span>
+                      </div>
+
+                      {/* Box do Status Atual */}
+                      <div className="rounded-2xl border border-emerald-100 bg-white p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-xs ${iconColorClasses}`}>
+                            <StatusIconComponent className="h-6 w-6 stroke-[2.2]" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none mb-1">
+                              STATUS ATUAL
+                            </span>
+                            <span className="text-sm sm:text-base font-black text-slate-900 leading-tight block truncate">
+                              {statusLabel}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 shrink-0 shadow-2xs animate-pulse">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          ATUALIZANDO
+                        </span>
+                      </div>
+
+                      {/* PROGRESSO DA COZINHA (STEPPER COM 5 CÍRCULOS NUMERADOS E LINHAS) */}
+                      <div className="space-y-2.5 pt-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                            PROGRESSO DA COZINHA
+                          </span>
+                          <span className="text-xs font-black text-emerald-700">
+                            Etapa {currentStage} de 5
+                          </span>
+                        </div>
+
+                        {/* Stepper de 5 Círculos Conectados */}
+                        <div className="py-2">
+                          <div className="flex items-center justify-between relative">
+                            {/* Linhas conectoras de fundo */}
+                            <div className="absolute left-4 right-4 top-4 -translate-y-1/2 h-1 bg-slate-200 z-0" />
+                            {/* Linha preenchida de progresso ativo */}
+                            <div
+                              className="absolute left-4 top-4 -translate-y-1/2 h-1 bg-emerald-600 transition-all duration-500 z-0"
+                              style={{
+                                width: `${((Math.min(currentStage, 5) - 1) / 4) * 100}%`,
+                                maxWidth: 'calc(100% - 32px)'
+                              }}
+                            />
+
+                            {stagesList.map((st) => {
+                              const isPassed = currentStage > st.num
+                              const isCurrent = currentStage === st.num
+                              const isCompletedOrActive = isPassed || isCurrent
+
+                              return (
+                                <div key={st.num} className="flex flex-col items-center gap-1.5 relative z-10">
+                                  <div
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all shadow-xs ${
+                                      isCompletedOrActive
+                                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                    }`}
+                                  >
+                                    {isPassed ? <Check className="h-4 w-4 stroke-[3]" /> : st.num}
+                                  </div>
+                                  <span
+                                    className={`text-[10px] text-center leading-tight ${
+                                      isCompletedOrActive ? 'font-black text-slate-900' : 'font-medium text-slate-400'
+                                    }`}
+                                  >
+                                    {st.label}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mensagem Explicativa Importante */}
+                      <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 flex items-start gap-2.5 text-xs text-amber-900 shadow-2xs">
+                        <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                        <p className="leading-snug">
+                          <strong>Atenção:</strong> Se você deseja acompanhar o status em tempo real, <strong>não feche esta janela</strong>. Atualizamos automaticamente assim que a cozinha avançar as etapas.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-xs text-slate-500 font-semibold block">Status Atual</span>
-                      <span className="text-sm font-black text-slate-900">
-                        {liveOrderStatus === 'completed'
-                          ? 'Pedido Entregue / Finalizado'
-                          : liveOrderStatus === 'delivering'
-                            ? 'Saiu para Entrega 🛵'
-                            : liveOrderStatus === 'ready'
-                              ? 'Pronto para Retirada / Expedição'
-                              : liveOrderStatus === 'in_production'
-                                ? 'Na Cozinha em Preparo 👨‍🍳'
-                                : 'Aguardando Confirmação'}
-                      </span>
+
+                    {/* MINI-CARD DE RESUMO DO PEDIDO (FIEL AO STITCH IMAGEM 3) */}
+                    <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-800 font-black text-xs border border-slate-200 shadow-2xs">
+                          {lastOrderItemsCount}x
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-black text-slate-900 truncate leading-tight">
+                            {lastOrderItemsSummary || 'Itens do Pedido'}
+                          </p>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">
+                            Previsão: {fulfillmentType === 'TAKEOUT' ? '15–25 min • Retirada no Balcão' : '30–45 min • Entrega Express'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none mb-1">Total</span>
+                        <span className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                          {formatCurrency(lastOrderTotal)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800 animate-pulse">
-                    Atualizando
-                  </span>
-                </div>
-
-                {/* Mensagem Explicativa Importante */}
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2.5 text-xs text-amber-900">
-                  <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-                  <p className="leading-snug">
-                    <strong>Atenção:</strong> Se você deseja acompanhar o status em tempo real, <strong>não feche esta janela</strong>. Atualizamos automaticamente assim que a cozinha avançar as etapas.
-                  </p>
-                </div>
-              </div>
+                )
+              })()}
 
               {/* Botão de Reenviar Mensagem WhatsApp caso tenha fechado sem querer */}
               {lastOrderText && (
@@ -3610,15 +3762,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   </button>
                 </div>
               )}
-
-              {/* Botão de Concluir */}
-              <button
-                type="button"
-                onClick={handleFinishAndReset}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all hover:opacity-95 active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
-              >
-                Concluir e Voltar ao Cardápio ✨
-              </button>
             </motion.div>
           )}
         </DialogContent>

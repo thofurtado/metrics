@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, Pizza, Plus, Search, Sparkles, X, Edit3, Info, ShoppingBag } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
@@ -6,8 +6,6 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { resolveImageUrl } from '@/lib/utils'
 
 export interface ComplementOption {
@@ -39,6 +37,7 @@ export interface ProductItem {
   description: string | null
   measureUnit: string
   category: string
+  category_id?: string
   imageUrl?: string
   subcategory?: Subcategory | null
   complementGroups?: ComplementGroup[]
@@ -73,6 +72,18 @@ interface ItemCustomizerDialogProps {
   primaryColor?: string
 }
 
+const FREQUENT_SHORTCUTS = [
+  'Sem cebola',
+  'Carne bem passada',
+  'Ao ponto',
+  'Molho à parte',
+  'Enviar sachês',
+  'Sem orégano',
+  'Massa crocante',
+  'Cortar em 8 pedaços',
+  'Embalagem separada'
+]
+
 export function ItemCustomizerDialog({
   open,
   onOpenChange,
@@ -91,6 +102,7 @@ export function ItemCustomizerDialog({
   const [selectedFlavors, setSelectedFlavors] = useState<(ProductItem | null)[]>([product])
   const [activeFlavorStep, setActiveFlavorStep] = useState<number | null>(null)
   const [flavorSearch, setFlavorSearch] = useState<string>('')
+  const [flavorCategoryFilter, setFlavorCategoryFilter] = useState<string>('Todas')
 
   // Estado de Complementos: Map de optionId -> quantidade
   const [selectedOptionsQty, setSelectedOptionsQty] = useState<Record<string, number>>({})
@@ -106,22 +118,50 @@ export function ItemCustomizerDialog({
       setSelectedFlavors([product])
       setActiveFlavorStep(null)
       setFlavorSearch('')
+      setFlavorCategoryFilter('Todas')
       setSelectedOptionsQty({})
       setItemQuantity(1)
       setObservation('')
     }
   }, [open, product])
 
-  // Lista de produtos irmãos (mesma subcategoria ou categoria para meio-a-meio)
+  // Lista de produtos irmãos (mesma categoria/subcategoria que aceitem fracionamento)
   const siblingProducts = useMemo(() => {
     if (!product) return []
     return allProducts.filter((p) => {
+      // Se for fracionado (ex: Pizza):
+      if (product.subcategory?.accepts_fractions) {
+        const isSameCategory = p.category === product.category || (p as any).category_id === (product as any).category_id
+        return Boolean(p.subcategory?.accepts_fractions) && isSameCategory
+      }
       if (product.subcategory?.id && p.subcategory?.id) {
         return p.subcategory.id === product.subcategory.id
       }
       return p.category === product.category
     })
   }, [allProducts, product])
+
+  // Categorias disponíveis de sabores para as abas de filtro
+  const availableFlavorTabs = useMemo(() => {
+    const tabs = ['Todas']
+    const hasTrad = siblingProducts.some((p) => (p.subcategory?.name || '').toLowerCase().includes('tradiciona'))
+    const hasEsp = siblingProducts.some((p) => (p.subcategory?.name || '').toLowerCase().includes('especia') || (p.subcategory?.name || '').toLowerCase().includes('premium'))
+    const hasDoces = siblingProducts.some((p) => (p.subcategory?.name || '').toLowerCase().includes('doce'))
+
+    if (hasTrad) tabs.push('Tradicionais')
+    if (hasEsp) tabs.push('Especiais')
+    if (hasDoces) tabs.push('Doces')
+
+    // Se houver outras subcategorias que não se encaixaram nas 3:
+    siblingProducts.forEach((p) => {
+      const name = p.subcategory?.name
+      if (name && !name.toLowerCase().includes('tradiciona') && !name.toLowerCase().includes('especia') && !name.toLowerCase().includes('doce')) {
+        if (!tabs.includes(name)) tabs.push(name)
+      }
+    })
+
+    return tabs
+  }, [siblingProducts])
 
   // Ajusta o array de sabores quando o usuário troca o número de frações (1, 2, 3...)
   const handleSetFractions = (num: number) => {
@@ -188,9 +228,29 @@ export function ItemCustomizerDialog({
     })
   }
 
+  // Atalhos de observação rápidos (toggle chip)
+  const handleToggleShortcut = (chip: string) => {
+    setObservation((prev) => {
+      const trimmed = prev.trim()
+      if (!trimmed) return chip
+
+      // Se já contém, remove
+      const regex = new RegExp(`(,\\s*)?${chip}(,\\s*)?`, 'i')
+      if (regex.test(trimmed)) {
+        let clean = trimmed.replace(regex, ', ').replace(/^,\s*/, '').replace(/,\s*$/, '')
+        return clean
+      }
+
+      // Senão adiciona
+      const separator = trimmed.endsWith(',') ? ' ' : ', '
+      const next = `${trimmed}${separator}${chip}`
+      return next.slice(0, 140)
+    })
+  }
+
   // Cálculo do Preço Unitário Total
   const { unitPrice, isReadyToConfirm, validationError } = useMemo(() => {
-    // 1. Preço Base dos Sabores: No Brasil, o padrão de pizzarias/delivery é cobrar pelo MAIOR preço entre as metades
+    // 1. Preço Base dos Sabores: padrão de pizzarias/delivery é cobrar pelo MAIOR preço entre as metades
     let baseFlavorPrice = product.price
     if (acceptsFractions && fractionCount > 1) {
       const validSelected = selectedFlavors.filter((f): f is ProductItem => f !== null)
@@ -207,7 +267,6 @@ export function ItemCustomizerDialog({
         const qty = selectedOptionsQty[opt.id] || 0
         for (let i = 0; i < qty; i++) {
           groupChargedCount++
-          // Se ultrapassar a quantidade grátis configurada, cobra o valor
           if (groupChargedCount > group.free_quantity) {
             complementsTotal += opt.price
           }
@@ -220,7 +279,6 @@ export function ItemCustomizerDialog({
     // 3. Validações de Obrigatórios
     let error: string | null = null
 
-    // Validação de Frações pendentes
     if (acceptsFractions && fractionCount > 1) {
       const hasMissingFlavor = selectedFlavors.some((f) => f === null)
       if (hasMissingFlavor) {
@@ -228,7 +286,6 @@ export function ItemCustomizerDialog({
       }
     }
 
-    // Validação de Grupos Obrigatórios
     if (!error) {
       for (const group of groups) {
         const totalInGroup = group.options.reduce(
@@ -253,14 +310,12 @@ export function ItemCustomizerDialog({
   const handleConfirm = () => {
     if (!isReadyToConfirm) return
 
-    // Monta o nome de exibição
     let displayName = product.name
     const flavorNames = selectedFlavors.filter((f): f is ProductItem => f !== null).map((f) => f.name)
     if (acceptsFractions && fractionCount > 1 && flavorNames.length > 1) {
       displayName = `1/${fractionCount} ${flavorNames.join(` + 1/${fractionCount} `)}`
     }
 
-    // Monta o payload de complementos selecionados
     const selectedOptionsPayload: SelectedOptionPayload[] = []
     groups.forEach((group) => {
       group.options.forEach((opt) => {
@@ -278,7 +333,6 @@ export function ItemCustomizerDialog({
       })
     })
 
-    // Gera uma chave única determinística para identificar itens idênticos no carrinho
     const optionsKeyPart = selectedOptionsPayload
       .map((o) => `${o.optionId}x${o.quantity}`)
       .sort()
@@ -309,35 +363,38 @@ export function ItemCustomizerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-lg overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden">
-        {/* HERO IMAGE BANNER COM BOTÃO FECHAR E PREÇO FLUTUANTE */}
+      <DialogContent className="max-h-[94vh] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden">
+        {/* HERO BANNER COM PREÇO FLUTUANTE E BOTÃO FECHAR */}
         {product.imageUrl ? (
-          <div className="relative h-64 w-full shrink-0 overflow-hidden bg-slate-100">
+          <div className="relative h-60 sm:h-72 md:h-80 w-full shrink-0 overflow-hidden bg-slate-900">
             <img
               src={resolveImageUrl(product.imageUrl)}
               alt={product.name}
               className="h-full w-full object-cover"
             />
+            {/* Gradiente sutil inferior */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+
             {/* Botão Fechar X Circular Flutuante */}
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 backdrop-blur-md shadow-md transition-all hover:bg-white active:scale-95"
+              className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 backdrop-blur-md shadow-lg transition-all hover:bg-white active:scale-95 z-10"
               aria-label="Fechar"
             >
               <X className="h-5 w-5 stroke-[2.5]" />
             </button>
 
-            {/* Pílula de Preço Flutuante */}
-            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-slate-900 shadow-md backdrop-blur-md">
-              A partir de {formatBRL(product.price)}
+            {/* Pílula de Preço Flutuante Fiel ao Stitch */}
+            <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-md backdrop-blur-md tracking-tight">
+              A PARTIR DE {formatBRL(product.price)}
             </div>
           </div>
         ) : (
           <div className="relative border-b border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
-                {product.category || 'ITEM'}
+              <span className="rounded-full border border-emerald-600/30 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> {product.category || 'ITEM'}
               </span>
               <span className="text-xs font-extrabold text-slate-700">
                 A partir de {formatBRL(product.price)}
@@ -355,79 +412,153 @@ export function ItemCustomizerDialog({
         )}
 
         {/* INFORMAÇÕES DO PRODUTO (FIXAS ABAIXO DA IMAGEM) */}
-        <div className="shrink-0 px-5 pt-4 pb-2 bg-white">
+        <div className="shrink-0 px-5 sm:px-6 pt-4 pb-2 bg-white border-b border-slate-100">
           {product.imageUrl && (
-            <span className="inline-block rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
-              {product.category || 'ITEM'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                <Sparkles className="h-3 w-3 text-emerald-600" />
+                {product.category || 'ITEM'}
+              </span>
+            </div>
           )}
-          <DialogTitle className="mt-1.5 text-xl font-black tracking-tight text-slate-900">
+          <DialogTitle className="mt-1 text-xl sm:text-2xl font-black tracking-tight text-slate-900 leading-tight">
             {product.name}
           </DialogTitle>
           {product.description && (
-            <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-2xl">
               {product.description}
             </p>
           )}
         </div>
 
         {/* CONTEÚDO SCROLLÁVEL */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 bg-slate-50/50">
-          {/* SEÇÃO 1: FRACIONAMENTO / MEIO-A-MEIO */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 bg-slate-50/50">
+          {/* SEÇÃO 1: FRACIONAMENTO / MEIO-A-MEIO (FIEL AO STITCH) */}
           {acceptsFractions && (
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <Pizza className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-sm font-black text-slate-900">Quantos Sabores você deseja?</h3>
+            <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+              {/* Cabeçalho do Seletor com Obrigatório */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Pizza className="h-5 w-5 text-emerald-600" />
+                  <h3 className="text-sm font-black text-slate-900">Quantos sabores você deseja?</h3>
+                </div>
+                <span className="text-xs font-bold text-emerald-700">Obrigatório</span>
               </div>
 
-              {/* Botões de Frações */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Seletor em Pílulas */}
+              <div className={`grid gap-2 bg-slate-100/90 p-1.5 rounded-2xl ${maxFractions >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <button
                   type="button"
                   onClick={() => handleSetFractions(1)}
-                  className={'rounded-xl py-2 text-xs font-bold transition-all ' + (
+                  className={`rounded-xl py-2.5 text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                     fractionCount === 1
-                      ? 'bg-slate-900 text-white shadow'
-                      : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  )}
+                      ? 'bg-slate-900 text-white shadow-md'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  1 Sabor
+                  <span>1 Sabor</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSetFractions(2)}
-                  className={'rounded-xl py-2 text-xs font-bold transition-all ' + (
+                  className={`rounded-xl py-2.5 text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                     fractionCount === 2
-                      ? 'bg-slate-900 text-white shadow'
-                      : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  )}
+                      ? 'bg-slate-900 text-white shadow-md'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  2 Sabores (1/2)
+                  <span>2 Sabores (1/2)</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 </button>
                 {maxFractions >= 3 && (
                   <button
                     type="button"
                     onClick={() => handleSetFractions(3)}
-                    className={'rounded-xl py-2 text-xs font-bold transition-all ' + (
+                    className={`rounded-xl py-2.5 text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                       fractionCount === 3
-                        ? 'bg-slate-900 text-white shadow'
-                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    )}
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   >
-                    3 Sabores (1/3)
+                    <span>3 Sabores (1/3)</span>
                   </button>
                 )}
               </div>
 
-              {/* Seletores de Sabores - Acordeão Colapsável Estilo iFood */}
-              <div className="mt-4 space-y-2.5">
-                {Array.from({ length: fractionCount }).map((_, idx) => {
+              {/* Card Resumo do Meio a Meio */}
+              {fractionCount > 1 && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative h-10 w-10 shrink-0 rounded-full border-2 border-emerald-600 overflow-hidden flex items-center justify-center shadow-xs">
+                      <div className="w-1/2 h-full bg-emerald-500" />
+                      <div className="w-1/2 h-full bg-amber-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                        Pizza Meio a Meio (50% / 50%)
+                      </h4>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        2 metades equilibradas no mesmo disco grande (8 pedaços)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-1 text-[10px] font-black text-emerald-800 shrink-0">
+                    {selectedFlavors.filter(Boolean).length}/2 Selecionados
+                  </span>
+                </div>
+              )}
+
+              {/* Slot 1: Sabor Principal Incluído */}
+              <div className="rounded-2xl border border-emerald-200 bg-white p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-black text-xs shadow-xs mt-0.5">
+                    <Check className="h-3.5 w-3.5 stroke-[3]" />
+                  </span>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                      1º SABOR (1/{fractionCount}) • {fractionCount === 1 ? '100%' : '50%'}
+                    </span>
+                    <p className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
+                      {selectedFlavors[0]?.name || product.name}
+                    </p>
+                    {selectedFlavors[0]?.description && (
+                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                        {selectedFlavors[0].description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-black text-slate-800 block">
+                    {formatBRL(selectedFlavors[0]?.price || product.price)}
+                  </span>
+                  {fractionCount > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveFlavorStep(0)}
+                      className="text-[11px] font-bold text-emerald-700 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Alterar <ChevronDown className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Slot 2 e outros (quando houver mais frações) */}
+              {fractionCount > 1 &&
+                Array.from({ length: fractionCount - 1 }).map((_, relIdx) => {
+                  const idx = relIdx + 1
                   const selectedFlavor = selectedFlavors[idx]
                   const isExpanded = activeFlavorStep === idx
 
-                  // Filtro por busca rápida
+                  // Filtro por busca rápida e abas de categoria
                   const filteredSiblings = siblingProducts.filter((sp) => {
+                    if (flavorCategoryFilter !== 'Todas') {
+                      const subName = (sp.subcategory?.name || '').toLowerCase()
+                      if (flavorCategoryFilter === 'Tradicionais' && !subName.includes('tradiciona')) return false
+                      if (flavorCategoryFilter === 'Especiais' && !subName.includes('especia') && !subName.includes('premium')) return false
+                      if (flavorCategoryFilter === 'Doces' && !subName.includes('doce')) return false
+                    }
                     if (!flavorSearch.trim()) return true
                     const q = flavorSearch.toLowerCase()
                     return (
@@ -441,15 +572,14 @@ export function ItemCustomizerDialog({
                     return (
                       <div
                         key={idx}
-                        className="rounded-2xl border-2 border-emerald-500 bg-white p-3.5 shadow-md transition-all"
+                        className="rounded-2xl border-2 border-emerald-500 bg-white p-3.5 sm:p-4 shadow-md transition-all space-y-3"
                       >
-                        {/* Cabeçalho do Slot Aberto */}
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-black text-white">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
                               {idx + 1}
                             </span>
-                            <h4 className="text-xs font-black text-slate-900">
+                            <h4 className="text-xs sm:text-sm font-black text-slate-900">
                               Escolha o {idx + 1}º Sabor (1/{fractionCount})
                             </h4>
                           </div>
@@ -467,64 +597,82 @@ export function ItemCustomizerDialog({
                           )}
                         </div>
 
-                        {/* Campo de Busca Rápida de Sabores */}
-                        {siblingProducts.length > 5 && (
-                          <div className="relative mb-2.5">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="Buscar sabor (ex: calabresa, frango...)"
-                              value={flavorSearch}
-                              onChange={(e) => setFlavorSearch(e.target.value)}
-                              className="w-full h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium text-slate-900"
-                              autoFocus
-                            />
-                          </div>
-                        )}
+                        {/* Abas de Categorias de Sabores Fiel ao Stitch */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                          {availableFlavorTabs.map((tab) => {
+                            const isTabActive = flavorCategoryFilter === tab
+                            return (
+                              <button
+                                key={tab}
+                                type="button"
+                                onClick={() => setFlavorCategoryFilter(tab)}
+                                className={`px-3 py-1 rounded-full text-xs font-black transition-all shrink-0 ${
+                                  isTabActive
+                                    ? 'bg-slate-900 text-white shadow-xs'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {tab}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* Campo de Busca Rápida */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Buscar sabor (ex: calabresa, frango, margherita...)"
+                            value={flavorSearch}
+                            onChange={(e) => setFlavorSearch(e.target.value)}
+                            className="w-full h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium text-slate-900"
+                          />
+                        </div>
 
                         {/* Lista Scrollável de Sabores */}
-                        <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 pr-1">
+                        <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 pr-1">
                           {filteredSiblings.map((sp) => {
                             const isCurrentSelected = selectedFlavor?.id === sp.id
+                            const isMaisPedida = sp.name.toLowerCase().includes('calabresa') || sp.name.toLowerCase().includes('frango')
+
                             return (
                               <div
                                 key={sp.id}
                                 onClick={() => handleSelectFlavor(idx, sp)}
-                                className={
-                                  'flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all ' +
-                                  (isCurrentSelected
-                                    ? 'bg-emerald-50/80 text-emerald-950 font-bold'
-                                    : 'hover:bg-slate-50 text-slate-700')
-                                }
+                                className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl cursor-pointer transition-all ${
+                                  isCurrentSelected
+                                    ? 'bg-emerald-50/90 text-emerald-950 font-bold ring-1 ring-emerald-400'
+                                    : 'hover:bg-slate-50 text-slate-700'
+                                }`}
                               >
                                 <div className="flex-1 pr-3">
-                                  <p
-                                    className={
-                                      'text-xs ' +
-                                      (isCurrentSelected
-                                        ? 'font-black text-emerald-900'
-                                        : 'font-bold text-slate-800')
-                                    }
-                                  >
-                                    {sp.name}
-                                  </p>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className={`text-xs sm:text-sm ${isCurrentSelected ? 'font-black text-emerald-950' : 'font-black text-slate-900'}`}>
+                                      {sp.name}
+                                    </p>
+                                    {isMaisPedida && (
+                                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black text-emerald-800">
+                                        Mais Pedida
+                                      </span>
+                                    )}
+                                  </div>
                                   {sp.description && (
-                                    <p className="text-[11px] text-slate-500 line-clamp-1">
+                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
                                       {sp.description}
                                     </p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="text-xs font-bold text-slate-600">
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                  <span className="text-xs font-black text-slate-800">
                                     {formatBRL(sp.price)}
                                   </span>
                                   <div
-                                    className={
-                                      'flex h-5 w-5 items-center justify-center rounded-full border ' +
-                                      (isCurrentSelected
+                                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                                      isCurrentSelected
                                         ? 'border-emerald-600 bg-emerald-600 text-white'
-                                        : 'border-slate-300 bg-white')
-                                    }
+                                        : 'border-slate-300 bg-white'
+                                    }`}
                                   >
                                     {isCurrentSelected && <Check className="h-3 w-3 stroke-[3]" />}
                                   </div>
@@ -546,28 +694,28 @@ export function ItemCustomizerDialog({
                           setActiveFlavorStep(idx)
                           setFlavorSearch('')
                         }}
-                        className="flex items-center justify-between p-3 bg-emerald-50/40 border border-emerald-200/80 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-xs group"
+                        className="flex items-center justify-between p-3.5 bg-emerald-50/40 border border-emerald-200 rounded-2xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-xs group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs shadow-xs">
-                            <Check className="h-4 w-4 stroke-[3]" />
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-black text-xs shadow-xs">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
                           </span>
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                              {fractionCount === 1 ? 'Sabor Único' : `${idx + 1}º Sabor (1/${fractionCount})`}
-                            </p>
-                            <p className="text-xs font-black text-slate-900 truncate">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
+                              {idx + 1}º SABOR (1/{fractionCount}) • 50%
+                            </span>
+                            <p className="text-xs sm:text-sm font-black text-slate-900 truncate">
                               {selectedFlavor.name}
                             </p>
                             {selectedFlavor.description && (
-                              <p className="text-xs sm:text-sm font-medium text-slate-500 truncate max-w-sm">
+                              <p className="text-[11px] text-slate-500 truncate max-w-sm">
                                 {selectedFlavor.description}
                               </p>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span className="text-xs font-black text-slate-700">
+                          <span className="text-xs font-black text-slate-800">
                             {formatBRL(selectedFlavor.price)}
                           </span>
                           <span className="text-[11px] font-bold text-emerald-700 group-hover:underline flex items-center gap-0.5">
@@ -589,14 +737,14 @@ export function ItemCustomizerDialog({
                       className="flex items-center justify-between p-3.5 bg-amber-50/40 border border-dashed border-amber-300 rounded-2xl cursor-pointer hover:bg-amber-50 hover:border-amber-400 transition-all group"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 font-black text-xs">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 font-black text-xs">
                           {idx + 1}
                         </span>
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">
-                            {idx + 1}º Sabor (1/{fractionCount}) • Escolha Obrigatória
-                          </p>
-                          <p className="text-xs font-bold text-amber-900">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block">
+                            {idx + 1}º Sabor (1/{fractionCount}) • OBRIGATÓRIO
+                          </span>
+                          <p className="text-xs font-black text-amber-900">
                             Toque para escolher o {idx + 1}º sabor
                           </p>
                         </div>
@@ -607,10 +755,6 @@ export function ItemCustomizerDialog({
                     </div>
                   )
                 })}
-              </div>
-              <p className="mt-3 text-[11px] font-semibold text-slate-400">
-                💡 O valor base da pizza fracionada é calculado pelo <span className="font-bold text-slate-600">maior preço</span> entre os sabores.
-              </p>
             </div>
           )}
 
@@ -625,7 +769,7 @@ export function ItemCustomizerDialog({
             return (
               <div
                 key={group.id}
-                className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"
+                className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs"
               >
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
@@ -650,7 +794,6 @@ export function ItemCustomizerDialog({
                   )}
                 </div>
 
-                {/* Callout informativo quando houver cortesia/grátis */}
                 {group.free_quantity > 0 && (
                   <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5 text-[11px] text-emerald-900">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
@@ -670,7 +813,7 @@ export function ItemCustomizerDialog({
                     return (
                       <div
                         key={opt.id}
-                        className="flex items-center justify-between py-2.5"
+                        className="flex items-center justify-between py-2.5 sm:py-3"
                       >
                         <div>
                           <p className="text-sm sm:text-base font-black text-slate-900 leading-snug">{opt.name}</p>
@@ -684,9 +827,9 @@ export function ItemCustomizerDialog({
                             type="button"
                             onClick={() => handleDecreaseOption(opt)}
                             disabled={qty === 0}
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-800 border border-slate-200 shadow-sm transition-all hover:bg-slate-100 disabled:opacity-20 active:scale-90"
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-800 border border-slate-200 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-20 active:scale-90"
                           >
-                            <Minus className="h-4 w-4 stroke-[3]" />
+                            <Minus className="h-3.5 w-3.5 stroke-[3]" />
                           </button>
                           <span className="w-6 text-center text-sm font-black text-slate-900">
                             {qty}
@@ -695,9 +838,10 @@ export function ItemCustomizerDialog({
                             type="button"
                             onClick={() => handleIncreaseOption(group, opt)}
                             disabled={!canAdd}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-md transition-all disabled:opacity-20 active:scale-90" style={{ backgroundColor: primaryColor }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-xs transition-all disabled:opacity-20 active:scale-90"
+                            style={{ backgroundColor: primaryColor }}
                           >
-                            <Plus className="h-4 w-4 stroke-[3]" />
+                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
                           </button>
                         </div>
                       </div>
@@ -708,31 +852,102 @@ export function ItemCustomizerDialog({
             )
           })}
 
-          {/* SEÇÃO 3: OBSERVAÇÕES PARA A COZINHA */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-            <h4 className="text-xs font-extrabold text-slate-900">
-              Observações para a cozinha (opcional):
-            </h4>
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              Avise sobre pontos da carne, remoção de itens ou restrições alimentares.
-            </p>
-            <div className="relative mt-2.5">
+          {/* SEÇÃO 3: OBSERVAÇÕES PARA PRODUÇÃO COM ATALHOS FREQUENTES (FIEL À IMAGEM 2) */}
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs space-y-3">
+            {/* Header com ícone de edição */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                  <Edit3 className="h-5 w-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm sm:text-base font-black text-slate-900">
+                      Observações para Produção
+                    </h4>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                      Opcional
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Avise sobre pontos da carne, remoção de ingredientes ou alergias
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Atalhos Frequentes Chips */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  ATALHOS FREQUENTES
+                </span>
+                <span className="text-[10px] font-bold text-slate-500">
+                  Toque para adicionar rápido
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FREQUENT_SHORTCUTS.map((chip) => {
+                  const isSelected = observation.toLowerCase().includes(chip.toLowerCase())
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => handleToggleShortcut(chip)}
+                      className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all border ${
+                        isSelected
+                          ? 'bg-emerald-100 text-emerald-900 border-emerald-300 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isSelected ? '✓' : '+'} {chip}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Textarea com Contador e Aviso */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
               <textarea
                 placeholder="Ex: Tirar cebola, carne bem passada, enviar sachês..."
                 value={observation}
                 onChange={(e) => setObservation(e.target.value.slice(0, 140))}
-                className="w-full h-20 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none font-medium"
+                className="w-full h-20 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none font-medium"
                 maxLength={140}
               />
-              <span className="absolute bottom-2.5 right-3 text-[10px] font-bold text-slate-400">
-                {observation.length}/140
-              </span>
+              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] text-slate-400">
+                <div className="flex items-center gap-1 text-slate-400">
+                  <Info className="h-3 w-3" />
+                  <span>Não informe dados sensíveis ou pagamento aqui</span>
+                </div>
+                <span className="font-bold">{observation.length}/140</span>
+              </div>
             </div>
+
+            {/* Botão de Limpar */}
+            {observation.length > 0 && (
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={() => setObservation('')}
+                  className="text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors"
+                >
+                  Limpar observação
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO */}
-        <div className="border-t border-slate-100 bg-white p-4 shrink-0">
+        <div className="border-t border-slate-100 bg-white p-4 sm:p-5 shrink-0">
+          {acceptsFractions && fractionCount > 1 && selectedFlavors.filter(Boolean).length === fractionCount && (
+            <p className="mb-2 text-center text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5 animate-fade-in">
+              <Check className="h-4 w-4 stroke-[3]" /> {fractionCount} de {fractionCount} Sabores selecionados com sucesso!
+            </p>
+          )}
+
           {validationError && (
             <p className="mb-2 text-center text-xs font-bold text-amber-700">
               ⚠️ {validationError}
@@ -741,12 +956,12 @@ export function ItemCustomizerDialog({
 
           <div className="flex items-center justify-between gap-3">
             {/* Contador de Quantidade do Prato */}
-            <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
+            <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-xs">
               <button
                 type="button"
                 onClick={() => setItemQuantity((q) => Math.max(1, q - 1))}
                 disabled={itemQuantity <= 1}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition-all disabled:opacity-30 active:scale-95"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all disabled:opacity-30 active:scale-95"
               >
                 <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
               </button>
@@ -756,25 +971,27 @@ export function ItemCustomizerDialog({
               <button
                 type="button"
                 onClick={() => setItemQuantity((q) => q + 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm transition-all active:scale-95"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-xs transition-all active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
               </button>
             </div>
 
-            {/* Botão de Adicionar */}
+            {/* Botão de Adicionar à Sacola */}
             <button
               type="button"
               onClick={handleConfirm}
               disabled={!isReadyToConfirm}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]" style={{ backgroundColor: primaryColor }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-40 active:scale-[0.98]"
+              style={{ backgroundColor: primaryColor }}
             >
+              <ShoppingBag className="h-4 w-4" />
               <span>ADICIONAR À SACOLA</span>
-              <span>{formatBRL(unitPrice * itemQuantity)}</span>
+              <span className="ml-1 opacity-90">{formatBRL(unitPrice * itemQuantity)}</span>
             </button>
           </div>
         </div>
-</DialogContent>
+      </DialogContent>
     </Dialog>
   )
 }

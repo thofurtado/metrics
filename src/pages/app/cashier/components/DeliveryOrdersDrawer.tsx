@@ -631,7 +631,7 @@ export function DeliveryOrdersDrawer({
     try {
       await api.patch(`/public/orders/${orderId}/status`, {
         status: nextStatus,
-        cashier_session_id: nextStatus === 'delivered' ? sessionId : undefined,
+        cashier_session_id: sessionId || undefined,
         delivery_man: deliveryMan,
         payment_method: paymentMethod,
         card_machine: cardMachine
@@ -940,6 +940,7 @@ export function DeliveryOrdersDrawer({
         routeOrders.map((order) =>
           api.patch(`/public/orders/${order.id}/status`, {
             status: 'dispatched',
+            cashier_session_id: sessionId || undefined,
             delivery_man: finalDriver
           })
         )

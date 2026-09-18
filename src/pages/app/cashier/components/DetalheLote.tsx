@@ -483,7 +483,12 @@ export function DetalheLote({
           <SummaryCards resumo={resumoLote} onEditAbertura={onEditarAbertura} />
         )}
 
-        <DeliveryOrdersBar sessionId={loteAtivo?.id} onOrderCompleted={onOrderCompleted} />
+        <DeliveryOrdersBar
+          sessionId={loteAtivo?.id}
+          sessionDate={loteAtivo?.dataReferencia}
+          sessionStatus={loteAtivo?.status}
+          onOrderCompleted={onOrderCompleted}
+        />
 
         {loteAtivo.status === 'ABERTO' ||
         loteAtivo.status === 'Aberto' ||

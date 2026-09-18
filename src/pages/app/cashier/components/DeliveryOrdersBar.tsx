@@ -24,10 +24,32 @@ import { toast } from 'sonner'
 
 interface DeliveryOrdersBarProps {
   sessionId?: string
+  sessionDate?: string | Date
+  sessionStatus?: string
   onOrderCompleted?: () => void
 }
 
-export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrdersBarProps) {
+function extractDateString(val: any): string {
+  if (!val) return ''
+  if (typeof val === 'string') {
+    const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (match && !val.includes('T')) {
+      return `${match[1]}-${match[2]}-${match[3]}`
+    }
+  }
+  try {
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return ''
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  } catch {
+    return ''
+  }
+}
+
+export function DeliveryOrdersBar({ sessionId, sessionDate, sessionStatus, onOrderCompleted }: DeliveryOrdersBarProps) {
   const queryClient = useQueryClient()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'pending' | 'in_preparation' | 'conferencia' | 'dispatched' | 'delivered'>('pending')
@@ -37,9 +59,12 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
   const soundDropdownRef = useRef<HTMLDivElement>(null)
 
   const { data } = useQuery({
-    queryKey: ['cashier-online-orders', sessionId],
+    queryKey: ['cashier-online-orders', sessionId, extractDateString(sessionDate)],
     queryFn: async () => {
-      const params = sessionId ? { cashier_session_id: sessionId } : {}
+      const params: Record<string, any> = {}
+      if (sessionId) params.cashier_session_id = sessionId
+      const dateStr = extractDateString(sessionDate)
+      if (dateStr) params.date = dateStr
       const res = await api.get('/public/orders/pending', { params })
       return res.data || { orders: [], profile: null }
     },
@@ -48,7 +73,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
 
   // A API pode retornar dados legados ou campos JSON inválidos. Normalize os
   // arrays aqui para que o drawer nunca tente executar .map/.filter em objeto.
-  const orders: any[] = (Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : [])
+  const rawOrders: any[] = (Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : [])
     .filter((order): order is Record<string, any> => !!order && typeof order === 'object')
     .map((order) => ({
       ...order,
@@ -59,6 +84,42 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
           }))
         : []
     }))
+
+  // Filtro rígido por sessão e data para evitar vazamento entre caixas de dias diferentes
+  const orders: any[] = React.useMemo(() => {
+    const sessionDateStr = extractDateString(sessionDate)
+    const isSessionOpen =
+      sessionStatus === 'ABERTO' ||
+      sessionStatus === 'OPEN' ||
+      sessionStatus === 'Aberto'
+
+    return rawOrders.filter((order) => {
+      // 1. Se o pedido já possui cashier_session_id ou caixa_id explicitamente gravado:
+      if (order.cashier_session_id || order.caixa_id) {
+        const orderSessionId = String(order.cashier_session_id || order.caixa_id)
+        if (sessionId) {
+          return orderSessionId === String(sessionId)
+        }
+        return true
+      }
+
+      // 2. Se o pedido NÃO tem caixa vinculado (pedido online novo / órfão):
+      // - Nunca deve aparecer em caixas que já foram fechados ou conferidos
+      if (sessionId && !isSessionOpen) {
+        return false
+      }
+
+      // - Deve pertencer à mesma data de referência do caixa atual
+      if (sessionDateStr && order.created_at) {
+        const orderDateStr = extractDateString(order.created_at)
+        if (orderDateStr && orderDateStr !== sessionDateStr) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [rawOrders, sessionId, sessionDate, sessionStatus])
   const profile = data?.profile || null
 
   const pendingOrders = orders.filter((o) => o.status === 'pending')
@@ -74,7 +135,8 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
     setAssociatingOrphans(true)
     try {
       const res = await api.post('/public/orders/associate-orphans', {
-        cashier_session_id: sessionId
+        cashier_session_id: sessionId,
+        order_ids: orphanOrders.map((o) => o.id)
       })
       toast.success(res.data.message || 'Pedidos vinculados com sucesso ao caixa!')
       queryClient.invalidateQueries({ queryKey: ['cashier-online-orders'] })
@@ -308,7 +370,7 @@ export function DeliveryOrdersBar({ sessionId, onOrderCompleted }: DeliveryOrder
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              deliveryAlertManager.previewSound(opt.id)
+                              deliveryAlertManager.previewSound(opt.id, true)
                             }}
                             className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                             title="Ouvir toque"

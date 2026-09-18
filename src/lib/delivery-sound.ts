@@ -273,6 +273,15 @@ class DeliveryAlertManager {
       if (saved && ['marimba', 'glockenspiel', 'zen_chord', 'subtle_ping'].includes(saved)) {
         this.soundType = saved
       }
+
+      const savedMute = localStorage.getItem('delivery_sound_muted')
+      if (savedMute !== null) {
+        this.isMuted = savedMute === 'true'
+      }
+
+      try {
+        Howler.mute(this.isMuted)
+      } catch (e) {}
     }
   }
 
@@ -285,10 +294,11 @@ class DeliveryAlertManager {
     if (typeof window !== 'undefined') {
       localStorage.setItem('delivery_sound_type', type)
     }
-    this.previewSound(type)
+    this.previewSound(type, true)
   }
 
-  public previewSound(type?: SoundType) {
+  public previewSound(type?: SoundType, forcePlay: boolean = false) {
+    if (this.isMuted && !forcePlay) return
     try {
       unlockAudioContext()
       const snd = getHowlSound(type || this.soundType)
@@ -301,18 +311,13 @@ class DeliveryAlertManager {
 
   /**
    * Sincroniza a quantidade de pedidos pendentes.
-   * Se for 0, interrompe o alarme imediatamente.
-   * Se for > 0 e não estiver alertando, inicia o ciclo de alertas a cada 18s.
+   * Se for 0 ou se estiver silenciado, interrompe o alarme imediatamente.
+   * Se for > 0 e não estiver silenciado, inicia o ciclo de alertas a cada 18s.
    */
   public syncPendingOrders(pendingCount: number) {
     this.currentPendingCount = pendingCount
 
-    if (pendingCount <= 0) {
-      this.stopAlert()
-      return
-    }
-
-    if (this.isMuted) {
+    if (this.isMuted || pendingCount <= 0) {
       this.stopAlert()
       return
     }
@@ -331,7 +336,7 @@ class DeliveryAlertManager {
     if (this.isAlerting) return
 
     this.isAlerting = true
-    // Toca imediatamente
+    // Toca imediatamente se não estiver mudo
     this.previewSound()
 
     // E repete a cada 18 segundos enquanto houver pedidos pendentes
@@ -363,12 +368,34 @@ class DeliveryAlertManager {
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('delivery_sound_muted', String(this.isMuted))
+        Howler.mute(this.isMuted)
+      } catch (e) {}
+    }
+
     if (this.isMuted) {
       this.stopAlert()
     } else if (this.currentPendingCount > 0) {
       this.startAlert()
     }
     return this.isMuted
+  }
+
+  public setMuted(muted: boolean): void {
+    this.isMuted = muted
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('delivery_sound_muted', String(muted))
+        Howler.mute(muted)
+      } catch (e) {}
+    }
+    if (this.isMuted) {
+      this.stopAlert()
+    } else if (this.currentPendingCount > 0) {
+      this.startAlert()
+    }
   }
 
   public getIsMuted(): boolean {
