@@ -24,6 +24,9 @@ import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle,
+  Compass,
+  Flame,
+  Navigation,
   Banknote,
   Bell,
   Bike,
@@ -640,6 +643,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
   const [isCopiedPix, setIsCopiedPix] = useState(false)
   const [pixTimerSeconds, setPixTimerSeconds] = useState(15 * 60)
+  const [isManualAddressMode, setIsManualAddressMode] = useState(false)
+  const [isNeighborhoodHelpOpen, setIsNeighborhoodHelpOpen] = useState(false)
 
   useEffect(() => {
     if (checkoutWizardStep === 4 && paymentMethod === 'PIX') {
@@ -2350,51 +2355,97 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       {/* Modal de Checkout Robusto em Etapas (Design Fiel ao Stitch) */}
       <Dialog open={isCheckoutStepOpen} onOpenChange={setIsCheckoutStepOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center justify-between gap-2 text-base sm:text-lg font-black text-slate-900">
-              <span className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <ShoppingBag className="h-4 w-4" />
-                </div>
-                Finalizar Pedido
-              </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600 whitespace-nowrap">
-                {checkoutWizardStep === 5
-                  ? 'Concluído'
-                  : fulfillmentType === 'TAKEOUT'
-                    ? `Etapa ${checkoutWizardStep === 1 ? 1 : checkoutWizardStep === 2 ? 2 : 3} de 3`
-                    : `Etapa ${checkoutWizardStep} de 4`}
-              </span>
-            </DialogTitle>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg !bg-white text-slate-900 border border-slate-100 shadow-2xl p-5 sm:p-6 rounded-3xl">
+          {/* Alça superior estilo folha nativa mobile */}
+          <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-1 mb-3" />
 
-            {/* Barra de Progresso Progressiva */}
-            {checkoutWizardStep < 5 && (
-              <div className="pt-2">
-                <div className={`grid gap-1.5 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
-                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 1 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
-                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
-                  {fulfillmentType === 'DELIVERY' && (
-                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
-                  )}
-                  <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+          {/* Cabeçalho Fiel ao Stitch */}
+          <DialogHeader className="pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-100/80 shadow-2xs">
+                  <ShoppingBag className="h-5 w-5" />
                 </div>
-                <div className={`grid text-center text-[10px] font-semibold text-slate-500 pt-1 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
-                  <span className={checkoutWizardStep >= 1 ? 'text-emerald-700 font-bold' : ''}>1. Recebimento</span>
-                  <span className={checkoutWizardStep >= 2 ? 'text-emerald-700 font-bold' : ''}>2. Identificação</span>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base sm:text-lg font-black text-slate-900 leading-tight truncate">
+                    {checkoutWizardStep === 1 && 'Checkout Recebimento'}
+                    {checkoutWizardStep === 2 && 'Checkout Identificação'}
+                    {checkoutWizardStep === 3 && 'Checkout Entrega'}
+                    {checkoutWizardStep === 4 && 'Checkout Pagamento'}
+                    {checkoutWizardStep === 5 && 'Acompanhamento do Pedido'}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs font-semibold text-slate-500 truncate">
+                    {profile?.name || tenantName || 'Alta Gastronomia Express'}
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customerPhone) setCheckoutWizardStep(2)
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-800 text-white hover:bg-emerald-900 transition-all shadow-xs"
+                  title={customerName ? `Identificado: ${customerName}` : 'Identificação'}
+                >
+                  <User className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCheckoutStepOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+                  title="Fechar"
+                >
+                  <X className="h-4 w-4 stroke-[2.5]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Barra de Progresso em 4 Etapas Fiel ao Stitch */}
+            {checkoutWizardStep < 5 && (
+              <div className="pt-2.5 pb-1">
+                <div className={`grid gap-2 ${fulfillmentType === 'TAKEOUT' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                  {/* Etapa 1: Sacola */}
+                  <div>
+                    <div className="h-1.5 rounded-full bg-emerald-700 transition-all" />
+                    <span className="block text-center text-[10px] font-black text-emerald-800 mt-1">
+                      1. Sacola
+                    </span>
+                  </div>
+
+                  {/* Etapa 2: Dados */}
+                  <div>
+                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 2 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
+                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 2 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
+                      2. Dados
+                    </span>
+                  </div>
+
+                  {/* Etapa 3: Entrega (apenas se Delivery) */}
                   {fulfillmentType === 'DELIVERY' && (
-                    <span className={checkoutWizardStep >= 3 ? 'text-emerald-700 font-bold' : ''}>3. Endereço</span>
+                    <div>
+                      <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 3 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
+                      <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 3 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
+                        3. Entrega
+                      </span>
+                    </div>
                   )}
-                  <span className={checkoutWizardStep >= 4 ? 'text-emerald-700 font-bold' : ''}>
-                    {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '4. Pagamento'}
-                  </span>
+
+                  {/* Etapa 4: Pagamento */}
+                  <div>
+                    <div className={`h-1.5 rounded-full transition-all ${checkoutWizardStep >= 4 ? 'bg-emerald-700' : 'bg-slate-200'}`} />
+                    <span className={`block text-center text-[10px] font-bold mt-1 ${checkoutWizardStep >= 4 ? 'text-emerald-800 font-black' : 'text-slate-400'}`}>
+                      {fulfillmentType === 'TAKEOUT' ? '3. Pagamento' : '4. Pagamento'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
           </DialogHeader>
 
           {/* ============================================================ */}
-          {/* ETAPA 1: FORMA DE RECEBIMENTO (DELIVERY VS BALCÃO)          */}
+          {/* ETAPA 1: ESCOLHA DE RECEBIMENTO (DELIVERY VS BALCÃO)          */}
           {/* ============================================================ */}
           {checkoutWizardStep === 1 && (
             <motion.div
@@ -2404,54 +2455,65 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div className="text-center pb-1">
-                <h3 className="text-base font-black text-slate-900 tracking-tight">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
                   Como deseja receber seu pedido?
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Escolha se prefere receber no seu endereço ou retirar na loja
+                <p className="text-xs text-slate-600 mt-1 leading-snug">
+                  Escolha a modalidade mais conveniente para apreciar sua experiência gastronômica.
                 </p>
               </div>
 
+              {/* Cards de Opção */}
               <div className="space-y-3 pt-1">
-                {/* CARD ENTREGA DELIVERY */}
+                {/* CARD 1: ENTREGA DELIVERY */}
                 <button
                   type="button"
                   onClick={() => setFulfillmentType('DELIVERY')}
-                  className={`w-full relative flex items-start p-4 rounded-2xl border-2 transition-all text-left shadow-sm ${
+                  className={`w-full relative flex flex-col p-4 sm:p-5 rounded-3xl border-2 transition-all text-left shadow-xs ${
                     fulfillmentType === 'DELIVERY'
-                      ? 'border-emerald-600 bg-emerald-50/40 ring-1 ring-emerald-600/30'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-600/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <span className="absolute -top-2.5 right-4 rounded-full bg-indigo-600 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm whitespace-nowrap">
-                    Mais Escolhido
-                  </span>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mr-3.5 mt-0.5">
-                    <Rocket className="h-6 w-6" />
+                  <div className="flex items-start justify-between w-full">
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-800 text-white shadow-sm">
+                        <Rocket className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-black text-slate-900">
+                          Entrega Delivery
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-0.5 leading-snug">
+                          Direto na sua porta com embalagem térmica
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all ${
+                      fulfillmentType === 'DELIVERY'
+                        ? 'bg-emerald-800 text-white'
+                        : 'border-2 border-slate-300 bg-white'
+                    }`}>
+                      {fulfillmentType === 'DELIVERY' && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-black text-slate-900">
-                        Entrega Delivery
-                      </h4>
-                      {fulfillmentType === 'DELIVERY' && (
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0 ml-2">
-                          <Check className="h-3 w-3 stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 leading-snug">
-                      Receba quentinho e com rapidez no seu endereço
-                    </p>
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 mt-2.5">
-                      <Clock className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                      <span>{profile?.estimatedDeliveryTime || 'Tempo estimado: 35 - 50 min'}</span>
-                    </div>
+
+                  {/* Pills de Entrega */}
+                  <div className="flex items-center gap-2 mt-3.5 flex-wrap">
+                    <span className="flex items-center gap-1.5 rounded-xl bg-blue-100/70 px-3 py-1 text-xs font-bold text-blue-950">
+                      <Clock className="h-3.5 w-3.5 text-blue-700" />
+                      {matchedSector?.estimatedTimeMin
+                        ? `${matchedSector.estimatedTimeMin} – ${matchedSector.estimatedTimeMax || 60} min`
+                        : profile?.deliveryEstimatedTime || '35 – 45 min'}
+                    </span>
+                    <span className="flex items-center gap-1 rounded-xl bg-emerald-100/80 px-3 py-1 text-xs font-bold text-emerald-950">
+                      🔥 Mais escolhido
+                    </span>
                   </div>
                 </button>
 
-                {/* CARD RETIRAR NO BALCÃO */}
+                {/* CARD 2: RETIRAR NO BALCÃO */}
                 <button
                   type="button"
                   onClick={() => {
@@ -2460,64 +2522,118 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     setStreet('Retirada no Balcão')
                     setNumber('0')
                   }}
-                  className={`w-full relative flex items-start p-4 rounded-2xl border-2 transition-all text-left shadow-sm ${
+                  className={`w-full relative flex flex-col p-4 sm:p-5 rounded-3xl border-2 transition-all text-left shadow-xs ${
                     fulfillmentType === 'TAKEOUT'
-                      ? 'border-emerald-600 bg-emerald-50/40 ring-1 ring-emerald-600/30'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-600/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <span className="absolute -top-2.5 right-4 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm whitespace-nowrap">
-                    Sem Taxa de Entrega
-                  </span>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 mr-3.5 mt-0.5">
-                    <Store className="h-6 w-6" />
+                  <div className="flex items-start justify-between w-full">
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-sm">
+                        <Store className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-black text-slate-900">
+                          Retirar no Balcão
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-0.5 leading-snug">
+                          Retire quentinho e sem fila de espera
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all ${
+                      fulfillmentType === 'TAKEOUT'
+                        ? 'bg-emerald-800 text-white'
+                        : 'border-2 border-slate-300 bg-white'
+                    }`}>
+                      {fulfillmentType === 'TAKEOUT' && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-black text-slate-900">
-                        Retirar no Balcão
-                      </h4>
-                      {fulfillmentType === 'TAKEOUT' && (
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0 ml-2">
-                          <Check className="h-3 w-3 stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 leading-snug">
-                      Você retira diretamente no restaurante assim que estiver pronto
-                    </p>
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 mt-2.5">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                      <span>Taxa R$ 0,00 • Economia garantida</span>
-                    </div>
+
+                  {/* Pills de Balcão (Tempo de Cozinha / Retirada) */}
+                  <div className="flex items-center gap-2 mt-3.5 flex-wrap">
+                    <span className="flex items-center gap-1.5 rounded-xl bg-blue-100/70 px-3 py-1 text-xs font-bold text-blue-950">
+                      <Clock className="h-3.5 w-3.5 text-blue-700" />
+                      {profile?.takeoutEstimatedTime ||
+                        (profile?.preparationTimeMin
+                          ? `${profile.preparationTimeMin} – ${profile.preparationTimeMax || profile.preparationTimeMin + 5} min`
+                          : '15 – 20 min')}
+                    </span>
+                    <span className="flex items-center gap-1 rounded-xl bg-indigo-100/70 px-3 py-1 text-xs font-bold text-indigo-950">
+                      🏷️ Sem taxa de entrega
+                    </span>
                   </div>
                 </button>
               </div>
 
-              {/* Rodapé da Etapa 1 */}
-              <div className="pt-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCheckoutStepOpen(false)
-                      setIsCartModalOpen(true)
-                    }}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
-                  >
-                    <ChevronLeft className="h-4 w-4" /> Voltar ao Cardápio
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutWizardStep(2)}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                  >
-                    <span>Continuar</span>
-                    <ChevronRight className="h-4 w-4 stroke-[3]" />
-                  </button>
+              {/* Selo de Garantia e Qualidade */}
+              <div className="rounded-2xl border border-blue-100/60 bg-blue-50/40 p-4 flex items-start gap-3 shadow-2xs">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
+                <div>
+                  <h5 className="text-xs sm:text-sm font-black text-slate-900">
+                    Padrão Alta Gastronomia
+                  </h5>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    Embalagens isotérmicas seladas e lacradas para preservar aromas e textura até o consumo.
+                  </p>
+                </div>
+              </div>
+
+              {/* Fotos Ilustrativas de Alta Gastronomia */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-slate-200">
+                  <img
+                    src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80"
+                    alt="Embalagem Selada"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                    <span className="text-white text-xs font-black drop-shadow-sm">Embalagem Selada</span>
+                  </div>
+                </div>
+                <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden shadow-xs border border-slate-200">
+                  <img
+                    src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80"
+                    alt="Direto da Cozinha"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                    <span className="text-white text-xs font-black drop-shadow-sm">Direto da Cozinha</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Voltar ao Cardápio */}
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCheckoutStepOpen(false)
+                    setIsCartModalOpen(true)
+                  }}
+                  className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Voltar ao Cardápio
+                </button>
+              </div>
+
+              {/* Barra Inferior Fixa com Total e Continuar */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 block leading-tight">Total do Pedido</span>
+                  <span className="text-xl font-black text-slate-950">{formatCurrency(cartTotal)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutWizardStep(2)}
+                  className="flex items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                >
+                  <span>Continuar</span>
+                  <ChevronRight className="h-4 w-4 stroke-[3]" />
+                </button>
               </div>
             </motion.div>
           )}
@@ -2533,20 +2649,20 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div className="text-center pb-1">
-                <h3 className="text-base font-black text-slate-900 tracking-tight">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
                   Identificação do Cliente
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Informe seu WhatsApp para confirmar o pedido e acompanhar em tempo real
+                <p className="text-xs text-slate-600 mt-1 leading-snug">
+                  Informe seu WhatsApp para confirmar o pedido e acompanhar em tempo real.
                 </p>
               </div>
 
-              {/* Resumo da Escolha de Recebimento */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+              {/* Resumo da Escolha de Recebimento com Link de Alterar */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-white text-slate-700 shadow-2xs shrink-0">
-                    {fulfillmentType === 'DELIVERY' ? <Rocket className="h-3.5 w-3.5 text-indigo-600" /> : <Store className="h-3.5 w-3.5 text-emerald-600" />}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-700 shadow-2xs shrink-0">
+                    {fulfillmentType === 'DELIVERY' ? <Rocket className="h-4 w-4 text-emerald-700" /> : <Store className="h-4 w-4 text-emerald-700" />}
                   </div>
                   <span className="font-extrabold text-slate-800 truncate">
                     {fulfillmentType === 'DELIVERY' ? 'Entrega Delivery' : 'Retirar no Balcão'}
@@ -2555,14 +2671,14 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 <button
                   type="button"
                   onClick={() => setCheckoutWizardStep(1)}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline shrink-0 ml-2"
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline shrink-0 ml-2"
                 >
-                  Alterar
+                  Alterar modalidade
                 </button>
               </div>
 
-              {/* CARD DE IDENTIFICAÇÃO */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3.5">
+              {/* Card de Identificação */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3.5">
                 <div>
                   <label className="text-xs font-bold text-slate-700">Seu WhatsApp / Telefone</label>
                   <div className="mt-1 flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
@@ -2584,7 +2700,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 {clientFound && customerName && (
                   <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-black text-sm shadow-sm">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-white font-black text-sm shadow-sm">
                         {customerName ? customerName.slice(0, 2).toUpperCase() : 'VIP'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -2604,62 +2720,51 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                   </div>
                 )}
 
-                {/* Nome do Cliente */}
                 <div>
                   <label className="text-xs font-bold text-slate-700">Seu Nome Completo</label>
                   <input
                     type="text"
-                    placeholder="Como gostaria de ser chamado?"
+                    placeholder="Como podemos te chamar?"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              {/* Rodapé da Etapa 2 */}
-              <div className="pt-3 space-y-2">
-                <div className="flex items-center gap-2">
+              {/* Botões de Navegação */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cleanPhone = customerPhone.replace(/D/g, '')
+                    if (cleanPhone.length < 10) {
+                      alert('Por favor, informe um número de WhatsApp válido com DDD.')
+                      return
+                    }
+                    if (!customerName.trim()) {
+                      alert('Por favor, informe o seu nome para identificação.')
+                      return
+                    }
+                    if (fulfillmentType === 'TAKEOUT') {
+                      setCheckoutWizardStep(4) // Balcão pula direto para pagamento!
+                    } else {
+                      setCheckoutWizardStep(3) // Delivery vai para endereço!
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                >
+                  <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Continuar para Entrega'}</span>
+                  <ChevronRight className="h-4 w-4 stroke-[3]" />
+                </button>
+
+                <div className="text-center pt-1">
                   <button
                     type="button"
                     onClick={() => setCheckoutWizardStep(1)}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
                   >
-                    <ChevronLeft className="h-4 w-4" /> Voltar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!customerPhone.trim()) {
-                        alert('Por favor, informe seu WhatsApp ou telefone.')
-                        return
-                      }
-                      if (!customerName.trim()) {
-                        alert('Por favor, informe seu nome.')
-                        return
-                      }
-
-                      // Se for Retirada no Balcão, avança direto para Pagamento (Etapa 4)!
-                      if (fulfillmentType === 'TAKEOUT') {
-                        setCheckoutWizardStep(4)
-                        registerClientInBackend().catch((err: any) => {
-                          console.warn('Sincronização em background do cliente:', err)
-                        })
-                        return
-                      }
-
-                      // Se for Delivery, avança para Endereço (Etapa 3)
-                      setCheckoutWizardStep(3)
-                      registerClientInBackend().catch((err: any) => {
-                        console.warn('Sincronização em background do cliente:', err)
-                      })
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                  >
-                    <span>{fulfillmentType === 'TAKEOUT' ? 'Avançar para Pagamento' : 'Avançar para Endereço'}</span>
-                    <ChevronRight className="h-4 w-4 stroke-[3]" />
+                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Recebimento
                   </button>
                 </div>
               </div>
@@ -2667,289 +2772,352 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           )}
 
           {/* ============================================================ */}
-          {/* ETAPA 3: ENDEREÇO DE ENTREGA (SOMENTE DELIVERY)              */}
+          {/* ETAPA 3: ENDEREÇO DE ENTREGA (DELIVERY) - FIEL AO STITCH     */}
           {/* ============================================================ */}
           {checkoutWizardStep === 3 && fulfillmentType === 'DELIVERY' && (
             <motion.div
-              key="step3-address"
+              key="step3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div className="text-center pb-1">
-                <h3 className="text-base font-black text-slate-900 tracking-tight">
-                  Endereço de Entrega
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
+                  Onde vamos entregar?
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Onde levaremos seu pedido quentinho?
+                <p className="text-xs text-slate-600 mt-1 leading-snug">
+                  Digite seu CEP para localizar ou escolha um endereço.
                 </p>
               </div>
 
-              {/* CARD DE ENDEREÇO SELECIONADO OU FORMULÁRIO */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm space-y-3">
-                {savedAddresses.length > 0 && !isNewAddress ? (
-                  <div className="relative rounded-2xl border-2 border-emerald-600 bg-emerald-50/20 p-4 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
-                        Endereço Confirmado
+              {/* BUSCA POR CEP (O CEP É O REI) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-emerald-700" />
+                    Buscar por CEP
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualAddressMode(!isManualAddressMode)}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
+                  >
+                    {isManualAddressMode ? 'Buscar por CEP' : 'Não sei meu CEP'}
+                  </button>
+                </div>
+
+                <div className="relative flex items-center">
+                  <input
+                    id="zipcode-input"
+                    type="text"
+                    placeholder="00000-000"
+                    value={zipcode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 8)
+                      setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
+                      if (val.length === 8) {
+                        handleSearchCEPCheckout(val)
+                      }
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-3 pr-28 text-sm font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+
+                  <div className="absolute right-2.5 flex items-center gap-1.5">
+                    {street && zipcode ? (
+                      <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1 text-[11px] font-black">
+                        <Check className="h-3 w-3 stroke-[3]" /> Localizado
                       </span>
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
-                        <Check className="h-3 w-3 stroke-[3]" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-black text-slate-900 leading-tight">
-                        {street}, {number}{complement ? ` (${complement})` : ''}
-                      </p>
-                      <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                        {neighborhood} • {city || profile?.city || 'Local'}/{state || profile?.state || 'SP'}
-                      </p>
-                      {zipcode && (
-                        <p className="text-[11px] text-slate-400 mt-0.5">CEP: {zipcode}</p>
-                      )}
-                    </div>
-
-                    <div className="border-t border-emerald-100/80 pt-2.5 flex items-center justify-between text-xs gap-2 flex-wrap">
+                    ) : isSearchingCEPCheckout ? (
+                      <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold px-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         onClick={() => {
-                          setIsNewAddress(true)
+                          const val = zipcode.replace(/\D/g, '')
+                          if (val.length === 8) handleSearchCEPCheckout(val)
                         }}
-                        className="text-xs font-bold text-slate-700 hover:text-slate-900 underline"
+                        className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                       >
-                        Editar dados
-                      </button>
-
-                      {savedAddresses.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setIsAddressesModalOpen(true)}
-                          className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900"
-                        >
-                          <RefreshCw className="h-3 w-3" /> Trocar endereço
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNewAddress(true)
-                          setStreet('')
-                          setNumber('')
-                          setComplement('')
-                          setZipcode('')
-                        }}
-                        className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900 ml-auto"
-                      >
-                        <Plus className="h-3 w-3" /> Digitar outro endereço
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Formulário de Endereço */
-                  <div className="space-y-3">
-                    {savedAddresses.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setIsNewAddress(false)}
-                        className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
-                      >
-                        ← Usar endereço salvo ({savedAddresses.length})
+                        <Search className="h-4 w-4" />
                       </button>
                     )}
+                  </div>
+                </div>
+              </div>
 
+              {/* MINI-MAPA INTERATIVO / PREVIEW DE LOCALIZAÇÃO (STITCH MOCKUP) */}
+              {(street || neighborhood) && (
+                <div className="relative w-full h-36 sm:h-40 rounded-3xl overflow-hidden border border-slate-200/80 shadow-inner bg-slate-100 group">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-90 transition-transform duration-700 group-hover:scale-105"
+                    style={{
+                      backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&auto=format&fit=crop&q=80")',
+                      filter: 'saturate(1.2) contrast(1.05)'
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-900/20 to-transparent" />
+
+                  {/* Pino Central de Localização */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-2 pointer-events-none">
+                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-800 px-3 py-1 text-[11px] font-black text-white shadow-xl ring-2 ring-white/80 animate-bounce">
+                      <span>🏠 Casa (Selecionado)</span>
+                    </div>
+                    <div className="flex h-8 w-8 items-center justify-center text-emerald-600 drop-shadow-md">
+                      <MapPin className="h-8 w-8 fill-emerald-600 text-white stroke-[2]" />
+                    </div>
+                    <div className="h-1.5 w-4 rounded-full bg-slate-900/40 blur-[1px]" />
+                  </div>
+
+                  {/* Tarja Flutuante Inferior com Endereço Destacado */}
+                  <div className="absolute bottom-2.5 inset-x-3 flex items-center justify-center">
+                    <div className="flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md px-4 py-1.5 text-xs font-black text-slate-800 shadow-md border border-slate-200/60 max-w-full truncate">
+                      <Rocket className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span className="truncate">
+                        Entregar aqui: {street ? `${street}, ${number || 'S/N'}` : 'Localizando seu endereço...'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CARD DE ENDEREÇO CONFIRMADO (BORDA VERDE LATERAL E CHECK) */}
+              {(street || neighborhood) && (
+                <div className="relative rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm border-l-4 border-l-emerald-600 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/90 border border-emerald-200 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-900">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-700" />
+                      {zipcode ? 'Endereço Confirmado via CEP' : 'Endereço Selecionado'}
+                    </span>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-white">
+                      <Check className="h-3 w-3 stroke-[3]" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-1">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-black text-slate-900 truncate">
+                        {street || 'Nome da rua'}, nº {number || 'S/N'}
+                      </h4>
+                      <p className="text-xs text-slate-600 truncate mt-0.5">
+                        {complement ? `${complement} • ` : ''}{neighborhood || 'Bairro'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {city || profile?.city || 'Cidade'} - {state || profile?.state || 'SP'} {zipcode ? `• CEP ${zipcode}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Ações Rápidas: Alterar número/complemento e Trocar endereço */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs font-bold text-emerald-700">
+                    <button
+                      type="button"
+                      onClick={() => setIsManualAddressMode(true)}
+                      className="flex items-center gap-1 hover:text-emerald-900 transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      <span>Alterar número/complemento</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setZipcode('')
+                        setStreet('')
+                        setNumber('')
+                        setNeighborhood('')
+                        setComplement('')
+                        setIsManualAddressMode(false)
+                        setTimeout(() => document.getElementById('zipcode-input')?.focus(), 100)
+                      }}
+                      className="flex items-center gap-1 text-slate-600 hover:text-slate-900 transition-colors"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      <span>Trocar endereço</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* FORMULÁRIO MANUAL COM SELECT DE BAIRRO */}
+              {isManualAddressMode && (
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 shadow-inner">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-black text-slate-900">Preencher Endereço Manualmente</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsManualAddressMode(false)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800"
+                    >
+                      Fechar ✕
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-[11px] font-bold text-slate-700">Rua / Logradouro</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Rua das Flores"
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700">Número</label>
+                      <input
+                        id="checkout-number-input"
+                        type="text"
+                        placeholder="Nº"
+                        value={number}
+                        onChange={(e) => setNumber(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700">CEP (Opcional)</label>
-                        {isSearchingCEPCheckout && (
-                          <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Buscando CEP...
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative mt-1 flex items-center">
-                        <input
-                          id="zipcode-input"
-                          type="text"
-                          placeholder="00000-000"
-                          value={zipcode}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 8)
-                            setZipcode(val.length > 5 ? `${val.slice(0, 5)}-${val.slice(5)}` : val)
-                            if (val.length === 8) {
-                              handleSearchCEPCheckout(val)
-                            }
-                          }}
-                          onBlur={() => {
-                            const val = zipcode.replace(/\D/g, '')
-                            if (val.length === 8) {
-                              handleSearchCEPCheckout(val)
-                            }
-                          }}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
+                        <label className="text-[11px] font-bold text-slate-700">Bairro</label>
                         <button
                           type="button"
-                          onClick={() => {
-                            const val = zipcode.replace(/\D/g, '')
-                            if (val.length === 8) {
-                              handleSearchCEPCheckout(val)
-                            }
-                          }}
-                          disabled={isSearchingCEPCheckout}
-                          className="absolute right-2 p-1 text-slate-400 hover:text-emerald-600 disabled:opacity-50"
-                          title="Buscar CEP"
+                          onClick={() => setIsNeighborhoodHelpOpen(true)}
+                          className="flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 hover:text-emerald-900 underline"
+                          title="Não achou seu bairro?"
                         >
-                          {isSearchingCEPCheckout ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
+                          <Info className="h-3 w-3" />
+                          <span>Não achou?</span>
                         </button>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-2">
-                        <label className="text-xs font-bold text-slate-700">Rua / Logradouro</label>
-                        <input
-                          type="text"
-                          placeholder="Nome da rua"
-                          value={street}
-                          onChange={(e) => setStreet(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-700">Número</label>
-                        <input
-                          id="checkout-number-input"
-                          type="text"
-                          placeholder="Nº"
-                          value={number}
-                          onChange={(e) => setNumber(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-xs font-bold text-slate-700">Bairro</label>
-                        <input
-                          type="text"
-                          placeholder="Bairro"
+                      {availableNeighborhoodsList.length > 0 ? (
+                        <select
                           value={neighborhood}
                           onChange={(e) => {
                             setNeighborhood(e.target.value)
                             setAcceptedStandardFee(false)
                           }}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-700">Complemento</label>
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                        >
+                          <option value="">Selecione seu bairro...</option>
+                          {availableNeighborhoodsList.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                          <option value="__outro__">Outro bairro (digitar)</option>
+                        </select>
+                      ) : (
                         <input
                           type="text"
-                          placeholder="Apto, bloco, casa 2..."
-                          value={complement}
-                          onChange={(e) => setComplement(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="Digite seu bairro"
+                          value={neighborhood}
+                          onChange={(e) => setNeighborhood(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
                         />
-                      </div>
+                      )}
                     </div>
 
-                    {/* Setor de Entrega Atendido */}
-                    {matchedSector ? (
-                      <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-bold text-emerald-900 shadow-sm">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>
-                          Atendido por <strong>{matchedSector.name}</strong> • Taxa: <strong>R$ {Number(matchedSector.fee || 0).toFixed(2).replace('.', ',')}</strong>
-                          {matchedSector.estimatedTimeMin ? ` • Prazo: ${matchedSector.estimatedTimeMin}-${matchedSector.estimatedTimeMax || 60} min` : ''}
-                        </span>
-                      </div>
-                    ) : neighborhood.trim() && acceptedStandardFee ? (
-                      <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs font-bold text-amber-900 shadow-sm">
-                        <Truck className="h-4 w-4 text-amber-600 shrink-0" />
-                        <span>
-                          Taxa padrão da loja: <strong>R$ {Number(profile?.deliveryFee || 0).toFixed(2).replace('.', ',')}</strong>
-                        </span>
-                      </div>
-                    ) : null}
-
                     <div>
-                      <label className="text-xs font-bold text-slate-700">Ponto de Referência (Opcional)</label>
+                      <label className="text-[11px] font-bold text-slate-700">Complemento</label>
                       <input
                         type="text"
-                        placeholder="Ex: Próximo à padaria, portão branco, em frente ao mercado"
-                        value={referencePoint}
-                        onChange={(e) => setReferencePoint(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="Apto, bloco, casa 2..."
+                        value={complement}
+                        onChange={(e) => setComplement(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
                       />
                     </div>
                   </div>
-                )}
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700">Ponto de Referência (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Próximo à padaria, portão cinza"
+                      value={referencePoint}
+                      onChange={(e) => setReferencePoint(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-xs focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Botão Secundário: Cadastrar novo endereço */}
+              <button
+                type="button"
+                onClick={() => {
+                  setZipcode('')
+                  setStreet('')
+                  setNumber('')
+                  setNeighborhood('')
+                  setComplement('')
+                  setIsManualAddressMode(true)
+                }}
+                className="w-full flex items-center justify-center gap-1.5 rounded-2xl border border-indigo-100 bg-indigo-50/60 py-3 text-xs font-bold text-indigo-900 hover:bg-indigo-100/70 transition-colors"
+              >
+                <Plus className="h-4 w-4 text-indigo-600" />
+                <span>Cadastrar novo endereço</span>
+              </button>
+
+              {/* Card de Taxa e Tempo de Rota (Stitch Mockup) */}
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-black text-emerald-900">
+                  <span className="flex items-center gap-1.5">
+                    <Bike className="h-4 w-4 text-emerald-600 shrink-0" />
+                    Taxa de Entrega ({matchedSector?.name || 'Setor Local'})
+                  </span>
+                  <span className="text-sm font-black">
+                    {Number(deliveryFee || 0) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+                  <Clock className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    Tempo estimado de rota: {matchedSector?.estimatedTimeMin ? `${matchedSector.estimatedTimeMin} - ${matchedSector.estimatedTimeMax || 50} min após o preparo` : '35 - 50 min após o preparo'}
+                  </span>
+                </div>
               </div>
 
-              {/* Card de Tempo Estimado */}
-              <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-xs shrink-0">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-extrabold text-slate-900">
-                    {profile?.estimatedDeliveryTime || 'Tempo estimado: 35 - 50 min'}
-                  </p>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    Previsão média após a confirmação pela cozinha da loja.
-                  </p>
-                </div>
-              </div>
+              {/* Botões de Ação */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!street.trim()) {
+                      alert('Por favor, informe o logradouro/rua ou digite seu CEP.')
+                      return
+                    }
+                    if (!number.trim() || number === '0') {
+                      alert('Por favor, informe o número da sua residência.')
+                      setTimeout(() => document.getElementById('checkout-number-input')?.focus(), 100)
+                      return
+                    }
+                    if (!neighborhood.trim()) {
+                      alert('Por favor, selecione ou informe o seu bairro.')
+                      return
+                    }
+                    setCheckoutWizardStep(4)
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
+                >
+                  <span>Avançar para Pagamento</span>
+                  <ChevronRight className="h-4 w-4 stroke-[3]" />
+                </button>
 
-              {/* Rodapé da Etapa 3 */}
-              <div className="pt-3 space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="text-center pt-1">
                   <button
                     type="button"
                     onClick={() => setCheckoutWizardStep(2)}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
                   >
-                    <ChevronLeft className="h-4 w-4" /> Voltar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
-                        alert('Por favor, informe os dados completos do endereço de entrega.')
-                        return
-                      }
-                      if (deliverySectorInfo.hasSectors) {
-                        const isAllowed = matchedSector !== null || acceptedStandardFee || deliverySectorInfo.sectors.some(
-                          (sec: any) => Array.isArray(sec.neighborhoods) && sec.neighborhoods.some((n: string) => normalizeText(n) === normalizeText(neighborhood))
-                        )
-                        if (!isAllowed) {
-                          setUnsupportedNeighborhoodModal({
-                            isOpen: true,
-                            neighborhoodName: neighborhood,
-                          })
-                          return
-                        }
-                      }
-
-                      // Avança instantâneo para o Pagamento (Etapa 4)
-                      setCheckoutWizardStep(4)
-                      registerClientInBackend().catch((err: any) => {
-                        console.warn('Sincronização em background do cliente:', err)
-                      })
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                  >
-                    <span>Avançar para Pagamento</span>
-                    <ChevronRight className="h-4 w-4 stroke-[3]" />
+                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para Identificação
                   </button>
                 </div>
               </div>
@@ -2957,493 +3125,414 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           )}
 
           {/* ============================================================ */}
-          {/* ETAPA 4: FORMA DE PAGAMENTO & PIX OFICIAL (STITCH)           */}
+          {/* ETAPA 4: FORMA DE PAGAMENTO (FIEL AO STITCH)                 */}
           {/* ============================================================ */}
           {checkoutWizardStep === 4 && (
             <motion.div
-              key="step4-payment"
+              key="step4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div className="text-center pb-1">
-                <h3 className="text-base font-black text-slate-900 tracking-tight">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
                   Forma de Pagamento
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Escolha como prefere pagar o seu pedido
+                <p className="text-xs text-slate-600 mt-1 leading-snug">
+                  Escolha como prefere pagar seu pedido de forma rápida e segura.
                 </p>
               </div>
 
-              {/* GRID DE FORMAS DE PAGAMENTO DINÂMICO */}
+              {/* LISTA VERTICAL DE FORMAS DE PAGAMENTO COM RÁDIO */}
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold uppercase tracking-wider text-slate-900">
-                    OPÇÕES DISPONÍVEIS
-                  </span>
-                  <span className="text-slate-400 text-[11px]">Escolha uma opção</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  {/* PIX */}
-                  {availablePaymentMethods.pix && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('PIX')}
-                      className={`relative flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                        paymentMethod === 'PIX'
-                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-sm whitespace-nowrap">
-                        Aprovação Imediata
-                      </span>
-                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5 mt-1">
-                        <Zap className="h-4 w-4 text-amber-500 fill-amber-500" /> Pix
+                {/* PIX */}
+                {availablePaymentMethods.pix && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('PIX')}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
+                      paymentMethod === 'PIX'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                        <QrCode className="h-6 w-6" />
                       </div>
-                      <p className="text-[11px] text-slate-500">Pagamento instantâneo</p>
-                    </button>
-                  )}
-
-                  {/* CARTÃO CRÉDITO */}
-                  {availablePaymentMethods.credit && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('CREDIT')}
-                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                        paymentMethod === 'CREDIT'
-                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                        <CreditCard className="h-4 w-4 text-indigo-600" /> Cartão Crédito
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-slate-900">Pix</span>
+                          <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2 py-0.2 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
+                            Aprovação Imediata
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                          Pague via QR Code ou Copia e Cola
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-500">Pague na entrega</p>
-                    </button>
-                  )}
+                    </div>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
+                      paymentMethod === 'PIX' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                    }`}>
+                      {paymentMethod === 'PIX' && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                )}
 
-                  {/* CARTÃO DÉBITO */}
-                  {availablePaymentMethods.debit && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('DEBIT')}
-                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                        paymentMethod === 'DEBIT'
-                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                        <CreditCard className="h-4 w-4 text-blue-600" /> Cartão Débito
+                {/* CRÉDITO NA ENTREGA */}
+                {availablePaymentMethods.credit && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('CREDIT')}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
+                      paymentMethod === 'CREDIT'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                        <CreditCard className="h-6 w-6" />
                       </div>
-                      <p className="text-[11px] text-slate-500">Maquininha na porta</p>
-                    </button>
-                  )}
-
-                  {/* DINHEIRO */}
-                  {availablePaymentMethods.cash && (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('CASH')}
-                      className={`flex flex-col items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
-                        paymentMethod === 'CASH'
-                          ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 font-black text-xs text-slate-900 mb-0.5">
-                        <Banknote className="h-4 w-4 text-emerald-600" /> Dinheiro
+                      <div className="min-w-0">
+                        <span className="text-sm font-black text-slate-900 block">Crédito na Entrega</span>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">Levamos a maquininha</p>
                       </div>
-                      <p className="text-[11px] text-slate-500">Com opção de troco</p>
-                    </button>
-                  )}
-                </div>
+                    </div>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
+                      paymentMethod === 'CREDIT' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                    }`}>
+                      {paymentMethod === 'CREDIT' && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                )}
 
-                {/* VALE REFEIÇÃO / VOUCHER (Renderiza SOMENTE se a loja tiver cadastrado e ativo!) */}
+                {/* DÉBITO NA ENTREGA */}
+                {availablePaymentMethods.debit && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('DEBIT')}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
+                      paymentMethod === 'DEBIT'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                        <CreditCard className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-sm font-black text-slate-900 block">Débito na Entrega</span>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">Visa, Master, Elo</p>
+                      </div>
+                    </div>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
+                      paymentMethod === 'DEBIT' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                    }`}>
+                      {paymentMethod === 'DEBIT' && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                )}
+
+                {/* DINHEIRO */}
+                {availablePaymentMethods.cash && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('CASH')}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
+                      paymentMethod === 'CASH'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                        <Banknote className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-sm font-black text-slate-900 block">Dinheiro</span>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">Com ou sem troco</p>
+                      </div>
+                    </div>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
+                      paymentMethod === 'CASH' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                    }`}>
+                      {paymentMethod === 'CASH' && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                )}
+
+                {/* VALE REFEIÇÃO (SOMENTE SE ATIVO NA LOJA) */}
                 {availablePaymentMethods.voucher && (
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('VOUCHER')}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left ${
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
                       paymentMethod === 'VOUCHER'
-                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Ticket className="h-4 w-4 text-amber-600 shrink-0" />
-                      <div>
-                        <span className="text-xs font-black text-slate-900 block">{availablePaymentMethods.voucherName}</span>
-                        <span className="text-[10px] text-slate-500">Aceito na maquininha na entrega</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                        <Ticket className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-sm font-black text-slate-900 block">{availablePaymentMethods.voucherName}</span>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">Pague na maquininha na entrega</p>
                       </div>
                     </div>
-                    <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 whitespace-nowrap">
-                      Pague na entrega
-                    </span>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
+                      paymentMethod === 'VOUCHER' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                    }`}>
+                      {paymentMethod === 'VOUCHER' && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
                   </button>
                 )}
-
-                {/* OUTRAS FORMAS ADICIONAIS ATIVAS NA LOJA */}
-                {availablePaymentMethods.extraMethods?.map((ext: any) => (
-                  <button
-                    key={ext.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(ext.name)}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === ext.name
-                        ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <CreditCard className="h-4 w-4 text-slate-600 shrink-0" />
-                      <span className="text-xs font-black text-slate-900">{ext.name}</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 whitespace-nowrap">Opção da loja</span>
-                  </button>
-                ))}
               </div>
 
-              {/* MENSAGEM INFORMATIVA DE CARTÃO DE CRÉDITO */}
-              {paymentMethod === 'CREDIT' && (
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3.5 flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-indigo-600 shrink-0" />
-                  <p className="text-xs text-indigo-950 font-medium leading-relaxed">
-                    O pagamento com <strong>Cartão de Crédito</strong> será realizado no ato da entrega com a maquininha do entregador.
-                  </p>
-                </div>
-              )}
-
-              {/* MENSAGEM INFORMATIVA DE CARTÃO DE DÉBITO */}
-              {paymentMethod === 'DEBIT' && (
-                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-blue-600 shrink-0" />
-                  <p className="text-xs text-blue-950 font-medium leading-relaxed">
-                    O pagamento com <strong>Cartão de Débito</strong> será realizado no ato da entrega com a maquininha do entregador.
-                  </p>
-                </div>
-              )}
-
-              {/* MENSAGEM INFORMATIVA DE VALE REFEIÇÃO */}
-              {paymentMethod === 'VOUCHER' && (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 flex items-center gap-3">
-                  <Ticket className="h-5 w-5 text-amber-600 shrink-0" />
-                  <p className="text-xs text-amber-950 font-medium leading-relaxed">
-                    O pagamento com <strong>{availablePaymentMethods.voucherName}</strong> será realizado no ato da entrega com a maquininha do entregador.
-                  </p>
-                </div>
-              )}
-
-              {/* DETALHES DO PIX OFICIAL */}
+              {/* CARD DE QR CODE PIX OFICIAL (FIEL AO STITCH) */}
               {paymentMethod === 'PIX' && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-950">
-                      <QrCode className="h-4 w-4 text-emerald-600" />
-                      <span>QR Code Pix & Copia e Cola Oficial</span>
+                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm flex flex-col items-center space-y-3.5">
+                  <div className="relative p-2.5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center justify-center">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'CHAVE_PIX')}`}
+                      alt="QR Code Pix"
+                      className="h-44 w-44 object-contain rounded-xl"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md border-2 border-white">
+                        <Check className="h-4 w-4 stroke-[3]" />
+                      </div>
                     </div>
-                    <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-xs font-black text-emerald-800">
-                      {formatCurrency(cartTotal)}
-                    </span>
                   </div>
 
-                  {/* QR CODE OFICIAL */}
-                  {pixBRCodePayload && (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(pixBRCodePayload)}`}
-                        alt="QR Code Pix"
-                        className="h-44 w-44 object-contain"
-                      />
-                      <p className="mt-2 text-center text-xs font-medium text-slate-600">
-                        Abra o app do seu banco e escaneie o QR Code acima
-                      </p>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 px-4 text-xs font-black text-white shadow-md transition-all active:scale-[0.98] bg-slate-900 hover:bg-slate-800"
+                  >
+                    {isCopiedPix ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                    <span>{isCopiedPix ? '✓ Código Pix Copiado com Sucesso!' : 'Copiar Código Pix (Copia e Cola)'}</span>
+                  </button>
 
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Ou copie o código <strong>Pix Copia e Cola</strong> abaixo. O valor exato de{' '}
-                    <strong className="text-emerald-800">{formatCurrency(cartTotal)}</strong> será preenchido automaticamente!
-                  </p>
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-600">
+                    <Clock className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Código válido por <strong className="text-slate-900">{formatCountdown(pixTimerSeconds)} min</strong></span>
+                  </div>
+                </div>
+              )}
 
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-2 shadow-sm">
-                    <span className="flex-1 truncate font-mono text-[11px] text-slate-700 px-1">
-                      {pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'Contate a loja'}
-                    </span>
+              {/* OPÇÃO DE TROCO EM DINHEIRO */}
+              {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 space-y-2.5">
+                  <label className="text-xs font-bold text-slate-800 block">Precisa de troco para quanto?</label>
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
-                      className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-all shrink-0" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+                      onClick={() => setChangeAmount('Não preciso')}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        changeAmount === 'Não preciso'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      {isCopiedPix ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {isCopiedPix ? 'Copiado!' : 'Copiar Pix'}
+                      Não preciso
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChangeAmount('50,00')}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        changeAmount === '50,00'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      R$ 50,00
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChangeAmount('100,00')}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        changeAmount === '100,00'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      R$ 100,00
                     </button>
                   </div>
-
-                  {/* TIMER DE VALIDADE */}
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 font-medium pt-1">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" />
-                    <span>
-                      Código válido por <strong className="text-slate-800 font-bold">{formatCountdown(pixTimerSeconds)}</strong>
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* TROCO EM DINHEIRO */}
-              {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 space-y-1.5">
-                  <label className="text-xs font-bold text-slate-800">Precisa de troco para quanto?</label>
                   <input
                     type="text"
-                    placeholder="Ex: 50,00 (deixe em branco se não precisar)"
-                    value={changeAmount}
+                    placeholder="Ou digite o valor do troco (ex: 70,00)"
+                    value={changeAmount === 'Não preciso' ? '' : changeAmount}
                     onChange={(e) => setChangeAmount(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900"
+                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 mt-1"
                   />
                 </div>
               )}
 
-              {/* RESUMO DOS VALORES */}
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-600">
+              {/* RESUMO FINANCEIRO DOS VALORES */}
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-slate-600 font-semibold">
                   <span>Subtotal dos itens</span>
-                  <span className="font-semibold text-slate-900">{formatCurrency(cartSubtotal)}</span>
+                  <span className="font-bold text-slate-800">{formatCurrency(subtotal)}</span>
                 </div>
-                {fulfillmentType === 'DELIVERY' && (
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <span>Taxa de Entrega</span>
-                    <span className="font-semibold text-slate-900">
-                      {deliveryFee > 0 ? formatCurrency(deliveryFee) : 'Grátis'}
-                    </span>
-                  </div>
-                )}
-                <div className="border-t border-slate-200 pt-2 flex items-center justify-between">
-                  <span className="text-sm font-black text-slate-900">Total a Pagar</span>
-                  <span className="text-xl font-black text-emerald-700">{formatCurrency(cartTotal)}</span>
+                <div className="flex items-center justify-between text-slate-600 font-semibold">
+                  <span>Taxa de entrega</span>
+                  <span className="font-bold text-slate-800">
+                    {fulfillmentType === 'TAKEOUT' || Number(deliveryFee || 0) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                  <span className="text-sm font-black text-slate-900">Total a pagar</span>
+                  <span className="text-xl font-black text-emerald-800">{formatCurrency(cartTotal)}</span>
                 </div>
               </div>
 
-              {/* AÇÕES DA ETAPA 4 */}
+              {/* BOTÃO PRINCIPAL DE CONFIRMAÇÃO */}
               <div className="pt-2 space-y-2">
-                <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isSubmittingOrder}
+                  onClick={handleFinishAndSubmitOrder}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900 disabled:opacity-60"
+                >
+                  {isSubmittingOrder ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Processando Pedido...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Confirmar Pedido via WhatsApp</span>
+                      <Rocket className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+
+                {/* Selo de Segurança */}
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-500 pt-1">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <span>Ambiente seguro e dados protegidos</span>
+                </div>
+
+                <div className="text-center pt-1">
                   <button
                     type="button"
                     onClick={() => setCheckoutWizardStep(fulfillmentType === 'TAKEOUT' ? 2 : 3)}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1"
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
                   >
-                    <ChevronLeft className="h-4 w-4" /> Voltar
+                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para {fulfillmentType === 'TAKEOUT' ? 'Identificação' : 'Endereço'}
                   </button>
-
-                  <button
-                    type="button"
-                    disabled={isSubmittingOrder}
-                    onClick={handleFinalizeOrder}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
-                    style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                  >
-                    {isSubmittingOrder ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Confirmar e Enviar Pedido via WhatsApp</span>
-                        <span>🚀</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Ambiente seguro e autenticado</span>
                 </div>
               </div>
             </motion.div>
           )}
 
           {/* ============================================================ */}
-          {/* PASSO 5: SUCESSO E PARABÉNS PELO PEDIDO                      */}
+          {/* ETAPA 5: PEDIDO CONCLUÍDO / ACOMPANHAMENTO AO VIVO          */}
           {/* ============================================================ */}
           {checkoutWizardStep === 5 && (
             <motion.div
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col items-center justify-center py-4 text-center"
+              className="py-4 text-center text-sm"
             >
-              <div className="relative mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
-                <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm animate-bounce">
+                <CheckCircle2 className="h-9 w-9" />
               </div>
 
-              <h3 className="text-2xl font-black tracking-tight text-slate-900">
-                Parabéns pelo seu Pedido! 🎉
+              <h3 className="mt-3 text-xl font-black text-slate-900">
+                Pedido Realizado com Sucesso! 🎉
               </h3>
-              <p className="mt-1 max-w-md text-xs font-medium text-slate-600">
-                Seu pedido foi registrado com sucesso! Acompanhe o status ao vivo:
+              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                Seu pedido foi registrado no sistema e a janela do WhatsApp foi aberta para você enviar a confirmação.
               </p>
 
-              {/* CARD DE STATUS EM TEMPO REAL (LIVE TRACKER) */}
-              <div className="mt-4 w-full overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-md text-left">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-700">
-                    Acompanhamento do Pedido #{createdDisplayId || ''}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Tempo Real
-                  </span>
-                </div>
-
-                <div className="mt-3">
-                  {liveOrderStatus === 'pending' && (
-                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 text-amber-900 border border-amber-200/60">
-                      <Clock className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold">🟡 Aguardando Confirmação do Restaurante</p>
-                        <p className="text-xs text-amber-800/80 mt-0.5">
-                          O restaurante recebeu seu pedido e está validando para iniciar o preparo.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {liveOrderStatus === 'in_preparation' && (
-                    <div className="flex items-start gap-3 rounded-xl bg-orange-50 p-3 text-orange-900 border border-orange-200/60 animate-fade-in">
-                      <ChefHat className="h-5 w-5 shrink-0 text-orange-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold">👨‍🍳 Pedido Confirmado! Em Preparo</p>
-                        <p className="text-xs text-orange-800/80 mt-0.5">
-                          Nossa cozinha já está preparando seus pratos com todo o carinho.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {liveOrderStatus === 'dispatched' && (
-                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 p-3 text-blue-900 border border-blue-200/60 animate-fade-in">
-                      <Bike className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold">🛵 Pedido a Caminho!</p>
-                        <p className="text-xs text-blue-800/80 mt-0.5">
-                          O motoboy já retirou seu pedido e está a caminho do seu endereço.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {liveOrderStatus === 'delivered' && (
-                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 text-amber-950 border border-amber-200/70 animate-fade-in">
-                      <span className="text-xl shrink-0 mt-0.5">⭐</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-black text-amber-950">Gostou do nosso atendimento?</p>
-                        <p className="text-xs text-amber-900/90 mt-0.5">
-                          Faça uma avaliação e nos ajude a crescer! Sua opinião é fundamental.
-                        </p>
-                        {(() => {
-                          const reviewUrl = (profile as any)?.googleReviewUrl || 
-                            `https://www.google.com/search?q=${encodeURIComponent(((profile?.tradeName || 'Restaurante') + ' avaliações'))}`;
-                          return (
-                            <a
-                              href={reviewUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2.5 flex items-center justify-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs py-2.5 px-3 shadow transition-all active:scale-98"
-                            >
-                              <span>⭐ Deixar Avaliação no Google ⭐</span>
-                            </a>
-                          )
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status da Notificação Push no Celular: Selo de Sucesso ou Botão Único */}
-                {(pushNotificationEnabled || (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')) ? (
-                  <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/90 py-2.5 px-3 text-xs font-bold text-emerald-800">
-                    <span className="text-sm">🔔</span>
-                    <span>Avisos no celular ativados para este pedido</span>
-                  </div>
-                ) : (
-                  typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'denied' && (
-                    <button
-                      type="button"
-                      onClick={handleRequestPushNotification}
-                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow transition-transform active:scale-98 hover:bg-slate-800"
-                    >
-                      <Bell className="h-4 w-4 text-amber-400" />
-                      <span>Avisar no meu celular quando o motoboy sair 🔔</span>
-                    </button>
-                  )
-                )}
-              </div>
-
-              {/* Resumo do Pedido Confirmado */}
-              <div className="mt-5 w-full space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-left">
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Cliente:</span>
-                  <span className="font-bold text-slate-900">{customerName}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>WhatsApp:</span>
-                  <span className="font-bold text-slate-900">{customerPhone}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Modalidade:</span>
-                  <span className="font-bold text-slate-900">
-                    {fulfillmentType === 'DELIVERY' ? '🛵 Entrega (Delivery)' : '🥡 Retirada no Balcão'}
-                  </span>
-                </div>
-                {fulfillmentType === 'DELIVERY' && (
-                  <div className="flex items-start justify-between text-xs text-slate-600">
-                    <span>Endereço:</span>
-                    <span className="font-bold text-slate-900 text-right max-w-[240px]">
-                      {street}, {number}{complement ? ` (${complement})` : ''} - {neighborhood}
+              {/* CARD DE ACOMPANHAMENTO DO STATUS DO PEDIDO (LIVE TRACKING) */}
+              <div className="mt-5 rounded-3xl border-2 border-emerald-200/90 bg-emerald-50/40 p-4 text-left space-y-3.5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
+                      Acompanhamento ao Vivo
                     </span>
                   </div>
-                )}
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Forma de Pagamento:</span>
-                  <span className="font-bold text-slate-900">
-                    {paymentMethod === 'PIX'
-                      ? '⚡ Pix'
-                      : paymentMethod === 'CREDIT'
-                        ? '💳 Cartão de Crédito'
-                        : paymentMethod === 'DEBIT'
-                          ? '💳 Cartão de Débito'
-                          : paymentMethod === 'VOUCHER'
-                            ? `🎫 ${availablePaymentMethods.voucherName || 'Vale Refeição'}`
-                            : paymentMethod === 'CASH'
-                              ? '💵 Dinheiro'
-                              : paymentMethod}
+                  {createdDisplayId && (
+                    <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-xs font-black text-white shadow-xs">
+                      #{createdDisplayId}
+                    </span>
+                  )}
+                </div>
+
+                {/* Status Badge */}
+                <div className="rounded-2xl bg-white border border-emerald-100 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      {liveOrderStatus === 'completed' ? (
+                        <Check className="h-5 w-5 stroke-[3]" />
+                      ) : liveOrderStatus === 'delivering' ? (
+                        <Rocket className="h-5 w-5" />
+                      ) : liveOrderStatus === 'ready' ? (
+                        <CheckCircle2 className="h-5 w-5" />
+                      ) : liveOrderStatus === 'in_production' ? (
+                        <ChefHat className="h-5 w-5" />
+                      ) : (
+                        <Clock className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500 font-semibold block">Status Atual</span>
+                      <span className="text-sm font-black text-slate-900">
+                        {liveOrderStatus === 'completed'
+                          ? 'Pedido Entregue / Finalizado'
+                          : liveOrderStatus === 'delivering'
+                            ? 'Saiu para Entrega 🛵'
+                            : liveOrderStatus === 'ready'
+                              ? 'Pronto para Retirada / Expedição'
+                              : liveOrderStatus === 'in_production'
+                                ? 'Na Cozinha em Preparo 👨‍🍳'
+                                : 'Aguardando Confirmação'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800 animate-pulse">
+                    Atualizando
                   </span>
                 </div>
-                <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm">
-                  <span className="font-bold text-slate-800">Total:</span>
-                  <span className="text-base font-black text-emerald-600">
-                    {formatCurrency(lastOrderTotal || cartTotal)}
-                  </span>
+
+                {/* Mensagem Explicativa Importante */}
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2.5 text-xs text-amber-900">
+                  <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                  <p className="leading-snug">
+                    <strong>Atenção:</strong> Se você deseja acompanhar o status em tempo real, <strong>não feche esta janela</strong>. Atualizamos automaticamente assim que a cozinha avançar as etapas.
+                  </p>
                 </div>
               </div>
 
-              {/* Botão Principal de Envio no WhatsApp */}
+              {/* Botão de Reenviar Mensagem WhatsApp caso tenha fechado sem querer */}
               {lastOrderText && (
-                <div className="mt-4 w-full">
+                <div className="mt-4">
                   <button
                     type="button"
                     onClick={() => {
-                      const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
-                      const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(lastOrderText)}`
+                      const phone = profile?.whatsappNumber || profile?.whatsapp_number || ''
+                      const url = `https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(lastOrderText)}`
                       window.open(url, '_blank')
                     }}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 py-3.5 text-sm font-extrabold text-white shadow-lg transition-transform active:scale-98 hover:bg-emerald-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 bg-white py-3.5 text-xs font-black text-emerald-800 shadow-sm transition-all hover:bg-emerald-50 active:scale-[0.98]"
                   >
-                    <span>Enviar Cópia no WhatsApp</span>
-                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">💬</span>
+                    <span>Reenviar Mensagem via WhatsApp</span>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs">💬</span>
                   </button>
                 </div>
               )}
@@ -3452,17 +3541,62 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <button
                 type="button"
                 onClick={handleFinishAndReset}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white shadow-xl transition-all hover:opacity-95 active:scale-[0.98]"
-                style={{ backgroundColor: 'var(--primary-color, #10B981)' }}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-xl transition-all hover:opacity-95 active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900"
               >
-                OK, Voltar ao Cardápio ✨
+                Concluir e Voltar ao Cardápio ✨
               </button>
             </motion.div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Modal Dialog: Escolha Rápida de Bairro no Topo */}
+      {/* MODAL HUMANIZADO: ÁREA DE ENTREGA E BAIRROS ATENDIDOS */}
+      <Dialog open={isNeighborhoodHelpOpen} onOpenChange={setIsNeighborhoodHelpOpen}>
+        <DialogContent className="sm:max-w-md !bg-white text-slate-900 rounded-3xl p-6 border border-slate-100 shadow-2xl">
+          <DialogHeader className="space-y-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
+              <MapPin className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-slate-900">
+              Não encontrou seu bairro?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 leading-relaxed pt-1">
+              Caso seu bairro não se encontre nessa lista é porque <strong>não trabalhamos com entregas nessa localidade no momento</strong>.
+              <br /><br />
+              Para que as refeições cheguem sempre <strong>quentinhas, crocantes e na textura ideal</strong>, mantemos um raio de entrega rigorosamente planejado.
+              <br /><br />
+              💡 <strong>Dica especial:</strong> Você pode optar pela modalidade <strong>Retirar no Balcão</strong>! Preparamos seu pedido com carinho para você buscar sem taxa de entrega e sem fila de espera.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="pt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsNeighborhoodHelpOpen(false)
+                setFulfillmentType('TAKEOUT')
+                setNeighborhood('Balcão')
+                setStreet('Retirada no Balcão')
+                setNumber('0')
+                setCheckoutWizardStep(4)
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-md bg-emerald-800 hover:bg-emerald-900 transition-all"
+            >
+              <Store className="h-4 w-4" />
+              <span>Mudar para Retirar no Balcão</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsNeighborhoodHelpOpen(false)}
+              className="w-full rounded-2xl border border-slate-200 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
+            >
+              Entendido, vou verificar meu endereço
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+{/* Modal Dialog: Escolha Rápida de Bairro no Topo */}
       <Dialog open={isNeighborhoodPickerOpen} onOpenChange={setIsNeighborhoodPickerOpen}>
         <DialogContent className="rounded-3xl p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl">
           <DialogHeader className="space-y-2">
