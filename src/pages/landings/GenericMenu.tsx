@@ -704,6 +704,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [customReferenceNote, setCustomReferenceNote] = useState('')
   const [selectedReferenceNeighbor, setSelectedReferenceNeighbor] = useState('')
   const [acceptedStandardFee, setAcceptedStandardFee] = useState(false)
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const formatPhone = (val: string) => {
     const v = val.replace(/\D/g, '').substring(0, 11)
@@ -1463,7 +1464,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           change_for: changeAmount ? Number(changeAmount) : undefined,
           delivery_fee: isTakeout ? 0 : resolvedDeliveryFee,
           total_amount: cartTotal,
-          notes: `${isTakeout ? 'Retirada no Balcão' : 'Entrega (Delivery)'}${customReferenceNote ? ` [${customReferenceNote}]` : ''}`,
+          notes: `${isTakeout ? 'Retirada no Balcão' : 'Entrega (Delivery)'}${customReferenceNote ? ` [${customReferenceNote}]` : ''}${deliveryCoords ? ` (GPS: ${deliveryCoords.lat.toFixed(6)},${deliveryCoords.lng.toFixed(6)})` : ''}`,
           items: cartItems.map((item) => ({
             product_id: item.product.id,
             name: item.displayName || item.product.name,

@@ -92,7 +92,13 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
               if (mapInstanceRef.current) {
                 mapInstanceRef.current.setView([lat, lng], 17, { animate: true })
               }
-              if (onCoordinatesChange) onCoordinatesChange({ lat, lng })
+              if (onCoordinatesChange) {
+                try {
+                  onCoordinatesChange({ lat, lng })
+                } catch (e) {
+                  console.warn('onCoordinatesChange error:', e)
+                }
+              }
               return
             }
           }
@@ -116,7 +122,13 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
           if (mapInstanceRef.current) {
             mapInstanceRef.current.setView([lat, lng], 17, { animate: true })
           }
-          if (onCoordinatesChange) onCoordinatesChange({ lat, lng })
+          if (onCoordinatesChange) {
+            try {
+              onCoordinatesChange({ lat, lng })
+            } catch (e) {
+              console.warn('onCoordinatesChange error:', e)
+            }
+          }
           return
         }
       } catch {
@@ -136,7 +148,13 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
           if (mapInstanceRef.current) {
             mapInstanceRef.current.setView([match.lat, match.lng], 16, { animate: true })
           }
-          if (onCoordinatesChange) onCoordinatesChange({ lat: match.lat, lng: match.lng })
+          if (onCoordinatesChange) {
+            try {
+              onCoordinatesChange({ lat: match.lat, lng: match.lng })
+            } catch (e) {
+              console.warn('onCoordinatesChange error:', e)
+            }
+          }
           return
         }
       }
@@ -179,7 +197,13 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
         if (activeMarkerRef.current) {
           activeMarkerRef.current.setLatLng(e.latlng)
         }
-        if (onCoordinatesChange) onCoordinatesChange(newCoords)
+        if (onCoordinatesChange) {
+          try {
+            onCoordinatesChange(newCoords)
+          } catch (e) {
+            console.warn('onCoordinatesChange error:', e)
+          }
+        }
       })
 
       setTimeout(() => {
@@ -247,7 +271,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
       html: `
         <div style="width: 140px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin: 0; padding: 0; pointer-events: auto; cursor: grab; user-select: none;">
           <div style="background: #065f46; color: #ffffff; font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 9999px; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid #ffffff; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
-            🏠 Casa (Selecionado)
+            📍 Local de Entrega (Arraste para ajustar)
           </div>
           <svg width="28" height="32" viewBox="0 0 24 28" fill="none" style="display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
             <path d="M12 0C5.37258 0 0 5.37258 0 12C0 20.25 12 28 12 28C12 28 24 20.25 24 12C24 5.37258 18.6274 0 12 0Z" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
