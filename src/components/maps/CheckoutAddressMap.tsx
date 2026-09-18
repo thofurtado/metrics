@@ -222,9 +222,9 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
         }
       })
 
-      setTimeout(() => {
-        map.invalidateSize()
-      }, 250)
+      setTimeout(() => { map.invalidateSize() }, 100)
+      setTimeout(() => { map.invalidateSize() }, 300)
+      setTimeout(() => { map.invalidateSize() }, 600)
     }
 
     return () => {
@@ -280,23 +280,28 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
       })
     }
 
-    // 3.2 Marcador Ativo Selecionado (Pino Verde Fixo com Ancoragem Absoluta na Ponta do Alfinete)
-    // Sem transforms internos conflitantes: iconSize [140, 58] e iconAnchor [70, 58]
+    // 3.2 Marcador Ativo Selecionado (Alvo Verde com Pílula "Portão de entrega selecionado" - Fiel ao Stitch)
     const activeIcon = L.divIcon({
       className: 'custom-active-pin-container',
       html: `
-        <div style="width: 140px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin: 0; padding: 0; pointer-events: auto; cursor: grab; user-select: none;">
-          <div style="background: #065f46; color: #ffffff; font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 9999px; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid #ffffff; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
-            📍 Local de Entrega (Arraste para ajustar)
+        <div style="width: 220px; height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin: 0; padding: 0; pointer-events: auto; cursor: grab; user-select: none;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #10b981; border: 3.5px solid #ffffff; box-shadow: 0 4px 16px rgba(16,185,129,0.5); display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="22" y1="12" x2="18" y2="12"></line>
+              <line x1="6" y1="12" x2="2" y2="12"></line>
+              <line x1="12" y1="6" x2="12" y2="2"></line>
+              <line x1="12" y1="22" x2="12" y2="18"></line>
+            </svg>
           </div>
-          <svg width="28" height="32" viewBox="0 0 24 28" fill="none" style="display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));">
-            <path d="M12 0C5.37258 0 0 5.37258 0 12C0 20.25 12 28 12 28C12 28 24 20.25 24 12C24 5.37258 18.6274 0 12 0Z" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
-            <circle cx="12" cy="11" r="4.5" fill="#ffffff"/>
-          </svg>
+          <div style="background: #ffffff; color: #0f172a; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.12); border: 1.5px solid #e2e8f0; margin-top: 5px; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+            Portão de entrega selecionado
+          </div>
         </div>
       `,
-      iconSize: [140, 58],
-      iconAnchor: [70, 58],
+      iconSize: [220, 76],
+      iconAnchor: [110, 22],
     })
 
     const activeMarker = L.marker([currentCoords.lat, currentCoords.lng], {
@@ -410,90 +415,48 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
   }
 
   return (
-    <div className="space-y-1.5">
-      {/* BARRA DE ATIVAÇÃO RÁPIDA DE GPS DO CELULAR */}
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={handleGetGpsLocation}
-          disabled={isLocatingGps}
-          className="flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 text-xs font-black shadow-sm transition-all disabled:opacity-75"
-        >
-          {isLocatingGps ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-white" />
-              <span>Buscando sinal GPS do celular...</span>
-            </>
-          ) : (
-            <>
-              <Navigation className="h-4 w-4 text-white" />
-              <span>Usar GPS do Celular</span>
-            </>
-          )}
-        </button>
-
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-          {isGpsActive ? (
-            <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-              GPS Fixado
-            </span>
-          ) : (
-            <span>Toque ou arraste para ajustar</span>
-          )}
-        </div>
-      </div>
-
-      <div className="relative w-full h-44 sm:h-48 rounded-3xl overflow-hidden border-2 border-slate-200/90 shadow-sm bg-slate-100 group">
+    <div className="relative w-full h-72 sm:h-80 rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm bg-slate-100 group">
       {/* Container do Mapa Leaflet */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Dica Superior: Instrução para ajuste fino */}
-      <div className="absolute top-2.5 inset-x-3 z-10 flex items-center justify-center pointer-events-none">
-        <div className="flex items-center gap-1.5 rounded-full bg-slate-900/85 backdrop-blur-md px-3 py-1 text-[10px] font-extrabold text-white shadow-md border border-white/20">
-          <span>👆</span>
-          <span>Toque no mapa ou arraste o pino para fixar sua rua</span>
+      {/* CONTROLES FLUTUANTES NO TOPO DIREITO (FIEL À IMAGEM 3 DO STITCH) */}
+      <div className="absolute right-3 top-3 z-10 flex flex-col items-end gap-2.5 pointer-events-auto">
+        {/* Botão Meu GPS com ícone verde e texto limpo */}
+        <button
+          type="button"
+          onClick={() => handleGetGpsLocation(true)}
+          disabled={isLocatingGps}
+          className="flex items-center gap-1.5 rounded-2xl bg-white/95 backdrop-blur-md px-3.5 py-2 text-xs font-black text-slate-800 shadow-md border border-slate-200/90 hover:bg-white active:scale-95 transition-all disabled:opacity-70"
+          title="Localizar meu ponto exato via GPS"
+        >
+          {isLocatingGps ? (
+            <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+          ) : (
+            <Crosshair className="h-4 w-4 text-emerald-600 stroke-[2.5]" />
+          )}
+          <span>Meu GPS</span>
+        </button>
+
+        {/* Card Vertical de Zoom (+ / -) */}
+        <div className="flex flex-col items-center rounded-2xl bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 overflow-hidden w-10">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="flex h-9 w-full items-center justify-center text-slate-800 hover:bg-slate-50 active:scale-90 transition-all border-b border-slate-100 font-extrabold text-base"
+            title="Aproximar mapa"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="flex h-9 w-full items-center justify-center text-slate-800 hover:bg-slate-50 active:scale-90 transition-all font-extrabold text-base"
+            title="Afastar mapa"
+          >
+            −
+          </button>
         </div>
       </div>
-
-      {/* Controles Flutuantes de Zoom e Recentralizar */}
-      <div className="absolute right-2.5 bottom-12 z-10 flex flex-col gap-1.5 pointer-events-auto">
-        <button
-          type="button"
-          onClick={handleZoomIn}
-          className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-slate-800 shadow-md border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all"
-          title="Aproximar mapa"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleZoomOut}
-          className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-slate-800 shadow-md border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all"
-          title="Afastar mapa"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleRecenter}
-          className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-md hover:bg-emerald-800 active:scale-95 transition-all"
-          title="Recentralizar no meu endereço"
-        >
-          <Crosshair className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Tarja Flutuante Inferior (Entregar Aqui) */}
-      <div className="absolute bottom-2 inset-x-3 z-10 flex items-center justify-center pointer-events-none">
-        <div className="flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md px-4 py-1.5 text-xs font-black text-slate-800 shadow-md border border-slate-200/80 max-w-full truncate">
-          <Rocket className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-          <span className="truncate">
-            Entregar aqui: {street ? `${street}, nº ${number || 'S/N'}` : 'Localizando seu endereço...'}
-          </span>
-        </div>
-      </div>
-    </div>
     </div>
   )
 }

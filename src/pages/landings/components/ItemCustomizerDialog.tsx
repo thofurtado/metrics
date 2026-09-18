@@ -387,7 +387,7 @@ export function ItemCustomizerDialog({
           e.preventDefault()
           document.body.style.pointerEvents = ''
         }}
-        className="max-h-[94vh] sm:max-h-[90vh] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden relative"
+        className="fixed z-[9999] inset-0 sm:inset-auto sm:left-[50%] sm:top-[50%] sm:-translate-x-1/2 sm:-translate-y-1/2 h-[100dvh] sm:h-auto sm:max-h-[90vh] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl overflow-hidden p-0 sm:rounded-3xl !bg-white text-slate-900 border-none shadow-2xl flex flex-col [&>button]:hidden"
       >
         {/* BOTÃO FECHAR FIXO NO TOPO DIREITO (SEMPRE ACESSÍVEL E CLICÁVEL, NUNCA SOME NO SCROLL) */}
         <button
@@ -970,7 +970,7 @@ export function ItemCustomizerDialog({
         </div>
 
         {/* RODAPÉ COM CONTROLE DE QUANTIDADE E CONFIRMAÇÃO */}
-        <div className="border-t border-slate-100 bg-white p-4 sm:p-5 shrink-0">
+        <div className="border-t border-slate-100 bg-white p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
           {acceptsFractions && fractionCount > 1 && selectedFlavors.filter(Boolean).length === fractionCount && (
             <p className="mb-2 text-center text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5 animate-fade-in">
               <Check className="h-4 w-4 stroke-[3]" /> {fractionCount} de {fractionCount} Sabores selecionados com sucesso!
