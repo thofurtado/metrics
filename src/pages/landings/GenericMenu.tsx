@@ -62,6 +62,7 @@ import {
   UtensilsCrossed,
   X,
 } from 'lucide-react'
+import QRCode from 'qrcode'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -561,6 +562,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     'PIX' | 'CREDIT' | 'DEBIT' | 'CASH' | 'VOUCHER' | string
   >('PIX')
 
+  // Chave Pix da loja (configurada no White Label; usa o WhatsApp da loja se não houver chave)
+  const pixKeyResolved: string = profile?.pixKey || profile?.whatsappNumber || ''
+
   // Mapeamento dinâmico das formas de pagamento ativas da loja (vindas do perfil público da empresa)
   const availablePaymentMethods = useMemo(() => {
     const methods = profile?.paymentMethods
@@ -616,7 +620,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       return {
         hasCustomConfig: true,
-        pix: hasPix,
+        pix: hasPix && !!pixKeyResolved,
         credit: hasCredit,
         debit: hasDebit,
         cash: hasCash,
@@ -629,7 +633,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
     return {
       hasCustomConfig: false,
-      pix: true,
+      pix: !!pixKeyResolved,
       credit: true,
       debit: true,
       cash: true,
@@ -638,7 +642,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       extraMethods: [],
       methodsList: [],
     }
-  }, [profile?.paymentMethods])
+  }, [profile?.paymentMethods, pixKeyResolved])
 
   // Garante que o método selecionado seja sempre um dos permitidos e ativos da loja
   useEffect(() => {
@@ -662,27 +666,65 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       }
     }
   }, [availablePaymentMethods, paymentMethod])
+  const payAt = fulfillmentType === 'TAKEOUT' ? 'na Retirada' : 'na Entrega'
+  const paymentOptions: {
+    value: string
+    title: string
+    desc: string
+    Icon: typeof QrCode
+    tint: string
+  }[] = [
+    availablePaymentMethods.pix && {
+      value: 'PIX',
+      title: 'Pix',
+      desc: 'QR Code ou copia e cola',
+      Icon: QrCode,
+      tint: 'bg-emerald-100 text-emerald-700',
+    },
+    availablePaymentMethods.credit && {
+      value: 'CREDIT',
+      title: `Crédito ${payAt}`,
+      desc: fulfillmentType === 'TAKEOUT' ? 'Na maquininha do balcão' : 'Levamos a maquininha',
+      Icon: CreditCard,
+      tint: 'bg-slate-100 text-slate-700',
+    },
+    availablePaymentMethods.debit && {
+      value: 'DEBIT',
+      title: `Débito ${payAt}`,
+      desc: fulfillmentType === 'TAKEOUT' ? 'Na maquininha do balcão' : 'Levamos a maquininha',
+      Icon: CreditCard,
+      tint: 'bg-slate-100 text-slate-700',
+    },
+    availablePaymentMethods.cash && {
+      value: 'CASH',
+      title: 'Dinheiro',
+      desc: fulfillmentType === 'TAKEOUT' ? 'Pague no balcão' : 'Com ou sem troco',
+      Icon: Banknote,
+      tint: 'bg-slate-100 text-slate-700',
+    },
+    availablePaymentMethods.voucher && {
+      value: 'VOUCHER',
+      title: availablePaymentMethods.voucherName || 'Vale Refeição',
+      desc: `Na maquininha ${payAt.toLowerCase()}`,
+      Icon: Ticket,
+      tint: 'bg-amber-100 text-amber-700',
+    },
+    ...(availablePaymentMethods.extraMethods || []).map((m: any) => ({
+      value: m.name as string,
+      title: m.name as string,
+      desc: `Pague ${payAt.toLowerCase()}`,
+      Icon: CreditCard,
+      tint: 'bg-slate-100 text-slate-700',
+    })),
+  ].filter(Boolean) as any
+
   const [changeAmount, setChangeAmount] = useState('')
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
   const [isCopiedPix, setIsCopiedPix] = useState(false)
-  const [pixTimerSeconds, setPixTimerSeconds] = useState(15 * 60)
+  const [pixQrDataUrl, setPixQrDataUrl] = useState('')
   const [isManualAddressMode, setIsManualAddressMode] = useState(false)
   const [isNeighborhoodHelpOpen, setIsNeighborhoodHelpOpen] = useState(false)
 
-  useEffect(() => {
-    if (checkoutWizardStep === 5 && paymentMethod === 'PIX') {
-      const timer = setInterval(() => {
-        setPixTimerSeconds((prev) => (prev > 0 ? prev - 1 : 0))
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [checkoutWizardStep, paymentMethod])
-
-  const formatCountdown = (totalSecs: number) => {
-    const m = Math.floor(totalSecs / 60)
-    const s = totalSecs % 60
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
 
   // Estados de Busca do Cliente Marujo & Múltiplos Endereços
   const [clientFound, setClientFound] = useState(false)
@@ -1454,7 +1496,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const isMinOrderSatisfied = cartSubtotal >= minOrderValue
 
   const pixBRCodePayload = useMemo(() => {
-    const key = profile?.pixKey || profile?.whatsappNumber || ''
+    const key = pixKeyResolved
     if (!key) return ''
     return generatePixBRCode({
       pixKey: key,
@@ -1463,6 +1505,25 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       amount: cartTotal,
     })
   }, [profile, tenantName, cartTotal])
+
+  // QR Code do Pix gerado no próprio aparelho (nada é enviado a serviços externos)
+  useEffect(() => {
+    let active = true
+    if (!pixBRCodePayload) {
+      setPixQrDataUrl('')
+      return
+    }
+    QRCode.toDataURL(pixBRCodePayload, { width: 320, margin: 1, errorCorrectionLevel: 'M' })
+      .then((url: string) => {
+        if (active) setPixQrDataUrl(url)
+      })
+      .catch(() => {
+        if (active) setPixQrDataUrl('')
+      })
+    return () => {
+      active = false
+    }
+  }, [pixBRCodePayload])
 
   const handleOpenCheckout = () => {
     if (!storeStatus.isOpen) {
@@ -1720,6 +1781,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
       if (paymentMethod === 'PIX') {
         text += `💳 *Forma de Pagamento:* Pix
+📎 _Vou enviar o comprovante do Pix nesta conversa._
 `
       } else if (paymentMethod === 'CREDIT') {
         text += `💳 *Forma de Pagamento:* Cartão de Crédito (na entrega)
@@ -3494,300 +3556,166 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4 py-2 text-sm"
             >
-              <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-                  Forma de Pagamento
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 leading-snug">
-                  Escolha como prefere pagar seu pedido de forma rápida e segura.
-                </p>
-              </div>
-
-              {/* LISTA VERTICAL DE FORMAS DE PAGAMENTO COM RÁDIO */}
+              {/* Formas de pagamento habilitadas na loja */}
               <div className="space-y-2.5">
-                {/* PIX */}
-                {availablePaymentMethods.pix && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('PIX')}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
-                      paymentMethod === 'PIX'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                        <QrCode className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-slate-900">Pix</span>
-                          <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2 py-0.2 text-[9px] font-black uppercase text-emerald-800 whitespace-nowrap">
-                            Aprovação Imediata
-                          </span>
+                {paymentOptions.map((opt) => {
+                  const selected = paymentMethod === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(opt.value)}
+                      className={`w-full flex items-center justify-between rounded-2xl border-2 p-4 text-left transition-all ${
+                        selected
+                          ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${opt.tint}`}>
+                          <opt.Icon className="h-6 w-6" />
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">
-                          Pague via QR Code ou Copia e Cola
-                        </p>
+                        <div className="min-w-0">
+                          <span className="block truncate text-base font-black text-slate-900">{opt.title}</span>
+                          <p className="mt-0.5 truncate text-sm text-slate-500">{opt.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
-                      paymentMethod === 'PIX' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
-                    }`}>
-                      {paymentMethod === 'PIX' && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                )}
-
-                {/* CRÉDITO NA ENTREGA */}
-                {availablePaymentMethods.credit && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('CREDIT')}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
-                      paymentMethod === 'CREDIT'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                        <CreditCard className="h-6 w-6" />
+                      <div
+                        className={`ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all ${
+                          selected ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
+                        }`}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                       </div>
-                      <div className="min-w-0">
-                        <span className="text-sm font-black text-slate-900 block">Crédito na Entrega</span>
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">Levamos a maquininha</p>
-                      </div>
-                    </div>
-                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
-                      paymentMethod === 'CREDIT' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
-                    }`}>
-                      {paymentMethod === 'CREDIT' && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                )}
-
-                {/* DÉBITO NA ENTREGA */}
-                {availablePaymentMethods.debit && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('DEBIT')}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
-                      paymentMethod === 'DEBIT'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                        <CreditCard className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-sm font-black text-slate-900 block">Débito na Entrega</span>
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">Visa, Master, Elo</p>
-                      </div>
-                    </div>
-                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
-                      paymentMethod === 'DEBIT' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
-                    }`}>
-                      {paymentMethod === 'DEBIT' && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                )}
-
-                {/* DINHEIRO */}
-                {availablePaymentMethods.cash && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('CASH')}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
-                      paymentMethod === 'CASH'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                        <Banknote className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-sm font-black text-slate-900 block">Dinheiro</span>
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">Com ou sem troco</p>
-                      </div>
-                    </div>
-                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
-                      paymentMethod === 'CASH' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
-                    }`}>
-                      {paymentMethod === 'CASH' && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                )}
-
-                {/* VALE REFEIÇÃO (SOMENTE SE ATIVO NA LOJA) */}
-                {availablePaymentMethods.voucher && (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('VOUCHER')}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left shadow-xs ${
-                      paymentMethod === 'VOUCHER'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                        <Ticket className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-sm font-black text-slate-900 block">{availablePaymentMethods.voucherName}</span>
-                        <p className="text-xs text-slate-500 mt-0.5 truncate">Pague na maquininha na entrega</p>
-                      </div>
-                    </div>
-                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ml-2 ${
-                      paymentMethod === 'VOUCHER' ? 'bg-emerald-700 text-white' : 'border-2 border-slate-300'
-                    }`}>
-                      {paymentMethod === 'VOUCHER' && <Check className="h-3 w-3 stroke-[3]" />}
-                    </div>
-                  </button>
-                )}
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* CARD DE QR CODE PIX OFICIAL (FIEL AO STITCH) */}
+              {/* Pix: o pagamento não é confirmado automaticamente, então o passo a passo é explícito */}
               {paymentMethod === 'PIX' && (
-                <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm flex flex-col items-center space-y-3.5">
-                  <div className="relative p-2.5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center justify-center">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || 'CHAVE_PIX')}`}
-                      alt="QR Code Pix"
-                      className="h-44 w-44 object-contain rounded-xl"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md border-2 border-white">
-                        <Check className="h-4 w-4 stroke-[3]" />
-                      </div>
+                <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-center">
+                      <span className="block text-sm font-semibold text-slate-500">Valor do Pix</span>
+                      <span className="text-3xl font-black text-slate-950">{formatCurrency(cartTotal)}</span>
                     </div>
+                    {pixQrDataUrl && (
+                      <img
+                        src={pixQrDataUrl}
+                        alt="QR Code Pix"
+                        className="h-48 w-48 rounded-2xl border border-slate-100 bg-white object-contain p-2"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPixKey(pixBRCodePayload)}
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-black text-white shadow-md transition-all hover:bg-slate-800 active:scale-[0.98]"
+                    >
+                      {isCopiedPix ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      <span>{isCopiedPix ? 'Código copiado' : 'Copiar código Pix'}</span>
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleCopyPixKey(pixBRCodePayload || profile?.pixKey || profile?.whatsappNumber || '')}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 px-4 text-xs font-black text-white shadow-md transition-all active:scale-[0.98] bg-slate-900 hover:bg-slate-800"
-                  >
-                    {isCopiedPix ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                    <span>{isCopiedPix ? '✓ Código Pix Copiado com Sucesso!' : 'Copiar Código Pix (Copia e Cola)'}</span>
-                  </button>
+                  <ol className="space-y-2.5">
+                    {[
+                      'Pague no app do seu banco com o QR Code ou o código copiado.',
+                      'Volte aqui e toque em "Confirmar e enviar comprovante".',
+                      'Anexe o comprovante na conversa do WhatsApp que vai abrir.',
+                    ].map((text, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm font-semibold leading-snug text-slate-700">{text}</span>
+                      </li>
+                    ))}
+                  </ol>
 
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-600">
-                    <Clock className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Código válido por <strong className="text-slate-900">{formatCountdown(pixTimerSeconds)} min</strong></span>
+                  <div className="flex items-start gap-2 rounded-2xl bg-amber-50 px-3.5 py-3 text-sm font-bold text-amber-900">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>Seu pedido só é liberado depois que recebermos o comprovante.</span>
                   </div>
                 </div>
               )}
 
-              {/* OPÇÃO DE TROCO EM DINHEIRO */}
+              {/* Troco em dinheiro */}
               {paymentMethod === 'CASH' && fulfillmentType === 'DELIVERY' && (
-                <div className="rounded-3xl border border-slate-200 bg-white p-4 space-y-2.5">
-                  <label className="text-xs font-bold text-slate-800 block">Precisa de troco para quanto?</label>
+                <div className="space-y-2.5 rounded-3xl border border-slate-200 bg-white p-4">
+                  <label className="block text-sm font-bold text-slate-800">Precisa de troco para quanto?</label>
                   <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setChangeAmount('Não preciso')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                        changeAmount === 'Não preciso'
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Não preciso
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setChangeAmount('50,00')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                        changeAmount === '50,00'
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      R$ 50,00
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setChangeAmount('100,00')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                        changeAmount === '100,00'
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      R$ 100,00
-                    </button>
+                    {['Não preciso', '50,00', '100,00'].map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setChangeAmount(v)}
+                        className={`rounded-xl border py-2.5 text-sm font-bold transition-all ${
+                          changeAmount === v
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {v === 'Não preciso' ? v : `R$ ${v}`}
+                      </button>
+                    ))}
                   </div>
                   <input
                     type="text"
-                    placeholder="Ou digite o valor do troco (ex: 70,00)"
+                    inputMode="decimal"
+                    placeholder="Ou digite o valor (ex: 70,00)"
                     value={changeAmount === 'Não preciso' ? '' : changeAmount}
                     onChange={(e) => setChangeAmount(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 mt-1"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-base font-medium text-slate-900"
                   />
                 </div>
               )}
 
-              {/* RESUMO FINANCEIRO DOS VALORES */}
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 space-y-2 text-xs">
-                <div className="flex items-center justify-between text-slate-600 font-semibold">
-                  <span>Subtotal dos itens</span>
+              {/* Resumo dos valores */}
+              <div className="space-y-2 rounded-2xl bg-slate-50 p-4 text-sm">
+                <div className="flex items-center justify-between font-semibold text-slate-600">
+                  <span>Subtotal</span>
                   <span className="font-bold text-slate-800">{formatCurrency(cartSubtotal)}</span>
                 </div>
-                <div className="flex items-center justify-between text-slate-600 font-semibold">
-                  <span>Taxa de entrega</span>
+                <div className="flex items-center justify-between font-semibold text-slate-600">
+                  <span>Entrega</span>
                   <span className="font-bold text-slate-800">
                     {fulfillmentType === 'TAKEOUT' || parseDeliveryFee(deliveryFee) === 0 ? 'Grátis' : formatCurrency(deliveryFee)}
                   </span>
                 </div>
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-sm font-black text-slate-900">Total a pagar</span>
-                  <span className="text-xl font-black text-emerald-800">{formatCurrency(cartTotal)}</span>
+                <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+                  <span className="text-base font-black text-slate-900">Total</span>
+                  <span className="text-2xl font-black text-emerald-800">{formatCurrency(cartTotal)}</span>
                 </div>
               </div>
 
-              {/* BOTÃO PRINCIPAL DE CONFIRMAÇÃO */}
-              <div className="pt-2 space-y-2">
+              {/* Ação principal fixa no rodapé */}
+              <div className="sticky bottom-0 -mx-5 sm:-mx-6 flex items-center gap-2 border-t border-slate-100 bg-white px-5 sm:px-6 pt-3 pb-1">
                 <button
                   type="button"
-                  disabled={isSubmittingOrder}
+                  aria-label="Voltar"
+                  onClick={() => setCheckoutWizardStep(fulfillmentType === 'TAKEOUT' ? 2 : 3)}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmittingOrder || !paymentMethod}
                   onClick={handleFinalizeOrder}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white shadow-xl transition-all active:scale-[0.98] bg-emerald-800 hover:bg-emerald-900 disabled:opacity-60"
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-800 text-sm font-black text-white shadow-lg ring-4 ring-emerald-500/25 transition-all hover:bg-emerald-900 active:scale-[0.98] disabled:opacity-60 disabled:ring-0"
                 >
                   {isSubmittingOrder ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Processando Pedido...</span>
+                      <span>Enviando pedido...</span>
                     </>
                   ) : (
                     <>
-                      <span>Confirmar Pedido via WhatsApp</span>
+                      <span>{paymentMethod === 'PIX' ? 'Confirmar e enviar comprovante' : 'Confirmar pedido'}</span>
                       <Rocket className="h-4 w-4" />
                     </>
                   )}
                 </button>
-
-                {/* Selo de Segurança */}
-                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-500 pt-1">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  <span>Ambiente seguro e dados protegidos</span>
-                </div>
-
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutWizardStep(fulfillmentType === 'TAKEOUT' ? 2 : 3)}
-                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" /> Voltar para {fulfillmentType === 'TAKEOUT' ? 'Identificação' : 'Endereço'}
-                  </button>
-                </div>
               </div>
             </motion.div>
           )}
@@ -3813,6 +3741,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
               <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
                 Seu pedido foi registrado no sistema e a janela do WhatsApp foi aberta para você enviar a confirmação.
               </p>
+              {paymentMethod === 'PIX' && (
+                <p className="mx-auto mt-3 max-w-sm rounded-2xl bg-amber-50 px-3.5 py-3 text-sm font-bold text-amber-900">
+                  Envie o comprovante do Pix na conversa do WhatsApp para liberarmos seu pedido.
+                </p>
+              )}
 
               {/* CARD DE ACOMPANHAMENTO DO STATUS DO PEDIDO (LIVE TRACKING - FIEL AO STITCH IMAGEM 3) */}
               {(() => {
