@@ -3014,6 +3014,21 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 zipcode={zipcode}
                 savedAddresses={savedAddresses}
                 onCoordinatesChange={(coords) => setDeliveryCoords(coords)}
+                onAddressResolved={(resolved) => {
+                  if (resolved.street && (!street || street.trim().length < 3)) {
+                    setStreet(resolved.street)
+                  }
+                  if (resolved.number && !number) {
+                    setNumber(resolved.number)
+                  }
+                  if (resolved.neighborhood) {
+                    const matched = matchNeighborhoodWithConfig(resolved.neighborhood)
+                    setNeighborhood(matched || resolved.neighborhood)
+                  }
+                  if (resolved.zipcode && !zipcode) {
+                    setZipcode(formatCep(resolved.zipcode.replace(/\D/g, '')))
+                  }
+                }}
                 onSelectSavedAddress={(addr) => {
                   setStreet(addr.street || '')
                   setNumber(addr.number || '')

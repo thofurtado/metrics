@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Rocket, Crosshair, ZoomIn, ZoomOut } from 'lucide-react'
+import { Rocket, Crosshair, ZoomIn, ZoomOut, Navigation, Loader2 } from 'lucide-react'
 import { CARAGUATATUBA_NEIGHBORHOODS } from '@/data/geo/caraguatatuba-neighborhoods'
 
 export interface SavedAddressItem {
@@ -25,6 +25,13 @@ interface CheckoutAddressMapProps {
   savedAddresses?: SavedAddressItem[]
   onSelectSavedAddress?: (addr: SavedAddressItem) => void
   onCoordinatesChange?: (coords: { lat: number; lng: number }) => void
+  onAddressResolved?: (resolved: {
+    street?: string
+    number?: string
+    neighborhood?: string
+    city?: string
+    zipcode?: string
+  }) => void
 }
 
 // Coordenadas centrais padrão (Caraguatatuba Centro / Litoral Paulista)
@@ -39,12 +46,16 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
   savedAddresses = [],
   onSelectSavedAddress,
   onCoordinatesChange,
+  onAddressResolved,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersGroupRef = useRef<L.LayerGroup | null>(null)
   const activeMarkerRef = useRef<L.Marker | null>(null)
   const lastGeocodedKeyRef = useRef<string>('')
+  const isUserGpsFixedRef = useRef<boolean>(false)
+  const [isLocatingGps, setIsLocatingGps] = useState(false)
+  const [isGpsActive, setIsGpsActive] = useState(false)
 
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>(() => {
     if (neighborhood) {
@@ -61,6 +72,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
     let isMounted = true
 
     async function resolveCoordinates() {
+      if (isUserGpsFixedRef.current) return
       if (!street || street.trim().length < 3) return
       const currentKey = `${street.trim()}|${(number || '').trim()}|${(neighborhood || '').trim()}|${(zipcode || '').trim()}|${(city || '').trim()}`
       if (currentKey === lastGeocodedKeyRef.current) return
@@ -192,6 +204,8 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
 
       // Clique no mapa move o pino diretamente para o ponto clicado
       map.on('click', (e: L.LeafletMouseEvent) => {
+        isUserGpsFixedRef.current = true
+        setIsGpsActive(true)
         const newCoords = { lat: e.latlng.lat, lng: e.latlng.lng }
         setCurrentCoords(newCoords)
         if (activeMarkerRef.current) {
@@ -291,6 +305,8 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
 
     // Permite que o cliente arraste o pino para a sua casa exata na rua
     activeMarker.on('dragend', (e: any) => {
+      isUserGpsFixedRef.current = true
+      setIsGpsActive(true)
       const pos = e.target.getLatLng()
       const newCoords = { lat: pos.lat, lng: pos.lng }
       setCurrentCoords(newCoords)
@@ -309,14 +325,120 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
     if (mapInstanceRef.current) mapInstanceRef.current.zoomOut()
   }
 
-  const handleRecenter = () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([currentCoords.lat, currentCoords.lng], 17, { animate: true })
+  const handleGetGpsLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Seu navegador ou celular não possui suporte à localização GPS.')
+      return
     }
+
+    setIsLocatingGps(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setIsLocatingGps(false)
+        setIsGpsActive(true)
+        isUserGpsFixedRef.current = true
+
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        const gpsCoords = { lat, lng }
+
+        setCurrentCoords(gpsCoords)
+
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setView([lat, lng], 18, { animate: true })
+        }
+
+        if (onCoordinatesChange) {
+          try {
+            onCoordinatesChange(gpsCoords)
+          } catch (e) {
+            console.warn('onCoordinatesChange error:', e)
+          }
+        }
+
+        // Geocodificação reversa cadastral via ArcGIS para preencher rua e bairro
+        try {
+          const revUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?location=${lng},${lat}&f=json`
+          const res = await fetch(revUrl)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.address && onAddressResolved) {
+              const addr = data.address
+              const resolvedStreet = addr.Address ? addr.Address.replace(/\s+\d+$/, '') : (addr.Match_addr?.split(',')[0] || '')
+              onAddressResolved({
+                street: resolvedStreet,
+                number: addr.AddNum || '',
+                neighborhood: addr.Neighborhood || addr.District || '',
+                city: addr.City || 'Caraguatatuba',
+                zipcode: addr.Postal || '',
+              })
+            }
+          }
+        } catch (revErr) {
+          console.warn('Reverse geocode fallback:', revErr)
+        }
+      },
+      (err) => {
+        setIsLocatingGps(false)
+        console.warn('GPS error:', err)
+        if (err.code === 1) {
+          alert('Permissão de localização negada. Ative o GPS e permita o acesso à localização no navegador para usar o localizador.')
+        } else if (err.code === 2) {
+          alert('Sinal de GPS indisponível no momento. Toque no mapa ou arraste o pino para indicar seu endereço.')
+        } else if (err.code === 3) {
+          alert('Tempo esgotado ao buscar sinal GPS. Tente novamente ou arraste o pino no mapa.')
+        } else {
+          alert('Não foi possível obter a localização GPS. Toque no mapa para marcar seu endereço.')
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    )
+  }
+
+  const handleRecenter = () => {
+    handleGetGpsLocation()
   }
 
   return (
-    <div className="relative w-full h-44 sm:h-48 rounded-3xl overflow-hidden border-2 border-slate-200/90 shadow-sm bg-slate-100 group">
+    <div className="space-y-1.5">
+      {/* BARRA DE ATIVAÇÃO RÁPIDA DE GPS DO CELULAR */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleGetGpsLocation}
+          disabled={isLocatingGps}
+          className="flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 text-xs font-black shadow-sm transition-all disabled:opacity-75"
+        >
+          {isLocatingGps ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-white" />
+              <span>Buscando sinal GPS do celular...</span>
+            </>
+          ) : (
+            <>
+              <Navigation className="h-4 w-4 text-white" />
+              <span>Usar GPS do Celular</span>
+            </>
+          )}
+        </button>
+
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+          {isGpsActive ? (
+            <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              GPS Fixado
+            </span>
+          ) : (
+            <span>Toque ou arraste para ajustar</span>
+          )}
+        </div>
+      </div>
+
+      <div className="relative w-full h-44 sm:h-48 rounded-3xl overflow-hidden border-2 border-slate-200/90 shadow-sm bg-slate-100 group">
       {/* Container do Mapa Leaflet */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -365,6 +487,7 @@ export const CheckoutAddressMap: React.FC<CheckoutAddressMapProps> = ({
           </span>
         </div>
       </div>
+    </div>
     </div>
   )
 }
