@@ -62,7 +62,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -478,6 +478,18 @@ const DynamicHero = ({ profile }: { profile: any }) => {
   )
 }
 
+
+function getProductMetaLabel(product: Product) {
+  const combined = (product.name + ' ' + (product.description || '')).toUpperCase()
+  const volumeMatch = combined.match(/\b(\d+\s*(?:ML|L|G|KG))\b/i)
+  const vol = volumeMatch ? volumeMatch[1].replace(/\s+/g, '') : ''
+  const unit = formatMeasureUnit(product.measureUnit).toUpperCase() || 'UNITÁRIO'
+  if (vol && !unit.includes(vol)) {
+    return `${unit} • ${vol}`
+  }
+  return unit
+}
+
 function formatMeasureUnit(unit?: string) {
   if (!unit) return ''
   const u = unit.trim().toUpperCase()
@@ -492,11 +504,17 @@ function formatMeasureUnit(unit?: string) {
 
 export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   // Garante que o cardápio público esteja SEMPRE no modo Claro (Light), independente do tema da retaguarda
+  const themeColor = profile?.primary_color || profile?.primaryColor || '#DC2626'
+
   useEffect(() => {
     const root = document.documentElement
     const hadDark = root.classList.contains('dark')
     root.classList.remove('dark')
     root.classList.add('light')
+
+    if (themeColor) {
+      root.style.setProperty('--primary-color', themeColor)
+    }
 
     return () => {
       if (hadDark) {
@@ -504,7 +522,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         root.classList.remove('light')
       }
     }
-  }, [])
+  }, [themeColor])
 
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -1887,7 +1905,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           type="button"
           onClick={handleOpenCheckout}
           disabled={cartCount === 0 || !storeStatus.isOpen || !isMinOrderSatisfied}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: "var(--primary-color, #DC2626)" }}
         >
           <span>Avançar para o Checkout</span>
           <ChevronRight className="h-4 w-4 stroke-[3]" />
@@ -1900,49 +1918,53 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       <main className="relative flex flex-1 flex-col overflow-x-hidden pb-24 lg:pb-0">
         <header className="relative z-10 shrink-0 bg-[#F8FAFC]">
           {/* Header Curvo Verde Floresta (Design Fiel ao Stitch) */}
-          <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden px-5 pt-8 pb-10 sm:pt-10 sm:pb-12 rounded-b-[36px] shadow-lg sm:min-h-[240px]" style={{ backgroundColor: "var(--primary-color, #0c3b23)" }}>
+          <div className="relative flex min-h-[220px] w-full flex-col justify-end overflow-hidden px-5 pt-8 pb-10 sm:pt-10 sm:pb-12 rounded-b-[36px] shadow-lg sm:min-h-[240px]" style={{ backgroundColor: "var(--primary-color, #200404)" }}>
             {/* Banner de fundo se houver */}
             <DynamicHero profile={profile} />
             <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
 
-            {/* Conteúdo Posicionado Sobre o Header */}
+            {/* Conteúdo Posicionado Sobre o Header (Fiel à Imagem 3 Mobile e Imagem 4 Desktop) */}
             <div className="relative z-20 flex flex-col gap-3 text-white">
-              <div className="flex items-center justify-between">
-                {/* Logo circular com aro dourado/sutil */}
-                <div className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-full border-2 border-amber-400/90 bg-black/40 shadow-xl p-0.5">
-                  {profile?.logo_url ? (
-                    <img
-                      src={resolveImageUrl(profile.logo_url)}
-                      alt="Logo"
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <Store className="h-full w-full p-3 text-amber-400" />
-                  )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Logo circular com aro dourado refinado */}
+                  <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-full border-2 border-amber-400/90 bg-black/40 shadow-xl p-0.5">
+                    {profile?.logo_url ? (
+                      <img
+                        src={resolveImageUrl(profile.logo_url)}
+                        alt="Logo"
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <Store className="h-full w-full p-2.5 text-amber-400" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-amber-300">
+                      DELIVERY & TAKEOUT
+                    </span>
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-black leading-tight tracking-tight text-white truncate">
+                      {profile?.tradeName || tenantName}
+                    </h1>
+                    <p className="mt-0.5 text-xs text-white/80 font-medium truncate max-w-md sm:max-w-xl">
+                      {profile?.description || profile?.subtitle || 'Culinária artesanal com ingredientes nobres'}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Botão Informações no topo direito */}
                 <button
                   type="button"
                   onClick={() => setIsStoreInfoOpen(true)}
-                  className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3.5 py-1 text-xs font-semibold text-white/90 backdrop-blur-md transition-all hover:bg-white/25 hover:text-white"
+                  className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-md transition-all hover:bg-white/25 hover:text-white shadow-sm"
                 >
                   <Info className="h-3.5 w-3.5" /> Informações
                 </button>
               </div>
 
-              {/* Nome e Subtítulo */}
-              <div className="mt-1">
-                <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">
-                  {profile?.tradeName || tenantName}
-                </h1>
-                <p className="mt-0.5 text-xs text-emerald-100/90 font-medium">
-                  {profile?.description || profile?.subtitle || 'Culinária artesanal com ingredientes nobres'}
-                </p>
-              </div>
-
               {/* Badges de Atendimento */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 {!storeStatus.isOpen ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/90 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
@@ -2024,7 +2046,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat
-                const label = cat === 'All' ? 'Menu Completo' : cat
+                const catCount = cat === 'All' ? (products?.length || 0) : (groupedProducts[cat]?.length || 0)
+                const baseLabel = cat === 'All' ? 'Menu Completo' : cat
+                const labelWithCount = isActive && cat !== 'All' ? `${baseLabel} (${catCount})` : baseLabel
                 return (
                   <button
                     key={cat}
@@ -2032,12 +2056,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     onClick={() => setActiveCategory(cat)}
                     className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-all ${
                       isActive
-                        ? 'text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'text-white shadow-sm ring-1 ring-black/10'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
-                    style={isActive ? { backgroundColor: 'var(--primary-color, #10B981)' } : undefined}
+                    style={isActive ? { backgroundColor: 'var(--primary-color, #DC2626)' } : undefined}
                   >
-                    {label}
+                    {labelWithCount}
                   </button>
                 )
               })}
@@ -2071,131 +2095,223 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                 ([catName, prods]) => (
                 <section key={catName}>
                   {!searchQuery && (
-                    <h2 className="mb-4 flex items-center gap-2 text-base font-extrabold tracking-tight text-slate-900">
-                      {catName}
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[11px] font-extrabold text-slate-600">
-                        {prods.length}
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
+                          {catName}
+                        </h2>
+                        <span className="rounded-full bg-slate-200/80 px-2.5 py-0.5 text-xs font-extrabold text-slate-700">
+                          {prods.length} itens
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                        {catName.toUpperCase()}
                       </span>
-                    </h2>
+                    </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {prods.map((product) => (
-                      <div
-                        key={product.id}
-                        className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md"
-                      >
-                        {product.imageUrl && (
-                          <div className="h-48 w-full overflow-hidden bg-slate-50 shrink-0">
-                            <img
-                              src={resolveImageUrl(product.imageUrl)}
-                              alt={product.name}
-                              onError={(e) => {
-                                (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
-                              }}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                          </div>
-                        )}
+                  {/* CONTAINER RESPONSIVO DE PRODUTOS: LISTA MOBILE (IMAGEM 3) / GRID DESKTOP (IMAGEM 4) */}
+                  <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
+                    {prods.map((product) => {
+                      const isCustomizable =
+                        (product.complementGroups && product.complementGroups.length > 0) ||
+                        Boolean(product.subcategory?.accepts_fractions)
+                      const totalInCart = getProductCartCount(product.id)
+                      const metaLabel = getProductMetaLabel(product)
 
-                        <div className="flex flex-1 flex-col p-4">
-                          <h3 className="text-[15px] font-extrabold leading-snug text-slate-900">
-                            {product.name}
-                          </h3>
-                          {product.description && (
-                            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
-                              {product.description}
-                            </p>
-                          )}
+                      const renderActionButton = (isCompact = false) => {
+                        if (isCustomizable) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleProductClick(product)}
+                              className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 ${
+                                isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
+                              }`}
+                              style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
+                            >
+                              {totalInCart > 0 ? (
+                                <>
+                                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[10px] font-black">
+                                    {totalInCart}
+                                  </span>
+                                  Adicionar
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                                  Adicionar
+                                </>
+                              )}
+                            </button>
+                          )
+                        }
 
-                          <div className="mt-4 flex items-end justify-between gap-3 pt-2 border-t border-slate-50">
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                                UNITÁRIO
+                        if (cart[product.id]) {
+                          return (
+                            <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFromCart(product.id)}
+                                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+                              >
+                                <Minus className="h-3 w-3 stroke-[3]" />
+                              </button>
+                              <span className="w-5 text-center text-xs font-black text-slate-900">
+                                {cart[product.id].quantity}
                               </span>
-                              <p className="text-base font-black tracking-tight text-slate-900">
-                                {formatCurrency(product.price)}
-                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCart(product)}
+                                className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95"
+                                style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
+                              >
+                                <Plus className="h-3 w-3 stroke-[3]" />
+                              </button>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleAddToCart(product)}
+                            className={`flex items-center justify-center gap-1.5 font-bold text-white shadow-sm transition-transform active:scale-95 ${
+                              isCompact ? 'rounded-full px-3.5 py-1.5 text-xs' : 'rounded-xl px-4 py-2 text-xs'
+                            }`}
+                            style={{ backgroundColor: 'var(--primary-color, #DC2626)' }}
+                          >
+                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                            Adicionar
+                          </button>
+                        )
+                      }
+
+                      return (
+                        <Fragment key={product.id}>
+                          {/* 1. CARD MOBILE (EXCLUSIVO MOBILE - FIEL À IMAGEM 3) */}
+                          <div className="sm:hidden group relative flex items-center gap-3.5 p-3 rounded-3xl border border-slate-100 bg-white shadow-xs hover:shadow-sm transition-all">
+                            {/* Thumbnail Quadrada à Esquerda */}
+                            <div
+                              className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-100 cursor-pointer"
+                              onClick={() => handleProductClick(product)}
+                            >
+                              {product.imageUrl ? (
+                                <img
+                                  src={resolveImageUrl(product.imageUrl)}
+                                  alt={product.name}
+                                  onError={(e) => {
+                                    (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
+                                  }}
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                  <UtensilsCrossed className="h-8 w-8 opacity-30" />
+                                </div>
+                              )}
                             </div>
 
-                            <div>
-                              {(() => {
-                                const isCustomizable =
-                                  (product.complementGroups &&
-                                    product.complementGroups.length > 0) ||
-                                  Boolean(product.subcategory?.accepts_fractions)
-                                const totalInCart = getProductCartCount(product.id)
+                            {/* Conteúdo do Produto à Direita */}
+                            <div className="flex flex-1 min-w-0 flex-col justify-between self-stretch py-0.5">
+                              <div onClick={() => handleProductClick(product)} className="cursor-pointer">
+                                <h3 className="text-sm font-extrabold leading-snug text-slate-900 line-clamp-1">
+                                  {product.name}
+                                </h3>
+                                {product.description && (
+                                  <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 leading-snug">
+                                    {product.description}
+                                  </p>
+                                )}
+                                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                  {metaLabel}
+                                </span>
+                              </div>
 
-                                if (isCustomizable) {
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleProductClick(product)}
-                                      className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                                    >
-                                      {totalInCart > 0 ? (
-                                        <>
-                                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[10px] font-black">
-                                            {totalInCart}
-                                          </span>
-                                          Adicionar
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Plus className="h-3.5 w-3.5 stroke-[3]" />
-                                          Adicionar
-                                        </>
-                                      )}
-                                    </button>
-                                  )
-                                }
-
-                                if (cart[product.id]) {
-                                  return (
-                                    <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 p-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveFromCart(product.id)}
-                                        className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
-                                      >
-                                        <Minus className="h-3 w-3 stroke-[3]" />
-                                      </button>
-                                      <span className="w-5 text-center text-xs font-black text-slate-900">
-                                        {cart[product.id].quantity}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAddToCart(product)}
-                                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm transition-all active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                                      >
-                                        <Plus className="h-3 w-3 stroke-[3]" />
-                                      </button>
-                                    </div>
-                                  )
-                                }
-
-                                return (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddToCart(product)}
-                                    className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-transform active:scale-95" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
-                                  >
-                                    <Plus className="h-3.5 w-3.5 stroke-[3]" />
-                                    Adicionar
-                                  </button>
-                                )
-                              })()}
+                              <div className="mt-1.5 flex items-center justify-between gap-2">
+                                <span className="text-base font-black tracking-tight text-slate-900">
+                                  {formatCurrency(product.price)}
+                                </span>
+                                <div>{renderActionButton(true)}</div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+
+                          {/* 2. CARD DESKTOP (EXCLUSIVO DESKTOP - FIEL À IMAGEM 4) */}
+                          <div className="hidden sm:flex group relative flex-col justify-between overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs hover:shadow-md transition-all">
+                            {/* Imagem Proporcional no Topo */}
+                            <div
+                              className="h-44 w-full overflow-hidden bg-slate-50 shrink-0 cursor-pointer"
+                              onClick={() => handleProductClick(product)}
+                            >
+                              {product.imageUrl ? (
+                                <img
+                                  src={resolveImageUrl(product.imageUrl)}
+                                  alt={product.name}
+                                  onError={(e) => {
+                                    (e.currentTarget.parentElement as HTMLElement)?.classList.add('hidden')
+                                  }}
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                  <UtensilsCrossed className="h-12 w-12 opacity-30" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Corpo do Card com Metadados e Título */}
+                            <div className="flex flex-1 flex-col justify-between p-4 space-y-2">
+                              <div>
+                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                                  {metaLabel}
+                                </span>
+                                <h3
+                                  onClick={() => handleProductClick(product)}
+                                  className="text-base font-extrabold leading-snug text-slate-900 line-clamp-2 min-h-[44px] cursor-pointer"
+                                >
+                                  {product.name}
+                                </h3>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-50">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                                    Valor
+                                  </span>
+                                  <span className="text-lg font-black tracking-tight text-slate-900">
+                                    {formatCurrency(product.price)}
+                                  </span>
+                                </div>
+                                <div>{renderActionButton(false)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </Fragment>
+                      )
+                    })}
                   </div>
                 </section>
               ))}
             </div>
           )}
         </div>
+
+        {/* Rodapé da Página Desktop/Geral (Fiel à Imagem 4) */}
+        <footer className="mt-auto border-t border-slate-200/80 bg-white px-6 py-6 text-xs text-slate-500">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
+            <p className="text-center text-slate-500 sm:text-left">
+              © {new Date().getFullYear()} {profile?.tradeName || tenantName}. Todos os direitos reservados.
+            </p>
+            <div className="flex items-center gap-6 font-medium text-slate-500">
+              <a href="#termos" onClick={(e) => { e.preventDefault(); alert('Termos de Uso do Estabelecimento.'); }} className="hover:text-slate-800 transition-colors">Termos de Uso</a>
+              <span>•</span>
+              <a href="#privacidade" onClick={(e) => { e.preventDefault(); alert('Políticas de Privacidade e Proteção de Dados.'); }} className="hover:text-slate-800 transition-colors">Políticas de Privacidade</a>
+              <span>•</span>
+              <a href="#ajuda" onClick={(e) => { e.preventDefault(); setIsStoreInfoOpen(true); }} className="hover:text-slate-800 transition-colors">Ajuda</a>
+            </div>
+          </div>
+        </footer>
       </main>
 
       {/* Sidebar Carrinho Desktop */}
@@ -2203,7 +2319,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         {renderCartSection()}
       </aside>
 
-      {/* Botão Flutuante Mobile Estilo Stitch */}
+      {/* Botão Flutuante Mobile Estilo Stitch (Fiel à Imagem 3) */}
       {cartCount > 0 && (
         <div className="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto lg:hidden">
           <motion.button
@@ -2211,24 +2327,24 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: 'spring', bounce: 0.2 }}
             onClick={() => setIsCartModalOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl p-3 px-4 font-bold text-white shadow-2xl transition-transform active:scale-[0.98]" style={{ backgroundColor: "var(--primary-color, #10B981)" }}
+            className="flex w-full items-center justify-between rounded-2xl p-3 px-4.5 bg-[#101828] text-white shadow-2xl transition-transform active:scale-[0.98] border border-slate-800"
           >
             <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white">
-                <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-black shadow" style={{ color: "var(--primary-color, #10B981)" }}>
-                  {cartCount}
-                </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white font-black text-xs shadow-inner">
+                {cartCount}
               </div>
               <div className="text-left">
-                <p className="text-sm font-black leading-tight text-white">Ver Pedido</p>
-                <p className="text-[11px] font-medium text-white/80">
-                  {cartCount} {cartCount === 1 ? 'item selecionado' : 'itens selecionados'}
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">
+                  Total estimado
+                </p>
+                <p className="text-base font-black text-white leading-tight">
+                  {formatCurrency(cartTotal)}
                 </p>
               </div>
             </div>
-            <span className="text-base font-black tracking-tight text-white">
-              {formatCurrency(cartTotal)}
+            <span className="flex items-center gap-1 text-sm font-black text-amber-400 hover:text-amber-300 transition-colors">
+              <span>Ver Sacola</span>
+              <ChevronRight className="h-4 w-4 stroke-[3]" />
             </span>
           </motion.button>
         </div>
