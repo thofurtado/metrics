@@ -103,6 +103,7 @@ const profileSchema = z.object({
   food99ShopId: z.string().optional(),
   anotaAiApiKey: z.string().optional(),
   googleReviewUrl: z.string().optional(),
+  neighborhoodPolicy: z.enum(['FALLBACK', 'STRICT']).default('FALLBACK'),
   pixKey: z.string().optional(),
   availableNeighborhoods: z.array(z.string()).optional().default([]),
   deliverySectors: z.array(deliverySectorSchema).optional().default([]),
@@ -301,6 +302,7 @@ export function MenuSettings() {
       food99ShopId: '',
       anotaAiApiKey: '',
       googleReviewUrl: '',
+      neighborhoodPolicy: 'FALLBACK',
       pixKey: '',
       availableNeighborhoods: [],
       deliverySectors: [],
@@ -359,6 +361,7 @@ export function MenuSettings() {
         food99ShopId: profile.food99ShopId || '',
         anotaAiApiKey: profile.anotaAiApiKey || '',
         googleReviewUrl: (profile as any).googleReviewUrl || (profile.deliverySectors as any)?.googleReviewUrl || '',
+        neighborhoodPolicy: (profile as any).neighborhoodPolicy === 'STRICT' ? 'STRICT' : 'FALLBACK',
         pixKey: profile.pixKey || '',
         availableNeighborhoods: profile.availableNeighborhoods || [],
         deliverySectors: profile.deliverySectors || [],
@@ -1255,6 +1258,43 @@ export function MenuSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2 md:col-span-3">
+                  <Label>Bairros no cardápio</Label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {(
+                      [
+                        {
+                          value: 'FALLBACK',
+                          title: 'Todos os bairros da cidade',
+                          text: 'Bairros fora dos setores aparecem com a taxa padrão. O cliente escolhe e aceita se quiser.',
+                        },
+                        {
+                          value: 'STRICT',
+                          title: 'Só bairros dos setores',
+                          text: 'Só aparecem os bairros vinculados a um setor. Sem um deles, o cliente não avança.',
+                        },
+                      ] as const
+                    ).map((opt) => {
+                      const selected = watch('neighborhoodPolicy') === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setValue('neighborhoodPolicy', opt.value, { shouldDirty: true })}
+                          className={`rounded-xl border-2 p-3 text-left transition-colors ${
+                            selected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:bg-muted/50'
+                          }`}
+                        >
+                          <span className="block text-sm font-bold">{opt.title}</span>
+                          <span className="mt-0.5 block text-[11px] text-muted-foreground">{opt.text}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="deliveryFee">Taxa de Entrega Padrão (R$)</Label>
                   <Input

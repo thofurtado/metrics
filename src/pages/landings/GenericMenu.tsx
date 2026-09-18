@@ -695,14 +695,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     type: 'success' | 'info' | 'error'
     message: string
   } | null>(null)
-  const [unsupportedNeighborhoodModal, setUnsupportedNeighborhoodModal] = useState<{
-    isOpen: boolean
-    neighborhoodName: string
-  } | null>(null)
+  // Política STRICT: bairro informado que a loja não atende (nome, ou '' se desconhecido)
+  const [unservedNeighborhood, setUnservedNeighborhood] = useState<string | null>(null)
   const [isNeighborhoodPickerOpen, setIsNeighborhoodPickerOpen] = useState(false)
-  const [customReferenceNote, setCustomReferenceNote] = useState('')
   const [selectedReferenceNeighbor, setSelectedReferenceNeighbor] = useState('')
-  const [acceptedStandardFee, setAcceptedStandardFee] = useState(false)
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [gpsTriggerNonce, setGpsTriggerNonce] = useState(0)
 
@@ -792,16 +788,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setCity(addr.city || '')
     setState(addr.state || '')
     setZipcode(addr.zipcode ? formatCep(addr.zipcode.toString().padStart(8, '0')) : '')
-    setAcceptedStandardFee(false)
     setIsNewAddress(false)
+    setUnservedNeighborhood(null)
     const matched = matchNeighborhoodWithConfig(addr.neighborhood || '')
     if (matched) {
       setNeighborhood(matched)
       setAddressReadonly(true)
-    } else if (availableNeighborhoodsList.length > 0) {
+    } else if (isStrictNeighborhoods && availableNeighborhoodsList.length > 0) {
       setNeighborhood('')
       setAddressReadonly(false)
-      setUnsupportedNeighborhoodModal({ isOpen: true, neighborhoodName: addr.neighborhood || '' })
+      setUnservedNeighborhood(addr.neighborhood || '')
     } else {
       setNeighborhood(addr.neighborhood || '')
       setAddressReadonly(true)
@@ -812,7 +808,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setWantsNewAddress(true)
     setIsNewAddress(true)
     setAddressReadonly(false)
-    setAcceptedStandardFee(false)
+    setUnservedNeighborhood(null)
     setIsManualAddressMode(false)
     setZipcode('')
     setStreet('')
@@ -822,6 +818,18 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setReferencePoint('')
     setCity('')
     setState('')
+  }
+
+  // Bairro que a loja não atende (STRICT): oferece retirada no balcão
+  const switchToTakeout = () => {
+    setUnservedNeighborhood(null)
+    setFulfillmentType('TAKEOUT')
+    setNeighborhood('Balcão')
+    setStreet('Retirada no Balcão')
+    setNumber('0')
+    setComplement('')
+    setZipcode('')
+    setCheckoutWizardStep(5)
   }
 
   const backToSavedAddresses = () => {
@@ -887,18 +895,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             setNeighborhood(matchedNeighborhood)
             setAddressReadonly(true)
             setIsNewAddress(false)
-          } else if (availableNeighborhoodsList.length > 0) {
+          } else if (isStrictNeighborhoods && availableNeighborhoodsList.length > 0) {
             setNeighborhood('')
             setAddressReadonly(false)
-            setIsNewAddress(true)
-            setUnsupportedNeighborhoodModal({
-              isOpen: true,
-              neighborhoodName: addr.neighborhood || '',
-            })
-            setPhoneSearchToast({
-              type: 'info',
-              message: `Seu endereço cadastrado (${addr.neighborhood || ''}) não está na nossa área de entrega padrão.`,
-            })
+            setIsNewAddress(false)
+            setUnservedNeighborhood(addr.neighborhood || '')
             return
           } else {
             setNeighborhood(addr.neighborhood || '')
@@ -948,13 +949,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   }
 
   const handleSelectSavedAddress = (addr: any) => {
-    if (fulfillmentType === 'DELIVERY' && availableNeighborhoodsList.length > 0) {
+    if (fulfillmentType === 'DELIVERY' && isStrictNeighborhoods && availableNeighborhoodsList.length > 0) {
       const matched = matchNeighborhoodWithConfig(addr.neighborhood || '')
       if (!matched) {
-        setUnsupportedNeighborhoodModal({
-          isOpen: true,
-          neighborhoodName: addr.neighborhood || '',
-        })
+        setUnservedNeighborhood(addr.neighborhood || '')
+        setIsAddressesModalOpen(false)
+        setCheckoutWizardStep(3)
         return
       }
       setNeighborhood(matched)
@@ -992,6 +992,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     if (rawCep.length !== 8) return
 
     setIsSearchingCEPCheckout(true)
+    setUnservedNeighborhood(null)
     try {
       type CepResult = {
         street: string
@@ -1056,12 +1057,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         if (matched) {
           setNeighborhood(matched)
         } else if (neighborhoodVal && !sameAsCity) {
-          setNeighborhood(neighborhoodVal)
-          if (availableNeighborhoodsList.length > 0) {
-            setUnsupportedNeighborhoodModal({
-              isOpen: true,
-              neighborhoodName: neighborhoodVal,
-            })
+          if (isStrictNeighborhoods && availableNeighborhoodsList.length > 0) {
+            setNeighborhood('')
+            setUnservedNeighborhood(neighborhoodVal)
+          } else {
+            setNeighborhood(neighborhoodVal)
           }
         }
 
@@ -1133,6 +1133,9 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     ) || null
   }
 
+  // Política de bairros: FALLBACK (padrão) lista todos os bairros da cidade; STRICT só os dos setores
+  const isStrictNeighborhoods = profile?.neighborhoodPolicy === 'STRICT'
+
   const availableNeighborhoodsList = useMemo(() => {
     let sectors = profile?.deliverySectors || profile?.delivery_sectors || []
     if (typeof sectors === 'string') {
@@ -1146,11 +1149,34 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
     // Restringe estritamente aos bairros associados a um setor de entrega cadastrado
     const fromSectors = sectors.flatMap((s: any) => s.neighborhoods || [])
-    const unique = Array.from(
-      new Set(fromSectors),
-    ).filter(Boolean) as string[]
+    let fromBank: string[] = []
+    if (profile?.neighborhoodPolicy !== 'STRICT') {
+      let bank = profile?.availableNeighborhoods || []
+      if (typeof bank === 'string') {
+        try {
+          bank = JSON.parse(bank)
+        } catch {
+          bank = []
+        }
+      }
+      if (Array.isArray(bank)) fromBank = bank
+    }
+    const seen = new Set<string>()
+    const unique = [...fromSectors, ...fromBank].filter((n: any) => {
+      const key = normalizeText(String(n || ''))
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    }) as string[]
     return unique.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [profile])
+
+  // Taxa mostrada ao lado do bairro na lista (setor ou taxa padrão)
+  const feeLabelForNeighborhood = (name: string) => {
+    const sector = findDeliverySector(name)
+    const fee = sector?.fee !== undefined ? parseDeliveryFee(sector.fee) : parseDeliveryFee(profile?.deliveryFee)
+    return fee === 0 ? 'Grátis' : formatCurrency(fee)
+  }
 
   const matchedSector = useMemo(
     () => findDeliverySector(neighborhood),
@@ -1517,18 +1543,16 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     if (fulfillmentType === 'DELIVERY') {
       if (!street.trim() || !number.trim() || !neighborhood.trim()) {
         alert('Por favor, preencha o endereço completo de entrega.')
-        setCheckoutWizardStep(2)
+        setCheckoutWizardStep(3)
         return
       }
-      if (deliverySectorInfo.hasSectors && !acceptedStandardFee) {
+      if (isStrictNeighborhoods && deliverySectorInfo.hasSectors) {
         const isAllowed = matchedSector !== null || deliverySectorInfo.sectors.some(
           (sec: any) => Array.isArray(sec.neighborhoods) && sec.neighborhoods.some((n: string) => normalizeText(n) === normalizeText(neighborhood))
         )
         if (!isAllowed) {
-          setUnsupportedNeighborhoodModal({
-            isOpen: true,
-            neighborhoodName: neighborhood,
-          })
+          setUnservedNeighborhood(neighborhood)
+          setNeighborhood('')
           setCheckoutWizardStep(3)
           return
         }
@@ -1571,7 +1595,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           change_for: changeAmount ? Number(changeAmount) : undefined,
           delivery_fee: isTakeout ? 0 : resolvedDeliveryFee,
           total_amount: cartTotal,
-          notes: `${isTakeout ? 'Retirada no Balcão' : 'Entrega (Delivery)'}${customReferenceNote ? ` [${customReferenceNote}]` : ''}${deliveryCoords ? ` (GPS: ${deliveryCoords.lat.toFixed(6)},${deliveryCoords.lng.toFixed(6)})` : ''}`,
+          notes: `${isTakeout ? 'Retirada no Balcão' : 'Entrega (Delivery)'}${deliveryCoords ? ` (GPS: ${deliveryCoords.lat.toFixed(6)},${deliveryCoords.lng.toFixed(6)})` : ''}`,
           items: cartItems.map((item) => ({
             product_id: item.product.id,
             name: item.displayName || item.product.name,
@@ -1595,10 +1619,8 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setIsSubmittingOrder(false)
         const errorMsg = orderApiErr?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
         if (errorMsg.toLowerCase().includes('área de entrega') || errorMsg.toLowerCase().includes('bairro')) {
-          setUnsupportedNeighborhoodModal({
-            isOpen: true,
-            neighborhoodName: neighborhood,
-          })
+          setUnservedNeighborhood(neighborhood)
+          setNeighborhood('')
           setCheckoutWizardStep(3)
         } else {
           alert(`Não foi possível registrar o pedido no caixa: ${errorMsg}`)
@@ -1645,10 +1667,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 `
         if (deliveryCoords) {
           text += `> 🗺️ Localização GPS: https://maps.google.com/?q=${deliveryCoords.lat},${deliveryCoords.lng}
-`
-        }
-        if (customReferenceNote) {
-          text += `> ⚠️ *${customReferenceNote}*
 `
         }
       }
@@ -3029,6 +3047,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     const isSel =
                       !!street && street === (addr.street || '') && number === (addr.number ? String(addr.number) : '')
                     const outOfArea =
+                      isStrictNeighborhoods &&
                       availableNeighborhoodsList.length > 0 &&
                       !matchNeighborhoodWithConfig(addr.neighborhood || '')
                     return (
@@ -3179,29 +3198,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                               value={neighborhood}
                               onChange={(e) => {
                                 setNeighborhood(e.target.value)
-                                setAcceptedStandardFee(false)
+                                setUnservedNeighborhood(null)
                               }}
                               className={addrInputCls}
                             >
                               <option value="">Selecione seu bairro</option>
                               {availableNeighborhoodsList.map((n) => (
                                 <option key={n} value={n}>
-                                  {n}
+                                  {n} · {feeLabelForNeighborhood(n)}
                                 </option>
                               ))}
                               {neighborhood && !availableNeighborhoodsList.includes(neighborhood) && (
-                                <option value={neighborhood}>{neighborhood}</option>
+                                <option value={neighborhood}>
+                                  {neighborhood} · {feeLabelForNeighborhood(neighborhood)}
+                                </option>
                               )}
                             </select>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setUnsupportedNeighborhoodModal({ isOpen: true, neighborhoodName: '' })
-                              }
-                              className="mt-1.5 text-sm font-bold text-emerald-700 hover:text-emerald-900"
-                            >
-                              Não achou seu bairro?
-                            </button>
                           </>
                         ) : (
                           <input
@@ -3240,6 +3252,22 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                       Usar um endereço salvo
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Bairro que a loja não atende (só na política STRICT) */}
+              {unservedNeighborhood !== null && !neighborhood && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-4 py-3">
+                  <span className="text-sm font-bold text-amber-900">
+                    Não entregamos em {unservedNeighborhood || 'esse bairro'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={switchToTakeout}
+                    className="shrink-0 text-sm font-black text-emerald-800 hover:text-emerald-900"
+                  >
+                    Retirar no balcão
+                  </button>
                 </div>
               )}
 
@@ -4029,148 +4057,6 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             >
               Fechar
             </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Dialog: Bairro Fora da Rota Padrão com Opção Acolhedora de Bairro de Referência */}
-      <Dialog
-        open={!!unsupportedNeighborhoodModal?.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setUnsupportedNeighborhoodModal(null)
-            setSelectedReferenceNeighbor('')
-          }
-        }}
-      >
-        <DialogContent className="rounded-3xl p-5 sm:p-6 sm:max-w-md !bg-white text-slate-900 border border-slate-100 shadow-2xl [&>button]:hidden">
-          {/* Alça superior estilo folha nativa */}
-          <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-1 mb-2" />
-
-          {/* Botão fechar X circular */}
-          <button
-            type="button"
-            onClick={() => setUnsupportedNeighborhoodModal(null)}
-            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
-          >
-            <X className="h-4 w-4 stroke-[2.5]" />
-          </button>
-
-          {/* Cabeçalho com Ícone Centralizado e Texto Acolhedor */}
-          <div className="text-center pt-1 space-y-2">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-2xs">
-              <Bike className="h-7 w-7" />
-            </div>
-            <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
-              Estamos quase lá! 🛵
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-              O bairro <strong className="text-slate-900 font-bold">"{unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || 'informado'}"</strong> fica um pouquinho fora da nossa rota diária, mas nós queremos muito te atender!
-            </DialogDescription>
-          </div>
-
-          {/* CARD 1: ENTREGA SOB ENCOMENDA / TAXA ESPECIAL (FIEL AO STITCH) */}
-          <div className="rounded-3xl border border-emerald-200 bg-white p-4 space-y-3 shadow-xs mt-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-900">
-                <Check className="h-3 w-3 stroke-[3]" /> Entrega sob encomenda
-              </span>
-              <span className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-black text-emerald-900">
-                Taxa: R$ {parseDeliveryFee(profile?.deliveryFee).toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              Você pode concluir seu pedido agora! Nossa equipe verifica o motoboy e alinha o horário com carinho pelo WhatsApp.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                const maxFee = parseDeliveryFee(profile?.deliveryFee)
-                const orig = unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''
-                setAcceptedStandardFee(true)
-                setCustomReferenceNote(`Bairro sob encomenda: ${orig} (Taxa especial R$ ${maxFee.toFixed(2).replace('.', ',')} aceita pelo cliente)`)
-                setUnsupportedNeighborhoodModal(null)
-                setCheckoutWizardStep(5)
-              }}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black text-white shadow-md bg-emerald-700 hover:bg-emerald-800 transition-all active:scale-[0.98]"
-            >
-              <span>Continuar com Taxa Especial</span>
-              <ChevronRight className="h-4 w-4 stroke-[3]" />
-            </button>
-          </div>
-
-          {/* CARD 2: PREFERE NÃO PAGAR TAXA? RETIRAR NO BALCÃO */}
-          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-700 shadow-2xs">
-                  <Store className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-900">
-                    Prefere não pagar taxa?
-                  </h4>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    Retire seu pedido quentinho direto no balcão da loja sem custo.
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5">
-                Grátis
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setFulfillmentType('TAKEOUT')
-                setUnsupportedNeighborhoodModal(null)
-                setNeighborhood('Balcão')
-                setStreet('Retirada no Balcão')
-                setNumber('0')
-                setComplement('')
-                setZipcode('')
-                setCheckoutWizardStep(5)
-              }}
-              className="w-full flex items-center justify-center gap-1.5 rounded-2xl border border-slate-300 bg-white py-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-xs transition-all active:scale-[0.99]"
-            >
-              <span>Mudar para Retirar no Balcão</span>
-            </button>
-          </div>
-
-          {/* LINKS INFERIORES */}
-          <div className="pt-2 text-center space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                const storePhone = (profile?.whatsappNumber || profile?.whatsapp_number || '').replace(/\D/g, '')
-                const clientText = `Olá! Estou montando um pedido no cardápio online e gostaria de saber se vocês conseguem entregar no bairro ${unsupportedNeighborhoodModal?.neighborhoodName || neighborhood || ''}?`
-                const link = `https://wa.me/55${storePhone}?text=${encodeURIComponent(clientText)}`
-                window.open(link, '_blank')
-              }}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>Tirar dúvida no WhatsApp da loja</span>
-            </button>
-
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnsupportedNeighborhoodModal(null)
-                  setNeighborhood('')
-                  setTimeout(() => {
-                    document.getElementById('checkout-street-input')?.focus()
-                  }, 150)
-                }}
-                className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                Voltar e alterar endereço de entrega
-              </button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
