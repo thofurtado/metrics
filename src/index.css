@@ -45,6 +45,55 @@ html.menu-fluid body {
   }
 }
 
+/* ==========================================================================
+   CARDÁPIO PREMIUM (temas): fontes e modo escuro. As escalas de cor vêm de variáveis
+   (--m-*) definidas por src/pages/landings/menu-themes.ts; aqui ficam só os ajustes
+   que o Tailwind não cobre (superfícies brancas, campos de formulário, fonte de títulos).
+   ========================================================================== */
+html.menu-themed h1,
+html.menu-themed h2,
+html.menu-themed h3 {
+  font-family: var(--m-font-display, inherit);
+}
+html.menu-dark {
+  color-scheme: dark;
+  background-color: rgb(var(--m-bg));
+}
+html.menu-dark body {
+  background-color: rgb(var(--m-bg));
+  color: rgb(var(--m-text));
+}
+html.menu-dark .bg-white,
+html.menu-dark .\!bg-white {
+  background-color: rgb(var(--m-surface)) !important;
+}
+html.menu-dark .bg-white\/95,
+html.menu-dark .bg-white\/90 {
+  background-color: rgb(var(--m-surface) / 0.95);
+}
+html.menu-dark .bg-\[\#F8FAFC\] {
+  background-color: rgb(var(--m-bg));
+}
+/* Fundos escuros fixos (overlay do modal, botões escuros): mantêm o cinza-azulado original mesmo com a escala de textos invertida */
+html.menu-dark [class*="bg-slate-900"],
+html.menu-dark [class*="bg-slate-800"],
+html.menu-dark [class*="bg-slate-950"] {
+  --m-slate-800: 30 41 59;
+  --m-slate-900: 15 23 42;
+  --m-slate-950: 2 6 23;
+}
+html.menu-dark input:not(.bg-transparent),
+html.menu-dark select,
+html.menu-dark textarea {
+  background-color: rgb(var(--m-surface2));
+  color: rgb(var(--m-text));
+  border-color: rgb(var(--m-border));
+}
+html.menu-dark input::placeholder,
+html.menu-dark textarea::placeholder {
+  color: rgb(var(--m-slate-500));
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

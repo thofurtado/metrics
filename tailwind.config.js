@@ -2,6 +2,21 @@
 
 const { Heading1 } = require('lucide-react')
 const { custom } = require('zod')
+const twColors = require('tailwindcss/colors')
+
+// Escalas do cardápio white label lidas de variáveis CSS (--m-<escala>-<passo>) com o valor padrão do Tailwind
+// como reserva: fora de um tema premium nada muda. Ver src/pages/landings/menu-themes.ts.
+const toTriplet = (hex) => {
+  const h = hex.replace('#', '')
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(' ')
+}
+const themedScale = (name) =>
+  Object.fromEntries(
+    Object.entries(twColors[name]).map(([step, hex]) => [
+      step,
+      `rgb(var(--m-${name}-${step}, ${toTriplet(hex)}) / <alpha-value>)`,
+    ]),
+  )
 
 module.exports = {
   darkMode: ['class'],
@@ -25,6 +40,9 @@ module.exports = {
         DEFAULT: 'hsl(var(--ring))',
       },
       colors: {
+        slate: themedScale('slate'),
+        emerald: themedScale('emerald'),
+        amber: themedScale('amber'),
         // Primary Brand (Purple/Indigo) -> Replaces "minsk"
         minsk: {
           50: '#eef2ff',

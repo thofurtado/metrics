@@ -97,7 +97,10 @@ export function LandingInterceptor() {
     return <Navigate to="/sign-in" replace />
   }
 
-  if (tenant.landingPageType === 'MENU') {
+  // ?generic=1: pré-visualiza o cardápio genérico (com tema) para um tenant CUSTOM, sem alterar o banco
+  const previewGeneric = new URLSearchParams(window.location.search).get('generic') === '1'
+
+  if (tenant.landingPageType === 'MENU' || (tenant.landingPageType === 'CUSTOM' && tenant.landingPageSlug === 'marujo' && previewGeneric)) {
     return (
       <Suspense
         fallback={

@@ -102,7 +102,8 @@ export function MenuResolver() {
   // Se for cliente VIP (Marujo) com layout customizado (preservando o funcionamento antigo)
   if (
     tenant.landingPageType === 'CUSTOM' &&
-    tenant.landingPageSlug === 'marujo'
+    tenant.landingPageSlug === 'marujo' &&
+    new URLSearchParams(window.location.search).get('generic') !== '1'
   ) {
     return (
       <Suspense

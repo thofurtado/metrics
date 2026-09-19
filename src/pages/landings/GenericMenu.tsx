@@ -77,6 +77,7 @@ import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
+import { applyMenuTheme, resolveMenuTheme } from './menu-themes'
 import { CheckoutAddressMap } from '@/components/maps/CheckoutAddressMap'
 
 
@@ -527,6 +528,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       }
     }
   }, [themeColor])
+
+  // Tema premium (paleta + fontes) do cliente, quando configurado; sem tema o visual padrão permanece
+  const menuTheme = useMemo(() => resolveMenuTheme(profile), [profile])
+  useEffect(() => {
+    if (!menuTheme) return
+    return applyMenuTheme(menuTheme)
+  }, [menuTheme])
 
   const [cart, setCart] = useState<Record<string, CartItem>>({})
   const [searchQuery, setSearchQuery] = useState('')
