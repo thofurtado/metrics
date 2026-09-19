@@ -408,8 +408,14 @@ export function MenuSettings() {
         await queryClient.invalidateQueries({ queryKey: ['public-profile'] })
         toast.success(field === 'logo_url' ? 'Logomarca enviada com sucesso.' : 'Banner enviado com sucesso.')
       }
-    } catch {
-      toast.error('Não foi possível enviar a imagem.')
+    } catch (err: any) {
+      // Mostra o motivo real devolvido pelo servidor (antes a mensagem era sempre genérica)
+      const status = err?.response?.status
+      const detail = err?.response?.data?.message || err?.message
+      console.error('Falha no upload de imagem do perfil:', status, err?.response?.data || err)
+      toast.error(
+        `Não foi possível enviar a imagem${status ? ` (erro ${status})` : ''}${detail ? `: ${detail}` : '.'}`,
+      )
     } finally {
       setUploadingBrandAsset(null)
     }
