@@ -75,7 +75,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
-import { cn, resolveImageUrl } from '@/lib/utils'
+import { cn, resolveImageUrl, toWhatsAppNumber } from '@/lib/utils'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
 import { applyMenuTheme, resolveMenuTheme } from './menu-themes'
 import { CheckoutAddressMap } from '@/components/maps/CheckoutAddressMap'
@@ -1853,8 +1853,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 `
       text += `_✅ Pedido gerado via Cardápio Digital Metrics_`
 
-      const targetPhone = (profile?.whatsappNumber || '').replace(/\D/g, '')
-      const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(text)}`
+      const url = `https://wa.me/${toWhatsAppNumber(profile?.whatsappNumber)}?text=${encodeURIComponent(text)}`
       const orderData = orderApiRes?.data?.order || orderApiRes?.data;
       const newOrderId = orderData?.id || orderData?.order_id || null;
       const newDisplayId = orderData?.display_id || null;
@@ -3980,7 +3979,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                     type="button"
                     onClick={() => {
                       const phone = profile?.whatsappNumber || profile?.whatsapp_number || ''
-                      const url = `https://api.whatsapp.com/send?phone=${phone.replace(/\D/g, '')}&text=${encodeURIComponent(lastOrderText)}`
+                      const url = `https://api.whatsapp.com/send?phone=${toWhatsAppNumber(phone)}&text=${encodeURIComponent(lastOrderText)}`
                       window.open(url, '_blank')
                     }}
                     className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-800 text-sm font-black text-white shadow-lg ring-4 ring-emerald-500/25 transition-all hover:bg-emerald-900 active:scale-[0.98]"

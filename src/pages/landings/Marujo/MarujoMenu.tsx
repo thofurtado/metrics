@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { api } from '@/lib/axios'
-import { formatCurrency, resolveImageUrl } from '@/lib/utils'
+import { formatCurrency, resolveImageUrl, toWhatsAppNumber } from '@/lib/utils'
 
 // -------------------------------------------------------------
 // Tipos
@@ -1735,8 +1735,7 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      const targetPhone = (profile?.whatsappNumber || '12992193644').replace(/\D/g, '')
-                      const url = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(lastOrderText)}`
+                      const url = `https://wa.me/${toWhatsAppNumber(profile?.whatsappNumber || '12992193644')}?text=${encodeURIComponent(lastOrderText)}`
                       window.open(url, '_blank')
                     }}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-xs font-extrabold text-white shadow-lg hover:bg-emerald-500 transition-all cursor-pointer"

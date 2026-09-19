@@ -2,6 +2,17 @@ import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { API_BASE_URL } from './axios'
 
+/**
+ * Número de WhatsApp pronto para wa.me / api.whatsapp.com: só dígitos, com o código do país (55) uma única vez.
+ * Aceita o número cadastrado com ou sem "55" e com máscara (ex.: "(12) 99629-3344" ou "5512996293344").
+ */
+export function toWhatsAppNumber(raw?: string | null): string {
+  let digits = String(raw || '').replace(/D/g, '').replace(/^0+/, '')
+  if (!digits) return ''
+  if (!(digits.length >= 12 && digits.startsWith('55'))) digits = '55' + digits
+  return digits
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
