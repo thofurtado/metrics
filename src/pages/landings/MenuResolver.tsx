@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { lazy, Suspense, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
 
 import { api } from '@/lib/axios'
+
+import { MenuErrorBoundary, MenuUnavailable } from './menu-error'
 
 const GenericMenu = lazy(() => import('./GenericMenu'))
 const MarujoMenu = lazy(() => import('./Marujo/MarujoMenu'))
@@ -61,14 +62,14 @@ export function MenuResolver() {
   } = useQuery({
     queryKey: ['tenant-landing-info'],
     queryFn: fetchTenantInfo,
-    retry: false,
+    retry: 2, // conexão de celular oscila: tenta de novo antes de desistir
     staleTime: Infinity,
   })
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['company-profile'],
     queryFn: fetchCompanyProfile,
-    retry: false,
+    retry: 2,
     staleTime: Infinity,
   })
 
@@ -94,9 +95,19 @@ export function MenuResolver() {
     )
   }
 
-  // Se deu erro no tenant ou ele não quer cardápio, joga pro login/fallback
-  if (tenantError || !tenant || tenant.landingPageType === 'NONE') {
-    return <Navigate to="/sign-in" replace />
+  // O cardápio é público: NUNCA manda o cliente para o login/sistema. Falha de rede = "Recarregar";
+  // restaurante sem cardápio ativo = aviso simples.
+  if (tenantError) {
+    return <MenuUnavailable />
+  }
+  if (!tenant || tenant.landingPageType === 'NONE') {
+    return (
+      <MenuUnavailable
+        title="Cardápio indisponível"
+        message="Este restaurante ainda não ativou o cardápio online."
+        showRetry={false}
+      />
+    )
   }
 
   // Se for cliente VIP (Marujo) com layout customizado (preservando o funcionamento antigo)
@@ -106,29 +117,33 @@ export function MenuResolver() {
     new URLSearchParams(window.location.search).get('generic') !== '1'
   ) {
     return (
-      <Suspense
-        fallback={
-          <div className="flex h-screen items-center justify-center bg-[#080E18] text-[#ffb77d]">
-            Carregando cardápio Marujo...
-          </div>
-        }
-      >
-        <MarujoMenu tenantName={tenant.name} profile={profile} />
-      </Suspense>
+      <MenuErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center bg-[#080E18] text-[#ffb77d]">
+              Carregando cardápio Marujo...
+            </div>
+          }
+        >
+          <MarujoMenu tenantName={tenant.name} profile={profile} />
+        </Suspense>
+      </MenuErrorBoundary>
     )
   }
 
   // Comportamento Genérico (White Label)
   // Nota: O GenericMenu será renderizado independentemente se falhar em carregar o profile
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-screen items-center justify-center">
-          Carregando...
-        </div>
-      }
-    >
-      <GenericMenu tenantName={tenant.name} profile={profile} />
-    </Suspense>
+    <MenuErrorBoundary>
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            Carregando...
+          </div>
+        }
+      >
+        <GenericMenu tenantName={tenant.name} profile={profile} />
+      </Suspense>
+    </MenuErrorBoundary>
   )
 }

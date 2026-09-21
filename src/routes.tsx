@@ -39,6 +39,7 @@ import { TimeClockKiosk } from './pages/hr/time-clock/kiosk'
 import { TimeSheetPage } from './pages/hr/time-clock/timesheet-page'
 import { LandingInterceptor } from './pages/landings/LandingInterceptor'
 import { MenuResolver } from './pages/landings/MenuResolver'
+import { MenuRouteError } from './pages/landings/menu-error'
 import { ReceiptPage } from './pages/public/receipt-page'
 import { EquipmentHistoryPage } from './pages/public/equipment-history'
 
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <LandingInterceptor />,
+        errorElement: <MenuRouteError />,
       },
       ...(isDev
         ? [
@@ -93,6 +95,7 @@ export const router = createBrowserRouter([
       {
         path: 'cardapio',
         element: <MenuResolver />,
+        errorElement: <MenuRouteError />,
       },
       {
         path: 'comprovante/:transactionId',

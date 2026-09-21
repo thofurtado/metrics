@@ -4,6 +4,8 @@ import { Navigate } from 'react-router-dom'
 
 import { api } from '@/lib/axios'
 
+import { MenuErrorBoundary, MenuUnavailable } from './menu-error'
+
 const EurecaLanding = lazy(() => import('./Eureca'))
 const GenericMenu = lazy(() => import('./GenericMenu'))
 const MarujoMenu = lazy(() => import('./Marujo/MarujoMenu'))
@@ -61,14 +63,14 @@ export function LandingInterceptor() {
   } = useQuery({
     queryKey: ['tenant-landing-info'],
     queryFn: fetchTenantInfo,
-    retry: false,
+    retry: 2, // conexão de celular oscila: tenta de novo antes de desistir
     staleTime: Infinity,
   })
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['company-profile'],
     queryFn: fetchCompanyProfile,
-    retry: false,
+    retry: 2,
     staleTime: Infinity,
   })
 
@@ -92,8 +94,13 @@ export function LandingInterceptor() {
     )
   }
 
-  // Se deu erro ou não tem landing page, joga pro login
-  if (error || !tenant || tenant.landingPageType === 'NONE') {
+  // Falha de rede/servidor: não é "sem landing page". Não joga o cliente no login; oferece Recarregar.
+  if (error) {
+    return <MenuUnavailable />
+  }
+
+  // Restaurante sem landing page: aqui é a porta de entrada do sistema (login da equipe)
+  if (!tenant || tenant.landingPageType === 'NONE') {
     return <Navigate to="/sign-in" replace />
   }
 
@@ -102,15 +109,17 @@ export function LandingInterceptor() {
 
   if (tenant.landingPageType === 'MENU' || (tenant.landingPageType === 'CUSTOM' && tenant.landingPageSlug === 'marujo' && previewGeneric)) {
     return (
-      <Suspense
-        fallback={
-          <div className="flex h-screen items-center justify-center">
-            Carregando...
-          </div>
-        }
-      >
-        <GenericMenu tenantName={tenant.name} profile={profile} />
-      </Suspense>
+      <MenuErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center">
+              Carregando...
+            </div>
+          }
+        >
+          <GenericMenu tenantName={tenant.name} profile={profile} />
+        </Suspense>
+      </MenuErrorBoundary>
     )
   }
 
