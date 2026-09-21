@@ -7,7 +7,9 @@ import {
   CreditCard,
   History,
   Loader2,
+  Pencil,
   Receipt,
+  Trash2,
   Wallet,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -42,6 +44,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+import { DeleteCreditCardPurchaseDialog } from './delete-credit-card-purchase-dialog'
+import { EditCreditCardPurchaseDialog } from './edit-credit-card-purchase-dialog'
 
 interface CreditCardDetailsDialogProps {
   open: boolean
@@ -84,6 +89,8 @@ export function CreditCardDetailsDialog({
   const [paymentMethod, setPaymentMethod] = useState<string>('PIX')
   const [amountToPay, setAmountToPay] = useState<string>('')
   const [activeTab, setActiveTab] = useState<string>('swipes')
+  const [purchaseToEdit, setPurchaseToEdit] = useState<any | null>(null)
+  const [purchaseToDelete, setPurchaseToDelete] = useState<any | null>(null)
 
   const totalValue = virtualTransaction?.totalValue ?? 0
   const paidAmount = virtualTransaction?.paidAmount ?? 0
@@ -177,6 +184,7 @@ export function CreditCardDetailsDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto rounded-3xl p-6 sm:max-w-[700px]">
         <DialogHeader className="space-y-2 pb-2">
@@ -298,6 +306,7 @@ export function CreditCardDetailsDialog({
                     <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Valor
                     </TableHead>
+                    <TableHead className="w-[92px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -341,12 +350,38 @@ export function CreditCardDetailsDialog({
                           },
                         )}
                       </TableCell>
+                      <TableCell className="py-1 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-lg text-slate-500 hover:text-slate-900"
+                            title="Editar compra"
+                            aria-label="Editar compra"
+                            onClick={() => setPurchaseToEdit(swipe)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                            title="Excluir compra"
+                            aria-label="Excluir compra"
+                            onClick={() => setPurchaseToDelete(swipe)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {virtualTransaction.swipes?.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={6}
                         className="py-6 text-center text-xs font-bold text-slate-400"
                       >
                         Nenhuma compra registrada nesta fatura.
@@ -603,5 +638,24 @@ export function CreditCardDetailsDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Depois de salvar/excluir, fecha a fatura: os totais dela ficaram velhos e a lista os recarrega */}
+    <EditCreditCardPurchaseDialog
+      purchase={purchaseToEdit}
+      onOpenChange={(o) => !o && setPurchaseToEdit(null)}
+      onSaved={() => {
+        setPurchaseToEdit(null)
+        onOpenChange(false)
+      }}
+    />
+    <DeleteCreditCardPurchaseDialog
+      purchase={purchaseToDelete}
+      onOpenChange={(o) => !o && setPurchaseToDelete(null)}
+      onDeleted={() => {
+        setPurchaseToDelete(null)
+        onOpenChange(false)
+      }}
+    />
+    </>
   )
 }
