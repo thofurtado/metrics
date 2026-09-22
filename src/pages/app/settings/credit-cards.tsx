@@ -154,6 +154,50 @@ export function CreditCards() {
                     </div>
                   </div>
 
+                  {typeof card.used_limit === 'number' && card.credit_limit > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {(() => {
+                        const usedPct = Math.min(
+                          100,
+                          Math.max(0, (card.used_limit! / card.credit_limit) * 100),
+                        )
+                        const over = (card.available_limit ?? 0) < 0
+                        return (
+                          <>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={cn(
+                                  'h-full rounded-full transition-all',
+                                  over
+                                    ? 'bg-red-500'
+                                    : usedPct > 80
+                                      ? 'bg-amber-500'
+                                      : 'bg-primary',
+                                )}
+                                style={{ width: `${usedPct}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+                              <span>
+                                Usado: R${' '}
+                                {card.used_limit!.toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                              <span className={cn(over && 'font-bold text-red-600')}>
+                                {over ? 'Excedeu em' : 'Disponível'}: R${' '}
+                                {Math.abs(card.available_limit ?? 0).toLocaleString(
+                                  'pt-BR',
+                                  { minimumFractionDigits: 2 },
+                                )}
+                              </span>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
                   {/* Background decoration */}
                   <div className="absolute -bottom-12 -right-12 h-32 w-32 rounded-full bg-primary/5 blur-3xl transition-all group-hover:bg-primary/10" />
                 </div>

@@ -13,6 +13,10 @@ export interface CreditCard {
   account_id?: string | null
   created_at: string
   updated_at: string
+  /** Soma de todas as compras ainda não pagas (todas as faturas em aberto, não só a do mês). */
+  used_limit?: number
+  /** credit_limit - used_limit. Só informativo: o sistema não bloqueia uma compra por estourar o limite. */
+  available_limit?: number
 }
 
 export interface CreateCreditCardBody {
