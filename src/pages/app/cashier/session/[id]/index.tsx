@@ -408,8 +408,8 @@ export function CashierSessionDetails() {
     ) {
       try {
         await audit(id!)
-      } catch (err) {
-        alert('Erro ao auditar caixa.')
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Erro ao auditar caixa.')
       }
     }
   }
@@ -467,7 +467,7 @@ export function CashierSessionDetails() {
       })
     } catch (err: any) {
       console.error('Erro ao editar lançamento:', err)
-      alert('Erro ao editar lançamento no caixa.')
+      alert(err?.response?.data?.message || 'Erro ao editar lançamento no caixa.')
     }
   }
 

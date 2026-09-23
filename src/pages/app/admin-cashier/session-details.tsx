@@ -35,7 +35,8 @@ export function AdminCashierSessionDetails() {
         queryKey: ['admin-cashier-session-details', id],
       })
     },
-    onError: () => toast.error('Erro ao auditar sessão'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Erro ao auditar sessão'),
   })
 
   if (isLoading || !data)

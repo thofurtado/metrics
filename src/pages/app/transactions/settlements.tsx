@@ -291,7 +291,8 @@ export function Settlements() {
       queryClient.invalidateQueries({ queryKey: ['pending-settlements-cards'] })
       queryClient.invalidateQueries({ queryKey: ['finance-metrics'] })
     },
-    onError: () => toast.error('Erro ao reverter liquidação.'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Erro ao reverter liquidação.'),
   })
 
   const { mutateAsync: triggerSettlement, isPending: isTriggering } = useMutation({

@@ -98,7 +98,8 @@ export function CashierBatchDetailsModal({
       queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
       onOpenChange(false)
     },
-    onError: () => toast.error('Erro ao reverter conferência.'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Erro ao reverter conferência.'),
   })
 
   async function handleToggleConfirm() {

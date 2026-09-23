@@ -261,9 +261,12 @@ export function TreatmentPaymentModal({
 
       // Navigate to the main list to prevent stale state
       navigate('/treatments')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao processar venda:', error)
-      toast.error('Erro ao finalizar venda. Verifique o console.')
+      toast.error(
+        error?.response?.data?.message ||
+          'Erro ao finalizar venda. Verifique o console.',
+      )
     } finally {
       setIsFinishing(false)
     }

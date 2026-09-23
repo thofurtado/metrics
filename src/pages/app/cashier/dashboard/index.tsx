@@ -168,8 +168,8 @@ export function CashierDashboard() {
         toast.success('Caixa excluído com sucesso!')
         handleCloseDeleteSessionModal()
       },
-      onError: () => {
-        toast.error('Erro ao excluir o caixa.')
+      onError: (err: any) => {
+        toast.error(err?.response?.data?.message || 'Erro ao excluir o caixa.')
       },
     })
 
