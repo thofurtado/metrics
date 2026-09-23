@@ -370,18 +370,20 @@ export function TransactionMobileCard({
               {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 flex-1 rounded-lg border-slate-200 text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200"
-            onClick={(e) => {
-              e.stopPropagation()
-              setDetailsMode('edit')
-              setOpenDetailsModal(true)
-            }}
-          >
-            Editar
-          </Button>
+          {!transactions.cashier_session_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 flex-1 rounded-lg border-slate-200 text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200"
+              onClick={(e) => {
+                e.stopPropagation()
+                setDetailsMode('edit')
+                setOpenDetailsModal(true)
+              }}
+            >
+              Editar
+            </Button>
+          )}
         </div>
       </div>
 
@@ -547,8 +549,11 @@ export function TransactionTableRow({
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
-    onError: (_error, _variables) => {
-      toast.error('Ocorreu um erro ao deletar a transação.')
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          'Ocorreu um erro ao deletar a transação.',
+      )
     },
     onSettled: () => {
       setLocalLoading(false)
@@ -969,16 +974,18 @@ export function TransactionTableRow({
                 <Eye className="mr-2 h-4 w-4" />
                 Visualizar
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  setDetailsMode('edit')
-                  setOpenDetailsModal(true)
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
+              {!transactions.cashier_session_id && (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    setDetailsMode('edit')
+                    setOpenDetailsModal(true)
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
+                </DropdownMenuItem>
+              )}
               {transactions.transaction_group_id && (
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -990,13 +997,15 @@ export function TransactionTableRow({
                   Gerenciar Parcelamento
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={() => setOpenDeleteAlert(true)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Deletar
-              </DropdownMenuItem>
+              {!transactions.cashier_session_id && (
+                <DropdownMenuItem
+                  onClick={() => setOpenDeleteAlert(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Deletar
+                </DropdownMenuItem>
+              )}
 
               {!transactions.isVirtual && (
                 <>
