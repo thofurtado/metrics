@@ -3,6 +3,7 @@ import {
   ChefHat,
   Hammer,
   Layers,
+  Link2,
   Plus,
   ShoppingBasket,
   PackagePlus,
@@ -14,6 +15,7 @@ import { Helmet } from 'react-helmet-async'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
+import { api } from '@/lib/axios'
 import { getProducts } from '@/api/get-products'
 import { getServices } from '@/api/get-services'
 import { getSupplies } from '@/api/get-supplies'
@@ -39,6 +41,7 @@ import { ComplementsTab } from './complements-tab'
 import { CompositeTab } from './composite-tab'
 import { ItemsTableFilters } from './item-table-filters'
 import { ItemTableRow } from './item-table-row'
+import { DeliveryItemMappingsDialog } from './delivery-item-mappings-dialog'
 import { PrintDepartmentsDialog } from './print-departments-dialog'
 import { ProductItemDialog } from './product-item-dialog'
 import { SubcategoriesDialog } from './subcategories-dialog'
@@ -70,6 +73,18 @@ export function Items() {
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false)
   const [isComplementsOpen, setIsComplementsOpen] = useState(false)
   const [isSubcategoriesOpen, setIsSubcategoriesOpen] = useState(false)
+  const [isDeliveryMappingsOpen, setIsDeliveryMappingsOpen] = useState(false)
+
+  // Botão de vínculo com delivery só existe se a loja tiver alguma integração conectada
+  // (iFood autorizado ou loja 99Food configurada) — sem integração, não há o que vincular.
+  const { data: companyProfile } = useQuery({
+    queryKey: ['company-profile-delivery-status'],
+    queryFn: async () => (await api.get('/public/profile')).data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const hasDeliveryIntegration = Boolean(
+    companyProfile?.ifoodConnected || companyProfile?.food99ShopId,
+  )
 
   const {
     data: result = {
@@ -227,6 +242,22 @@ export function Items() {
           >
             Departamentos
           </Button>
+
+          {hasDeliveryIntegration && (
+            <Button
+              variant="outline"
+              onClick={() => setIsDeliveryMappingsOpen(true)}
+              className="h-10 w-auto rounded-xl border-slate-200 px-3.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <Link2 className="mr-1.5 h-4 w-4 text-rose-500" />
+              Vínculos com Delivery
+            </Button>
+          )}
+
+          <DeliveryItemMappingsDialog
+            open={isDeliveryMappingsOpen}
+            onOpenChange={setIsDeliveryMappingsOpen}
+          />
 
           <Dialog
             open={isCreateDialogOpen}
