@@ -2,7 +2,7 @@
   "homepage": "https://thofurtado.github.io/metrics",
   "name": "metrics-web",
   "private": true,
-  "version": "2.6.20.1",
+  "version": "2.6.20.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
