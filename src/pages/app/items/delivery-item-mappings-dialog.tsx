@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronsUpDown, Link2, Trash2 } from 'lucide-react'
+import { ChevronsUpDown, Link2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,21 +14,12 @@ import { getProducts } from '@/api/get-products'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +40,7 @@ function ProductPicker({
   onPick: (product: { id: string; name: string }) => void
   disabled?: boolean
 }) {
+  // Lista simples (sem Popover em portal): dentro do Dialog o portal engolia o clique no produto.
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -60,51 +52,51 @@ function ProductPicker({
   const products = data?.data.products ?? []
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 w-[220px] justify-between rounded-lg text-xs font-semibold"
-          disabled={disabled}
-        >
-          Escolher produto...
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Buscar produto..."
-            value={search}
-            onValueChange={setSearch}
+    <div className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-9 w-[220px] justify-between rounded-lg text-xs font-semibold"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+      >
+        Escolher produto...
+        <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <input
             autoFocus
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar produto..."
+            className="h-10 w-full border-b border-slate-200 bg-transparent px-3 text-sm outline-none dark:border-slate-700"
           />
-          <CommandList>
-            <CommandEmpty>
-              {isFetching ? 'Buscando...' : 'Nenhum produto encontrado.'}
-            </CommandEmpty>
-            <CommandGroup>
-              {products.map((p) => (
-                <CommandItem
-                  key={p.id}
-                  value={p.id}
-                  onSelect={() => {
-                    onPick({ id: p.id, name: p.name })
-                    setOpen(false)
-                    setSearch('')
-                  }}
-                >
-                  <Check className="mr-2 h-3.5 w-3.5 opacity-0" />
-                  <span className="truncate">{p.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          <div className="max-h-56 overflow-y-auto p-1">
+            {products.length === 0 && (
+              <p className="px-3 py-4 text-center text-xs text-slate-400">
+                {isFetching ? 'Buscando...' : 'Nenhum produto encontrado.'}
+              </p>
+            )}
+            {products.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => {
+                  onPick({ id: p.id, name: p.name })
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                <span className="truncate">{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
