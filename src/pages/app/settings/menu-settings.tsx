@@ -99,9 +99,6 @@ const profileSchema = z.object({
   minOrderValue: z.coerce.number().min(0, 'Valor mínimo inválido').default(0),
   deliveryTimeMin: z.coerce.number().min(1, 'Tempo inválido').default(30),
   deliveryTimeMax: z.coerce.number().min(1, 'Tempo inválido').default(60),
-  ifoodMerchantId: z.string().optional(),
-  food99ShopId: z.string().optional(),
-  anotaAiApiKey: z.string().optional(),
   googleReviewUrl: z.string().optional(),
   neighborhoodPolicy: z.enum(['FALLBACK', 'STRICT']).default('FALLBACK'),
   pixKey: z.string().optional(),
@@ -298,9 +295,6 @@ export function MenuSettings() {
       minOrderValue: 0,
       deliveryTimeMin: 30,
       deliveryTimeMax: 60,
-      ifoodMerchantId: '',
-      food99ShopId: '',
-      anotaAiApiKey: '',
       googleReviewUrl: '',
       neighborhoodPolicy: 'FALLBACK',
       pixKey: '',
@@ -357,9 +351,6 @@ export function MenuSettings() {
         minOrderValue: profile.minOrderValue ?? 0,
         deliveryTimeMin: profile.deliveryTimeMin ?? 30,
         deliveryTimeMax: profile.deliveryTimeMax ?? 60,
-        ifoodMerchantId: profile.ifoodMerchantId || '',
-        food99ShopId: profile.food99ShopId || '',
-        anotaAiApiKey: profile.anotaAiApiKey || '',
         googleReviewUrl: (profile as any).googleReviewUrl || (profile.deliverySectors as any)?.googleReviewUrl || '',
         neighborhoodPolicy: (profile as any).neighborhoodPolicy === 'STRICT' ? 'STRICT' : 'FALLBACK',
         pixKey: profile.pixKey || '',
@@ -418,89 +409,6 @@ export function MenuSettings() {
       )
     } finally {
       setUploadingBrandAsset(null)
-    }
-  }
-
-  // Integração com Marketplaces (iFood & 99Food)
-  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false)
-  const [isConnectingIfood, setIsConnectingIfood] = useState(false)
-    const [ifoodAuthData, setIfoodAuthData] = useState<{
-    userCode: string
-    verificationUrlComplete: string
-  } | null>(null)
-  const [ifoodAuthorizationCode, setIfoodAuthorizationCode] = useState('')
-  const [isExchangingIfoodToken, setIsExchangingIfoodToken] = useState(false)
-
-  async function handleSyncCatalog() {
-    setIsSyncingCatalog(true)
-    try {
-      const response = await api.post('/delivery/catalog/sync')
-      toast.success(response.data?.message || 'Cardápio sincronizado com sucesso!')
-    } catch (error: any) {
-      console.error('Erro ao sincronizar cardápio:', error)
-      toast.error(
-        error?.response?.data?.details ||
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        'Erro ao sincronizar cardápio com marketplaces.'
-      )
-    } finally {
-      setIsSyncingCatalog(false)
-    }
-  }
-
-  async function handleConnectIfood() {
-    setIsConnectingIfood(true)
-    try {
-      const response = await api.get('/delivery/ifood/usercode')
-      if (response.data?.userCode) {
-        setIfoodAuthData({
-                    userCode: response.data.userCode,
-          verificationUrlComplete:
-            response.data.verificationUrlComplete ||
-            response.data.verificationUrl ||
-            'https://portal.ifood.com.br',
-        })
-        toast.success('Código de autorização iFood gerado!')
-      } else {
-        toast.error('Não foi possível obter o código de autorização.')
-      }
-    } catch (error: any) {
-      console.error('Erro ao conectar iFood:', error)
-      toast.error(
-        error?.response?.data?.details ||
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        'Erro ao obter código de autorização do iFood.'
-      )
-    } finally {
-      setIsConnectingIfood(false)
-    }
-    }
-
-  async function handleExchangeIfoodToken() {
-    if (!ifoodAuthData || !ifoodAuthorizationCode.trim()) {
-      toast.error('Informe o authorization code recebido após autorizar a loja.')
-      return
-    }
-
-    setIsExchangingIfoodToken(true)
-    try {
-      await api.post('/delivery/ifood/token', {
-        authorizationCode: ifoodAuthorizationCode.trim(),
-      })
-      toast.success('Loja iFood autorizada com sucesso.')
-      setIfoodAuthorizationCode('')
-      setIfoodAuthData(null)
-      queryClient.invalidateQueries({ queryKey: ['company-profile'] })
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.details ||
-        error?.response?.data?.error ||
-        'Não foi possível concluir a autorização da loja iFood.',
-      )
-    } finally {
-      setIsExchangingIfoodToken(false)
     }
   }
 
@@ -892,7 +800,7 @@ export function MenuSettings() {
             Cardápio & Estabelecimento (White Label)
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Configure informações da loja, zonas de entrega por bairro, horários e integrações.
+            Configure informações da loja, zonas de entrega por bairro, horários e Pix. iFood, 99Food e De Olho no Imposto ficam em Configurações → Integrações.
           </p>
         </div>
       </div>
@@ -900,7 +808,7 @@ export function MenuSettings() {
 
       <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
         <Tabs defaultValue="delivery" className="space-y-6">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 gap-1">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 h-auto p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 gap-1">
             <TabsTrigger
               value="store"
               className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
@@ -924,12 +832,6 @@ export function MenuSettings() {
               className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
             >
               <Clock className="h-4 w-4" /> Horários
-            </TabsTrigger>
-            <TabsTrigger
-              value="integrations"
-              className="gap-2 text-xs font-bold rounded-xl py-2.5 data-[state=checked]:bg-white dark:data-[state=checked]:bg-slate-950 data-[state=checked]:shadow-sm"
-            >
-              <Sparkles className="h-4 w-4" /> Pix & Integrações
             </TabsTrigger>
           </TabsList>
 
@@ -1245,6 +1147,82 @@ export function MenuSettings() {
                     >
                       Botão de Teste
                     </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                  Avaliações no Google
+                </CardTitle>
+                <CardDescription>Convite para o cliente avaliar a loja no Google quando o pedido é concluído.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* INTEGRAÇÃO GOOGLE REVIEWS (AVALIAÇÕES 5 ESTRELAS) */}
+                <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                  <div className="flex items-center justify-end empty:hidden">
+                    {watch('googleReviewUrl') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = watch('googleReviewUrl')
+                          if (url) window.open(url, '_blank')
+                        }}
+                        className="h-7 text-xs font-bold gap-1 border-amber-300 bg-white text-amber-900 hover:bg-amber-100 dark:bg-slate-900 dark:text-amber-300"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> Testar Link
+                      </Button>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Ao finalizar o pedido no caixa, o cliente recebe uma notificação no celular e um botão no cardápio convidando a avaliar seu restaurante com <strong>5 estrelas no Google</strong>.
+                  </p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="googleReviewUrl" className="text-xs font-bold">
+                      Link de Avaliação do Google (Google Reviews / Maps / Busca)
+                    </Label>
+                    <Input
+                      id="googleReviewUrl"
+                      {...register('googleReviewUrl')}
+                      placeholder="Ex: https://g.page/r/.../review ou https://www.google.com/search?q=marujo+gastro+bar"
+                      className="bg-white dark:bg-slate-900"
+                    />
+                  </div>
+
+                  <div className="rounded-lg bg-amber-100/70 p-3 text-[11px] leading-relaxed text-amber-950 dark:bg-amber-950/40 dark:text-amber-200 space-y-1.5">
+                    <p className="font-bold">💡 Onde encontrar o link do seu restaurante?</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>
+                        <strong>Link Oficial (Recomendado):</strong> Acesse o <a href="https://business.google.com" target="_blank" rel="noreferrer" className="underline font-bold">Google Meu Negócio</a> &gt; clique em <em>&quot;Pedir avaliações&quot;</em> e copie o link curto gerado (ex: <code>https://g.page/r/CODIGO/review</code>).
+                      </li>
+                      <li>
+                        <strong>Link do Maps ou Busca:</strong> Você também pode pesquisar sua empresa no Google, clicar em &quot;Avaliações&quot; e copiar o link do navegador (ex: <code>https://www.google.com/search?q=marujo+gastro+bar...</code>).
+                      </li>
+                    </ul>
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const name = watch('tradeName') || ''
+                          const city = watch('city') || ''
+                          const query = encodeURIComponent(`${name} ${city} avaliações`.trim())
+                          const generated = `https://www.google.com/search?q=${query}`
+                          setValue('googleReviewUrl', generated, { shouldDirty: true })
+                          toast.success('Link de busca do Google gerado automaticamente com base no nome do restaurante!')
+                        }}
+                        className="h-6 text-[11px] font-bold text-amber-800 hover:text-amber-950 dark:text-amber-300 px-2 underline cursor-pointer"
+                      >
+                        ⚡ Gerar link de busca automaticamente com o nome da loja
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1704,6 +1682,30 @@ export function MenuSettings() {
 
           {/* ABA 3: FORMAS DE PAGAMENTO NO DELIVERY */}
           <TabsContent value="payments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Wallet className="h-5 w-5 text-emerald-600" />
+                  Pix no Cardápio
+                </CardTitle>
+                <CardDescription>Chave usada para gerar o QR Code e o Copia e Cola do Pix na tela de pagamento do cliente.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pixKey" className="font-bold text-emerald-700 dark:text-emerald-400">
+                    ⚡ Chave Pix do Estabelecimento (Checkout Online)
+                  </Label>
+                  <Input
+                    id="pixKey"
+                    {...register('pixKey')}
+                    placeholder="Chave Pix (CPF, CNPJ, Telefone, E-mail ou Chave Aleatória)"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Quando preenchida, o sistema gera o QR Code e o Copia e Cola automaticamente na tela de pagamento do cliente.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
             <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
                 <div>
@@ -1955,286 +1957,6 @@ export function MenuSettings() {
                       </div>
                     )
                   })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ABA 4: PIX & INTEGRAÇÕES */}
-          <TabsContent value="integrations" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Chave Pix & Integrações Marketplaces
-                </CardTitle>
-                <CardDescription>
-                  Configure a chave Pix para geração automática do QR Code no checkout e tokens de integrações.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pixKey" className="font-bold text-emerald-700 dark:text-emerald-400">
-                    ⚡ Chave Pix do Estabelecimento (Checkout Online)
-                  </Label>
-                  <Input
-                    id="pixKey"
-                    {...register('pixKey')}
-                    placeholder="Chave Pix (CPF, CNPJ, Telefone, E-mail ou Chave Aleatória)"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    Quando preenchida, o sistema gera o QR Code e o Copia e Cola automaticamente na tela de pagamento do cliente.
-                  </p>
-                </div>
-
-                <Separator className="my-2" />
-
-                {/* MARKETPLACES: IFOOD & 99FOOD */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        🛵 Marketplaces de Delivery Conectados
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Integração nativa para captura automática de pedidos no PDV e sincronização de cardápio.
-                      </p>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={handleSyncCatalog}
-                      disabled={isSyncingCatalog}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow-sm"
-                    >
-                      {isSyncingCatalog ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sincronizando...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3.5 w-3.5" /> Sincronizar Cardápio Completo
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {/* CARD IFOOD */}
-                    <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/40 dark:bg-red-950/20 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 font-black text-white text-xs">
-                            iF
-                          </span>
-                          <div>
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">iFood</span>
-                            <div className="flex items-center gap-1">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Ativo e Escutando</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleConnectIfood}
-                          disabled={isConnectingIfood}
-                          className="h-7 text-xs font-bold border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300"
-                        >
-                          {isConnectingIfood ? <Loader2 className="h-3 w-3 animate-spin" /> : '🔗 Autorizar Loja'}
-                        </Button>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label htmlFor="ifoodMerchantId" className="text-xs font-semibold">iFood Merchant ID</Label>
-                        <Input
-                          id="ifoodMerchantId"
-                          {...register('ifoodMerchantId')}
-                          placeholder="Ex: 0157299d-4790-4389-9703-47d56b5fe140"
-                          className="bg-white dark:bg-slate-900 text-xs"
-                        />
-                      </div>
-
-                      {ifoodAuthData && (
-                        <div className="rounded-xl border border-red-300 bg-white p-3 dark:bg-slate-900 space-y-2">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">Código de Autorização iFood:</p>
-                          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
-                            <code className="text-sm font-black text-red-600 tracking-wider">{ifoodAuthData.userCode}</code>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-[10px] font-bold gap-1"
-                              onClick={() => {
-                                navigator.clipboard.writeText(ifoodAuthData.userCode)
-                                toast.success('Código copiado!')
-                              }}
-                            >
-                              <Copy className="h-3 w-3" /> Copiar
-                            </Button>
-                          </div>
-                                                    <Button
-                            type="button"
-                            size="sm"
-                            className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1"
-                            onClick={() => window.open(ifoodAuthData.verificationUrlComplete, '_blank')}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" /> Abrir Portal iFood para Confirmar
-                          </Button>
-                          <div className="space-y-1 pt-1">
-                            <Label htmlFor="ifoodAuthorizationCode" className="text-xs font-semibold">
-                              Authorization Code
-                            </Label>
-                            <div className="flex gap-2">
-                              <Input
-                                id="ifoodAuthorizationCode"
-                                value={ifoodAuthorizationCode}
-                                onChange={(event) => setIfoodAuthorizationCode(event.target.value)}
-                                placeholder="Cole aqui o código recebido do iFood"
-                                className="bg-white text-xs dark:bg-slate-950"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={handleExchangeIfoodToken}
-                                disabled={isExchangingIfoodToken || !ifoodAuthorizationCode.trim()}
-                                className="shrink-0 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
-                              >
-                                {isExchangingIfoodToken ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Concluir'}
-                              </Button>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">
-                              O verifier é mantido com segurança no backend e não é enviado pelo navegador.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* CARD 99FOOD */}
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500 font-black text-white text-xs">
-                            99
-                          </span>
-                          <div>
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">99Food</span>
-                            <div className="flex items-center gap-1">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Webhook Ativo</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText('https://api.metrics.dev.br/webhooks/99food')
-                            toast.success('URL do Webhook copiada!')
-                          }}
-                          className="h-7 text-xs font-bold border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 gap-1"
-                        >
-                          <Copy className="h-3 w-3" /> Copiar Webhook
-                        </Button>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label htmlFor="food99ShopId" className="text-xs font-semibold">99Food App Shop ID</Label>
-                        <Input
-                          id="food99ShopId"
-                          {...register('food99ShopId')}
-                          placeholder="Ex: 342343227"
-                          className="bg-white dark:bg-slate-900 text-xs"
-                        />
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground">
-                        Notificações de pedidos são recebidas instantaneamente pelo servidor oficial na nuvem.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator className="my-4" />
-
-                {/* INTEGRAÇÃO GOOGLE REVIEWS (AVALIAÇÕES 5 ESTRELAS) */}
-                <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        ⭐ Avaliações no Google (Google Reviews)
-                      </h4>
-                    </div>
-                    {watch('googleReviewUrl') && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const url = watch('googleReviewUrl')
-                          if (url) window.open(url, '_blank')
-                        }}
-                        className="h-7 text-xs font-bold gap-1 border-amber-300 bg-white text-amber-900 hover:bg-amber-100 dark:bg-slate-900 dark:text-amber-300"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" /> Testar Link
-                      </Button>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Ao finalizar o pedido no caixa, o cliente recebe uma notificação no celular e um botão no cardápio convidando a avaliar seu restaurante com <strong>5 estrelas no Google</strong>.
-                  </p>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="googleReviewUrl" className="text-xs font-bold">
-                      Link de Avaliação do Google (Google Reviews / Maps / Busca)
-                    </Label>
-                    <Input
-                      id="googleReviewUrl"
-                      {...register('googleReviewUrl')}
-                      placeholder="Ex: https://g.page/r/.../review ou https://www.google.com/search?q=marujo+gastro+bar"
-                      className="bg-white dark:bg-slate-900"
-                    />
-                  </div>
-
-                  <div className="rounded-lg bg-amber-100/70 p-3 text-[11px] leading-relaxed text-amber-950 dark:bg-amber-950/40 dark:text-amber-200 space-y-1.5">
-                    <p className="font-bold">💡 Onde encontrar o link do seu restaurante?</p>
-                    <ul className="list-disc pl-4 space-y-1">
-                      <li>
-                        <strong>Link Oficial (Recomendado):</strong> Acesse o <a href="https://business.google.com" target="_blank" rel="noreferrer" className="underline font-bold">Google Meu Negócio</a> &gt; clique em <em>&quot;Pedir avaliações&quot;</em> e copie o link curto gerado (ex: <code>https://g.page/r/CODIGO/review</code>).
-                      </li>
-                      <li>
-                        <strong>Link do Maps ou Busca:</strong> Você também pode pesquisar sua empresa no Google, clicar em &quot;Avaliações&quot; e copiar o link do navegador (ex: <code>https://www.google.com/search?q=marujo+gastro+bar...</code>).
-                      </li>
-                    </ul>
-                    <div className="pt-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const name = watch('tradeName') || ''
-                          const city = watch('city') || ''
-                          const query = encodeURIComponent(`${name} ${city} avaliações`.trim())
-                          const generated = `https://www.google.com/search?q=${query}`
-                          setValue('googleReviewUrl', generated, { shouldDirty: true })
-                          toast.success('Link de busca do Google gerado automaticamente com base no nome do restaurante!')
-                        }}
-                        className="h-6 text-[11px] font-bold text-amber-800 hover:text-amber-950 dark:text-amber-300 px-2 underline cursor-pointer"
-                      >
-                        ⚡ Gerar link de busca automaticamente com o nome da loja
-                      </Button>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>

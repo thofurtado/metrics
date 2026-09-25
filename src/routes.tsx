@@ -18,6 +18,7 @@ import { Items } from './pages/app/items'
 import { Accounts } from './pages/app/settings/accounts'
 import { CreditCards } from './pages/app/settings/credit-cards'
 import { MenuSettings } from './pages/app/settings/menu-settings'
+import { IntegrationsSettings } from './pages/app/settings/integrations-settings'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
 import { PaymentIdentifiersSettings } from './pages/app/settings/payment-identifiers'
 import { Payments } from './pages/app/settings/payments'
@@ -241,6 +242,7 @@ export const router = createBrowserRouter([
               },
               { path: 'modules', element: <ModulesSettings /> },
               { path: 'cardapio', element: <MenuSettings /> },
+              { path: 'integrations', element: <IntegrationsSettings /> },
               { path: 'permissions', element: <Permissions /> },
               { path: 'payment-config', element: <PaymentConfig /> },
             ],

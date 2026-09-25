@@ -2,6 +2,7 @@ import {
   Blocks,
   Cpu,
   CreditCard,
+  Plug,
   Shield,
   Store,
   Tag,
@@ -59,6 +60,20 @@ export function SettingsLayout() {
             >
               <Store className="h-4 w-4" />
               Meu Cardápio (White Label)
+            </NavLink>
+            <NavLink
+              to="/settings/integrations"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'border-l-4 border-l-primary bg-muted text-primary'
+                    : 'border-l-4 border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )
+              }
+            >
+              <Plug className="h-4 w-4" />
+              Integrações
             </NavLink>
 
             <div className="mx-3 my-2 hidden border-t border-border/40 lg:block" />
