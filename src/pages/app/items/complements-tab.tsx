@@ -32,6 +32,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
+/** Número do consumo em pt-BR, sem zeros sobrando (0.03 → "0,03"). */
+function formatarConsumo(valor: number): string {
+  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+}
+
+/** Equivalente na unidade menor, para quem pensa em gramas: 0,03 KG → "30 g"; 0,05 LT → "50 ml". */
+function equivalenteMenor(valor: number, unidade: string): string | null {
+  if (!(valor > 0)) return null
+  if (unidade === 'KG') return `${formatarConsumo(valor * 1000)} g`
+  if (unidade === 'LT' || unidade === 'L') return `${formatarConsumo(valor * 1000)} ml`
+  return null
+}
+
 export function ComplementsTab() {
   const queryClient = useQueryClient()
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
@@ -147,7 +160,7 @@ export function ComplementsTab() {
   })
 
   const handleAddOption = () => {
-    setOptions([...options, { name: '', price: 0, linked_supply_id: null }])
+    setOptions([...options, { name: '', price: 0, linked_supply_id: null, supply_quantity: null }])
   }
 
   const handleUpdateOption = (
@@ -178,6 +191,16 @@ export function ComplementsTab() {
       return
     }
 
+    const semConsumo = options.find(
+      (opt) => opt.name.trim() !== '' && opt.linked_supply_id && !(Number(opt.supply_quantity) > 0),
+    )
+    if (semConsumo) {
+      toast.error(
+        `Informe o consumo por porção de "${semConsumo.name.trim()}": quanto do insumo sai do estoque a cada porção.`,
+      )
+      return
+    }
+
     const payload = {
       name: groupName.trim(),
       min_quantity: Number(minQty),
@@ -190,6 +213,9 @@ export function ComplementsTab() {
           name: opt.name.trim(),
           price: Number(opt.price || 0),
           linked_supply_id: opt.linked_supply_id || null,
+          supply_quantity: opt.linked_supply_id ? Number(opt.supply_quantity) : null,
+          // Esta aba não edita o produto ligado: devolve o que veio, para não apagar
+          linked_product_id: opt.linked_product_id,
         })),
       product_ids: linkedProductIds,
     }
@@ -406,11 +432,17 @@ export function ComplementsTab() {
                     Nenhuma opção cadastrada. Clique em "+ Adicionar Opção".
                   </p>
                 )}
-                {options.map((opt, idx) => (
+                {options.map((opt, idx) => {
+                  const insumo = supplies.find((s: any) => s.id === opt.linked_supply_id)
+                  const unidade = String(insumo?.unit || 'UN').toUpperCase()
+                  const consumo = Number(opt.supply_quantity || 0)
+                  const equivalente = equivalenteMenor(consumo, unidade)
+                  return (
                   <div
                     key={idx}
-                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/50"
+                    className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/50"
                   >
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     {/* Nome da Opção */}
                     <div className="flex-1">
                       <Input
@@ -469,7 +501,52 @@ export function ComplementsTab() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+
+                  {/* Consumo por porção: quanto do insumo sai do estoque a cada vez que o cliente escolhe esta opção.
+                      Sem ele o sistema baixava 1 unidade inteira do insumo (ex.: 1 kg de bacon por "Bacon Extra"). */}
+                  {insumo && (
+                    <div className="flex flex-col gap-1.5 rounded-xl border border-orange-200 bg-orange-50/60 p-2.5 sm:flex-row sm:items-center sm:gap-3 dark:border-orange-900/50 dark:bg-orange-950/20">
+                      <Label
+                        htmlFor={`consumo-${idx}`}
+                        className="text-sm font-bold text-slate-800 dark:text-slate-100"
+                      >
+                        Consumo por porção
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`consumo-${idx}`}
+                          type="number"
+                          inputMode="decimal"
+                          step="0.001"
+                          min="0"
+                          placeholder={unidade === 'KG' || unidade === 'LT' ? '0,030' : '1'}
+                          value={opt.supply_quantity ?? ''}
+                          onChange={(e) =>
+                            handleUpdateOption(
+                              idx,
+                              'supply_quantity',
+                              e.target.value === '' ? null : Number(e.target.value),
+                            )
+                          }
+                          className={cn(
+                            'h-11 w-28 rounded-xl border-slate-200 bg-white font-mono text-base font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100',
+                            !(consumo > 0) && 'border-red-400 dark:border-red-700',
+                          )}
+                        />
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {unidade}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        {consumo > 0
+                          ? `Cada "${opt.name.trim() || 'porção'}" tira ${formatarConsumo(consumo)} ${unidade}${equivalente ? ` (${equivalente})` : ''} de ${insumo.name} do estoque.`
+                          : `Quanto de ${insumo.name} sai do estoque a cada porção, em ${unidade}.`}
+                      </p>
+                    </div>
+                  )}
+                  </div>
+                  )
+                })}
               </div>
             </div>
 
