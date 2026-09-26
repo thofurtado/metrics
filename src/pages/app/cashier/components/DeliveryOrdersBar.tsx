@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { api, API_BASE_URL } from '@/lib/axios'
 import { DeliveryOrdersDrawer } from './DeliveryOrdersDrawer'
+import { diaOperacional } from '@/lib/dia-operacional'
 import {
   deliveryAlertManager,
   unlockAudioContext,
@@ -40,10 +41,9 @@ function extractDateString(val: any): string {
   try {
     const d = new Date(val)
     if (isNaN(d.getTime())) return ''
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
+    // Dia operacional (vira às 05:00 de Brasília): o caixa que passa da meia-noite continua vendo os pedidos da
+    // madrugada. Antes era a data do calendário no fuso do navegador.
+    return diaOperacional(d)
   } catch {
     return ''
   }

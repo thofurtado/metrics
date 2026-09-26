@@ -60,6 +60,7 @@ import { LiveTablesView } from '../components/LiveTablesView'
 import { CancellationsAuditView } from '../components/CancellationsAuditView'
 import { UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { diaOperacional } from '@/lib/dia-operacional'
 
 export function CashierDashboard() {
   const navigate = useNavigate()
@@ -68,9 +69,9 @@ export function CashierDashboard() {
 
   const [saldoAbertura, setSaldoAbertura] = useState('0.00')
   const [selectedUser, setSelectedUser] = useState('')
-  const [dataAbertura, setDataAbertura] = useState(
-    `${dataAtual.getFullYear()}-${String(dataAtual.getMonth() + 1).padStart(2, '0')}-${String(dataAtual.getDate()).padStart(2, '0')}`,
-  )
+  // Data sugerida = dia operacional (vira às 05:00 de Brasília): à 01:00 ainda é o dia anterior, como no PDV.
+  const [dataAbertura, setDataAbertura] = useState(() => diaOperacional(dataAtual))
+  const [dataAberturaEditada, setDataAberturaEditada] = useState(false)
   const [mesVisualizacao, setMesVisualizacao] = useState(new Date().getMonth())
   const [anoVisualizacao, setAnoVisualizacao] = useState(
     new Date().getFullYear(),
@@ -411,12 +412,15 @@ export function CashierDashboard() {
 
   const handleCriar = async () => {
     try {
-      let opened_at
-      if (dataAbertura) {
-        const now = new Date()
-        const [year, month, day] = dataAbertura.split('-')
-        now.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
-        opened_at = now.toISOString()
+      // Abertura agora (data não mexida, ou o dia operacional de agora): usa o horário atual. Antes a data da
+      // tela era aplicada ao horário atual e, se a página tinha sido aberta antes da meia-noite, o caixa ficava
+      // 24 h no passado. Dia anterior escolhido de propósito: meio-dia de Brasília daquele dia.
+      let opened_at: string | undefined
+      const agora = new Date()
+      if (!dataAberturaEditada || !dataAbertura || dataAbertura === diaOperacional(agora)) {
+        opened_at = agora.toISOString()
+      } else {
+        opened_at = new Date(`${dataAbertura}T12:00:00-03:00`).toISOString()
       }
 
       await openSessionFn({
@@ -810,7 +814,10 @@ export function CashierDashboard() {
                   <input
                     type="date"
                     value={dataAbertura}
-                    onChange={(e) => setDataAbertura(e.target.value)}
+                    onChange={(e) => {
+                      setDataAbertura(e.target.value)
+                      setDataAberturaEditada(true)
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-800 outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                   />
                 </div>
