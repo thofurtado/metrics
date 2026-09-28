@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog'
 import { api } from '@/lib/axios'
 import { formatCurrency, resolveImageUrl, toWhatsAppNumber } from '@/lib/utils'
+import { valorCobradoDoGrupo } from '@/lib/complementos-gratis'
 
 // -------------------------------------------------------------
 // Tipos
@@ -462,16 +463,14 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
 
     if (customizingProduct.complementGroups) {
       for (const group of customizingProduct.complementGroups) {
-        let totalSelectedInGroup = 0
+        // Em grupo com "N grátis", os N mais baratos escolhidos saem de graça (igual ao PDV)
+        price += valorCobradoDoGrupo(
+          group.options.map((opt) => ({ preco: opt.price, quantidade: customizerSelectedOptions[opt.id] || 0 })),
+          group.free_quantity || 0,
+        )
         for (const opt of group.options) {
           const qty = customizerSelectedOptions[opt.id] || 0
           if (qty > 0) {
-            totalSelectedInGroup += qty
-            const freeQty = group.free_quantity || 0
-            const chargeable = Math.max(0, totalSelectedInGroup - freeQty)
-            const optCharge = chargeable > 0 ? Math.min(qty, chargeable) : 0
-            price += opt.price * optCharge
-
             selectedPayload.push({
               groupId: group.id,
               groupName: group.name,
@@ -1208,7 +1207,7 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
                       </div>
                       {group.free_quantity > 0 && (
                         <span className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                          {group.free_quantity}º GRÁTIS
+                          {group.free_quantity} GRÁTIS
                         </span>
                       )}
                     </div>

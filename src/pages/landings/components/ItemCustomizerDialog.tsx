@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { resolveImageUrl } from '@/lib/utils'
+import { valorCobradoDoGrupo } from '@/lib/complementos-gratis'
 
 export interface ComplementOption {
   id: string
@@ -286,19 +287,13 @@ export function ItemCustomizerDialog({
       }
     }
 
-    // 2. Preço dos Complementos
+    // 2. Preço dos Complementos: em grupo com "N grátis", os N mais baratos escolhidos saem de graça (igual ao PDV)
     let complementsTotal = 0
     groups.forEach((group) => {
-      let groupChargedCount = 0
-      group.options.forEach((opt) => {
-        const qty = selectedOptionsQty[opt.id] || 0
-        for (let i = 0; i < qty; i++) {
-          groupChargedCount++
-          if (groupChargedCount > group.free_quantity) {
-            complementsTotal += opt.price
-          }
-        }
-      })
+      complementsTotal += valorCobradoDoGrupo(
+        group.options.map((opt) => ({ preco: opt.price, quantidade: selectedOptionsQty[opt.id] || 0 })),
+        group.free_quantity,
+      )
     })
 
     const finalUnitPrice = baseFlavorPrice + complementsTotal
@@ -822,7 +817,7 @@ export function ItemCustomizerDialog({
                       <h4 className="break-words text-lg font-black text-slate-900 tracking-tight">{group.name}</h4>
                       {group.free_quantity > 0 && (
                         <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-extrabold text-emerald-800">
-                          {group.free_quantity === 1 ? '1º Grátis' : `${group.free_quantity} Grátis`}
+                          {`${group.free_quantity} Grátis`}
                         </span>
                       )}
                     </div>
@@ -854,8 +849,8 @@ export function ItemCustomizerDialog({
                     <span className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                     <span>
                       {group.free_quantity === 1
-                        ? 'O primeiro item é por nossa conta! Demais são cobrados à parte.'
-                        : `Os primeiros ${group.free_quantity} itens são por nossa conta! Demais são cobrados à parte.`}
+                        ? 'O item de menor valor é por nossa conta! Demais são cobrados à parte.'
+                        : `Os ${group.free_quantity} itens de menor valor são por nossa conta! Demais são cobrados à parte.`}
                     </span>
                   </div>
                 )}
