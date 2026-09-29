@@ -1,3 +1,4 @@
+import { extrairCaixinhaDeLancamento } from '@/utils/cashier/caixinha'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -322,7 +323,12 @@ export function CashierDashboard() {
 
         items.forEach((s: any) => {
           const entries = s.entries || []
-          const valorAbertura = Number(s.initial_balance || 0)
+          const salesTip = (s.sales || [])
+                        .filter((sl: any) => sl.status !== 'CANCELLED')
+                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
+                      totalCaixinhas += salesTip
+
+                      const valorAbertura = Number(s.initial_balance || 0)
           let sSangrias = 0
           let sEntradas = 0
           let sSuprimentos = 0
@@ -369,34 +375,18 @@ export function CashierDashboard() {
         status: s.status,
         sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
-          const regexCaixinha =
-            /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
-          const match = (e.identification || '').match(regexCaixinha)
-          const valorCaixinhaLinked = match
-            ? parseFloat(match[1].replace(',', '.'))
-            : 0
-          const pm = (e.payment_method || '').toLowerCase()
-          const isAvulsaTip = Boolean(
-            (e.is_tip || e.type === 'TIP' || pm.includes('caixinha') || pm.includes('gorjeta')) &&
-              valorCaixinhaLinked === 0,
-          )
-          const valorCaixinha =
-            valorCaixinhaLinked > 0
-              ? valorCaixinhaLinked
-              : isAvulsaTip
-                ? Number(e.amount || 0)
-                : 0
-
+          const { valorCaixinha, paraQuem, temCaixinha } = extrairCaixinhaDeLancamento(e)
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: valorCaixinha > 0,
-            is_tip: e.is_tip || false,
+            isCaixinha: temCaixinha,
+            is_tip: Boolean(e.is_tip || e.type === 'TIP'),
             type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
             valorCaixinha,
+            paraQuem,
           }
         }),
       }))
@@ -417,34 +407,18 @@ export function CashierDashboard() {
         status: s.status,
         sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
-          const regexCaixinha =
-            /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
-          const match = (e.identification || '').match(regexCaixinha)
-          const valorCaixinhaLinked = match
-            ? parseFloat(match[1].replace(',', '.'))
-            : 0
-          const pm = (e.payment_method || '').toLowerCase()
-          const isAvulsaTip = Boolean(
-            (e.is_tip || e.type === 'TIP' || pm.includes('caixinha') || pm.includes('gorjeta')) &&
-              valorCaixinhaLinked === 0,
-          )
-          const valorCaixinha =
-            valorCaixinhaLinked > 0
-              ? valorCaixinhaLinked
-              : isAvulsaTip
-                ? Number(e.amount || 0)
-                : 0
-
+          const { valorCaixinha, paraQuem, temCaixinha } = extrairCaixinhaDeLancamento(e)
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: valorCaixinha > 0,
-            is_tip: e.is_tip || false,
+            isCaixinha: temCaixinha,
+            is_tip: Boolean(e.is_tip || e.type === 'TIP'),
             type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
             valorCaixinha,
+            paraQuem,
           }
         }),
       }
@@ -1037,11 +1011,13 @@ export function CashierDashboard() {
                           totalSangrias += amt
                         } else if (e.is_addition) {
                           totalSuprimentos += amt
-                        } else if (e.is_tip || e.type === 'TIP') {
-                          totalCaixinhas += amt
-                          totalEntradasSemSaida += amt
                         } else {
                           totalEntradasSemSaida += amt
+                        }
+
+                        const { valorCaixinha: vC, temCaixinha: hasT } = extrairCaixinhaDeLancamento(e)
+                        if (hasT) {
+                          totalCaixinhas += vC
                         }
 
                         if (!e.is_withdrawal) {
@@ -1060,6 +1036,11 @@ export function CashierDashboard() {
                       }
 
 
+
+                      const salesTip = (s.sales || [])
+                        .filter((sl: any) => sl.status !== 'CANCELLED')
+                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
+                      totalCaixinhas += salesTip
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =
@@ -1264,10 +1245,12 @@ export function CashierDashboard() {
                         const amt = Number(e.amount || 0)
                         if (e.is_withdrawal) totalSangrias += amt
                         else if (e.is_addition) totalSuprimentos += amt
-                        else if (e.is_tip || e.type === 'TIP') {
-                          totalCaixinhas += amt
-                          totalEntradasSemSaida += amt
-                        } else totalEntradasSemSaida += amt
+                        else totalEntradasSemSaida += amt
+
+                        const { valorCaixinha: vClist, temCaixinha: hasTlist } = extrairCaixinhaDeLancamento(e)
+                        if (hasTlist) {
+                          totalCaixinhas += vClist
+                        }
 
                         if (!e.is_withdrawal) {
                           const method = e.payment_method || 'Dinheiro'
@@ -1285,6 +1268,11 @@ export function CashierDashboard() {
                       }
 
 
+
+                      const salesTip = (s.sales || [])
+                        .filter((sl: any) => sl.status !== 'CANCELLED')
+                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
+                      totalCaixinhas += salesTip
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =

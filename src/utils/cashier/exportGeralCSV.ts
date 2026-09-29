@@ -1,3 +1,4 @@
+import { calcularTotalCaixinhaLote } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
 export function exportarGeralCSV(lotes: any[]) {
   if (lotes.length === 0) return

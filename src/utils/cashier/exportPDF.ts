@@ -1,3 +1,4 @@
+import { extrairCaixinhaDeLancamento } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
@@ -57,8 +58,9 @@ export function computeResumoFromLote(lote: any) {
       continue
     }
 
-    if (valorCaixinha > 0) {
-      res.GERAL.totalCaixinha += valorCaixinha
+    const { valorCaixinha: vCaixa, temCaixinha } = extrairCaixinhaDeLancamento(l)
+    if (temCaixinha) {
+      res.GERAL.totalCaixinha += vCaixa
     } else if (isCaixinha || l.is_tip || l.type === 'TIP') {
       res.GERAL.totalCaixinha += val
     }
@@ -102,6 +104,13 @@ export function computeResumoFromLote(lote: any) {
   }
 
 
+
+    if (lote.sales && Array.isArray(lote.sales)) {
+    const tipFromSales = lote.sales
+      .filter((s: any) => s.status !== 'CANCELLED')
+      .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
+    res.GERAL.totalCaixinha += tipFromSales
+  }
 
   res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
   return res

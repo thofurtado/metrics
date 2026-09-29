@@ -1,3 +1,4 @@
+import { extrairCaixinhaDeLancamento, REGEX_CAIXINHA } from '@/utils/cashier/caixinha'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -171,14 +172,9 @@ export function CashierSessionDetails() {
       return dateB - dateA
     })
     .map((e: any) => {
-      const regexCaixinha = /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
-      const match = (e.identification || '').match(regexCaixinha)
-      const valorCaixinhaLinked = match
-        ? parseFloat(match[1].replace(',', '.'))
-        : 0
-      const paraQuemCaixinhaLinked = match ? match[2].trim() : ''
+      const { valorCaixinha, paraQuem, temCaixinha } = extrairCaixinhaDeLancamento(e)
       const cleanIdentification = (e.identification || '')
-        .replace(regexCaixinha, '')
+        .replace(REGEX_CAIXINHA, '')
         .trim()
 
       const consumidorNome =
@@ -198,21 +194,21 @@ export function CashierSessionDetails() {
         id: e.id,
         isSaida: e.is_withdrawal || false,
         isSuprimento: e.is_addition || false,
-        isCaixinha: Boolean(e.is_tip || e.type === 'TIP' || (e.payment_method || '').toLowerCase().includes('caixinha') || (e.payment_method || '').toLowerCase().includes('gorjeta')),
+        isCaixinha: temCaixinha,
         is_checked: e.is_checked || false,
         valor: e.amount,
         formaPagamento: e.payment_method || 'Dinheiro',
         origin: e.origin || 'Mesa',
         identification: cleanIdentification,
         identificacao: cleanIdentification,
-        paraQuem: e.is_tip ? cleanIdentification : paraQuemCaixinhaLinked,
+        paraQuem: paraQuem || (e.is_tip ? cleanIdentification : ''),
         mesa: e.origin === 'Mesa' ? cleanIdentification : '',
         banco: e.bank || 'CAIXA',
         conferido: e.is_checked || false,
         consumidorCasa: consumidorNome,
         client_id: e.client_id || null,
         employee_id: e.employee_id || null,
-        valorCaixinha: valorCaixinhaLinked > 0 ? valorCaixinhaLinked : (e.is_tip ? e.amount : 0),
+        valorCaixinha,
       }
     })
 
@@ -292,10 +288,9 @@ export function CashierSessionDetails() {
         continue
       }
 
-      if (entry.is_tip || entry.type === 'TIP') {
-        res.GERAL.totalCaixinha += amount
-      } else if (valorCaixinhaLinked > 0) {
-        res.GERAL.totalCaixinha += valorCaixinhaLinked
+      const { valorCaixinha: vCaixa, temCaixinha: hasTip } = extrairCaixinhaDeLancamento(entry)
+      if (hasTip) {
+        res.GERAL.totalCaixinha += vCaixa
       }
 
       res.GERAL.entradas += amount
@@ -357,10 +352,8 @@ export function CashierSessionDetails() {
           res[bank][formaKey] = amount
         }
 
-        if (entry.is_tip || entry.type === 'TIP') {
-          res[bank].caixinha += amount
-        } else if (valorCaixinhaLinked > 0) {
-          res[bank].caixinha += valorCaixinhaLinked
+        if (hasTip) {
+          res[bank].caixinha += vCaixa
         }
         res[bank].total += amount
 
@@ -390,6 +383,13 @@ export function CashierSessionDetails() {
     }
 
 
+
+        if (sessionObj?.sales && Array.isArray(sessionObj.sales)) {
+      const salesTip = sessionObj.sales
+        .filter((s: any) => s.status !== 'CANCELLED')
+        .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
+      res.GERAL.totalCaixinha += salesTip
+    }
 
     res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
     return res

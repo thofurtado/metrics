@@ -1,3 +1,4 @@
+import { calcularTotalCaixinhaLote } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
@@ -74,12 +75,10 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
     const lanc = l.lancamentos || l.entries || []
     const abertura = Number(l.valorAbertura ?? l.initial_balance ?? 0)
 
-    // Caixinha total arrecadada no turno (estritamente a sobra / valorCaixinha dos lançamentos)
-    const caixinha = lanc
-      .filter((i: any) => !i.isSaida && !i.is_withdrawal)
-      .reduce((acc: number, i: any) => acc + Number(i.valorCaixinha || 0), 0)
+    // Caixinha total arrecadada no turno (estritamente a sobra / excedente dos lançamentos + taxa de serviço)
+    const caixinha = calcularTotalCaixinhaLote(l)
 
-    // Dinheiro que entrou (vendas em dinheiro - caixinhas em dinheiro)
+    // Dinheiro físico que entrou no caixa (todo o dinheiro recebido em vendas e aportes)
     const entDin = lanc
       .filter(
         (i: any) =>
@@ -88,9 +87,7 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
           (i.formaPagamento === 'Dinheiro' || i.payment_method === 'Dinheiro'),
       )
       .reduce(
-        (acc: number, i: any) =>
-          acc +
-          (Number(i.valor ?? i.amount ?? 0) - Number(i.valorCaixinha || 0)),
+        (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),
         0,
       )
 
