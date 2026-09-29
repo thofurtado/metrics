@@ -367,17 +367,27 @@ export function CashierDashboard() {
         periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
+        sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
-          const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+          const regexCaixinha =
+            /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
           const match = (e.identification || '').match(regexCaixinha)
           const valorCaixinhaLinked = match
             ? parseFloat(match[1].replace(',', '.'))
             : 0
-          const isTip = Boolean(e.is_tip)
+          const pm = (e.payment_method || '').toLowerCase()
+          const isTip = Boolean(
+            e.is_tip ||
+              e.type === 'TIP' ||
+              pm.includes('caixinha') ||
+              pm.includes('gorjeta'),
+          )
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
             isCaixinha: isTip,
+            is_tip: isTip,
+            type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
@@ -400,17 +410,27 @@ export function CashierDashboard() {
         periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
+        sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
-          const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+          const regexCaixinha =
+            /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
           const match = (e.identification || '').match(regexCaixinha)
           const valorCaixinhaLinked = match
             ? parseFloat(match[1].replace(',', '.'))
             : 0
-          const isTip = Boolean(e.is_tip)
+          const pm = (e.payment_method || '').toLowerCase()
+          const isTip = Boolean(
+            e.is_tip ||
+              e.type === 'TIP' ||
+              pm.includes('caixinha') ||
+              pm.includes('gorjeta'),
+          )
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
             isCaixinha: isTip,
+            is_tip: isTip,
+            type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
@@ -1007,7 +1027,7 @@ export function CashierDashboard() {
                           totalSangrias += amt
                         } else if (e.is_addition) {
                           totalSuprimentos += amt
-                        } else if (e.is_tip) {
+                        } else if (e.is_tip || e.type === 'TIP') {
                           totalCaixinhas += amt
                           totalEntradasSemSaida += amt
                         } else {
@@ -1028,6 +1048,11 @@ export function CashierDashboard() {
                             (totalsByMethod[dest] || 0) + amt
                         }
                       }
+
+                      const salesTip = (s.sales || [])
+                        .filter((sl: any) => sl.status !== 'CANCELLED')
+                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
+                      totalCaixinhas += salesTip
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =
@@ -1232,7 +1257,7 @@ export function CashierDashboard() {
                         const amt = Number(e.amount || 0)
                         if (e.is_withdrawal) totalSangrias += amt
                         else if (e.is_addition) totalSuprimentos += amt
-                        else if (e.is_tip) {
+                        else if (e.is_tip || e.type === 'TIP') {
                           totalCaixinhas += amt
                           totalEntradasSemSaida += amt
                         } else totalEntradasSemSaida += amt
@@ -1251,6 +1276,11 @@ export function CashierDashboard() {
                             (totalsByMethod[dest] || 0) + amt
                         }
                       }
+
+                      const salesTip = (s.sales || [])
+                        .filter((sl: any) => sl.status !== 'CANCELLED')
+                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
+                      totalCaixinhas += salesTip
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =

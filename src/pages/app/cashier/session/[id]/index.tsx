@@ -171,7 +171,7 @@ export function CashierSessionDetails() {
       return dateB - dateA
     })
     .map((e: any) => {
-      const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+      const regexCaixinha = /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
       const match = (e.identification || '').match(regexCaixinha)
       const valorCaixinhaLinked = match
         ? parseFloat(match[1].replace(',', '.'))
@@ -198,7 +198,7 @@ export function CashierSessionDetails() {
         id: e.id,
         isSaida: e.is_withdrawal || false,
         isSuprimento: e.is_addition || false,
-        isCaixinha: e.is_tip || false,
+        isCaixinha: Boolean(e.is_tip || e.type === 'TIP' || (e.payment_method || '').toLowerCase().includes('caixinha') || (e.payment_method || '').toLowerCase().includes('gorjeta')),
         is_checked: e.is_checked || false,
         valor: e.amount,
         formaPagamento: e.payment_method || 'Dinheiro',
@@ -212,7 +212,7 @@ export function CashierSessionDetails() {
         consumidorCasa: consumidorNome,
         client_id: e.client_id || null,
         employee_id: e.employee_id || null,
-        valorCaixinha: e.is_tip ? e.amount : valorCaixinhaLinked,
+        valorCaixinha: (e.is_tip || e.type === 'TIP' || (e.payment_method || '').toLowerCase().includes('caixinha') || (e.payment_method || '').toLowerCase().includes('gorjeta')) ? e.amount : valorCaixinhaLinked,
       }
     })
 
@@ -258,7 +258,7 @@ export function CashierSessionDetails() {
       'fiado',
       'convenio',
     ]
-    const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+    const regexCaixinha = /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
 
     for (const entry of entriesList || []) {
       const amount = Number(entry.amount || 0)
@@ -292,7 +292,7 @@ export function CashierSessionDetails() {
         continue
       }
 
-      if (entry.is_tip) {
+      if (entry.is_tip || entry.type === 'TIP') {
         res.GERAL.totalCaixinha += amount
       } else if (valorCaixinhaLinked > 0) {
         res.GERAL.totalCaixinha += valorCaixinhaLinked
@@ -357,7 +357,7 @@ export function CashierSessionDetails() {
           res[bank][formaKey] = amount
         }
 
-        if (entry.is_tip) {
+        if (entry.is_tip || entry.type === 'TIP') {
           res[bank].caixinha += amount
         } else if (valorCaixinhaLinked > 0) {
           res[bank].caixinha += valorCaixinhaLinked
@@ -387,6 +387,13 @@ export function CashierSessionDetails() {
         }
         res[bank].juros = (res[bank].juros || 0) + taxa
       }
+    }
+
+    if (sessionObj?.sales && Array.isArray(sessionObj.sales)) {
+      const salesTip = sessionObj.sales
+        .filter((s: any) => s.status !== 'CANCELLED')
+        .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
+      res.GERAL.totalCaixinha += salesTip
     }
 
     res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas

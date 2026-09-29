@@ -67,12 +67,27 @@ export function exportarGeralCSV(lotes: any[]) {
     const pro = getSum('Pró-labore')
     const perm = getSum('Permuta')
     const cort = getSum('Cortesia')
-    const caixinha = lanc
-      .filter((i: any) => !i.isSaida)
+    const tipFromEntries = lanc
+      .filter((i: any) => !i.isSaida && !i.is_withdrawal)
       .reduce((acc: number, i: any) => {
-        if (i.isCaixinha || i.is_tip) return acc + Number(i.valor ?? i.amount ?? 0)
+        const pm = (i.formaPagamento || i.payment_method || '').toLowerCase()
+        if (
+          i.isCaixinha ||
+          i.is_tip ||
+          i.type === 'TIP' ||
+          pm.includes('caixinha') ||
+          pm.includes('gorjeta')
+        ) {
+          return acc + Number(i.valor ?? i.amount ?? 0)
+        }
         return acc + Number(i.valorCaixinha || 0)
       }, 0)
+
+    const tipFromSales = (l.sales || [])
+      .filter((s: any) => s.status !== 'CANCELLED')
+      .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
+
+    const caixinha = tipFromEntries + tipFromSales
 
     const totalVendas = lanc
       .filter((i: any) => !i.isSaida)
