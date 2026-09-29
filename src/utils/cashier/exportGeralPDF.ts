@@ -74,30 +74,12 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
     const lanc = l.lancamentos || l.entries || []
     const abertura = Number(l.valorAbertura ?? l.initial_balance ?? 0)
 
-    // Caixinha total arrecadada no turno (avulsa em entries + acoplada na identificação + taxa de serviço das vendas)
-    const tipFromEntries = lanc
+    // Caixinha total arrecadada no turno (estritamente a sobra / valorCaixinha dos lançamentos)
+    const caixinha = lanc
       .filter((i: any) => !i.isSaida && !i.is_withdrawal)
-      .reduce((acc: number, i: any) => {
-        const pm = (i.formaPagamento || i.payment_method || '').toLowerCase()
-        if (
-          i.isCaixinha ||
-          i.is_tip ||
-          i.type === 'TIP' ||
-          pm.includes('caixinha') ||
-          pm.includes('gorjeta')
-        ) {
-          return acc + Number(i.valor ?? i.amount ?? 0)
-        }
-        return acc + Number(i.valorCaixinha || 0)
-      }, 0)
+      .reduce((acc: number, i: any) => acc + Number(i.valorCaixinha || 0), 0)
 
-    const tipFromSales = (l.sales || [])
-      .filter((s: any) => s.status !== 'CANCELLED')
-      .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
-
-    const caixinha = tipFromEntries + tipFromSales
-
-    // Dinheiro que entrou (vendas em dinheiro - gorjetas em dinheiro)
+    // Dinheiro que entrou (vendas em dinheiro - caixinhas em dinheiro)
     const entDin = lanc
       .filter(
         (i: any) =>
@@ -105,20 +87,12 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
           !i.is_withdrawal &&
           (i.formaPagamento === 'Dinheiro' || i.payment_method === 'Dinheiro'),
       )
-      .reduce((acc: number, i: any) => {
-        const pm = (i.formaPagamento || i.payment_method || '').toLowerCase()
-        const isTipEntry = Boolean(
-          i.isCaixinha ||
-            i.is_tip ||
-            i.type === 'TIP' ||
-            pm.includes('caixinha') ||
-            pm.includes('gorjeta'),
-        )
-        const tipVal = isTipEntry
-          ? Number(i.valor ?? i.amount ?? 0)
-          : Number(i.valorCaixinha || 0)
-        return acc + (Number(i.valor ?? i.amount ?? 0) - tipVal)
-      }, 0)
+      .reduce(
+        (acc: number, i: any) =>
+          acc +
+          (Number(i.valor ?? i.amount ?? 0) - Number(i.valorCaixinha || 0)),
+        0,
+      )
 
     const sai = lanc
       .filter((i: any) => i.isSaida || i.is_withdrawal)

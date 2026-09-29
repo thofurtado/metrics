@@ -57,18 +57,10 @@ export function computeResumoFromLote(lote: any) {
       continue
     }
 
-    const isTipDetected = Boolean(
-      isCaixinha ||
-        l.is_tip ||
-        l.type === 'TIP' ||
-        (forma || '').toLowerCase().includes('caixinha') ||
-        (forma || '').toLowerCase().includes('gorjeta'),
-    )
-
-    if (isTipDetected) {
-      res.GERAL.totalCaixinha += val
-    } else if (valorCaixinha > 0) {
+    if (valorCaixinha > 0) {
       res.GERAL.totalCaixinha += valorCaixinha
+    } else if (isCaixinha || l.is_tip || l.type === 'TIP') {
+      res.GERAL.totalCaixinha += val
     }
 
     res.GERAL.entradas += val
@@ -109,12 +101,7 @@ export function computeResumoFromLote(lote: any) {
     }
   }
 
-  if (lote.sales && Array.isArray(lote.sales)) {
-    const tipFromSales = lote.sales
-      .filter((s: any) => s.status !== 'CANCELLED')
-      .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
-    res.GERAL.totalCaixinha += tipFromSales
-  }
+
 
   res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
   return res

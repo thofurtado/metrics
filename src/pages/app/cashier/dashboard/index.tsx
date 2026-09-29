@@ -376,22 +376,27 @@ export function CashierDashboard() {
             ? parseFloat(match[1].replace(',', '.'))
             : 0
           const pm = (e.payment_method || '').toLowerCase()
-          const isTip = Boolean(
-            e.is_tip ||
-              e.type === 'TIP' ||
-              pm.includes('caixinha') ||
-              pm.includes('gorjeta'),
+          const isAvulsaTip = Boolean(
+            (e.is_tip || e.type === 'TIP' || pm.includes('caixinha') || pm.includes('gorjeta')) &&
+              valorCaixinhaLinked === 0,
           )
+          const valorCaixinha =
+            valorCaixinhaLinked > 0
+              ? valorCaixinhaLinked
+              : isAvulsaTip
+                ? Number(e.amount || 0)
+                : 0
+
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: isTip,
-            is_tip: isTip,
+            isCaixinha: valorCaixinha > 0,
+            is_tip: e.is_tip || false,
             type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
-            valorCaixinha: isTip ? Number(e.amount || 0) : valorCaixinhaLinked,
+            valorCaixinha,
           }
         }),
       }))
@@ -419,22 +424,27 @@ export function CashierDashboard() {
             ? parseFloat(match[1].replace(',', '.'))
             : 0
           const pm = (e.payment_method || '').toLowerCase()
-          const isTip = Boolean(
-            e.is_tip ||
-              e.type === 'TIP' ||
-              pm.includes('caixinha') ||
-              pm.includes('gorjeta'),
+          const isAvulsaTip = Boolean(
+            (e.is_tip || e.type === 'TIP' || pm.includes('caixinha') || pm.includes('gorjeta')) &&
+              valorCaixinhaLinked === 0,
           )
+          const valorCaixinha =
+            valorCaixinhaLinked > 0
+              ? valorCaixinhaLinked
+              : isAvulsaTip
+                ? Number(e.amount || 0)
+                : 0
+
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: isTip,
-            is_tip: isTip,
+            isCaixinha: valorCaixinha > 0,
+            is_tip: e.is_tip || false,
             type: e.type,
             valor: Number(e.amount || 0),
             formaPagamento: e.payment_method || 'Dinheiro',
             identificacao: e.identification || '',
-            valorCaixinha: isTip ? Number(e.amount || 0) : valorCaixinhaLinked,
+            valorCaixinha,
           }
         }),
       }
@@ -1049,10 +1059,7 @@ export function CashierDashboard() {
                         }
                       }
 
-                      const salesTip = (s.sales || [])
-                        .filter((sl: any) => sl.status !== 'CANCELLED')
-                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
-                      totalCaixinhas += salesTip
+
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =
@@ -1277,10 +1284,7 @@ export function CashierDashboard() {
                         }
                       }
 
-                      const salesTip = (s.sales || [])
-                        .filter((sl: any) => sl.status !== 'CANCELLED')
-                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
-                      totalCaixinhas += salesTip
+
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =

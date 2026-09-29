@@ -212,7 +212,7 @@ export function CashierSessionDetails() {
         consumidorCasa: consumidorNome,
         client_id: e.client_id || null,
         employee_id: e.employee_id || null,
-        valorCaixinha: (e.is_tip || e.type === 'TIP' || (e.payment_method || '').toLowerCase().includes('caixinha') || (e.payment_method || '').toLowerCase().includes('gorjeta')) ? e.amount : valorCaixinhaLinked,
+        valorCaixinha: valorCaixinhaLinked > 0 ? valorCaixinhaLinked : (e.is_tip ? e.amount : 0),
       }
     })
 
@@ -389,12 +389,7 @@ export function CashierSessionDetails() {
       }
     }
 
-    if (sessionObj?.sales && Array.isArray(sessionObj.sales)) {
-      const salesTip = sessionObj.sales
-        .filter((s: any) => s.status !== 'CANCELLED')
-        .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
-      res.GERAL.totalCaixinha += salesTip
-    }
+
 
     res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
     return res
