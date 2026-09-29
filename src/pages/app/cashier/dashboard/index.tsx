@@ -323,10 +323,7 @@ export function CashierDashboard() {
 
         items.forEach((s: any) => {
           const entries = s.entries || []
-          const salesTip = (s.sales || [])
-                        .filter((sl: any) => sl.status !== 'CANCELLED')
-                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
-                      totalCaixinhas += salesTip
+
 
                       const valorAbertura = Number(s.initial_balance || 0)
           let sSangrias = 0
@@ -1037,10 +1034,7 @@ export function CashierDashboard() {
 
 
 
-                      const salesTip = (s.sales || [])
-                        .filter((sl: any) => sl.status !== 'CANCELLED')
-                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
-                      totalCaixinhas += salesTip
+
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =
@@ -1269,10 +1263,7 @@ export function CashierDashboard() {
 
 
 
-                      const salesTip = (s.sales || [])
-                        .filter((sl: any) => sl.status !== 'CANCELLED')
-                        .reduce((acc: number, sl: any) => acc + Number(sl.service_fee || 0), 0)
-                      totalCaixinhas += salesTip
+
 
                       const valorAbertura = Number(s.initial_balance || 0)
                       const valorFinalCaixa =

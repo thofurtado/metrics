@@ -8,13 +8,49 @@ export interface ExtractedCaixinha {
 }
 
 /**
+ * Converte valor em formato string para float lidando com formatos brasileiros e americanos:
+ * - '1.250,00' -> 1250.00
+ * - '1250.00'  -> 1250.00
+ * - '1250,00'  -> 1250.00
+ * - '18.00'    -> 18.00
+ * - '18,00'    -> 18.00
+ */
+export function parseMoedaBR(rawStr: string): number {
+  if (!rawStr) return 0
+  const limpo = rawStr.trim()
+
+  // Se contém ponto e vírgula:
+  if (limpo.includes('.') && limpo.includes(',')) {
+    if (limpo.lastIndexOf(',') > limpo.lastIndexOf('.')) {
+      // Padrão brasileiro: 1.250,00
+      return parseFloat(limpo.replace(/\./g, '').replace(',', '.')) || 0
+    } else {
+      // Padrão internacional: 1,250.00
+      return parseFloat(limpo.replace(/,/g, '')) || 0
+    }
+  }
+
+  // Se contém apenas vírgula: 18,00 ou 1250,00
+  if (limpo.includes(',')) {
+    return parseFloat(limpo.replace(',', '.')) || 0
+  }
+
+  // Se contém múltiplos pontos: 1.250.000
+  if ((limpo.match(/\./g) || []).length > 1) {
+    return parseFloat(limpo.replace(/\./g, '')) || 0
+  }
+
+  return parseFloat(limpo) || 0
+}
+
+/**
  * Extrai com precisão a caixinha/gorjeta de um lançamento de caixa.
  * 
- * REGRA DO METRICS:
- * Caixinha é SOMENTE o excedente do pagamento (ex.: conta de R$ 182,00 passada no débito como R$ 200,00 = R$ 18,00 de caixinha).
- * Nunca somar o valor total da venda (R$ 200,00) como caixinha!
- * Se for caixinha avulsa pura (sem venda de produto, type === 'TIP' ou is_tip === true sem tag acoplada), o valor é o amount da entrada.
- * Se for venda comum sem marcação de caixinha, o valor é 0.
+ * REGRA DO METRICS (Decisão do Thomás):
+ * 1. Caixinha é SOMENTE o excedente do pagamento (ex.: conta de R$ 182,00 passada no débito como R$ 200,00 = R$ 18,00 de caixinha).
+ * 2. Serviço (taxa de 10% / service_fee) NÃO é caixinha: é parte da conta e vai na nota fiscal. Nunca somar service_fee na caixinha!
+ * 3. Se for caixinha avulsa pura (type === 'TIP' ou is_tip === true sem tag acoplada), o valor é o amount da entrada.
+ * 4. Se for venda comum sem marcação, caixinha = 0.
  */
 export function extrairCaixinhaDeLancamento(entry: any): ExtractedCaixinha {
   if (!entry) {
@@ -23,7 +59,7 @@ export function extrairCaixinhaDeLancamento(entry: any): ExtractedCaixinha {
 
   const ident = String(entry.identification || entry.identificacao || '')
   const match = ident.match(REGEX_CAIXINHA)
-  const valorLinked = match ? parseFloat(match[1].replace(',', '.')) : 0
+  const valorLinked = match ? parseMoedaBR(match[1]) : 0
   const paraQuemLinked = match && match[2] ? match[2].trim() : ''
 
   // 1. Se tem a marcação explícita de acoplamento na identificação, o valor É o excedente indicado
@@ -77,22 +113,16 @@ export function extrairCaixinhaDeLancamento(entry: any): ExtractedCaixinha {
 
 /**
  * Calcula o total de caixinha de um lote/sessão de caixa:
- * - Soma o excedente de cada lançamento (ou caixinha avulsa)
- * - Soma as taxas de serviço (service_fee) de vendas não canceladas
+ * - Soma estritamente o excedente de cada lançamento (ou caixinha avulsa)
+ * - NUNCA soma service_fee (serviço é parte da conta e vai na nota)
  */
 export function calcularTotalCaixinhaLote(lote: any): number {
   if (!lote) return 0
 
   const entries = lote.lancamentos || lote.entries || []
-  const tipFromEntries = entries
+  return entries
     .filter((i: any) => !i.isSaida && !i.is_withdrawal)
     .reduce((acc: number, i: any) => {
       return acc + extrairCaixinhaDeLancamento(i).valorCaixinha
     }, 0)
-
-  const tipFromSales = (lote.sales || [])
-    .filter((s: any) => s.status !== 'CANCELLED')
-    .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
-
-  return tipFromEntries + tipFromSales
 }

@@ -384,12 +384,7 @@ export function CashierSessionDetails() {
 
 
 
-        if (sessionObj?.sales && Array.isArray(sessionObj.sales)) {
-      const salesTip = sessionObj.sales
-        .filter((s: any) => s.status !== 'CANCELLED')
-        .reduce((acc: number, s: any) => acc + Number(s.service_fee || 0), 0)
-      res.GERAL.totalCaixinha += salesTip
-    }
+
 
     res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
     return res
