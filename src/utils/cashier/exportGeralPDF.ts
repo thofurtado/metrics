@@ -53,10 +53,36 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
     18,
   )
 
+  // --- ACUMULADORES DE TOTAIS GERAIS DO MÊS ---
+  let totalAbertura = 0
+  let totalDinheiro = 0
+  let totalSangrias = 0
+  let totalSaldoGaveta = 0
+  let totalPix = 0
+  let totalDebito = 0
+  let totalCredito = 0
+  let totalVoucher = 0
+  let totalFuncionario = 0
+  let totalProLabore = 0
+  let totalPermuta = 0
+  let totalCortesia = 0
+  let totalCaixinha = 0
+  let totalFaturamento = 0
+
   // --- MAPEAMENTO DOS DADOS COM CORES ---
   const body: RowInput[] = lotesOrdenados.map((l) => {
     const lanc = l.lancamentos || l.entries || []
     const abertura = Number(l.valorAbertura ?? l.initial_balance ?? 0)
+
+    // Caixinha total arrecadada no turno (avulsa ou acoplada à venda)
+    const caixinha = lanc
+      .filter((i: any) => !i.isSaida && !i.is_withdrawal)
+      .reduce((acc: number, i: any) => {
+        if (i.isCaixinha || i.is_tip) {
+          return acc + Number(i.valor ?? i.amount ?? 0)
+        }
+        return acc + Number(i.valorCaixinha || 0)
+      }, 0)
 
     // Dinheiro que entrou (vendas - gorjetas em dinheiro)
     const entDin = lanc
@@ -106,6 +132,31 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
 
     const saldoGaveta = abertura + entDin - sai
 
+    const pixVal = getSum('PIX')
+    const debVal = getSum('Débito')
+    const credVal = getSum('Crédito')
+    const vouchVal = getSum('Voucher')
+    const funcVal = getSum('Funcionário')
+    const proVal = getSum('Pró-labore')
+    const permVal = getSum('Permuta')
+    const cortVal = getSum('Cortesia')
+
+    // Acumular totais do mês
+    totalAbertura += abertura
+    totalDinheiro += entDin
+    totalSangrias += sai
+    totalSaldoGaveta += saldoGaveta
+    totalPix += pixVal
+    totalDebito += debVal
+    totalCredito += credVal
+    totalVoucher += vouchVal
+    totalFuncionario += funcVal
+    totalProLabore += proVal
+    totalPermuta += permVal
+    totalCortesia += cortVal
+    totalCaixinha += caixinha
+    totalFaturamento += totalVendas
+
     const dateStr = formatarData(l.dataReferencia || l.opened_at)
     const periodoStr = String(l.periodo || l.period || '').toUpperCase()
 
@@ -137,38 +188,48 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
         }),
         styles: { fontStyle: 'bold' as const, textColor: [21, 128, 61] as any },
       }, // Verde para saldo físico
-      getSum('PIX').toLocaleString('pt-BR', {
+      pixVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Débito').toLocaleString('pt-BR', {
+      debVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Crédito').toLocaleString('pt-BR', {
+      credVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Voucher').toLocaleString('pt-BR', {
+      vouchVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Funcionário').toLocaleString('pt-BR', {
+      funcVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Pró-labore').toLocaleString('pt-BR', {
+      proVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Permuta').toLocaleString('pt-BR', {
+      permVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      getSum('Cortesia').toLocaleString('pt-BR', {
+      cortVal.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
+      {
+        content: caixinha.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        styles: {
+          fontStyle: 'bold' as const,
+          textColor: [109, 40, 217] as any, // Roxo elegante para Caixinha
+        },
+      },
       {
         content: totalVendas.toLocaleString('pt-BR', {
           minimumFractionDigits: 2,
@@ -200,15 +261,79 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
         'PRO.',
         'PERM.',
         'CORT.',
+        'CAIX.',
         'TOTAL',
       ],
     ],
     body,
+    foot: [
+      [
+        'TOTAL DO MÊS',
+        `${lotesOrdenados.length} caixas`,
+        totalAbertura.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalDinheiro.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalSangrias.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalSaldoGaveta.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalPix.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalDebito.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalCredito.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalVoucher.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalFuncionario.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalProLabore.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalPermuta.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalCortesia.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalCaixinha.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        totalFaturamento.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+      ],
+    ],
     theme: 'striped',
+    showFoot: 'lastPage',
     styles: {
-      fontSize: 6.5,
+      fontSize: 6.2,
       halign: 'center',
-      cellPadding: 2,
+      cellPadding: 1.8,
       lineColor: [226, 232, 240],
       lineWidth: 0.1,
     },
@@ -216,23 +341,31 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
       fillColor: [30, 41, 59],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 7,
+      fontSize: 6.8,
+    },
+    footStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 6.8,
+      halign: 'center',
     },
     columnStyles: {
       0: { halign: 'left', fontStyle: 'bold' },
       5: { fillColor: [240, 253, 244] }, // Fundo levemente esverdeado para o Saldo em Mão
-      14: { fillColor: [239, 246, 255] }, // Fundo levemente azulado para o Faturamento Total
+      14: { fillColor: [250, 245, 255] }, // Fundo suave para Caixinha
+      15: { fillColor: [239, 246, 255] }, // Fundo levemente azulado para o Faturamento Total
     },
   })
 
   // Nota explicativa no rodapé
   const finalY = (doc as any).lastAutoTable?.finalY || 30
-  doc.setFontSize(8)
+  doc.setFontSize(7.5)
   doc.setTextColor(100)
   doc.text(
-    'Legenda: SALDO GAVETA = (Abertura + Dinheiro Vendas - Sangrias). FATURAMENTO TOTAL = Soma de todas as formas de pagamento (exceto sangrias).',
+    'Legenda: SALDO GAVETA = (Abertura + Dinheiro Vendas - Sangrias). FATURAMENTO TOTAL = Soma de todas as formas de pagamento (exceto sangrias). CAIX. = Total de caixinhas e gorjetas arrecadadas no turno (para repasse à equipe).',
     14,
-    finalY + 10,
+    finalY + 8,
   )
 
   doc.save(`${tenantName}_GERENCIAL_${new Date().getTime()}.pdf`)

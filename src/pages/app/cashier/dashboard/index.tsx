@@ -367,15 +367,23 @@ export function CashierDashboard() {
         periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
-        lancamentos: (s.entries || []).map((e: any) => ({
-          isSaida: e.is_withdrawal || false,
-          isSuprimento: e.is_addition || false,
-          isCaixinha: e.is_tip || false,
-          valor: Number(e.amount || 0),
-          formaPagamento: e.payment_method || 'Dinheiro',
-          identificacao: e.identification || '',
-          valorCaixinha: e.is_tip ? Number(e.amount || 0) : 0,
-        })),
+        lancamentos: (s.entries || []).map((e: any) => {
+          const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+          const match = (e.identification || '').match(regexCaixinha)
+          const valorCaixinhaLinked = match
+            ? parseFloat(match[1].replace(',', '.'))
+            : 0
+          const isTip = Boolean(e.is_tip)
+          return {
+            isSaida: e.is_withdrawal || false,
+            isSuprimento: e.is_addition || false,
+            isCaixinha: isTip,
+            valor: Number(e.amount || 0),
+            formaPagamento: e.payment_method || 'Dinheiro',
+            identificacao: e.identification || '',
+            valorCaixinha: isTip ? Number(e.amount || 0) : valorCaixinhaLinked,
+          }
+        }),
       }))
       exportarRelatorioGeralPDF(lotesParaExportar)
       toast.success('Relatório Gerencial PDF gerado com sucesso!')
@@ -392,15 +400,23 @@ export function CashierDashboard() {
         periodo: getPeriodoBRT(s.opened_at, s.period, s.sequence_number),
         valorAbertura: Number(s.initial_balance || 0),
         status: s.status,
-        lancamentos: (s.entries || []).map((e: any) => ({
-          isSaida: e.is_withdrawal || false,
-          isSuprimento: e.is_addition || false,
-          isCaixinha: e.is_tip || false,
-          valor: Number(e.amount || 0),
-          formaPagamento: e.payment_method || 'Dinheiro',
-          identificacao: e.identification || '',
-          valorCaixinha: e.is_tip ? Number(e.amount || 0) : 0,
-        })),
+        lancamentos: (s.entries || []).map((e: any) => {
+          const regexCaixinha = /\[Gorjeta:\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
+          const match = (e.identification || '').match(regexCaixinha)
+          const valorCaixinhaLinked = match
+            ? parseFloat(match[1].replace(',', '.'))
+            : 0
+          const isTip = Boolean(e.is_tip)
+          return {
+            isSaida: e.is_withdrawal || false,
+            isSuprimento: e.is_addition || false,
+            isCaixinha: isTip,
+            valor: Number(e.amount || 0),
+            formaPagamento: e.payment_method || 'Dinheiro',
+            identificacao: e.identification || '',
+            valorCaixinha: isTip ? Number(e.amount || 0) : valorCaixinhaLinked,
+          }
+        }),
       }
       exportarLotePDF(lote)
       toast.success('Relatório do caixa gerado em PDF com sucesso!')
