@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { getEquipmentIcon, formatEquipmentTypeLabel } from '../equipment-types'
+import { getEquipmentIcon, formatEquipmentTypeLabel, getEquipmentDisplayName } from '../equipment-types'
 
 interface EquipmentCardProps {
   equipment: any
@@ -39,10 +39,7 @@ export function EquipmentCard({
   const windyVersion = telemetry?.windy?.version
   const hasWindy = Boolean(windyVersion || equipment.last_telemetry)
 
-  const hostname =
-    equipment.identification ||
-    telemetry?.osInfo?.hostname ||
-    typeLabel
+  const displayName = getEquipmentDisplayName(equipment)
 
   // CPU Load %
   const cpuLoad =
@@ -123,9 +120,9 @@ export function EquipmentCard({
             <h4
               onClick={() => onOpenDetails(equipment)}
               className="cursor-pointer truncate text-[11px] font-bold text-slate-800 transition-colors hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400"
-              title={hostname}
+              title={equipment.identification && equipment.identification !== displayName ? `${displayName} (${equipment.identification})` : displayName}
             >
-              {hostname}
+              {displayName}
             </h4>
 
             <div className="flex items-center gap-1 text-[9px] text-slate-500 dark:text-slate-400 truncate">

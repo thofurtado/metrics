@@ -517,7 +517,7 @@ export function ClientsEquipments() {
                           </TableCell>
                           <TableCell className="font-bold text-slate-800 dark:text-slate-200">
                             <div>
-                              <span>{eq.identification || eq.last_telemetry?.osInfo?.hostname || typeLabel}</span>
+                              <span>{getEquipmentDisplayName(eq)}</span>
                               {eq.brand && (
                                 <span className="block text-[11px] font-normal text-slate-400">
                                   {eq.brand}
@@ -644,7 +644,7 @@ export function ClientsEquipments() {
                             onClick={() => handleOpenDetails(orphan)}
                             title="Clique para ver detalhes do equipamento"
                           >
-                            {orphan.last_telemetry?.osInfo?.hostname || orphan.identification || orphan.type || 'Equipamento'}
+                            {getEquipmentDisplayName(orphan)}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
                             {orphan.ip_address} • CPU: {orphan.last_telemetry?.cpu?.currentLoad?.toFixed(0) || 0}%

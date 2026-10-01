@@ -187,7 +187,7 @@ export function EquipmentDetailsModal({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1.5">
               <DialogTitle className="flex flex-wrap items-center gap-2 text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100">
-                {osInfo?.hostname || equipment.identification || equipment.type || 'Equipamento'}
+                {getEquipmentDisplayName(equipment)}
                 {isOnline ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>{' '}
