@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/axios'
+import { getEquipmentDisplayName } from '../equipment-types'
 
 interface EquipmentDetailsModalProps {
   open: boolean

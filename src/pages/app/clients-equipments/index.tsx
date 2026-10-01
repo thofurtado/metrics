@@ -62,7 +62,7 @@ import { NiimbotLabelModal } from '../treatments/components/niimbot-label-modal'
 import { CreateEquipmentModal } from './components/create-equipment-modal'
 import { EditEquipmentModal } from './components/edit-equipment-modal'
 import { ClientCard } from './components/client-card'
-import { formatEquipmentTypeLabel } from './equipment-types'
+import { formatEquipmentTypeLabel, getEquipmentDisplayName } from './equipment-types'
 
 export function checkIsOnline(equipment: any, maxInactiveMinutes = 15): boolean {
   if (!equipment || !equipment.last_seen_at) return false
