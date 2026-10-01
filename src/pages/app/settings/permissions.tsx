@@ -71,6 +71,9 @@ export function Permissions() {
     mutationFn: async () => {
       if (isCreating) {
         const payload: any = { ...formData }
+        if (!payload.password || payload.password.trim() === '') {
+          delete payload.password
+        }
         if (!payload.pin || payload.pin.trim() === '') {
           delete payload.pin
         }
@@ -333,22 +336,23 @@ export function Permissions() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">
-                  {isCreating ? 'Senha de Acesso (mín. 6 caracteres)' : 'Nova Senha (opcional, mín. 6)'}
+                  {isCreating ? 'Senha de Acesso (mín. 4 caracteres)' : 'Nova Senha (opcional, mín. 4)'}
                 </Label>
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                   placeholder={
-                    isCreating ? 'Mínimo 6 caracteres' : 'Deixe em branco para não alterar'
+                    isCreating ? 'Mínimo 4 caracteres' : 'Deixe em branco para não alterar'
                   }
                 />
-                {isCreating && formData.password && formData.password.length < 6 && (
+                {isCreating && formData.password && formData.password.length < 4 && (
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    A senha deve ter no mínimo 6 caracteres ({formData.password.length}/6).
+                    A senha deve ter no mínimo 4 caracteres ({formData.password.length}/4).
                   </p>
                 )}
               </div>
@@ -359,6 +363,7 @@ export function Permissions() {
                 <Input
                   id="pin"
                   type="password"
+                  autoComplete="new-password"
                   inputMode="numeric"
                   maxLength={6}
                   value={formData.pin}
@@ -370,6 +375,11 @@ export function Permissions() {
                     isCreating ? 'Opcional (Ex: 1234)' : 'Deixe em branco para manter'
                   }
                 />
+                {formData.pin && formData.pin.length > 0 && formData.pin.length < 4 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    O PIN deve conter no mínimo 4 dígitos ({formData.pin.length}/4).
+                  </p>
+                )}
               </div>
             </div>
 
@@ -458,7 +468,12 @@ export function Permissions() {
               disabled={
                 isSaving ||
                 (isCreating &&
-                  (!formData.name || !formData.email || !formData.password || formData.password.length < 6))
+                  (!formData.name ||
+                    !formData.email ||
+                    ((!formData.password || formData.password.length < 4) &&
+                      (!formData.pin || formData.pin.length < 4)))) ||
+                (Boolean(formData.password) && formData.password.length < 4) ||
+                (Boolean(formData.pin) && formData.pin.length < 4)
               }
               className="bg-minsk-600 text-white hover:bg-minsk-700"
             >
