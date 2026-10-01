@@ -103,8 +103,12 @@ export function LinkReceiptModal({
         onOpenChange(false)
       }
     },
-    onError: () => {
-      toast.error('Erro ao vincular comprovante.')
+    onError: (error) => {
+      // 409: o comprovante já foi usado em outra despesa (ou descartado); a lista é atualizada para ele sumir
+      queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
+      const mensagem = (error as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message
+      toast.error(mensagem || 'Erro ao vincular comprovante.')
     },
   })
 

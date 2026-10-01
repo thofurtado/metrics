@@ -26,6 +26,8 @@ export interface CreateTransactionBody {
   interest?: number | null
   fine?: number | null
   discount?: number | null
+  /** Comprovante da lista "Comprovantes" que vira esta despesa: a nuvem o tira da lista e anexa no mesmo envio (01/10/2026). */
+  receiptFilename?: string | null
 }
 
 export async function createTransaction({
@@ -48,6 +50,7 @@ export async function createTransaction({
   interest,
   fine,
   discount,
+  receiptFilename,
 }: CreateTransactionBody) {
   const response = await api.post('/transaction', {
     operation,
@@ -68,6 +71,7 @@ export async function createTransaction({
     interest: interest || null,
     fine: fine || null,
     discount: discount || null,
+    receipt_filename: receiptFilename || null,
   })
   return response
 }

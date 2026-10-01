@@ -482,11 +482,23 @@ export function TransactionExpense({
         interest: data.interest ? parseCurrencyToFloat(data.interest) : undefined,
         fine: data.fine ? parseCurrencyToFloat(data.fine) : undefined,
         discount: data.discount ? parseCurrencyToFloat(data.discount) : undefined,
+        // O comprovante vai no mesmo envio: a nuvem o tira da lista antes de criar a despesa e anexa (01/10/2026)
+        receiptFilename: localReceipt?.filename ?? null,
       })
 
       const transactionId = response.data?.transaction?.id || response.data?.id
-      // Upload do arquivo pendente (vinculação)
-      if (localReceipt && transactionId) {
+      const comprovanteJaAnexado = response.data?.receipt_linked === true
+      // Comprovante da lista: a nuvem já o tirou da lista e anexou no mesmo envio
+      if (
+        localReceipt &&
+        (comprovanteJaAnexado || response.data?.receipt_error)
+      ) {
+        queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
+        if (response.data?.receipt_error)
+          toast.error(response.data.receipt_error)
+      }
+      // Nuvem antiga (sem receipt_linked na resposta): vincula do jeito anterior
+      else if (localReceipt && transactionId) {
         setIsUploading(true)
         try {
           await import('@/lib/axios').then((m) =>
@@ -541,7 +553,14 @@ export function TransactionExpense({
       onOpenChange?.(false)
     } catch (error) {
       console.error(error)
-      toast.error('Erro ao registrar despesa.')
+      const resposta = (
+        error as { response?: { status?: number; data?: { message?: string } } }
+      )?.response
+      // 409 com comprovante: ele já virou outra despesa (outra tela, clique duplo) e esta NÃO foi criada
+      if (localReceipt && resposta?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['pending-receipts'] })
+      }
+      toast.error(resposta?.data?.message || 'Erro ao registrar despesa.')
     }
   }
 
