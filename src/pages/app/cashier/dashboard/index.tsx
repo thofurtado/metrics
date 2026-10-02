@@ -373,10 +373,17 @@ export function CashierDashboard() {
         sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
           const { valorCaixinha, paraQuem, temCaixinha } = extrairCaixinhaDeLancamento(e)
+          const isCaixinhaAvulsa = Boolean(
+            e.is_tip ||
+              e.type === 'TIP' ||
+              (e.payment_method || '').toLowerCase().includes('caixinha') ||
+              (e.payment_method || '').toLowerCase().includes('gorjeta'),
+          )
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: temCaixinha,
+            isCaixinha: isCaixinhaAvulsa,
+            temCaixinha,
             is_tip: Boolean(e.is_tip || e.type === 'TIP'),
             type: e.type,
             valor: Number(e.amount || 0),
@@ -405,10 +412,17 @@ export function CashierDashboard() {
         sales: s.sales || [],
         lancamentos: (s.entries || []).map((e: any) => {
           const { valorCaixinha, paraQuem, temCaixinha } = extrairCaixinhaDeLancamento(e)
+          const isCaixinhaAvulsa = Boolean(
+            e.is_tip ||
+              e.type === 'TIP' ||
+              (e.payment_method || '').toLowerCase().includes('caixinha') ||
+              (e.payment_method || '').toLowerCase().includes('gorjeta'),
+          )
           return {
             isSaida: e.is_withdrawal || false,
             isSuprimento: e.is_addition || false,
-            isCaixinha: temCaixinha,
+            isCaixinha: isCaixinhaAvulsa,
+            temCaixinha,
             is_tip: Boolean(e.is_tip || e.type === 'TIP'),
             type: e.type,
             valor: Number(e.amount || 0),

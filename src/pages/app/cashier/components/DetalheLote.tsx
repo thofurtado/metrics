@@ -177,36 +177,49 @@ export function DetalheLote({
   ]
 
   const vendasFiltradas = useMemo(() => {
-    let items = loteAtivo.lancamentos.filter(
-      (l: any) =>
-        !l.isSaida &&
-        !l.isSuprimento &&
-        l.formaPagamento !== 'Suprimento' &&
-        !l.isCaixinha,
-    )
+    let items = loteAtivo.lancamentos.filter((l: any) => {
+      if (l.isSaida || l.isSuprimento || l.formaPagamento === 'Suprimento') return false
+      // Se for caixinha avulsa pura (tipo TIP ou lançamento avulso sem venda de produtos acoplada),
+      // fica exclusivamente no Controle de Caixinhas abaixo.
+      const isCaixinhaAvulsa = Boolean(
+        l.is_tip ||
+        l.type === 'TIP' ||
+        (l.isCaixinha && (!l.valorCaixinha || l.valor <= l.valorCaixinha)) ||
+        (l.formaPagamento || '').toLowerCase() === 'caixinha' ||
+        (l.formaPagamento || '').toLowerCase() === 'gorjeta'
+      )
+      if (isCaixinhaAvulsa) return false
+      return true
+    })
 
     // Filtro por Aba
     if (activeTab === 'Dinheiro') {
       items = items.filter(
         (l: any) =>
-          l.formaPagamento === 'Dinheiro' &&
+          (l.formaPagamento || '').toLowerCase() === 'dinheiro' &&
           !formasCasa.includes(l.formaPagamento),
       )
     } else if (activeTab === 'Pix') {
       items = items.filter(
         (l: any) =>
-          l.formaPagamento === 'PIX' && !formasCasa.includes(l.formaPagamento),
+          (l.formaPagamento || '').toUpperCase() === 'PIX' && !formasCasa.includes(l.formaPagamento),
       )
     } else if (activeTab === 'Débito') {
-      items = items.filter((l: any) => l.formaPagamento === 'Débito')
+      items = items.filter((l: any) => {
+        const fp = (l.formaPagamento || '').toLowerCase()
+        return fp.includes('débito') || fp.includes('debito')
+      })
     } else if (activeTab === 'Crédito') {
-      items = items.filter((l: any) => l.formaPagamento === 'Crédito')
+      items = items.filter((l: any) => {
+        const fp = (l.formaPagamento || '').toLowerCase()
+        return fp.includes('crédito') || fp.includes('credito')
+      })
     } else if (activeTab === 'Voucher') {
-      items = items.filter((l: any) => l.formaPagamento === 'Voucher')
+      items = items.filter((l: any) => (l.formaPagamento || '').toLowerCase().includes('voucher'))
     } else if (activeTab === 'Consumo Interno') {
       items = items.filter((l: any) => formasCasa.includes(l.formaPagamento))
     } else if (activeTab === 'Todas') {
-      // Todas mostra tudo exceto saídas (já filtrado acima)
+      // Todas mostra tudo exceto saídas e caixinhas avulsas (já filtradas acima)
       // Se quiser excluir consumo interno do 'Todas', descomente abaixo.
       // Assumindo que 'Todas' inclui consumo interno também.
     }

@@ -131,3 +131,27 @@ test('Serviço 10% NÃO é caixinha: turno com caixinha de R$ 18,00 e serviço d
   // Regra do Thomás: serviço não é caixinha. O total de caixinhas DEVE ser estritamente R$ 18,00!
   assert.equal(total, 18.0)
 })
+test('Venda com caixinha acoplada (PIX R$ 115,00 com caixinha de R$ 2,11): deve manter valor da venda e extrair gorjeta sem virar caixinha avulsa', () => {
+  const entrada = {
+    amount: 115.0,
+    valor: 115.0,
+    payment_method: 'PIX',
+    type: 'SALE',
+    is_tip: false,
+    identification: 'Mesa 20 [Caixinha: R$ 2.11 | CAIXINHA FERNANDO SALÃO]',
+  }
+
+  const res = extrairCaixinhaDeLancamento(entrada)
+  assert.equal(res.temCaixinha, true)
+  assert.equal(res.valorCaixinha, 2.11)
+  assert.equal(res.paraQuem, 'CAIXINHA FERNANDO SALÃO')
+
+  // Testa lógica de identificação de caixinha avulsa
+  const isCaixinhaAvulsa = Boolean(
+    entrada.is_tip ||
+      entrada.type === 'TIP' ||
+      (entrada.payment_method || '').toLowerCase().includes('caixinha') ||
+      (entrada.payment_method || '').toLowerCase().includes('gorjeta'),
+  )
+  assert.equal(isCaixinhaAvulsa, false, 'Venda com caixinha acoplada NÃO deve ser classificada como caixinha avulsa')
+})

@@ -190,11 +190,19 @@ export function CashierSessionDetails() {
           ? cleanIdentification
           : '')
 
+      const isCaixinhaAvulsa = Boolean(
+        e.is_tip ||
+          e.type === 'TIP' ||
+          (e.payment_method || '').toLowerCase().includes('caixinha') ||
+          (e.payment_method || '').toLowerCase().includes('gorjeta'),
+      )
+
       return {
         id: e.id,
         isSaida: e.is_withdrawal || false,
         isSuprimento: e.is_addition || false,
-        isCaixinha: temCaixinha,
+        isCaixinha: isCaixinhaAvulsa,
+        temCaixinha,
         is_checked: e.is_checked || false,
         valor: e.amount,
         formaPagamento: e.payment_method || 'Dinheiro',
