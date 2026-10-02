@@ -265,6 +265,8 @@ export function DownloadsPage() {
         return <Smartphone className="h-5 w-5" />
       case 'garcom':
         return <UtensilsCrossed className="h-5 w-5" />
+      case 'support':
+        return <ShieldCheck className="h-5 w-5" />
       default:
         return <Download className="h-5 w-5" />
     }
