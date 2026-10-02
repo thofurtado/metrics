@@ -120,6 +120,20 @@ const officialApps: DownloadItem[] = [
     iconType: 'garcom',
     colorScheme: 'teal',
   },
+  {
+    id: 'metrics-rustdesk',
+    name: 'Suporte Remoto Metrics',
+    subtitle: 'Acesso Remoto Exclusivo (RustDesk)',
+    fileName: 'Instalador_Suporte_Metrics.exe',
+    version: 'v1.3.7.1',
+    size: '24 MB',
+    features: ['Servidor Dedicado Metrics', 'Conexão Criptografada', 'Instalação em 1 Clique'],
+    tag: 'Suporte',
+    isOfficial: true,
+    downloadUrl: `${API_BASE_URL}/api/public/rustdesk/download`,
+    iconType: 'support',
+    colorScheme: 'cyan',
+  },
 ]
 
 const utilityApps: DownloadItem[] = [
