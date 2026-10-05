@@ -11,10 +11,11 @@ import {
   Clock,
   Download,
   FileSpreadsheet,
+  Filter,
   Printer,
   Users,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Employee, getEmployees } from '@/api/hr/employees'
@@ -23,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -30,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 
 import { MonthlySummaryView } from './monthly-summary-view'
 import { TimeSheetPage } from './timesheet-page'
@@ -67,11 +70,37 @@ export function TimeClockAudit() {
     queryFn: () => getEmployees({ limit: 1000 }),
   })
 
-  const employeesList: Employee[] = employeesData?.data || []
+  // Ativos x inativos, igual à aba Colaboradores (isRegistered = ativo). Vale para as três visões.
+  const [filterStatus, setFilterStatus] = useState<boolean>(true) // true = Ativos, false = Inativos
+
+  const employeesList: Employee[] = useMemo(
+    () => (employeesData?.data || []).filter((e) => e.isRegistered === filterStatus),
+    [employeesData, filterStatus],
+  )
 
   // Selected Employee
   const paramEmployeeId = searchParams.get('employeeId')
   const [selectedEmployeeIdState, setSelectedEmployeeIdState] = useState<string>('')
+
+  // "Ver ponto" de um colaborador inativo (aba Colaboradores): abre já em Inativos, uma vez por colaborador.
+  const appliedParamRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!paramEmployeeId || appliedParamRef.current === paramEmployeeId) return
+    const employee = employeesData?.data?.find((e) => e.id === paramEmployeeId)
+    if (!employee) return
+    appliedParamRef.current = paramEmployeeId
+    setFilterStatus(employee.isRegistered)
+  }, [paramEmployeeId, employeesData])
+
+  const handleFilterStatusChange = (active: boolean) => {
+    setFilterStatus(active)
+    setSelectedEmployeeIdState('')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('employeeId')
+      return next
+    })
+  }
 
   const selectedEmployeeId = useMemo(() => {
     if (paramEmployeeId && employeesList.some((e) => e.id === paramEmployeeId)) {
@@ -169,28 +198,46 @@ export function TimeClockAudit() {
           </TabsList>
         </Tabs>
 
-        {activeView === 'monthly' && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCSV}
-              className="rounded-xl shadow-sm"
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-background px-3 py-1.5 dark:border-slate-800">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label
+              htmlFor="time-clock-status-filter"
+              className="cursor-pointer text-xs font-bold uppercase tracking-tight text-muted-foreground"
             >
-              <Download className="mr-1.5 h-4 w-4 text-emerald-600" />
-              Exportar CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="rounded-xl shadow-sm"
-            >
-              <Printer className="mr-1.5 h-4 w-4 text-slate-600" />
-              Imprimir
-            </Button>
+              {filterStatus ? 'Ativos' : 'Inativos'}
+            </Label>
+            <Switch
+              id="time-clock-status-filter"
+              checked={filterStatus}
+              onCheckedChange={handleFilterStatusChange}
+              className="scale-75 data-[state=checked]:bg-emerald-600"
+            />
           </div>
-        )}
+
+          {activeView === 'monthly' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                className="rounded-xl shadow-sm"
+              >
+                <Download className="mr-1.5 h-4 w-4 text-emerald-600" />
+                Exportar CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="rounded-xl shadow-sm"
+              >
+                <Printer className="mr-1.5 h-4 w-4 text-slate-600" />
+                Imprimir
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* VIEW 1: ESPELHO INDIVIDUAL */}
