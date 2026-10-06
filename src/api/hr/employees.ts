@@ -16,6 +16,14 @@ export interface Employee {
   allow_term_sales?: boolean
   term_credit_limit?: number | null
   photo_url?: string | null
+  /** Grupo do colaborador (o cargo virou cadastro; 06/10/2026). */
+  group_id?: string | null
+  group?: {
+    id: string
+    name: string
+    can_use_waiter_app: boolean
+    can_use_pdv: boolean
+  } | null
 }
 
 export interface CreateEmployeeInput {
@@ -32,6 +40,8 @@ export interface CreateEmployeeInput {
   hasCestaBasica: boolean
   allow_term_sales?: boolean
   term_credit_limit?: number | null
+  /** Grupo escolhido na lista; sem ele, o cargo digitado vira o grupo de mesmo nome. */
+  groupId?: string | null
 }
 
 export interface UpdateEmployeeInput extends CreateEmployeeInput {

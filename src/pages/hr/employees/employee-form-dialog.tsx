@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Banknote,
   CalendarDays,
@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { acessoDoGrupo, getEmployeeGroups } from '@/api/hr/employee-groups'
 import { createEmployee, Employee, updateEmployee } from '@/api/hr/employees'
 import { uploadFileEmployee } from '@/api/upload-file'
 import { FileUpload } from '@/components/file-upload'
@@ -49,6 +50,8 @@ import { Switch } from '@/components/ui/switch'
 const employeeFormSchema = z.object({
   name: z.string().min(2),
   role: z.string().min(2),
+  // Grupo escolhido na lista ('' = nenhum; NOVO_GRUPO = digitar um grupo novo no campo do cargo)
+  groupId: z.string().optional(),
   registrationType: z.string(), // We handle logic manually
   isRegistered: z.boolean().default(true),
   admissionDate: z
@@ -79,6 +82,8 @@ const employeeFormSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeFormSchema>
 
+const NOVO_GRUPO = '__novo__'
+
 interface EmployeeFormDialogProps {
   employee?: Employee
   children?: React.ReactNode
@@ -98,6 +103,7 @@ export function EmployeeFormDialog({
     defaultValues: {
       name: '',
       role: '',
+      groupId: '',
       registrationType: 'REGISTERED',
       isRegistered: true,
       admissionDate: new Date().toISOString().split('T')[0],
@@ -113,6 +119,16 @@ export function EmployeeFormDialog({
   })
 
   const currentRegistrationType = form.watch('registrationType')
+  const grupoEscolhido = form.watch('groupId')
+
+  // Grupos de funcionários (o cargo virou cadastro). Sem a lista (sistema ainda sem os grupos), o cargo é digitado como antes.
+  const { data: grupos, isError: gruposComErro } = useQuery({
+    queryKey: ['employee-groups'],
+    queryFn: getEmployeeGroups,
+    enabled: open,
+  })
+  const usaListaDeGrupos = !gruposComErro && !!grupos && grupos.length > 0
+  const grupoAtual = grupos?.find((g) => g.id === grupoEscolhido)
 
   // Reset form when opening/changing employee
   useEffect(() => {
@@ -120,6 +136,7 @@ export function EmployeeFormDialog({
       form.reset({
         name: employee?.name ?? '',
         role: employee?.role ?? '',
+        groupId: employee?.group_id ?? employee?.group?.id ?? '',
         registrationType:
           employee?.isRegistered === false
             ? 'DISMISSED'
@@ -155,6 +172,9 @@ export function EmployeeFormDialog({
     mutationFn: async (data: EmployeeFormValues) => {
       // Transform "DISMISSED" back to valid data
       const submissionData: any = { ...data }
+      // Grupo da lista; "novo grupo" ou sem lista = vale o cargo digitado (a nuvem cria o grupo com esse nome)
+      submissionData.groupId =
+        data.groupId && data.groupId !== NOVO_GRUPO ? data.groupId : null
 
       if (data.registrationType === 'DISMISSED') {
         submissionData.isRegistered = false
@@ -341,21 +361,84 @@ export function EmployeeFormDialog({
                 </h3>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Cargo / Função <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Atendente" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {usaListaDeGrupos ? (
+                    <FormField
+                      control={form.control}
+                      name="groupId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Cargo / Grupo <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <Select
+                            value={field.value || undefined}
+                            onValueChange={(valor) => {
+                              field.onChange(valor)
+                              const g = grupos?.find((x) => x.id === valor)
+                              form.setValue('role', g ? g.name : '', { shouldValidate: !!g })
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Escolha o grupo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {grupos?.map((g) => (
+                                <SelectItem key={g.id} value={g.id}>
+                                  {g.name}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value={NOVO_GRUPO}>Outro (novo grupo)…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {grupoEscolhido === NOVO_GRUPO ? (
+                            <FormField
+                              control={form.control}
+                              name="role"
+                              render={({ field: campoCargo }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input autoFocus placeholder="Nome do novo grupo" {...campoCargo} />
+                                  </FormControl>
+                                  <FormDescription>
+                                    O grupo novo nasce sem acesso ao app nem ao PDV (libere em Configurações do RH).
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          ) : (
+                            <FormDescription>
+                              {grupoAtual
+                                ? `Entra com o PIN do ponto: ${acessoDoGrupo(grupoAtual)}.`
+                                : 'O grupo diz se o colaborador entra no app do garçom e no PDV.'}
+                            </FormDescription>
+                          )}
+                          {!grupoEscolhido && form.formState.errors.role ? (
+                            <p className="text-sm font-medium text-destructive">Escolha o grupo.</p>
+                          ) : null}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Cargo / Função <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Atendente" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <FormField
                     control={form.control}
                     name="admissionDate"

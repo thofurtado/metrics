@@ -41,6 +41,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import { EmployeeGroupsSettings } from './employee-groups-settings'
+
 const customHolidaySchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   date: z.string().min(1, 'Data é obrigatória'),
@@ -93,6 +95,9 @@ export function HrRulesSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Grupos de funcionários: quem entra no app do garçom e no PDV com o PIN do ponto */}
+      <EmployeeGroupsSettings />
+
       {/* Information Cards about CLT Rules */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-blue-50/20 p-5 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900/50">
