@@ -1,11 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addDays,
-  differenceInMinutes,
   eachDayOfInterval,
   endOfMonth,
   format,
-  getISOWeek,
   parseISO,
   startOfMonth,
 } from 'date-fns'
@@ -13,11 +11,13 @@ import { ptBR } from 'date-fns/locale'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import {
+  AlertTriangle,
   ArrowLeft,
   Clock,
   FileText,
   GripVertical,
   Loader2,
+  Moon,
   Save,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -27,7 +27,16 @@ import { toast } from 'sonner'
 
 import { getEmployees } from '@/api/hr/employees'
 import { listHolidays } from '@/api/hr/holidays'
+import {
+  ApuracaoDoDia,
+  apurarPonto,
+  DiaEditado,
+  horas,
+  NOMES_DOS_AVISOS,
+  percentual,
+} from '@/api/hr/ponto'
 import { bulkUpsertTimeClock, listTimeClocks } from '@/api/hr/time-clock'
+import { AvisoRegraDoPonto } from '@/components/hr/aviso-regra-do-ponto'
 import { MonthPicker } from '@/components/MonthPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +62,44 @@ function parseDateOnly(dateStr: string): Date {
   const [yyyy, mm, dd] = str.split('-').map(Number)
   return new Date(yyyy, mm - 1, dd)
 }
+
+/** "18:30" do dia da linha (ou do dia seguinte, com o 1d+) em ISO, como o salvar sempre gravou */
+function montarHorario(
+  dateStr: string,
+  timeStr?: string,
+  isNextDay?: boolean,
+): string | null {
+  if (!timeStr) return null
+  const [h, m] = timeStr.split(':').map(Number)
+  const [yyyy, mm, dd] = dateStr.split('-').map(Number)
+  let d = new Date(yyyy, mm - 1, dd, h, m, 0, 0)
+  if (isNextDay) d = addDays(d, 1)
+  return d.toISOString()
+}
+
+/** A linha do espelho, ainda não salva, no formato que a conta do servidor entende */
+function diaEditadoDaLinha(r: any): DiaEditado {
+  const trabalhou = r.status === 'PRESENCA'
+  return {
+    data: r.date,
+    entrada: trabalhou ? montarHorario(r.date, r.clockIn) : null,
+    saidaIntervalo: trabalhou ? montarHorario(r.date, r.breakStart) : null,
+    voltaIntervalo: trabalhou ? montarHorario(r.date, r.breakEnd) : null,
+    saida: trabalhou
+      ? montarHorario(r.date, r.clockOut, r.clockOutNextDay)
+      : null,
+    entradaExtra: trabalhou ? montarHorario(r.date, r.extraClockIn) : null,
+    saidaExtra: trabalhou
+      ? montarHorario(r.date, r.extraClockOut, r.extraClockOutNextDay)
+      : null,
+    dobra: trabalhou ? !!r.isExtraDay : false,
+    valorDobra: r.negotiatedValue ? Number(r.negotiatedValue) : null,
+    ausencia: r.status === 'PRESENCA' || r.status === 'FOLGA' ? null : r.status,
+  }
+}
+
+const moeda = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export interface TimeSheetPageProps {
   employeeId?: string
@@ -119,6 +166,36 @@ export function TimeSheetPage({
   const { fields, replace } = useFieldArray({
     control,
     name: 'rows',
+  })
+
+  // A conta única do ponto (08/10/2026): mora no servidor. Enquanto a pessoa edita, a tela manda os dias meio segundo depois da
+  // última mudança e mostra o resultado (antes cada tela fazia a sua conta, com 7h20 e 60% fixos).
+  const linhasAtuais = watch('rows') || []
+  const assinaturaDosDias = JSON.stringify(linhasAtuais.map(diaEditadoDaLinha))
+  const [diasParaConta, setDiasParaConta] = useState<DiaEditado[] | null>(null)
+  useEffect(() => {
+    const espera = setTimeout(
+      () => setDiasParaConta(JSON.parse(assinaturaDosDias)),
+      500,
+    )
+    return () => clearTimeout(espera)
+  }, [assinaturaDosDias])
+  const { data: apuracao, isFetching: calculando } = useQuery({
+    queryKey: [
+      'ponto-apuracao',
+      employeeId,
+      format(startDate, 'yyyy-MM-dd'),
+      diasParaConta,
+    ],
+    queryFn: () =>
+      apurarPonto({
+        employee_id: employeeId!,
+        inicio: format(startDate, 'yyyy-MM-dd'),
+        fim: format(endDate, 'yyyy-MM-dd'),
+        dias: diasParaConta ?? [],
+      }),
+    enabled: !!employeeId && !!diasParaConta && diasParaConta.length > 0,
+    placeholderData: (anterior) => anterior,
   })
 
   // Sync form with data
@@ -227,6 +304,7 @@ export function TimeSheetPage({
       await bulkUpsertTimeClock(entries)
       toast.success('Mês salvo com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['time-clocks-mirror'] })
+      queryClient.invalidateQueries({ queryKey: ['ponto-resumo'] })
     } catch (err) {
       console.error(err)
       toast.error('Erro ao salvar mês.')
@@ -302,51 +380,44 @@ export function TimeSheetPage({
 
       doc.line(15, 37, 282, 37)
 
-      // Rows data processing
+      // A conta do PDF é a mesma da tela (vem do servidor)
+      if (!apuracao) {
+        toast.error('Aguarde a conta do mês terminar e tente de novo.')
+        return
+      }
       const rows = watch('rows') || []
+      const regra = apuracao.regra
+      const t = apuracao.totais
+      const diaDaConta = (data: string) =>
+        apuracao.dias.find((d) => d.data === data)
 
-      const calculateNetHours = (row: any) => {
-        if (row.status === 'ATESTADO' || row.status === 'FALTA_JUSTIFICADA')
-          return '7h 20m'
-        if (row.status !== 'PRESENCA') return '--'
-
-        const setTime = (t: string, isNext?: boolean) => {
-          if (!t) return null
-          const [h, m] = t.split(':').map(Number)
-          const d = parseDateOnly(row.date)
-          d.setHours(h, m, 0, 0)
-          const isAutoNextDay = h < 4
-          if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
-          return d
-        }
-
-        let total = 0
-        const cin = setTime(row.clockIn)
-        const bout = setTime(row.breakStart)
-        const bin = setTime(row.breakEnd)
-        const cout = setTime(row.clockOut, row.clockOutNextDay)
-        const xcin = setTime(row.extraClockIn)
-        const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
-
-        if (cin && bout) {
-          total += differenceInMinutes(bout, cin)
-        } else if (cin && cout && !bout && !bin) {
-          total += differenceInMinutes(cout, cin)
-        }
-
-        if (bin && cout) {
-          total += differenceInMinutes(cout, bin)
-        }
-
-        if (xcin && xcout) {
-          total += differenceInMinutes(xcout, xcin)
-        }
-
-        if (total <= 0) return '--'
-
-        const h = Math.floor(Math.abs(total) / 60)
-        const m = Math.abs(total) % 60
-        return `${h}h ${m.toString().padStart(2, '0')}m`
+      const textoHoras = (row: any) => {
+        const d = diaDaConta(row.date)
+        if (!d) return '--'
+        if (d.virtuaisMin > 0) return `${horas(d.virtuaisMin)} (virtual)`
+        return d.trabalhadosMin > 0 ? horas(d.trabalhadosMin) : '--'
+      }
+      const textoExtras = (row: any) => {
+        const d = diaDaConta(row.date)
+        if (!d) return '--'
+        const partes: string[] = []
+        if (d.extraMin + d.extraSemanaMin > 0)
+          partes.push(
+            `${horas(d.extraMin + d.extraSemanaMin)} (${percentual(regra.multiplicadorExtra)})`,
+          )
+        if (d.extraSegundaFaixaMin > 0 && regra.multiplicadorSegundaFaixa)
+          partes.push(
+            `${horas(d.extraSegundaFaixaMin)} (${percentual(regra.multiplicadorSegundaFaixa)})`,
+          )
+        if (d.extraEspecialMin > 0)
+          partes.push(
+            `${horas(d.extraEspecialMin)} (${percentual(regra.multiplicadorEspecial)})`,
+          )
+        return partes.length ? partes.join(' + ') : '--'
+      }
+      const textoNoturno = (row: any) => {
+        const d = diaDaConta(row.date)
+        return d && d.noturnosMin > 0 ? horas(d.noturnosMin) : '--'
       }
 
       const tableRows = rows.map((r: any) => {
@@ -367,83 +438,6 @@ export function TimeSheetPage({
                     ? 'F. Injustificada'
                     : r.status
 
-        const list = timeClocks?.timeClocks || timeClocks?.data || []
-        const dayClock: any = list.find(
-          (tc: any) => tc.date?.split('T')[0] === r.date,
-        )
-
-        const getOvertimeStr = (row: any, originalDayClock: any) => {
-          let ovtMins = originalDayClock?.overtimeMinutes ?? row.overtimeMinutes
-          const calcMem =
-            originalDayClock?.calculation_memory ?? row.calculation_memory
-          let multiplier = calcMem?.multiplier
-
-          if (!ovtMins || ovtMins <= 0) {
-            if (row.status !== 'PRESENCA') return '--'
-
-            const setTime = (t: string, isNext?: boolean) => {
-              if (!t) return null
-              const [h, m] = t.split(':').map(Number)
-              const d = parseDateOnly(row.date)
-              d.setHours(h, m, 0, 0)
-              const isAutoNextDay = h < 4
-              if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
-              return d
-            }
-
-            let total = 0
-            const cin = setTime(row.clockIn)
-            const bout = setTime(row.breakStart)
-            const bin = setTime(row.breakEnd)
-            const cout = setTime(row.clockOut, row.clockOutNextDay)
-            const xcin = setTime(row.extraClockIn)
-            const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
-
-            if (cin && bout) total += differenceInMinutes(bout, cin)
-            else if (cin && cout && !bout && !bin)
-              total += differenceInMinutes(cout, cin)
-            if (bin && cout) total += differenceInMinutes(cout, bin)
-            if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
-
-            if (total > 0) {
-              const DAILY_WORKLOAD = 440
-              const TOLERANCE = 10
-              const excess = total - DAILY_WORKLOAD
-              const dailyOvt = excess > TOLERANCE ? excess : 0
-
-              const isSunday = parseDateOnly(row.date).getDay() === 0
-              // holidaysData might be undefined in the exact scope, let's use holidaysData?.holidays or fallback to false
-              const isHoliday =
-                holidaysData?.holidays?.some((h: any) =>
-                  h.date.startsWith(row.date),
-                ) ?? false
-
-              if (isHoliday) {
-                ovtMins = total
-                multiplier = 2.0
-              } else if (isSunday) {
-                ovtMins = dailyOvt
-                multiplier = 2.0
-              } else {
-                ovtMins = dailyOvt
-                multiplier = 1.6
-              }
-            }
-          }
-
-          if (!ovtMins || ovtMins <= 0) return '--'
-          const h = Math.floor(ovtMins / 60)
-          const m = ovtMins % 60
-          const timeStr = `${h}h${m > 0 ? ` ${m.toString().padStart(2, '0')}m` : ''}`
-
-          let percent = ''
-          if (multiplier) {
-            if (multiplier === 1.6) percent = ' (60%)'
-            else if (multiplier >= 2.0) percent = ' (100%)'
-          }
-          return timeStr + percent
-        }
-
         return [
           format(parsedDay, 'dd/MM (EEE)', { locale: ptBR }),
           formatTime(r.clockIn),
@@ -454,18 +448,13 @@ export function TimeSheetPage({
           formatTime(r.extraClockOut, r.extraClockOutNextDay),
           statusStr,
           r.isExtraDay ? 'Sim' : 'Não',
-          r.negotiatedValue
-            ? Number(r.negotiatedValue).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })
-            : '--',
-          calculateNetHours(r),
-          getOvertimeStr(r, dayClock),
+          r.negotiatedValue ? moeda(Number(r.negotiatedValue)) : '--',
+          textoHoras(r),
+          textoExtras(r),
+          textoNoturno(r),
         ]
       })
 
-      // Call autoTable
       autoTable(doc, {
         startY: 40,
         margin: { left: 15, right: 15 },
@@ -495,157 +484,79 @@ export function TimeSheetPage({
             'Valor',
             'Horas',
             'H. Extras',
+            'Noturno',
           ],
         ],
         body: tableRows,
       })
 
-      // Capture final position
       let finalY = (doc as any).lastAutoTable.finalY + 10
 
-      // Page bounds check
-      if (finalY > 260) {
-        doc.addPage()
-        finalY = 20
+      // Resumo do mês pela regra da loja
+      const linhasDoResumo: Array<[string, string]> = [
+        [
+          'Total de horas trabalhadas:',
+          horas(t.trabalhadosMin) +
+            (t.virtuaisMin > 0
+              ? ` (+ ${horas(t.virtuaisMin)} de atestado)`
+              : ''),
+        ],
+        [
+          `Hora extra (${percentual(regra.multiplicadorExtra)}):`,
+          `${horas(t.extraMin + t.extraSemanaMin)} = ${moeda(t.valorExtraNormal)}`,
+        ],
+      ]
+      if (regra.multiplicadorSegundaFaixa && t.extraSegundaFaixaMin > 0) {
+        linhasDoResumo.push([
+          `Hora extra (${percentual(regra.multiplicadorSegundaFaixa)}):`,
+          `${horas(t.extraSegundaFaixaMin)} = ${moeda(t.valorExtraSegundaFaixa)}`,
+        ])
       }
+      linhasDoResumo.push([
+        `Domingo e feriado (${percentual(regra.multiplicadorEspecial)}):`,
+        `${horas(t.extraEspecialMin)} = ${moeda(t.valorExtraEspecial)}`,
+      ])
+      linhasDoResumo.push([
+        `Adicional noturno${regra.noturnoLigado ? ` (${Math.round(regra.adicionalNoturno * 100)}%)` : ''}:`,
+        regra.noturnoLigado
+          ? `${horas(t.noturnosMin)} = ${moeda(t.valorNoturno)}`
+          : `${horas(t.noturnosMin)} (não pago pela regra da loja)`,
+      ])
+      const alturaDoQuadro = 22 + linhasDoResumo.length * 7
 
-      // Calculate Total Hours if '--'
-      let totalHoursFormatted = timeClocks?.summary?.totalHours || '--'
-
-      let ovt60 = timeClocks?.summary?.totalOvertimeMinutes60 || 0
-      let ovt100 = timeClocks?.summary?.totalOvertimeMinutes100 || 0
-
-      // Fallback para estimativa global se backend não forneceu
-      if (ovt60 === 0 && ovt100 === 0) {
-        const DAILY_WORKLOAD = 440
-        const TOLERANCE = 10
-        let totalAllMinutes = 0
-
-        rows.forEach((row: any) => {
-          if (row.status !== 'PRESENCA') return
-
-          const setTime = (t: string, isNext?: boolean) => {
-            if (!t) return null
-            const [h, m] = t.split(':').map(Number)
-            const d = parseDateOnly(row.date)
-            d.setHours(h, m, 0, 0)
-            const isAutoNextDay = h < 4
-            if (isNext || isAutoNextDay) d.setDate(d.getDate() + 1)
-            return d
-          }
-
-          let total = 0
-          const cin = setTime(row.clockIn)
-          const bout = setTime(row.breakStart)
-          const bin = setTime(row.breakEnd)
-          const cout = setTime(row.clockOut, row.clockOutNextDay)
-          const xcin = setTime(row.extraClockIn)
-          const xcout = setTime(row.extraClockOut, row.extraClockOutNextDay)
-
-          if (cin && bout) total += differenceInMinutes(bout, cin)
-          else if (cin && cout && !bout && !bin)
-            total += differenceInMinutes(cout, cin)
-          if (bin && cout) total += differenceInMinutes(cout, bin)
-          if (xcin && xcout) total += differenceInMinutes(xcout, xcin)
-
-          if (total > 0) {
-            totalAllMinutes += total
-            const excess = total - DAILY_WORKLOAD
-            const dailyOvt = excess > TOLERANCE ? excess : 0
-
-            const isSunday = parseDateOnly(row.date).getDay() === 0
-            const isHoliday =
-              holidaysData?.holidays?.some((h: any) =>
-                h.date.startsWith(row.date),
-              ) ?? false
-
-            if (isHoliday) {
-              ovt100 += total
-            } else if (isSunday) {
-              ovt100 += dailyOvt
-            } else {
-              ovt60 += dailyOvt
-            }
-          }
-        })
-
-        if (totalHoursFormatted === '--') {
-          const isNegative = totalAllMinutes < 0
-          const absMins = Math.abs(totalAllMinutes)
-          const h = Math.floor(absMins / 60)
-          const m = absMins % 60
-          totalHoursFormatted = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`
-        }
-      }
-
-      // UX: Resumo Financeiro (Estimativa) Box
-      if (finalY + 45 > 190) {
+      if (finalY + alturaDoQuadro > 190) {
         doc.addPage()
         finalY = 20
       }
 
       doc.setDrawColor(200, 200, 200)
       doc.setFillColor(248, 250, 252) // slate-50
-      doc.roundedRect(15, finalY, 120, 44, 3, 3, 'FD')
+      doc.roundedRect(15, finalY, 140, alturaDoQuadro, 3, 3, 'FD')
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
       doc.setTextColor(30, 41, 59) // slate-800
       doc.text('Resumo e Estimativas', 20, finalY + 7)
+      doc.line(15, finalY + 10, 155, finalY + 10)
 
-      doc.line(15, finalY + 10, 135, finalY + 10)
-
-      doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      doc.setTextColor(71, 85, 105) // slate-600
+      linhasDoResumo.forEach(([rotulo, valor], i) => {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(71, 85, 105) // slate-600
+        doc.text(rotulo, 20, finalY + 16 + i * 7)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(15, 23, 42)
+        doc.text(valor, 80, finalY + 16 + i * 7)
+      })
 
-      doc.text('Total de Horas Trabalhadas:', 20, finalY + 16)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(15, 23, 42)
-      doc.text(totalHoursFormatted, 73, finalY + 16)
-
-      const rate = Number(employee?.salary) || 0
-      const hourlyRate = rate / 220
-      const overtimeHourlyRate60 = hourlyRate * 1.6
-      const overtimeHourlyRate100 = hourlyRate * 2.0
-
-      const value60 = (ovt60 / 60) * overtimeHourlyRate60
-      const value100 = (ovt100 / 60) * overtimeHourlyRate100
-      const totalValue = value60 + value100
-
-      const fmtCurrency = (val: number) =>
-        val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      const fmtHours = (mins: number) =>
-        `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, '0')}m`
-
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(71, 85, 105)
-      doc.text(`Valor de Horas Extras (60%):`, 20, finalY + 23)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(15, 23, 42)
-      doc.text(`${fmtHours(ovt60)} = ${fmtCurrency(value60)}`, 73, finalY + 23)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(71, 85, 105)
-      doc.text(`Valor de Horas Extras (100%):`, 20, finalY + 30)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(15, 23, 42)
-      doc.text(
-        `${fmtHours(ovt100)} = ${fmtCurrency(value100)}`,
-        73,
-        finalY + 30,
-      )
-
-      doc.setDrawColor(226, 232, 240) // slate-200
-      doc.line(20, finalY + 34, 130, finalY + 34)
-
+      const yTotal = finalY + 16 + linhasDoResumo.length * 7
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(22, 163, 74) // green-600
-      doc.text(`Valor Estimado a Receber (Total):`, 20, finalY + 40)
-      doc.text(fmtCurrency(totalValue), 73, finalY + 40)
+      doc.text('Valor estimado (extras + noturno):', 20, yTotal)
+      doc.text(moeda(t.valorExtra + t.valorNoturno), 80, yTotal)
 
       doc.setTextColor(0, 0, 0)
-      finalY += 55
+      finalY += alturaDoQuadro + 10
 
       // Signature area
       finalY += 15
@@ -677,18 +588,31 @@ export function TimeSheetPage({
       <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-muted-foreground dark:border-slate-800">
         <Clock className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-base font-medium">Nenhum colaborador selecionado</p>
-        <p className="text-xs">Selecione um colaborador para abrir o espelho de ponto e editar batidas.</p>
+        <p className="text-xs">
+          Selecione um colaborador para abrir o espelho de ponto e editar
+          batidas.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className={cn("flex flex-col bg-background", isEmbedded ? "w-full space-y-4" : "h-[calc(100vh-4rem)]")}>
+    <div
+      className={cn(
+        'flex flex-col bg-background',
+        isEmbedded ? 'w-full space-y-4' : 'h-[calc(100vh-4rem)]',
+      )}
+    >
+      <AvisoRegraDoPonto />
       {/* Header */}
-      <header className={cn(
-        "flex flex-col justify-between gap-4 border bg-card p-4 shadow-sm xl:flex-row xl:items-center",
-        isEmbedded ? "rounded-2xl border-slate-200/80 dark:border-slate-800" : "sticky top-0 z-30 border-b md:px-6"
-      )}>
+      <header
+        className={cn(
+          'flex flex-col justify-between gap-4 border bg-card p-4 shadow-sm xl:flex-row xl:items-center',
+          isEmbedded
+            ? 'rounded-2xl border-slate-200/80 dark:border-slate-800'
+            : 'sticky top-0 z-30 border-b md:px-6',
+        )}
+      >
         <div className="flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center xl:w-auto xl:justify-start">
           <div className="flex items-center gap-4">
             {!hideBackButton && (
@@ -718,153 +642,48 @@ export function TimeSheetPage({
             </div>
           </div>
 
-          {/* Summary Logic */}
-          <div className="flex items-center gap-4 overflow-x-auto py-1 sm:py-0">
+          {/* Resumo do mês: a conta vem do servidor (a mesma do resumo do mês e do PDF) */}
+          <div className="flex flex-wrap items-center gap-2 py-1 sm:py-0">
             {(() => {
               const rows = watch('rows') || []
-              // Estimativa DIÁRIA (espelha a lógica do backend):
-              // Para cada dia, apura o excedente acima da jornada diária (7h20 = 440min).
-              // Se for Domingo/Feriado: excedente vai para 100%; caso contrário: 60%.
-              let estimatedOvt60 = 0 // minutos de HE a 60%
-              let estimatedOvt100 = 0 // minutos de HE a 100%
-              let totalMinutes60 = 0 // total trabalhado em dias normais (para exibição de horas)
-              let totalMinutes100 = 0 // total trabalhado em Dom/Feriado (para exibição de horas)
-              let dsrcMinutes = 0
-              const DAILY_WORKLOAD = 440 // 7h20
-              const TOLERANCE = 10 // 10 minutos de tolerância CLT
-              // weeksWithPresence: semanas que tiveram ao menos 1 dia trabalhado ou justificado
-              const weeksWithPresence = new Set<string>()
-              const weeksWithInjustFalta = new Set<string>()
-
-              rows.forEach((row: any) => {
-                const d = new Date(row.date + 'T12:00:00')
-                const weekKey = `${d.getFullYear()}-W${getISOWeek(d)}`
-
-                if (
-                  row.status === 'ATESTADO' ||
-                  row.status === 'FALTA_JUSTIFICADA'
-                ) {
-                  totalMinutes60 += DAILY_WORKLOAD
-                  weeksWithPresence.add(weekKey)
-                  return
-                }
-
-                if (row.status === 'FALTA_INJUSTIFICADA') {
-                  weeksWithInjustFalta.add(weekKey)
-                  weeksWithPresence.add(weekKey)
-                  return
-                }
-
-                if (row?.status !== 'PRESENCA') return
-
-                const setTime = (t: string, nextDay?: boolean) => {
-                  if (!t) return null
-                  const [h, m] = t.split(':').map(Number)
-                  const isAutoNextDay = h < 4
-                  return (h + (nextDay || isAutoNextDay ? 24 : 0)) * 60 + m
-                }
-
-                const cin = setTime(row.clockIn, false)
-                const bin = setTime(row.breakStart, false)
-                const bout = setTime(row.breakEnd, false)
-                const cout = setTime(row.clockOut, row.clockOutNextDay)
-                const xcin = setTime(row.extraClockIn, false)
-                const xcout = setTime(
-                  row.extraClockOut,
-                  row.extraClockOutNextDay,
-                )
-
-                // Só conta horas se houver ao menos entrada + saída
-                let workedDayMins = 0
-                if (
-                  cin !== null &&
-                  bin !== null &&
-                  bout !== null &&
-                  cout !== null
-                ) {
-                  workedDayMins = bin - cin + (cout - bout)
-                } else if (
-                  cin !== null &&
-                  cout !== null &&
-                  bin === null &&
-                  bout === null
-                ) {
-                  workedDayMins = cout - cin
-                }
-                // Se só tem entrada sem saída, workedDayMins permanece 0 (registro incompleto)
-                if (xcin !== null && xcout !== null) {
-                  workedDayMins += xcout - xcin
-                }
-
-                // Só marca presença na semana se tiver ao menos entrada registrada
-                if (cin !== null) {
-                  weeksWithPresence.add(weekKey)
-                }
-
-                // Excedente diário (com tolerância)
-                const excess = workedDayMins - DAILY_WORKLOAD
-                const dailyOvt = excess > TOLERANCE ? excess : 0
-
-                const isSunday = d.getDay() === 0
-                const isHoliday = holidaysData?.holidays?.some((h: any) =>
-                  h.date.startsWith(row.date),
-                )
-
-                if (isHoliday) {
-                  totalMinutes100 += workedDayMins
-                  estimatedOvt100 += workedDayMins // Feriado é 100% o dia todo
-                } else if (isSunday) {
-                  totalMinutes100 += workedDayMins
-                  estimatedOvt100 += dailyOvt
-                } else {
-                  totalMinutes60 += workedDayMins
-                  estimatedOvt60 += dailyOvt
-                }
-              })
-
-              // DSR: 1 por semana que teve presença e sem falta injustificada
-              weeksWithPresence.forEach((w) => {
-                if (!weeksWithInjustFalta.has(w)) {
-                  dsrcMinutes += 440
-                }
-              })
-
-              // Horas trabalhadas = apenas horas reais (sem DSR, que é remuneração contábil)
-              const totalMinutes = totalMinutes60 + totalMinutes100
-
-              const isNegative = totalMinutes < 0
-              const absMins = Math.abs(totalMinutes)
-              const h = Math.floor(absMins / 60)
-              const m = absMins % 60
-              const formattedHours = `${isNegative ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m`
+              const t = apuracao?.totais
+              const regra = apuracao?.regra
+              const extraNormalMin = t ? t.extraMin + t.extraSemanaMin : 0
+              const totalExtraMin = t
+                ? extraNormalMin + t.extraSegundaFaixaMin + t.extraEspecialMin
+                : 0
+              const avisos = t
+                ? (
+                    Object.entries(t.avisos) as Array<
+                      [keyof typeof NOMES_DOS_AVISOS, number]
+                    >
+                  ).filter(([, n]) => n > 0)
+                : []
+              const totalDeAvisos = avisos.reduce((s, [, n]) => s + n, 0)
 
               return (
                 <>
                   <div className="flex flex-shrink-0 items-center gap-4 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 shadow-sm">
-                    {/* Saldo de Horas */}
                     <div className="flex flex-col items-center">
-                      <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Horas Trabalhadas
-                      </span>
-                      <span
-                        className={cn(
-                          'font-mono text-lg font-bold sm:text-xl',
-                          'text-primary',
+                        {calculando && (
+                          <Loader2 className="h-3 w-3 animate-spin" />
                         )}
-                      >
-                        {timeClocks?.summary?.totalHours || formattedHours}
+                      </span>
+                      <span className="font-mono text-lg font-bold text-primary sm:text-xl">
+                        {t ? horas(t.trabalhadosMin + t.virtuaisMin) : '--'}
                       </span>
                     </div>
 
                     <div className="h-6 w-px bg-border" />
 
-                    {/* Dias Extras */}
                     <div className="flex flex-col items-center text-green-600">
                       <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Dias Extras
                       </span>
                       <span className="font-mono text-lg font-bold sm:text-xl">
-                        {timeClocks?.summary?.extraDays ??
+                        {t?.dobras ??
                           rows.filter((r: any) => r.isExtraDay).length}
                       </span>
                     </div>
@@ -872,172 +691,154 @@ export function TimeSheetPage({
 
                   {employee?.registrationType === 'DAILY' && (
                     <div className="flex flex-shrink-0 items-center gap-2">
-                      <div className="flex flex-col items-end rounded-lg border border-green-100 bg-green-50/50 px-3 py-1">
-                        <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-green-700">
+                      <div className="flex flex-col items-end rounded-lg border border-green-100 bg-green-50/50 px-3 py-1 dark:border-green-900/50 dark:bg-green-950/30">
+                        <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-green-700 dark:text-green-300">
                           Q1 (1 a 15)
                         </span>
-                        <span className="font-mono text-base font-bold text-green-700 sm:text-lg">
-                          {(() => {
-                            const workedQ1 = rows.filter(
+                        <span className="font-mono text-base font-bold text-green-700 dark:text-green-300 sm:text-lg">
+                          {moeda(
+                            rows.filter(
                               (r: any) =>
                                 r.status === 'PRESENCA' &&
                                 new Date(r.date + 'T12:00:00').getDate() <= 15,
-                            ).length
-                            const rate = employee.dailyRate || 0
-                            return (workedQ1 * rate).toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })
-                          })()}
+                            ).length * (employee.dailyRate || 0),
+                          )}
                         </span>
                       </div>
-                      <div className="flex flex-col items-end rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-1">
-                        <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                      <div className="flex flex-col items-end rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-1 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                        <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                           Q2 (16+)
                         </span>
-                        <span className="font-mono text-base font-bold text-emerald-700 sm:text-lg">
-                          {(() => {
-                            const workedQ2 = rows.filter(
+                        <span className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-300 sm:text-lg">
+                          {moeda(
+                            rows.filter(
                               (r: any) =>
                                 r.status === 'PRESENCA' &&
                                 new Date(r.date + 'T12:00:00').getDate() > 15,
-                            ).length
-                            const rate = employee.dailyRate || 0
-                            return (workedQ2 * rate).toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })
-                          })()}
+                            ).length * (employee.dailyRate || 0),
+                          )}
                         </span>
                       </div>
                     </div>
                   )}
 
                   {employee?.registrationType === 'HOURLY' && (
-                    <div className="flex flex-shrink-0 flex-col items-end rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-1">
-                      <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-blue-700">
+                    <div className="flex flex-shrink-0 flex-col items-end rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-1 dark:border-blue-900/50 dark:bg-blue-950/30">
+                      <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
                         Total a Pagar (Horas)
                       </span>
-                      <span className="font-mono text-base font-bold text-blue-700 sm:text-lg">
-                        {(() => {
-                          const rate = Number(employee.salary) || 0
-                          const totalValue =
-                            ((totalMinutes60 + totalMinutes100) / 60) * rate
-                          return totalValue.toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })
-                        })()}
+                      <span className="font-mono text-base font-bold text-blue-700 dark:text-blue-300 sm:text-lg">
+                        {moeda(
+                          ((t?.trabalhadosMin ?? 0) / 60) *
+                            (Number(employee.salary) || 0),
+                        )}
                       </span>
                     </div>
                   )}
 
-                  {employee?.registrationType === 'REGISTERED' && (
-                    <div className="flex flex-shrink-0 flex-col items-end rounded-lg border border-purple-100 bg-purple-50/50 px-3 py-1 shadow-sm">
-                      <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-purple-700">
-                        Horas Extras (Estimativa)
-                      </span>
-                      <span className="font-mono text-base font-bold text-purple-700 sm:text-lg">
-                        {(() => {
-                          const rate = Number(employee.salary) || 0
-                          const hourlyRate = rate / 220
-
-                          const overtimeHourlyRate60 = hourlyRate * 1.6 // 60%
-                          const overtimeHourlyRate100 = hourlyRate * 2.0 // 100%
-
-                          const summaryResult = timeClocks?.summary
-
-                          // Preferência pelo backend (linha a linha), caso contrário usa estimativa diária
-                          const finalOvt60 =
-                            summaryResult?.totalOvertimeMinutes60 ??
-                            estimatedOvt60
-                          const finalOvt100 =
-                            summaryResult?.totalOvertimeMinutes100 ??
-                            estimatedOvt100
-
-                          const value60 =
-                            summaryResult?.totalOvertimeValue60 ??
-                            (finalOvt60 / 60) * overtimeHourlyRate60
-                          const value100 =
-                            summaryResult?.totalOvertimeValue100 ??
-                            (finalOvt100 / 60) * overtimeHourlyRate100
-                          const totalValue = value60 + value100
-
-                          if (finalOvt60 <= 0 && finalOvt100 <= 0)
-                            return '0h00 - R$ 0,00'
-
-                          const totalOvtMins = finalOvt60 + finalOvt100
-                          const h = Math.floor(totalOvtMins / 60)
-                          const m = totalOvtMins % 60
-                          const formattedHE = `${h}h${m.toString().padStart(2, '0')}`
-
-                          const formatMins = (mins: number) =>
-                            `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, '0')}`
-
-                          return (
-                            <TooltipProvider delayDuration={200}>
-                              <Tooltip>
-                                <TooltipTrigger className="flex cursor-help items-center gap-1 whitespace-nowrap border-b border-dashed border-purple-300">
-                                  {formattedHE} ={' '}
-                                  {totalValue.toLocaleString('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL',
-                                  })}
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  className="max-w-[280px] border-purple-800 bg-purple-900 p-3 text-xs leading-relaxed text-purple-50 shadow-xl"
-                                >
-                                  <p className="mb-1 border-b border-purple-700 pb-1 font-semibold">
-                                    Cálculo de Hora Extra
-                                  </p>
-                                  <ul className="mt-2 space-y-2">
+                  {/* Hora extra e noturno pela regra da loja, para todo tipo de funcionário */}
+                  <div className="flex flex-shrink-0 flex-col items-end rounded-lg border border-purple-100 bg-purple-50/50 px-3 py-1 shadow-sm dark:border-purple-900/50 dark:bg-purple-950/30">
+                    <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                      Horas Extras e Noturno
+                    </span>
+                    <span className="font-mono text-base font-bold text-purple-700 dark:text-purple-300 sm:text-lg">
+                      {!t || !regra ? (
+                        '--'
+                      ) : (
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger className="flex cursor-help items-center gap-1 whitespace-nowrap border-b border-dashed border-purple-300">
+                              {horas(totalExtraMin)} ={' '}
+                              {moeda(t.valorExtra + t.valorNoturno)}
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="bottom"
+                              className="max-w-[300px] border-purple-800 bg-purple-900 p-3 text-xs leading-relaxed text-purple-50 shadow-xl"
+                            >
+                              <p className="mb-1 border-b border-purple-700 pb-1 font-semibold">
+                                Pela regra da loja
+                              </p>
+                              <ul className="mt-2 space-y-1.5">
+                                <li>
+                                  <span className="opacity-70">
+                                    Hora normal:
+                                  </span>{' '}
+                                  {moeda(apuracao!.valorHora)} · hora extra{' '}
+                                  {moeda(apuracao!.valorHoraExtra)}
+                                </li>
+                                <li>
+                                  Extra ({percentual(regra.multiplicadorExtra)}
+                                  ): {horas(extraNormalMin)} ={' '}
+                                  {moeda(t.valorExtraNormal)}
+                                  {t.extraSemanaMin > 0
+                                    ? ` (${horas(t.extraSemanaMin)} pela semana)`
+                                    : ''}
+                                </li>
+                                {regra.multiplicadorSegundaFaixa &&
+                                  t.extraSegundaFaixaMin > 0 && (
                                     <li>
-                                      <span className="opacity-70">
-                                        Salário-base:
-                                      </span>{' '}
-                                      R$ {rate.toFixed(2)} (R${' '}
-                                      {hourlyRate.toFixed(2)}/h)
+                                      Extra (
+                                      {percentual(
+                                        regra.multiplicadorSegundaFaixa,
+                                      )}
+                                      ): {horas(t.extraSegundaFaixaMin)} ={' '}
+                                      {moeda(t.valorExtraSegundaFaixa)}
                                     </li>
-                                    {finalOvt60 > 0 && (
-                                      <li className="rounded bg-purple-800/50 p-1.5">
-                                        <span className="block font-semibold opacity-70">
-                                          Dias Normais (+60%):
-                                        </span>
-                                        {formatMins(finalOvt60)} ={' '}
-                                        {value60.toLocaleString('pt-BR', {
-                                          style: 'currency',
-                                          currency: 'BRL',
-                                        })}
-                                      </li>
-                                    )}
-                                    {finalOvt100 > 0 && (
-                                      <li className="rounded bg-purple-800/50 p-1.5">
-                                        <span className="block font-semibold opacity-70">
-                                          Dom/Feriado (+100%):
-                                        </span>
-                                        {formatMins(finalOvt100)} ={' '}
-                                        {value100.toLocaleString('pt-BR', {
-                                          style: 'currency',
-                                          currency: 'BRL',
-                                        })}
-                                      </li>
-                                    )}
-                                    <li className="mt-1 border-t border-purple-700 pt-1 font-bold text-purple-200">
-                                      Total:{' '}
-                                      {totalValue.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL',
-                                      })}
+                                  )}
+                                <li>
+                                  Domingo e feriado (
+                                  {percentual(regra.multiplicadorEspecial)}):{' '}
+                                  {horas(t.extraEspecialMin)} ={' '}
+                                  {moeda(t.valorExtraEspecial)}
+                                </li>
+                                <li>
+                                  Noturno: {horas(t.noturnosMin)}
+                                  {regra.noturnoLigado
+                                    ? ` (${Math.round(regra.adicionalNoturno * 100)}%) = ${moeda(t.valorNoturno)}`
+                                    : ' (a regra da loja não paga)'}
+                                </li>
+                                {employee?.registrationType === 'DAILY' &&
+                                  !regra.diaristaRecebeExtra && (
+                                    <li className="text-amber-200">
+                                      A regra da loja não paga hora extra de
+                                      diarista: as horas aparecem, sem valor.
                                     </li>
-                                  </ul>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )
-                        })()}
-                      </span>
-                    </div>
+                                  )}
+                              </ul>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Avisos do mês (D18): só avisam */}
+                  {avisos.length > 0 && (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+                          <AlertTriangle className="h-4 w-4" />
+                          {totalDeAvisos}{' '}
+                          {totalDeAvisos === 1 ? 'aviso' : 'avisos'}
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          className="max-w-[300px] text-xs"
+                        >
+                          <ul className="space-y-1">
+                            {avisos.map(([tipo, n]) => (
+                              <li key={tipo}>
+                                {NOMES_DOS_AVISOS[tipo]}: {n}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-2 text-muted-foreground">
+                            Só avisam: nada impede salvar ou fechar o mês. O
+                            detalhe está em cada dia.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </>
               )
@@ -1131,6 +932,8 @@ export function TimeSheetPage({
                     day={parseDateOnly(field.date)}
                     dailyRate={employee?.dailyRate || 0}
                     holidays={holidaysData?.holidays}
+                    apuracao={apuracao?.dias.find((d) => d.data === field.date)}
+                    regraMultiplicadorExtra={apuracao?.regra.multiplicadorExtra}
                   />
                 ))
               )}
@@ -1152,6 +955,8 @@ function MirrorRowField({
   day,
   dailyRate,
   holidays,
+  apuracao,
+  regraMultiplicadorExtra,
 }: {
   index: number
   register: any
@@ -1160,6 +965,8 @@ function MirrorRowField({
   day: Date
   dailyRate: number
   holidays?: any[]
+  apuracao?: ApuracaoDoDia
+  regraMultiplicadorExtra?: number
 }) {
   const isWeekend = day.getDay() === 0 || day.getDay() === 6
 
@@ -1175,12 +982,6 @@ function MirrorRowField({
   const status = watch(`rows.${index}.status`)
   const isWorked = status === 'PRESENCA'
   const isExtraDay = watch(`rows.${index}.isExtraDay`)
-  const clockIn = watch(`rows.${index}.clockIn`)
-  const breakStart = watch(`rows.${index}.breakStart`)
-  const breakEnd = watch(`rows.${index}.breakEnd`)
-  const clockOut = watch(`rows.${index}.clockOut`)
-  const extraClockIn = watch(`rows.${index}.extraClockIn`)
-  const extraClockOut = watch(`rows.${index}.extraClockOut`)
   const clockOutNextDay = watch(`rows.${index}.clockOutNextDay`)
   const extraClockOutNextDay = watch(`rows.${index}.extraClockOutNextDay`)
 
@@ -1230,72 +1031,27 @@ function MirrorRowField({
     }
   }
 
-  const calculateHours = (
-    cin?: string,
-    bout?: string,
-    bin?: string,
-    cout?: string,
-    xcin?: string,
-    xcout?: string,
-  ) => {
-    let total = 0
-    const setTime = (t: string, isNext?: boolean) => {
-      if (!t) return new Date()
-      const [h, m] = t.split(':').map(Number)
-      let d = new Date(day)
-      d.setHours(h, m, 0, 0)
-      const isAutoNextDay = h < 4
-      if (isNext || isAutoNextDay) d = addDays(d, 1)
-      return d
-    }
-
-    if (cin && bout) {
-      total += differenceInMinutes(setTime(bout), setTime(cin))
-    } else if (cin && cout && !bout && !bin) {
-      total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(cin))
-    }
-
-    if (bin && cout) {
-      total += differenceInMinutes(setTime(cout, clockOutNextDay), setTime(bin))
-    }
-
-    if (xcin && xcout) {
-      total += differenceInMinutes(
-        setTime(xcout, extraClockOutNextDay),
-        setTime(xcin),
-      )
-    }
-
-    if (total <= 0) return '--'
-
-    const h = Math.floor(Math.abs(total) / 60)
-    const m = Math.abs(total) % 60
-    return `${h}h ${m.toString().padStart(2, '0')}m`
-  }
-
-  const netHours = calculateHours(
-    clockIn,
-    breakStart,
-    breakEnd,
-    clockOut,
-    extraClockIn,
-    extraClockOut,
-  )
-
-  const getDisplayHours = () => {
-    if (status === 'ATESTADO' || status === 'FALTA_JUSTIFICADA')
-      return '7h 20m (virtual)'
-    if (status !== 'PRESENCA') return '--'
-    return netHours
-  }
+  // As horas do dia vêm da conta do servidor (a mesma do topo, do resumo do mês e do PDF)
+  const horasDoDia = (() => {
+    if (!apuracao) return '…'
+    if (apuracao.virtuaisMin > 0)
+      return `${horas(apuracao.virtuaisMin)} (virtual)`
+    if (status !== 'PRESENCA' || apuracao.trabalhadosMin <= 0) return '--'
+    return horas(apuracao.trabalhadosMin)
+  })()
+  const extraDoDia = apuracao
+    ? apuracao.extraMin +
+      apuracao.extraSegundaFaixaMin +
+      apuracao.extraSemanaMin
+    : 0
 
   return (
     <TableRow
       className={cn(
         'transition-colors hover:bg-muted/10',
-        { 'bg-blue-50/50': isWeekend && !holiday },
-        isNationalHoliday && 'bg-green-50/60',
-        isMunicipalHoliday && 'bg-sky-50/60',
+        { 'bg-blue-50/50 dark:bg-blue-950/20': isWeekend && !holiday },
+        isNationalHoliday && 'bg-green-50/60 dark:bg-green-950/20',
+        isMunicipalHoliday && 'bg-sky-50/60 dark:bg-sky-950/20',
       )}
     >
       <TableCell className="border-r py-2 pl-6 font-medium">
@@ -1657,7 +1413,7 @@ function MirrorRowField({
           className={cn(
             'h-8 border-0 text-right shadow-none focus-visible:ring-1',
             isExtraDay
-              ? 'bg-green-50/50'
+              ? 'bg-green-50/50 dark:bg-green-950/20'
               : 'bg-transparent text-muted-foreground',
           )}
           step="0.01"
@@ -1668,7 +1424,64 @@ function MirrorRowField({
       </TableCell>
 
       <TableCell className="bg-muted/5 pr-6 text-right font-mono text-sm">
-        {getDisplayHours()}
+        <div className="flex flex-col items-end gap-0.5">
+          <span>{horasDoDia}</span>
+          {apuracao &&
+            (extraDoDia > 0 ||
+              apuracao.extraEspecialMin > 0 ||
+              apuracao.noturnosMin > 0) && (
+              <span className="flex flex-wrap justify-end gap-1.5 text-[10px] font-semibold">
+                {extraDoDia > 0 && (
+                  <span
+                    className="text-purple-600"
+                    title={
+                      apuracao.extraSemanaMin > 0
+                        ? 'Inclui a extra pela semana (acima da jornada semanal)'
+                        : undefined
+                    }
+                  >
+                    +{horas(extraDoDia)}
+                    {regraMultiplicadorExtra
+                      ? ` ${percentual(regraMultiplicadorExtra)}`
+                      : ''}
+                  </span>
+                )}
+                {apuracao.extraEspecialMin > 0 && (
+                  <span className="text-rose-600">
+                    +{horas(apuracao.extraEspecialMin)} 100%
+                  </span>
+                )}
+                {apuracao.noturnosMin > 0 && (
+                  <span className="flex items-center gap-0.5 text-indigo-600">
+                    <Moon className="h-2.5 w-2.5" />
+                    {horas(apuracao.noturnosMin)}
+                  </span>
+                )}
+              </span>
+            )}
+          {apuracao && apuracao.avisos.length > 0 && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger
+                  type="button"
+                  className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-600"
+                >
+                  <AlertTriangle className="h-3 w-3" />{' '}
+                  {apuracao.avisos.length === 1
+                    ? 'aviso'
+                    : `${apuracao.avisos.length} avisos`}
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[280px] text-xs">
+                  <ul className="space-y-1">
+                    {apuracao.avisos.map((a) => (
+                      <li key={a.tipo}>{a.texto}</li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   )

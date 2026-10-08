@@ -1,21 +1,27 @@
-﻿import {
-  differenceInMinutes,
-  format,
-  parseISO,
-} from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
+import { endOfMonth, format, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Eye,
+  Moon,
   Search,
   Users,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { Employee } from '@/api/hr/employees'
+import {
+  horas,
+  NOMES_DOS_AVISOS,
+  resumoDoPonto,
+  TipoDeAviso,
+} from '@/api/hr/ponto'
 import { TimeClock } from '@/api/hr/time-clock'
+import { AvisoRegraDoPonto } from '@/components/hr/aviso-regra-do-ponto'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,8 +51,9 @@ import { formatCurrency } from '@/lib/utils'
 
 interface MonthlySummaryViewProps {
   employeesList: Employee[]
-  timeClocks: TimeClock[]
-  daysInMonth: Date[]
+  /** Não são mais usados: a conta vem do servidor (ficam para não mexer em quem chama) */
+  timeClocks?: TimeClock[]
+  daysInMonth?: Date[]
   selectedMonth: number
   setSelectedMonth: (m: number) => void
   selectedYear: number
@@ -59,8 +66,6 @@ interface MonthlySummaryViewProps {
 
 export function MonthlySummaryView({
   employeesList,
-  timeClocks,
-  daysInMonth,
   selectedMonth,
   setSelectedMonth,
   selectedYear,
@@ -78,6 +83,21 @@ export function MonthlySummaryView({
   }))
   const years = [2023, 2024, 2025, 2026]
 
+  // A conta do mês vem do servidor: a mesma do espelho e do PDF (08/10/2026). Antes esta tela fazia a sua (7h20, sem
+  // tolerância, tudo a 60%).
+  const inicio = format(
+    startOfMonth(new Date(selectedYear, selectedMonth, 1)),
+    'yyyy-MM-dd',
+  )
+  const fim = format(
+    endOfMonth(new Date(selectedYear, selectedMonth, 1)),
+    'yyyy-MM-dd',
+  )
+  const { data: resumo, isLoading: calculando } = useQuery({
+    queryKey: ['ponto-resumo', inicio, fim],
+    queryFn: () => resumoDoPonto({ inicio, fim }),
+  })
+
   const monthlySummaryData = useMemo(() => {
     let filtered = employeesList
 
@@ -91,92 +111,67 @@ export function MonthlySummaryView({
     }
 
     return filtered.map((emp) => {
-      const history = timeClocks.filter((tc) => tc.employee_id === emp.id)
-
-      let totalDays = 0
-      let totalMinutes = 0
-      let overtimeMinutes = 0
-
-      daysInMonth.forEach((day) => {
-        const dayStr = format(day, 'yyyy-MM-dd')
-        const tc = history.find((record) => {
-          if (!record.date) return false
-          return record.date.substring(0, 10) === dayStr
-        })
-
-        if (tc && (tc.clockIn || tc.isExtraDay) && (!tc.absenceReason || tc.absenceReason === 'PRESENCA')) {
-          totalDays++
-          let session = 0
-
-          if (tc.clockIn && tc.clockOut) {
-            let s = differenceInMinutes(parseISO(tc.clockOut), parseISO(tc.clockIn))
-            if (s < 0) s += 24 * 60
-            if (tc.breakStart && tc.breakEnd) {
-              let b = differenceInMinutes(parseISO(tc.breakEnd), parseISO(tc.breakStart))
-              if (b < 0) b += 24 * 60
-              s -= b
-            }
-            session += s > 0 ? s : 0
-          }
-
-          if (tc.extraClockIn && tc.extraClockOut) {
-            let xs = differenceInMinutes(parseISO(tc.extraClockOut), parseISO(tc.extraClockIn))
-            if (xs < 0) xs += 24 * 60
-            session += xs > 0 ? xs : 0
-          }
-
-          totalMinutes += session
-
-          if (session > 440) {
-            overtimeMinutes += session - 440
-          }
-        }
-      })
-
-      const totalH = Math.floor(totalMinutes / 60)
-      const totalM = totalMinutes % 60
-      const ovtH = Math.floor(overtimeMinutes / 60)
-      const ovtM = overtimeMinutes % 60
+      const t = resumo?.linhas.find((l) => l.employee.id === emp.id)?.totais
+      const totalDays = t ? t.diasTrabalhados + t.dobras : 0
+      const totalMinutes = t?.trabalhadosMin ?? 0
+      const overtimeMinutes = t
+        ? t.extraMin +
+          t.extraSegundaFaixaMin +
+          t.extraEspecialMin +
+          t.extraSemanaMin
+        : 0
+      const noturnosMin = t?.noturnosMin ?? 0
+      const extrasENoturno = t ? t.valorExtra + t.valorNoturno : 0
+      const avisos = t
+        ? (Object.entries(t.avisos) as Array<[TipoDeAviso, number]>).filter(
+            ([, n]) => n > 0,
+          )
+        : []
 
       let estimatedTotal = 0
       if (emp.registrationType === 'DAILY') {
-        const dailyRate = Number(emp.dailyRate) || 0
-        estimatedTotal = totalDays * dailyRate
+        estimatedTotal =
+          (t?.diasTrabalhados ?? 0) * (Number(emp.dailyRate) || 0) +
+          (t?.valorDobras ?? 0) +
+          extrasENoturno
       } else if (emp.registrationType === 'HOURLY') {
-        const hourlyRate = Number(emp.salary) || 0
-        estimatedTotal = (totalMinutes / 60) * hourlyRate
-      } else if (emp.registrationType === 'REGISTERED') {
-        const salary = Number(emp.salary) || 0
-        const hourlyBase = salary / 220
-        const overtimeValue = (overtimeMinutes / 60) * (hourlyBase * 1.6)
-        estimatedTotal = salary + overtimeValue
+        estimatedTotal =
+          (totalMinutes / 60) * (Number(emp.salary) || 0) + extrasENoturno
+      } else {
+        estimatedTotal = (Number(emp.salary) || 0) + extrasENoturno
       }
 
       return {
         employee: emp,
         totalDays,
         totalMinutes,
-        formattedTotalHours: `${totalH}h ${totalM.toString().padStart(2, '0')}m`,
-        formattedOvertime: overtimeMinutes > 0 ? `${ovtH}h ${ovtM.toString().padStart(2, '0')}m` : '--',
+        formattedTotalHours: horas(totalMinutes),
+        formattedOvertime: overtimeMinutes > 0 ? horas(overtimeMinutes) : '--',
         overtimeMinutes,
+        noturnosMin,
+        avisos,
         estimatedTotal,
       }
     })
-  }, [employeesList, timeClocks, daysInMonth, employeeType, searchTerm])
+  }, [employeesList, resumo, employeeType, searchTerm])
 
   const totalMonthHoursWorked = useMemo(() => {
-    const totalMin = monthlySummaryData.reduce((acc, row) => acc + row.totalMinutes, 0)
-    const h = Math.floor(totalMin / 60)
-    const m = totalMin % 60
-    return `${h}h ${m.toString().padStart(2, '0')}m`
+    return horas(
+      monthlySummaryData.reduce((acc, row) => acc + row.totalMinutes, 0),
+    )
   }, [monthlySummaryData])
 
   const totalMonthOvertime = useMemo(() => {
-    const totalOvt = monthlySummaryData.reduce((acc, row) => acc + row.overtimeMinutes, 0)
-    const h = Math.floor(totalOvt / 60)
-    const m = totalOvt % 60
-    return `${h}h ${m.toString().padStart(2, '0')}m`
+    return horas(
+      monthlySummaryData.reduce((acc, row) => acc + row.overtimeMinutes, 0),
+    )
   }, [monthlySummaryData])
+
+  const totalNoturno = useMemo(
+    () =>
+      horas(monthlySummaryData.reduce((acc, row) => acc + row.noturnosMin, 0)),
+    [monthlySummaryData],
+  )
 
   const totalEstimatedPayroll = useMemo(() => {
     return monthlySummaryData.reduce((acc, row) => acc + row.estimatedTotal, 0)
@@ -184,6 +179,8 @@ export function MonthlySummaryView({
 
   return (
     <div className="space-y-6">
+      <AvisoRegraDoPonto />
+
       {/* Filters Bar */}
       <Card className="rounded-2xl border border-slate-200/70 bg-card/60 shadow-sm backdrop-blur dark:border-slate-800">
         <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -200,7 +197,11 @@ export function MonthlySummaryView({
               </SelectTrigger>
               <SelectContent>
                 {months.map((m) => (
-                  <SelectItem key={m.value} value={String(m.value)} className="capitalize">
+                  <SelectItem
+                    key={m.value}
+                    value={String(m.value)}
+                    className="capitalize"
+                  >
                     {m.label}
                   </SelectItem>
                 ))}
@@ -305,8 +306,9 @@ export function MonthlySummaryView({
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50">
             {totalMonthOvertime}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Excedentes acumulados
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            Pela regra da loja · <Moon className="h-3 w-3" /> {totalNoturno}{' '}
+            entre 22h e 5h
           </p>
         </Card>
 
@@ -330,10 +332,14 @@ export function MonthlySummaryView({
       <Card className="rounded-2xl border border-slate-200/70 shadow-sm dark:border-slate-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold">
-            Consolidado de Ponto - {format(new Date(selectedYear, selectedMonth, 1), 'MMMM yyyy', { locale: ptBR })}
+            Consolidado de Ponto -{' '}
+            {format(new Date(selectedYear, selectedMonth, 1), 'MMMM yyyy', {
+              locale: ptBR,
+            })}
           </CardTitle>
           <CardDescription>
-            Resumo claro e legível de presença, total de horas e valores por colaborador.
+            Resumo claro e legível de presença, total de horas e valores por
+            colaborador.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -343,29 +349,42 @@ export function MonthlySummaryView({
                 <TableRow className="border-b bg-muted/40">
                   <TableHead className="w-[280px]">Colaborador</TableHead>
                   <TableHead>Regime</TableHead>
-                  <TableHead className="text-center">Dias Trabalhados</TableHead>
+                  <TableHead className="text-center">
+                    Dias Trabalhados
+                  </TableHead>
                   <TableHead className="text-center">Total Horas</TableHead>
                   <TableHead className="text-center">Horas Extras</TableHead>
+                  <TableHead className="text-center">Noturno</TableHead>
+                  <TableHead className="text-center">Avisos</TableHead>
                   <TableHead className="text-right">Estimativa Bruta</TableHead>
                   <TableHead className="w-[120px] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading || calculando ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={9}
+                      className="h-32 text-center text-muted-foreground"
+                    >
                       Carregando consolidado...
                     </TableCell>
                   </TableRow>
                 ) : monthlySummaryData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={9}
+                      className="h-32 text-center text-muted-foreground"
+                    >
                       Nenhum registro encontrado para esta competência.
                     </TableCell>
                   </TableRow>
                 ) : (
                   monthlySummaryData.map((row) => (
-                    <TableRow key={row.employee.id} className="transition-colors hover:bg-muted/30">
+                    <TableRow
+                      key={row.employee.id}
+                      className="transition-colors hover:bg-muted/30"
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-bold text-primary">
@@ -382,7 +401,10 @@ export function MonthlySummaryView({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="rounded-lg font-medium">
+                        <Badge
+                          variant="outline"
+                          className="rounded-lg font-medium"
+                        >
                           {row.employee.registrationType === 'DAILY'
                             ? 'Diarista'
                             : row.employee.registrationType === 'HOURLY'
@@ -402,6 +424,33 @@ export function MonthlySummaryView({
                         {row.overtimeMinutes > 0 ? (
                           <span className="font-semibold text-amber-600 dark:text-amber-400">
                             +{row.formattedOvertime}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">--</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center font-mono">
+                        {row.noturnosMin > 0 ? (
+                          <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                            {horas(row.noturnosMin)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">--</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {row.avisos.length > 0 ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600"
+                            title={row.avisos
+                              .map(
+                                ([tipo, n]) =>
+                                  `${NOMES_DOS_AVISOS[tipo]}: ${n}`,
+                              )
+                              .join('\n')}
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            {row.avisos.reduce((s, [, n]) => s + n, 0)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">--</span>

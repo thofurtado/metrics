@@ -14,9 +14,15 @@ import { z } from 'zod'
 
 import { acessoDoGrupo, getEmployeeGroups } from '@/api/hr/employee-groups'
 import { createEmployee, Employee, updateEmployee } from '@/api/hr/employees'
+import {
+  obterRegraDoPonto,
+  percentual,
+  valorDaHoraPelaRegra,
+} from '@/api/hr/ponto'
 import { uploadFileEmployee } from '@/api/upload-file'
 import { FileUpload } from '@/components/file-upload'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Dialog,
   DialogContent,
@@ -36,8 +42,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { CurrencyInput } from '@/components/ui/currency-input'
-import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import {
   Select,
   SelectContent,
@@ -46,6 +50,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import {
+  formatCurrencyFromNumber,
+  parseCurrencyToFloat,
+} from '@/lib/currency-utils'
 
 const employeeFormSchema = z.object({
   name: z.string().min(2),
@@ -60,8 +68,18 @@ const employeeFormSchema = z.object({
       message: 'Data inválida.',
     }),
   pin: z.string().length(4),
-  salary: z.preprocess((val) => parseCurrencyToFloat(val), z.number().default(0)),
-  dailyRate: z.preprocess((val) => parseCurrencyToFloat(val), z.number().default(0)),
+  salary: z.preprocess(
+    (val) => parseCurrencyToFloat(val as string | number | null | undefined),
+    z.number().default(0),
+  ),
+  dailyRate: z.preprocess(
+    (val) => parseCurrencyToFloat(val as string | number | null | undefined),
+    z.number().default(0),
+  ),
+  overtimeValue: z.preprocess(
+    (val) => parseCurrencyToFloat(val as string | number | null | undefined),
+    z.number().min(0).default(0),
+  ),
   points: z.preprocess(
     (val) =>
       val === '' || val === undefined || val === null ? 0 : Number(val),
@@ -75,7 +93,7 @@ const employeeFormSchema = z.object({
   hasCestaBasica: z.boolean().default(false),
   allow_term_sales: z.boolean().default(false),
   term_credit_limit: z.preprocess(
-    (val) => parseCurrencyToFloat(val),
+    (val) => parseCurrencyToFloat(val as string | number | null | undefined),
     z.number().min(0).default(0),
   ),
 })
@@ -110,6 +128,7 @@ export function EmployeeFormDialog({
       pin: '',
       salary: undefined,
       dailyRate: undefined,
+      overtimeValue: 0,
       points: 0,
       transportAllowance: 0,
       hasCestaBasica: false,
@@ -129,6 +148,32 @@ export function EmployeeFormDialog({
   })
   const usaListaDeGrupos = !gruposComErro && !!grupos && grupos.length > 0
   const grupoAtual = grupos?.find((g) => g.id === grupoEscolhido)
+
+  // Valor da hora extra sugerido pela regra da loja (D15): a mesma conta do espelho. Sem a regra (servidor antigo), só o campo.
+  const { data: regraDoPonto } = useQuery({
+    queryKey: ['ponto-regra'],
+    queryFn: obterRegraDoPonto,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
+  const regraAtual = regraDoPonto?.atual
+  const ehDiarista = currentRegistrationType === 'DAILY'
+  const salarioDigitado = parseCurrencyToFloat(form.watch('salary'))
+  const diariaDigitada = parseCurrencyToFloat(form.watch('dailyRate'))
+  const horaExtraDigitada = parseCurrencyToFloat(form.watch('overtimeValue'))
+  const horaPelaRegra = regraAtual
+    ? valorDaHoraPelaRegra(
+        currentRegistrationType,
+        salarioDigitado,
+        diariaDigitada,
+        regraAtual,
+      )
+    : 0
+  const horaExtraPelaRegra = regraAtual
+    ? Math.round(horaPelaRegra * regraAtual.multiplicadorExtra * 100) / 100
+    : 0
+  const diaristaSemExtraNaLoja =
+    ehDiarista && !!regraAtual && !regraAtual.diaristaRecebeExtra
 
   // Reset form when opening/changing employee
   useEffect(() => {
@@ -154,6 +199,7 @@ export function EmployeeFormDialog({
           employee?.dailyRate !== null && employee?.dailyRate !== undefined
             ? Number(employee.dailyRate)
             : undefined,
+        overtimeValue: Number(employee?.overtimeValue) || 0,
         points: Number(employee?.points) || 0,
         transportAllowance: Number(employee?.transportAllowance) || 0,
         hasCestaBasica: employee?.hasCestaBasica ?? false,
@@ -208,6 +254,7 @@ export function EmployeeFormDialog({
       submissionData.dailyRate = submissionData.dailyRate
         ? Number(submissionData.dailyRate)
         : null
+      submissionData.overtimeValue = Number(submissionData.overtimeValue) || 0
       submissionData.points = submissionData.points
         ? Number(submissionData.points)
         : 0
@@ -368,14 +415,17 @@ export function EmployeeFormDialog({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Cargo / Grupo <span className="text-red-500">*</span>
+                            Cargo / Grupo{' '}
+                            <span className="text-red-500">*</span>
                           </FormLabel>
                           <Select
                             value={field.value || undefined}
                             onValueChange={(valor) => {
                               field.onChange(valor)
                               const g = grupos?.find((x) => x.id === valor)
-                              form.setValue('role', g ? g.name : '', { shouldValidate: !!g })
+                              form.setValue('role', g ? g.name : '', {
+                                shouldValidate: !!g,
+                              })
                             }}
                           >
                             <FormControl>
@@ -389,7 +439,9 @@ export function EmployeeFormDialog({
                                   {g.name}
                                 </SelectItem>
                               ))}
-                              <SelectItem value={NOVO_GRUPO}>Outro (novo grupo)…</SelectItem>
+                              <SelectItem value={NOVO_GRUPO}>
+                                Outro (novo grupo)…
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           {grupoEscolhido === NOVO_GRUPO ? (
@@ -399,10 +451,15 @@ export function EmployeeFormDialog({
                               render={({ field: campoCargo }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input autoFocus placeholder="Nome do novo grupo" {...campoCargo} />
+                                    <Input
+                                      autoFocus
+                                      placeholder="Nome do novo grupo"
+                                      {...campoCargo}
+                                    />
                                   </FormControl>
                                   <FormDescription>
-                                    O grupo novo nasce sem acesso ao app nem ao PDV (libere em Configurações do RH).
+                                    O grupo novo nasce sem acesso ao app nem ao
+                                    PDV (libere em Configurações do RH).
                                   </FormDescription>
                                   <FormMessage />
                                 </FormItem>
@@ -416,7 +473,9 @@ export function EmployeeFormDialog({
                             </FormDescription>
                           )}
                           {!grupoEscolhido && form.formState.errors.role ? (
-                            <p className="text-sm font-medium text-destructive">Escolha o grupo.</p>
+                            <p className="text-sm font-medium text-destructive">
+                              Escolha o grupo.
+                            </p>
                           ) : null}
                           <FormMessage />
                         </FormItem>
@@ -429,7 +488,8 @@ export function EmployeeFormDialog({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Cargo / Função <span className="text-red-500">*</span>
+                            Cargo / Função{' '}
+                            <span className="text-red-500">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input placeholder="Ex: Atendente" {...field} />
@@ -512,68 +572,130 @@ export function EmployeeFormDialog({
                 </h3>
 
                 <div className="grid grid-cols-1 gap-6 rounded-lg border bg-muted/10 p-4 md:grid-cols-2">
+                  {/* Um campo de valor só, com o nome do tipo (D16): o diarista guarda a diária; os outros, o salário ou a hora */}
+                  {ehDiarista ? (
+                    <FormField
+                      key="valor-diaria"
+                      control={form.control}
+                      name="dailyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-blue-600" />
+                            Valor da diária (R$)
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0,00"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Quanto a pessoa recebe por dia trabalhado.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      key="valor-salario"
+                      control={form.control}
+                      name="salary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Banknote className="h-4 w-4 text-green-600" />
+                            {currentRegistrationType === 'HOURLY'
+                              ? 'Valor da hora (R$)'
+                              : 'Salário mensal (R$)'}
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0,00"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            {currentRegistrationType === 'HOURLY'
+                              ? 'Valor pago por cada hora trabalhada.'
+                              : 'O salário do mês, sem os benefícios.'}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  {/* Valor da hora extra de cada pessoa (D15): vazio = pela regra da loja; preenchido = o combinado com ela */}
                   <FormField
                     control={form.control}
-                    name="salary"
+                    name="overtimeValue"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
-                          <Banknote className="h-4 w-4 text-green-600" />
-                          {currentRegistrationType === 'HOURLY'
-                            ? 'Valor da Hora (R$)'
-                            : 'Salário Base (R$)'}
+                          <Banknote className="h-4 w-4 text-purple-600" />
+                          Valor da hora extra (R$)
                         </FormLabel>
                         <FormControl>
                           <CurrencyInput
-                            placeholder="0,00"
                             {...field}
-                            value={
-                              currentRegistrationType === 'DAILY'
-                                ? '0'
-                                : field.value ?? ''
+                            placeholder={
+                              horaExtraPelaRegra > 0
+                                ? formatCurrencyFromNumber(horaExtraPelaRegra)
+                                : '0,00'
                             }
-                            disabled={currentRegistrationType === 'DAILY'}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        {currentRegistrationType === 'DAILY' && (
-                          <FormDescription className="text-xs">
-                            Não aplicável para diaristas.
-                          </FormDescription>
-                        )}
-                        {currentRegistrationType === 'HOURLY' && (
-                          <FormDescription className="text-xs">
-                            Valor pago por cada hora trabalhada.
-                          </FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="dailyRate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4 text-blue-600" />{' '}
-                          Valor da Diária (R$)
-                        </FormLabel>
-                        <FormControl>
-                          <CurrencyInput
-                            placeholder="0,00"
-                            {...field}
                             value={field.value ?? ''}
                             onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormDescription className="text-xs">
-                          Apenas para Diaristas.
+                          {!regraAtual
+                            ? 'Vazio = pela regra de hora extra da loja.'
+                            : horaExtraDigitada > 0
+                              ? `Combinado com esta pessoa. Pela regra da loja seria R$ ${formatCurrencyFromNumber(horaExtraPelaRegra)}.`
+                              : diaristaSemExtraNaLoja
+                                ? 'A regra da loja não paga hora extra a diarista. Preencha só se combinou um valor com esta pessoa.'
+                                : horaPelaRegra > 0
+                                  ? `Vazio = pela regra da loja: R$ ${formatCurrencyFromNumber(horaExtraPelaRegra)} (hora de R$ ${formatCurrencyFromNumber(horaPelaRegra)} + ${percentual(regraAtual.multiplicadorExtra)}).`
+                                  : 'Vazio = pela regra da loja (a hora sai do valor acima).'}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  {/* Para quem não é diarista, a coluna da diária guarda o valor da dobra: preenche o dia de dobra no espelho */}
+                  {!ehDiarista && (
+                    <FormField
+                      key="valor-dobra"
+                      control={form.control}
+                      name="dailyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-blue-600" />
+                            Valor da dobra (R$)
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0,00"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            Opcional. Preenche sozinho o dia de dobra no
+                            espelho.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <FormField
                     control={form.control}
                     name="transportAllowance"
@@ -581,10 +703,7 @@ export function EmployeeFormDialog({
                       <FormItem>
                         <FormLabel>Vale Transporte (R$)</FormLabel>
                         <FormControl>
-                          <CurrencyInput
-                            placeholder="0,00"
-                            {...field}
-                          />
+                          <CurrencyInput placeholder="0,00" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -653,7 +772,9 @@ export function EmployeeFormDialog({
                             Permitir compras a prazo no PDV (Desconto em folha)
                           </FormLabel>
                           <FormDescription className="text-xs">
-                            Habilita o colaborador a consumir ou solicitar adiantamentos no PDV com débito automático no holerite.
+                            Habilita o colaborador a consumir ou solicitar
+                            adiantamentos no PDV com débito automático no
+                            holerite.
                           </FormDescription>
                         </div>
                         <FormControl>
@@ -684,7 +805,8 @@ export function EmployeeFormDialog({
                             />
                           </FormControl>
                           <FormDescription className="text-xs">
-                            Teto máximo autorizado para compras no PDV durante o ciclo vigente.
+                            Teto máximo autorizado para compras no PDV durante o
+                            ciclo vigente.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

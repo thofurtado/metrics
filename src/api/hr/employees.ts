@@ -9,7 +9,10 @@ export interface Employee {
   admissionDate: string
   pin: string
   salary: number | null
+  /** Diarista: o valor da diária. Os outros: o valor da dobra (preenche o dia de dobra no espelho). */
   dailyRate: number | null
+  /** Valor da hora extra combinado com a pessoa (D15). 0 = pela regra da loja. */
+  overtimeValue?: number | string | null
   points: number
   transportAllowance: number
   hasCestaBasica: boolean
@@ -35,6 +38,7 @@ export interface CreateEmployeeInput {
   pin: string
   salary?: number
   dailyRate?: number
+  overtimeValue?: number
   points: number
   transportAllowance: number
   hasCestaBasica: boolean
