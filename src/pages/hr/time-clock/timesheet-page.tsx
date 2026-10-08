@@ -98,6 +98,43 @@ function diaEditadoDaLinha(r: any): DiaEditado {
   }
 }
 
+/** Os campos de hora da linha, com o nome da coluna que a pessoa vê. */
+const CAMPOS_DE_HORA: Array<[string, string]> = [
+  ['clockIn', 'Entrada 1'],
+  ['breakStart', 'Saída 1'],
+  ['breakEnd', 'Entrada 2'],
+  ['clockOut', 'Saída 2'],
+  ['extraClockIn', 'Entrada 3'],
+  ['extraClockOut', 'Saída 3'],
+]
+
+/**
+ * Campo de hora pela metade (08/10/2026, caso do Marujo): só a hora ou só os minutos. O navegador mostra "16:--", mas o valor
+ * do campo fica VAZIO; antes o "Salvar" gravava o dia sem aquele horário (e apagava a batida que existia), dizia "salvo" e,
+ * sem a entrada 1, o dia voltava como "Folga". Devolve o primeiro campo assim, para avisar e não salvar.
+ */
+function campoDeHoraIncompleto(
+  linhas: any[],
+): { campo: HTMLInputElement; dia: string; coluna: string } | null {
+  for (let i = 0; i < linhas.length; i++) {
+    for (const [nome, coluna] of CAMPOS_DE_HORA) {
+      const campo = document.getElementById(`${nome}-${i}`) as HTMLInputElement | null
+      if (campo && !campo.disabled && campo.validity?.badInput)
+        return { campo, dia: linhas[i].date, coluna }
+    }
+  }
+  return null
+}
+
+/** "05/10" a partir de "2026-10-05". */
+const diaCurto = (data: string) => `${data.substring(8, 10)}/${data.substring(5, 7)}`
+
+/** Aviso na hora em que a pessoa sai de um campo de hora pela metade. */
+function avisarSeHoraIncompleta(e: React.FocusEvent<HTMLInputElement>) {
+  if (e.currentTarget.validity?.badInput)
+    toast.warning('Horário incompleto: digite a hora e os minutos (ex.: 16:00). Assim ele não é salvo.')
+}
+
 const moeda = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -218,12 +255,21 @@ export function TimeSheetPage({
           return normalizedIsoDate !== dayStr
         }
 
+        // Dia com algum horário aparece como Presença, mesmo sem a entrada 1 (antes ia para "Folga" e escondia as outras batidas)
+        const temAlgumHorario = !!(
+          dayClock?.clockIn ||
+          dayClock?.breakStart ||
+          dayClock?.breakEnd ||
+          dayClock?.clockOut ||
+          dayClock?.extraClockIn ||
+          dayClock?.extraClockOut
+        )
         let status = 'PRESENCA'
         if (!dayClock) {
           status = 'FOLGA'
         } else if (dayClock.absenceReason) {
           status = dayClock.absenceReason
-        } else if (!dayClock.clockIn) {
+        } else if (!temAlgumHorario) {
           status = 'FOLGA'
         }
 
@@ -252,6 +298,26 @@ export function TimeSheetPage({
 
   const onSubmit = async (data: any) => {
     if (!employeeId) return
+
+    const incompleto = campoDeHoraIncompleto(data.rows)
+    if (incompleto) {
+      toast.error(
+        `Horário incompleto em ${diaCurto(incompleto.dia)} (${incompleto.coluna}): digite a hora e os minutos, ex.: 16:00. Nada foi salvo.`,
+      )
+      incompleto.campo.focus()
+      return
+    }
+    const presencaSemHorario = data.rows.find(
+      (r: any) =>
+        r.status === 'PRESENCA' && !CAMPOS_DE_HORA.some(([nome]) => !!r[nome]),
+    )
+    if (presencaSemHorario) {
+      toast.error(
+        `${diaCurto(presencaSemHorario.date)} está como Presença, mas sem nenhum horário. Coloque os horários ou mude para Folga. Nada foi salvo.`,
+      )
+      return
+    }
+
     setIsSaving(true)
     try {
       const entries = data.rows
@@ -1112,7 +1178,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.clockIn`)}
+            {...register(`rows.${index}.clockIn`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
@@ -1151,7 +1217,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.breakStart`)}
+            {...register(`rows.${index}.breakStart`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
@@ -1190,7 +1256,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.breakEnd`)}
+            {...register(`rows.${index}.breakEnd`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
@@ -1229,7 +1295,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.clockOut`)}
+            {...register(`rows.${index}.clockOut`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
@@ -1283,7 +1349,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.extraClockIn`)}
+            {...register(`rows.${index}.extraClockIn`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
@@ -1322,7 +1388,7 @@ function MirrorRowField({
           </div>
           <Input
             type="time"
-            {...register(`rows.${index}.extraClockOut`)}
+            {...register(`rows.${index}.extraClockOut`, { onBlur: avisarSeHoraIncompleta })}
             className="h-9 min-w-0 flex-1 border-0 bg-transparent px-1 text-center shadow-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             disabled={!isWorked}
             onKeyDown={(e) => handleKeyDown(e)}
