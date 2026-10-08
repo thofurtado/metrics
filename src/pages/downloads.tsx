@@ -217,6 +217,17 @@ const utilityApps: DownloadItem[] = [
   },
 ]
 
+/** "03/10/2026 às 08:38" no horário de Brasília (a data do envio oficial da versão para a Central). */
+function dataDePublicacao(iso?: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const fuso = { timeZone: 'America/Sao_Paulo' } as const
+  const dia = d.toLocaleDateString('pt-BR', fuso)
+  const hora = d.toLocaleTimeString('pt-BR', { ...fuso, hour: '2-digit', minute: '2-digit' })
+  return `${dia} às ${hora}`
+}
+
 export function DownloadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState<'Todos' | 'Oficiais Metrics' | 'Suporte' | 'Drivers' | 'Utilitários'>('Todos')
@@ -453,6 +464,8 @@ export function DownloadsPage() {
                   ? liveInfo.formattedSize
                   : file.size
               const displayUrl = liveInfo?.downloadUrl || file.downloadUrl
+              // Só a data do envio oficial (o servidor manda "publicadoEm"; sem ela, nada aparece)
+              const publicadoEm = dataDePublicacao(liveInfo?.publicadoEm)
               const colors = getColorClasses(file.colorScheme)
 
               return (
@@ -503,9 +516,17 @@ export function DownloadsPage() {
 
                   {/* Rodapé do Card: Tamanho do Arquivo + Botão de Download */}
                   <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                      Tamanho: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{displaySize}</strong>
-                    </span>
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                        Tamanho: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{displaySize}</strong>
+                      </span>
+                      {publicadoEm && (
+                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                          Publicado em{' '}
+                          <strong className="text-slate-600 dark:text-slate-300 font-semibold">{publicadoEm}</strong>
+                        </span>
+                      )}
+                    </div>
 
                     <a
                       href={displayUrl}
