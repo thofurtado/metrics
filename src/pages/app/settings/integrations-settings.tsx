@@ -362,6 +362,24 @@ function CartaoFood99({ dados }: { dados: Integracoes }) {
   const [shopId, setShopId] = useState(dados.food99.shopId)
   useEffect(() => setShopId(dados.food99.shopId), [dados.food99.shopId])
 
+  // Autorizar a loja e ver o cardápio que ela tem na 99 (12/10/2026)
+  const [urlAutorizacao, setUrlAutorizacao] = useState('')
+  const [cardapio99, setCardapio99] = useState<{ app_item_id: string; item_name: string; price: number }[] | null>(null)
+  const { mutate: gerarUrl, isPending: gerandoUrl } = useMutation({
+    mutationFn: async () => (await api.get('/settings/integrations/food99/authorization-url')).data as { url: string; shopId: string },
+    onSuccess: (data) => {
+      setUrlAutorizacao(data.url)
+      setShopId(data.shopId)
+      queryClient.invalidateQueries({ queryKey: ['external-integrations'] })
+    },
+    onError: (error: any) => toast.error(mensagemDoErro(error, 'A 99 não devolveu o endereço de autorização.')),
+  })
+  const { mutate: lerCardapio, isPending: lendoCardapio } = useMutation({
+    mutationFn: async () => (await api.get('/settings/integrations/food99/menu')).data as { items: { app_item_id: string; item_name: string; price: number }[] },
+    onSuccess: (data) => setCardapio99(data.items),
+    onError: (error: any) => toast.error(mensagemDoErro(error, 'A 99 não devolveu o cardápio da loja.')),
+  })
+
   const { mutate: salvar, isPending } = useMutation({
     mutationFn: async () => (await api.put('/settings/integrations/food99', { shopId: shopId.trim() || null })).data,
     onSuccess: (data: any) => {
@@ -411,6 +429,63 @@ function CartaoFood99({ dados }: { dados: Integracoes }) {
             </Button>
           </div>
         </div>
+
+        <div className="space-y-2 rounded-lg border p-4">
+          <Label>Autorizar a loja na 99</Label>
+          <p className="text-sm text-muted-foreground">
+            O dono da loja abre o endereço, entra com a conta dele na 99 e autoriza o Metrics. A 99 aceita um sistema por loja:
+            se outro sistema estiver ligado, ele deixa de receber os pedidos. O endereço vale por pouco tempo; gere outro se expirar.
+          </p>
+          <Button type="button" variant="outline" onClick={() => gerarUrl()} disabled={gerandoUrl || !dados.tabelaPronta} className="h-11 gap-2">
+            {gerandoUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+            Gerar endereço de autorização
+          </Button>
+          {urlAutorizacao && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input readOnly value={urlAutorizacao} className="h-11 font-mono text-xs" aria-label="Endereço de autorização da 99" />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 shrink-0 gap-2"
+                onClick={() => {
+                  navigator.clipboard.writeText(urlAutorizacao)
+                  toast.success('Endereço copiado. Mande para o dono da loja.')
+                }}
+              >
+                <Copy className="h-4 w-4" /> Copiar
+              </Button>
+              <Button asChild variant="outline" className="h-11 shrink-0 gap-2">
+                <a href={urlAutorizacao} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" /> Abrir
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 rounded-lg border p-4">
+          <Label>Cardápio da loja na 99</Label>
+          <p className="text-sm text-muted-foreground">Os produtos que a loja tem hoje na 99 (só leitura; nada é alterado lá).</p>
+          <Button type="button" variant="outline" onClick={() => lerCardapio()} disabled={lendoCardapio || !dados.tabelaPronta} className="h-11 gap-2">
+            {lendoCardapio ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Ver cardápio da 99
+          </Button>
+          {cardapio99 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{cardapio99.length} itens na 99</p>
+              <ul className="max-h-80 divide-y overflow-y-auto rounded-md border text-sm">
+                {cardapio99.map((i) => (
+                  <li key={i.app_item_id} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="min-w-0 break-words">{i.item_name}</span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {(Number(i.price || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
@@ -422,10 +497,11 @@ function CartaoCatalogo() {
   async function enviar() {
     setEnviando(true)
     try {
-      const response = await api.post('/delivery/catalog/sync')
+      // Só para loja nova (12/10/2026): a nuvem recusa se a loja já tem cardápio na 99
+      const response = await api.post('/settings/integrations/food99/catalog')
       toast.success(response.data?.message || 'Cardápio enviado.')
     } catch (error: any) {
-      toast.error(mensagemDoErro(error, 'Erro ao enviar o cardápio para os marketplaces.'))
+      toast.error(mensagemDoErro(error, 'Erro ao enviar o cardápio para a 99.'))
     } finally {
       setEnviando(false)
     }
@@ -438,7 +514,8 @@ function CartaoCatalogo() {
           <Send className="h-5 w-5 text-primary" /> Cardápio nos marketplaces
         </CardTitle>
         <CardDescription>
-          Envia os produtos e preços do Metrics para a 99Food. O iFood ainda não recebe o cardápio por aqui.
+          Só para loja nova na 99Food: envia os produtos e preços do Metrics. Se a loja já tem cardápio na 99, o envio é
+          recusado e nada muda lá. O iFood não recebe o cardápio por aqui.
         </CardDescription>
       </CardHeader>
       <CardContent>
