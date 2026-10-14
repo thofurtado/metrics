@@ -911,6 +911,53 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     setCheckoutWizardStep(5)
   }
 
+  // Bairro que a loja não atende (STRICT): leva o cliente para o WhatsApp da loja com o pedido já escrito,
+  // para a loja conferir o endereço antes de aceitar. Nenhum pedido entra no sistema por aqui.
+  const storeWhatsApp = toWhatsAppNumber(profile?.whatsappNumber || profile?.whatsapp_number)
+  const openUnservedWhatsApp = () => {
+    if (!storeWhatsApp) return
+    const bairro = unservedNeighborhood || 'meu bairro'
+    let text = `Olá! Quero fazer um pedido, mas meu bairro (*${bairro}*) não aparece na área de entrega do cardápio. Vocês conseguem entregar aqui?
+
+`
+    if (customerName.trim()) text += `👤 *Nome:* ${customerName.trim()}
+`
+    if (customerPhone.trim()) text += `📱 *WhatsApp:* ${customerPhone.trim()}
+`
+    if (street.trim()) {
+      text += `
+📍 *Endereço:*
+> ${street}, ${number || 'S/N'}
+`
+      if (complement) text += `> Complemento: ${complement}
+`
+      text += `> ${bairro} - ${city || profile?.city || ''}${state ? `/${state}` : ''}
+`
+      if (zipcode) text += `> CEP: ${zipcode}
+`
+      if (referencePoint) text += `> Referência: ${referencePoint}
+`
+    }
+    if (deliveryCoords) text += `> 🗺️ Localização: https://maps.google.com/?q=${deliveryCoords.lat},${deliveryCoords.lng}
+`
+    if (cartItems.length > 0) {
+      text += `
+📋 *Meu pedido:*
+`
+      cartItems.forEach((item) => {
+        text += `▪️ ${item.quantity}x ${item.displayName || item.product.name} (${formatCurrency(item.unitPrice * item.quantity)})
+`
+        if (item.observation) text += `   ↳ Obs: ${item.observation}
+`
+      })
+      text += `
+💵 Subtotal: *${formatCurrency(cartSubtotal)}* (sem a taxa de entrega)
+`
+    }
+    // api.whatsapp.com em vez de wa.me: o redirecionamento do wa.me estraga os emojis da mensagem
+    window.location.href = `https://api.whatsapp.com/send?phone=${storeWhatsApp}&text=${encodeURIComponent(text)}`
+  }
+
   const backToSavedAddresses = () => {
     setWantsNewAddress(false)
     if (savedAddresses[0]) selectSavedAddress(savedAddresses[0])
@@ -3360,17 +3407,31 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
               {/* Bairro que a loja não atende (só na política STRICT) */}
               {unservedNeighborhood !== null && !neighborhood && (
-                <div className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-4 py-3">
-                  <span className="text-sm font-bold text-amber-900">
-                    Não entregamos em {unservedNeighborhood || 'esse bairro'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={switchToTakeout}
-                    className="shrink-0 text-sm font-black text-emerald-800 hover:text-emerald-900"
-                  >
-                    Retirar no balcão
-                  </button>
+                <div className="space-y-3 rounded-2xl bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-bold text-amber-900">
+                    {storeWhatsApp
+                      ? `Ainda não entregamos pelo cardápio ${unservedNeighborhood ? `no bairro ${unservedNeighborhood}` : 'nesse bairro'}. Fale com a loja: ela confere o seu endereço.`
+                      : `Não entregamos em ${unservedNeighborhood || 'esse bairro'}`}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {storeWhatsApp && (
+                      <button
+                        type="button"
+                        onClick={openUnservedWhatsApp}
+                        className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-700"
+                      >
+                        <MessageCircle className="h-5 w-5" />
+                        Pedir pelo WhatsApp da loja
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={switchToTakeout}
+                      className="shrink-0 text-sm font-black text-emerald-800 hover:text-emerald-900"
+                    >
+                      Retirar no balcão
+                    </button>
+                  </div>
                 </div>
               )}
 
