@@ -154,6 +154,11 @@ export function TreatmentPaymentModal({
   const isCreditCard =
     selectedPaymentMethodObj?.name?.toLowerCase().includes('crédito') || false
   const maxInstallments = selectedPaymentMethodObj?.installment_limit || 1
+  // Fase 1 do Mergulho (16:A3): forma a prazo (fiado) vai para a conta a prazo do cliente na nuvem, sempre em aberto (os
+  // mesmos nomes que a nuvem reconhece em isTermPayment).
+  const isTermPayment = /prazo|correntista|fiado|permuta/i.test(
+    selectedPaymentMethodObj?.name || '',
+  )
 
   // Effects
   useEffect(() => {
@@ -198,6 +203,13 @@ export function TreatmentPaymentModal({
       setChangeAlert(changeToReturn)
     }
 
+    if (isTermPayment && !treatment?.client_id) {
+      toast.error(
+        'Pagamento a prazo precisa de um cliente na O.S. Escolha o cliente antes de finalizar.',
+      )
+      return
+    }
+
     if (currentPayment.installments > maxInstallments) {
       toast.error(`Máximo de parcelas: ${maxInstallments}`)
       return
@@ -209,7 +221,7 @@ export function TreatmentPaymentModal({
       amount: amountToRegister,
       installments: isCreditCard ? currentPayment.installments : 1,
       date: currentPayment.date,
-      isPaid: currentPayment.isPaid,
+      isPaid: isTermPayment ? false : currentPayment.isPaid,
       description: currentPayment.description,
     }
 
@@ -540,23 +552,29 @@ export function TreatmentPaymentModal({
                     />
                   </div>
                   <div className="col-span-1 mt-5 flex h-12 items-center">
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={currentPayment.isPaid}
-                        onChange={(e) =>
-                          setCurrentPayment((prev) => ({
-                            ...prev,
-                            isPaid: e.target.checked,
-                          }))
-                        }
-                        className="h-5 w-5 rounded border-primary/50 text-primary focus:ring-primary"
-                        disabled={isFullyPaid}
-                      />
+                    {isTermPayment ? (
                       <span className="text-sm font-semibold text-foreground">
-                        Já está pago?
+                        Vai para a conta a prazo do cliente
                       </span>
-                    </label>
+                    ) : (
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={currentPayment.isPaid}
+                          onChange={(e) =>
+                            setCurrentPayment((prev) => ({
+                              ...prev,
+                              isPaid: e.target.checked,
+                            }))
+                          }
+                          className="h-5 w-5 rounded border-primary/50 text-primary focus:ring-primary"
+                          disabled={isFullyPaid}
+                        />
+                        <span className="text-sm font-semibold text-foreground">
+                          Já está pago?
+                        </span>
+                      </label>
+                    )}
                   </div>
                   <div className="col-span-2">
                     <Label className="mb-1 block text-xs font-bold uppercase text-muted-foreground">

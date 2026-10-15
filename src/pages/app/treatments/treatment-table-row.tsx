@@ -1,14 +1,16 @@
 import {} from '@radix-ui/react-dialog'
 import dayjs from 'dayjs'
-import { Eye, NotebookPen, Shapes } from 'lucide-react'
+import { Eye, NotebookPen, RotateCcw, Shapes } from 'lucide-react'
 import { useState } from 'react'
 
+import { AlertDialog, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { TreatmentStatus } from '@/components/ui/treatment-status'
 import { useModules } from '@/context/module-context'
 
+import { ReopenTreatmentDialog } from './reopen-treatment-dialog'
 import { TreatmentDetails } from './treatment-details'
 import { TreatmentInteraction } from './treatment-interaction'
 import { TreatmentItems } from './treatment-items'
@@ -57,6 +59,7 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
   const [isInteractionsOpen, setIsInteractionsOpen] = useState(false)
   const [isItemsOpen, setIsItemsOpen] = useState(false)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [isReopenOpen, setIsReopenOpen] = useState(false)
   const [pendingInteraction, setPendingInteraction] = useState<{
     interactionData: any
     processFn: () => void
@@ -125,7 +128,11 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
                 <span className="sr-only">Itens</span>
               </Button>
             </DialogTrigger>
-            <TreatmentItems open={isItemsOpen} onOpenChange={setIsItemsOpen} treatmentId={treatments.id} />
+            <TreatmentItems
+              open={isItemsOpen}
+              onOpenChange={setIsItemsOpen}
+              treatmentId={treatments.id}
+            />
           </Dialog>
         ) : (
           <Button
@@ -141,30 +148,54 @@ export function TreatmentTableRow({ treatments }: TreatmentTableRowProps) {
         )}
       </TableCell>
       <TableCell className="py-5 pr-8">
-        <Dialog open={isInteractionsOpen} onOpenChange={setIsInteractionsOpen}>
-          <DialogTrigger asChild>
-            <Button
-              disabled={['canceled', 'resolved'].includes(treatments.status)}
-              className="h-9 w-full rounded-xl bg-slate-900 px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-slate-800 sm:w-auto"
-              size="sm"
-            >
-              <NotebookPen className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Atender</span>
-              <span className="sr-only">Atender</span>
-            </Button>
-          </DialogTrigger>
-          <TreatmentInteraction
+        {/* Fase 1 do Mergulho (16:A1): O.S. resolvida ganha o botão Reabrir (a nuvem já desfazia o fechamento). */}
+        {treatments.status === 'resolved' ? (
+          <AlertDialog open={isReopenOpen} onOpenChange={setIsReopenOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-full rounded-xl border-slate-200 px-4 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 sm:w-auto"
+              >
+                <RotateCcw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Reabrir</span>
+                <span className="sr-only">Reabrir atendimento</span>
+              </Button>
+            </AlertDialogTrigger>
+            <ReopenTreatmentDialog
+              treatmentId={treatments.id}
+              onSuccess={() => setIsReopenOpen(false)}
+            />
+          </AlertDialog>
+        ) : (
+          <Dialog
             open={isInteractionsOpen}
             onOpenChange={setIsInteractionsOpen}
-            treatmentId={treatments.id}
-            status={treatments.status}
-            amount={treatments.amount}
-            onOpenPaymentModal={(data) => {
-              setPendingInteraction(data)
-              setIsPaymentModalOpen(true)
-            }}
-          />
-        </Dialog>
+          >
+            <DialogTrigger asChild>
+              <Button
+                disabled={['canceled', 'resolved'].includes(treatments.status)}
+                className="h-9 w-full rounded-xl bg-slate-900 px-4 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-slate-800 sm:w-auto"
+                size="sm"
+              >
+                <NotebookPen className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Atender</span>
+                <span className="sr-only">Atender</span>
+              </Button>
+            </DialogTrigger>
+            <TreatmentInteraction
+              open={isInteractionsOpen}
+              onOpenChange={setIsInteractionsOpen}
+              treatmentId={treatments.id}
+              status={treatments.status}
+              amount={treatments.amount}
+              onOpenPaymentModal={(data) => {
+                setPendingInteraction(data)
+                setIsPaymentModalOpen(true)
+              }}
+            />
+          </Dialog>
+        )}
 
         {/* Render Payment Modal outside the interaction dialog to fix Radix nested dialog focus issues */}
         <TreatmentPaymentModal
