@@ -18,6 +18,7 @@ import { Items } from './pages/app/items'
 import { Accounts } from './pages/app/settings/accounts'
 import { Sectors } from './pages/app/settings/sectors'
 import { CreditCards } from './pages/app/settings/credit-cards'
+import { DeliveryPlatformsSettings } from './pages/app/settings/delivery-platforms'
 import { MenuSettings } from './pages/app/settings/menu-settings'
 import { IntegrationsSettings } from './pages/app/settings/integrations-settings'
 import { ModulesSettings } from './pages/app/settings/modules-settings'
@@ -238,6 +239,8 @@ export const router = createBrowserRouter([
               { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
               { path: 'pos-machines', element: <POSMachinesSettings /> },
+              // Plataformas de entrega (iFood/99Food), 15/10/2026: perto das maquininhas, mesma proteção
+              { path: 'delivery-platforms', element: <DeliveryPlatformsSettings /> },
               {
                 path: 'payment-identifiers',
                 element: <PaymentIdentifiersSettings />,

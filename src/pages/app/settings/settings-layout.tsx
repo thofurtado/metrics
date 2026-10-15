@@ -5,6 +5,7 @@ import {
   FolderTree,
   Plug,
   Shield,
+  ShoppingBag,
   Store,
   Tag,
   Wallet,
@@ -95,6 +96,21 @@ export function SettingsLayout() {
             >
               <Cpu className="h-4 w-4" />
               Maquininhas & Taxas
+            </NavLink>
+
+            <NavLink
+              to="/settings/delivery-platforms"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'border-l-4 border-l-primary bg-muted text-primary'
+                    : 'border-l-4 border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )
+              }
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Plataformas (iFood/99)
             </NavLink>
 
             <NavLink

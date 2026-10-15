@@ -12,6 +12,13 @@ export interface PaymentIdentifier {
     id: string
     name: string
   }
+  /** Plataforma de entrega do identificador (iFood, 99Food), 15/10/2026 */
+  platform_id?: string | null
+  platform?: {
+    id: string
+    code: string
+    name: string
+  } | null
 }
 
 export interface CreatePaymentIdentifierParams {
@@ -19,6 +26,7 @@ export interface CreatePaymentIdentifierParams {
   payment_method_id?: string | null
   is_correntista_debt?: boolean
   is_stock_evasion?: boolean
+  platform_id?: string | null
 }
 
 export interface UpdatePaymentIdentifierParams {
@@ -28,6 +36,7 @@ export interface UpdatePaymentIdentifierParams {
   is_correntista_debt?: boolean
   is_stock_evasion?: boolean
   active?: boolean
+  platform_id?: string | null
 }
 
 export async function getPaymentIdentifiers() {

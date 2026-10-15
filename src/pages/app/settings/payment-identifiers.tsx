@@ -6,12 +6,15 @@ import {
   Edit2,
   Plus,
   ShieldCheck,
+  ShoppingBag,
   Tag,
   Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
+import { getDeliveryPlatforms } from '@/api/delivery-platforms'
 import { getPayments } from '@/api/get-payments'
 import {
   createPaymentIdentifier,
@@ -40,6 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { codigoDePlataforma } from '@/utils/plataformas'
 
 export function PaymentIdentifiersSettings() {
   const queryClient = useQueryClient()
@@ -51,6 +55,9 @@ export function PaymentIdentifiersSettings() {
   const [paymentMethodId, setPaymentMethodId] = useState<string>('none')
   const [isCorrentistaDebt, setIsCorrentistaDebt] = useState(false)
   const [isStockEvasion, setIsStockEvasion] = useState(false)
+  // Plataforma de entrega do identificador (15/10/2026): o identificador "iFood" da forma "Pago na plataforma" diz de qual
+  // plataforma é a venda paga no app
+  const [platformId, setPlatformId] = useState<string>('none')
 
   const { data: identifiers, isLoading } = useQuery({
     queryKey: ['payment-identifiers'],
@@ -62,6 +69,17 @@ export function PaymentIdentifiersSettings() {
     queryFn: getPayments,
   })
 
+  const { data: platforms } = useQuery({
+    queryKey: ['delivery-platforms'],
+    queryFn: getDeliveryPlatforms,
+  })
+
+  const formaEscolhida = payments?.find((p) => p.id === paymentMethodId)
+  const formaEhPlataforma =
+    (formaEscolhida?.kind || '').toUpperCase() === 'PLATAFORMA'
+  const mostrarPlataforma = formaEhPlataforma || platformId !== 'none'
+  const platformIdParaSalvar = platformId === 'none' ? null : platformId
+
   const { mutateAsync: saveIdentifier, isPending: isSaving } = useMutation({
     mutationFn: async () => {
       if (editingId) {
@@ -72,6 +90,7 @@ export function PaymentIdentifiersSettings() {
             paymentMethodId === 'none' ? null : paymentMethodId,
           is_correntista_debt: isCorrentistaDebt,
           is_stock_evasion: isStockEvasion,
+          platform_id: platformIdParaSalvar,
         })
       } else {
         return createPaymentIdentifier({
@@ -80,11 +99,13 @@ export function PaymentIdentifiersSettings() {
             paymentMethodId === 'none' ? null : paymentMethodId,
           is_correntista_debt: isCorrentistaDebt,
           is_stock_evasion: isStockEvasion,
+          platform_id: platformIdParaSalvar,
         })
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-identifiers'] })
+      queryClient.invalidateQueries({ queryKey: ['delivery-platforms'] })
       toast.success(
         editingId
           ? 'Identificador atualizado!'
@@ -116,6 +137,7 @@ export function PaymentIdentifiersSettings() {
     setPaymentMethodId('none')
     setIsCorrentistaDebt(false)
     setIsStockEvasion(false)
+    setPlatformId('none')
     setIsModalOpen(true)
   }
 
@@ -125,6 +147,7 @@ export function PaymentIdentifiersSettings() {
     setPaymentMethodId(item.payment_method_id || 'none')
     setIsCorrentistaDebt(item.is_correntista_debt)
     setIsStockEvasion(item.is_stock_evasion)
+    setPlatformId(item.platform_id || item.platform?.id || 'none')
     setIsModalOpen(true)
   }
 
@@ -135,6 +158,18 @@ export function PaymentIdentifiersSettings() {
     setPaymentMethodId('none')
     setIsCorrentistaDebt(false)
     setIsStockEvasion(false)
+    setPlatformId('none')
+  }
+
+  /** Sugere a plataforma pelo nome do identificador ("iFood" → a plataforma IFOOD), se ainda não escolhida. */
+  const sugerirPlataforma = (nomeDoIdentificador: string) => {
+    if (platformId !== 'none') return
+    const codigo = codigoDePlataforma(nomeDoIdentificador)
+    if (!codigo) return
+    const achada = platforms?.find(
+      (pl) => pl.code === codigo || codigoDePlataforma(pl.name) === codigo,
+    )
+    if (achada) setPlatformId(achada.id)
   }
 
   const handlePaymentMethodSelect = (val: string) => {
@@ -142,6 +177,13 @@ export function PaymentIdentifiersSettings() {
     if (val === 'none') return
 
     const selectedPay = payments?.find((p) => p.id === val)
+    if ((selectedPay?.kind || '').toUpperCase() === 'PLATAFORMA') {
+      // Venda paga no app: não é a prazo nem evasão
+      setIsCorrentistaDebt(false)
+      setIsStockEvasion(false)
+      sugerirPlataforma(name)
+      return
+    }
     if (selectedPay) {
       const pName = selectedPay.name.toLowerCase()
       if (
@@ -231,6 +273,15 @@ export function PaymentIdentifiersSettings() {
                           Sem forma vinculada
                         </span>
                       )}
+                      {item.platform && (
+                        <Badge
+                          variant="outline"
+                          className="ml-1 mt-1 border-violet-200 bg-violet-50 text-[10px] text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300"
+                        >
+                          <ShoppingBag className="mr-1 h-3 w-3" />
+                          {item.platform.name}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -273,7 +324,19 @@ export function PaymentIdentifiersSettings() {
                       </div>
                     )}
 
-                    {!item.is_correntista_debt && !item.is_stock_evasion && (
+                    {item.platform && (
+                      <div className="flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 p-2 text-violet-800 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300">
+                        <ShoppingBag className="h-4 w-4 shrink-0" />
+                        <span className="font-semibold">
+                          Pago no app do {item.platform.name} (repasse com a
+                          comissão)
+                        </span>
+                      </div>
+                    )}
+
+                    {!item.is_correntista_debt &&
+                      !item.is_stock_evasion &&
+                      !item.platform && (
                       <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         <ShieldCheck className="h-4 w-4 shrink-0" />
                         <span>Identificador Simples de Lançamento</span>
@@ -289,7 +352,7 @@ export function PaymentIdentifiersSettings() {
 
       {/* Modal de Criação / Edição */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-primary" />
@@ -309,6 +372,7 @@ export function PaymentIdentifiersSettings() {
                 placeholder="Ex: Funcionário João, Pró-labore Patrão, Permuta, Quebra Prato, Cortesia VIP"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => formaEhPlataforma && sugerirPlataforma(name)}
                 className="h-11"
               />
             </div>
@@ -338,6 +402,46 @@ export function PaymentIdentifiersSettings() {
                 (ex: A Prazo ou Consumo Operacional).
               </p>
             </div>
+
+            {mostrarPlataforma && (
+              <div className="space-y-2 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/10">
+                <Label htmlFor="platformId" className="font-bold">
+                  Plataforma
+                </Label>
+                <Select value={platformId} onValueChange={setPlatformId}>
+                  <SelectTrigger id="platformId" className="h-11 bg-background">
+                    <SelectValue placeholder="Escolha a plataforma..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {(platforms || [])
+                      .filter((pl) => pl.active || pl.id === platformId)
+                      .map((pl) => (
+                        <SelectItem key={pl.id} value={pl.id}>
+                          {pl.name} ({pl.code})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {(platforms || []).length === 0 ? (
+                  <p className="text-xs text-violet-800 dark:text-violet-300">
+                    Nenhuma plataforma cadastrada.{' '}
+                    <Link
+                      to="/settings/delivery-platforms"
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Cadastre em Plataformas
+                    </Link>
+                    .
+                  </p>
+                ) : (
+                  <p className="text-xs text-violet-800 dark:text-violet-300">
+                    A venda paga no app com este identificador vira repasse e
+                    comissão desta plataforma.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Checkbox A Prazo */}
             <div className="flex items-start space-x-3 space-y-0 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/10">

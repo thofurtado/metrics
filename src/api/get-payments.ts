@@ -7,6 +7,8 @@ export interface Payment {
   in_sight: boolean
   account_id: string | null
   show_in_menu?: boolean
+  /** Tipo da forma (15/10/2026): null = comum; 'PLATAFORMA' = paga no app do iFood/99 */
+  kind?: 'PLATAFORMA' | null
 }
 
 export async function getPayments(): Promise<Payment[]> {

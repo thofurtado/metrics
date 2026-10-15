@@ -7,6 +7,8 @@ export interface UpdatePaymentBody {
   account_id?: string
   sefaz_tPag?: string | null
   show_in_menu?: boolean
+  /** 'PLATAFORMA', null = volta a ser comum, ausente = não mexe */
+  kind?: 'PLATAFORMA' | null
 }
 
 export interface UpdatePaymentParams {
