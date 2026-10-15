@@ -44,7 +44,13 @@ export function SuppliersList() {
   })
 
   async function handleDelete(id: string) {
-    if (confirm('Deseja realmente excluir este fornecedor?')) {
+    // Mergulho 15:E3: a nuvem solta o fornecedor das despesas ao excluir (não apaga nem dá erro); o aviso diz isso,
+    // como já dizia a tela da despesa
+    if (
+      confirm(
+        'Deseja realmente excluir este fornecedor? As despesas ligadas a ele perdem o fornecedor, mas não são apagadas.',
+      )
+    ) {
       await deleteSupplierFn(id)
     }
   }
