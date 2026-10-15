@@ -143,19 +143,28 @@ export function EquipmentDetailsModal({
   const { mutateAsync: sendCommand, isPending: isSendingCommand } = useMutation(
     {
       mutationFn: async (commandName) => {
-        await api.post('/equipments/' + equipment.id + '/command', {
+        const res = await api.post('/equipments/' + equipment.id + '/command', {
           command: commandName,
         })
+        return res.data
       },
-      onSuccess: (_, commandName) => {
-        toast.success('Comando enviado: ' + commandName)
+      onSuccess: (dados: any, commandName) => {
+        // Mergulho (08:W6): o Windy novo confirma o comando; o antigo não responde (fica "enviado, sem confirmação")
+        if (dados?.confirmado) {
+          toast.success(dados.message || 'O equipamento confirmou o comando.')
+        } else {
+          toast.success('Comando enviado: ' + commandName, {
+            description: 'O equipamento não confirmou (Windy antigo ou ocupado). Confira na telemetria em instantes.',
+          })
+        }
         if (commandName === 'REFRESH_TELEMETRY') {
           toast.info('Aguardando resposta do equipamento...', { duration: 4000 })
           setTimeout(() => queryClient.invalidateQueries({ queryKey: ['clients-fleet'] }), 2000)
           setTimeout(() => queryClient.invalidateQueries({ queryKey: ['clients-fleet'] }), 4000)
         }
       },
-      onError: () => toast.error('Falha ao enviar comando ou equipamento offline.'),
+      onError: (err: any) =>
+        toast.error(err?.response?.data?.message || 'Falha ao enviar comando ou equipamento offline.'),
     },
   )
 
@@ -167,8 +176,14 @@ export function EquipmentDetailsModal({
       })
       sendCommand('ATUALIZAR_WINDY')
     } else if (commandName === 'ATUALIZAR_PDV') {
+      // Mergulho (08:W9): o Serviço do PDV fecha o PDV na hora para atualizar (decisão de 01/10/2026: sem travas,
+      // quem pede escolhe a hora). Antes a tela dizia "em segundo plano"; agora avisa e pede confirmação.
+      const confirmou = window.confirm(
+        'Atualizar o PDV agora?\n\nO PDV deste computador FECHA NA HORA para atualizar, mesmo com venda pela metade no caixa. Prefira fora do horário de movimento.',
+      )
+      if (!confirmou) return
       toast.info('Solicitando atualização remota do Metrics PDV...', {
-        description: 'O PDV vai baixar o novo instalador e aplicar o patch em segundo plano.',
+        description: 'O PDV vai fechar, instalar a versão nova e abrir de novo.',
         duration: 5000,
       })
       sendCommand('ATUALIZAR_PDV')
