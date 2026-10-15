@@ -133,9 +133,6 @@ export function CashierSignIn() {
                         <span className="block text-sm font-bold text-slate-100 group-hover:text-blue-400">
                           {user.name}
                         </span>
-                        <span className="block text-[11px] font-medium text-slate-400">
-                          {user.email}
-                        </span>
                       </div>
                     </div>
 
@@ -165,9 +162,6 @@ export function CashierSignIn() {
                 <div>
                   <span className="block text-xs font-black text-white">
                     {selectedUser.name}
-                  </span>
-                  <span className="block text-[10px] font-medium text-slate-400">
-                    {selectedUser.email}
                   </span>
                 </div>
               </div>

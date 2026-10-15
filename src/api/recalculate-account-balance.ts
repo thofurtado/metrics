@@ -14,6 +14,8 @@ export async function recalculateAccountBalance({
 export interface PreviaDoRecalculo {
   saldo_atual: number
   saldo_novo: number
+  /** Mergulho 13:D1: motivo de a conta não poder ser recalculada (acerto manual ou zeragem); nuvem antiga não manda. */
+  bloqueado?: string | null
 }
 
 // Mostra o que o recálculo gravaria, sem gravar (Fase 1 do Mergulho, 13:D1).

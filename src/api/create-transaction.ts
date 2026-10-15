@@ -52,7 +52,7 @@ export async function createTransaction({
   discount,
   receiptFilename,
 }: CreateTransactionBody) {
-  const response = await api.post('/transaction', {
+  const body = {
     operation,
     amount,
     account_id: account || null,
@@ -72,6 +72,23 @@ export async function createTransaction({
     fine: fine || null,
     discount: discount || null,
     receipt_filename: receiptFilename || null,
-  })
-  return response
+  }
+  try {
+    return await api.post('/transaction', body)
+  } catch (err: any) {
+    // Mergulho 13:D11: a nuvem recusa um lançamento igual a um criado há menos de 2 minutos (clique duplo, reenvio).
+    // Se a pessoa quer mesmo lançar de novo, confirma e o pedido vai com allow_repeat.
+    const data = err?.response?.data
+    if (err?.response?.status === 409 && data?.code === 'LANCAMENTO_REPETIDO') {
+      const lancarDeNovo = window.confirm(
+        `${data.message}
+
+Quer lançar outro igual mesmo assim?`,
+      )
+      if (lancarDeNovo) {
+        return await api.post('/transaction', { ...body, allow_repeat: true })
+      }
+    }
+    throw err
+  }
 }

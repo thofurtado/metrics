@@ -16,6 +16,8 @@ import {
   X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+// Faltava este import: salvar a abertura dava erro de execução (achado na correção do Mergulho 14:X1)
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 
 export function SummaryCards({
   resumo,
@@ -67,6 +69,8 @@ export function SummaryCards({
   const saldoFinalDinheiro = abertura + entradasDinheiro - saidasDinheiro
 
   const handleStartEdit = () => {
+    // Mergulho 14:X1: sem onEditAbertura (caixa conferido, ou em conferência para quem não é ADMIN) não edita
+    if (!onEditAbertura) return
     setTempAbertura(abertura.toString())
     setIsEditing(true)
   }
@@ -311,16 +315,18 @@ export function SummaryCards({
                 </div>
               ) : (
                 <div
-                  className="group/btn flex cursor-pointer items-center gap-1"
+                  className={`group/btn flex items-center gap-1 ${onEditAbertura ? 'cursor-pointer' : ''}`}
                   onClick={handleStartEdit}
                 >
                   <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
                     {abertura.toFixed(2)}
                   </span>
-                  <Edit2
-                    size={10}
-                    className="text-emerald-500 opacity-0 group-hover/btn:opacity-100"
-                  />
+                  {onEditAbertura && (
+                    <Edit2
+                      size={10}
+                      className="text-emerald-500 opacity-0 group-hover/btn:opacity-100"
+                    />
+                  )}
                 </div>
               )}
             </div>
