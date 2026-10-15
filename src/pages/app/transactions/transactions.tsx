@@ -195,14 +195,23 @@ export function Transactions() {
   })
 
   function handleBulkPay() {
-    bulkPay({ transactionIds: selectedIds }).catch((error) => {
+    // Mergulho 13:D5: a linha da fatura do cartão é virtual (paga pelo "Pagar fatura"); com ela no lote a nuvem
+    // recusava o lote inteiro. Fica de fora do pagamento em lote.
+    const transactionIds = selectedIds.filter((id) => !id.startsWith('virtual-'))
+    if (transactionIds.length === 0) {
+      toast.info('Fatura de cartão se paga pelo botão "Pagar fatura".')
+      return
+    }
+    bulkPay({ transactionIds }).catch((error) => {
       console.error('Failed to bulk pay', error)
     })
   }
 
   function handleSelectAll(checked: boolean, transactions: any[]) {
     if (checked) {
-      const allIds = transactions.map((t: any) => t.id)
+      const allIds = transactions
+        .filter((t: any) => !t.isVirtual)
+        .map((t: any) => t.id)
       setSelectedIds(allIds)
     } else {
       setSelectedIds([])
