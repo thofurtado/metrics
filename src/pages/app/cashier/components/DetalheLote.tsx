@@ -29,6 +29,7 @@ import { SummaryCards } from './SummaryCards'
 import { BlindAuditPanel } from './BlindAuditPanel'
 import { DeliveryOrdersBar } from './DeliveryOrdersBar'
 import { TransactionForm } from './TransactionForm'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
 
 interface DetalheLoteProps {
   loteAtivo: any
@@ -842,6 +843,15 @@ export function DetalheLote({
                     <tr key={l.id}>
                       <td className="p-4 text-xs font-bold italic text-red-900 dark:text-red-300">
                         {l.identificacao}
+                        {/* Paga no Pix (acerto do motoboy, 15/10/2026): não saiu da gaveta */}
+                        {saidaNoPix(l) && (
+                          <span
+                            className="ml-2 rounded bg-teal-100 px-1.5 py-0.5 text-xs font-black not-italic text-teal-800 dark:bg-teal-950 dark:text-teal-300"
+                            title="Pago no Pix: não saiu da gaveta"
+                          >
+                            Pix · fora da gaveta
+                          </span>
+                        )}
                       </td>
                       <td className="p-4 text-right font-mono font-black text-red-600">
                         R$ -{l.valor.toFixed(2)}

@@ -1,6 +1,8 @@
 import { Search, TrendingDown, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
+
 interface OutflowsModalProps {
   isOpen: boolean
   onClose: () => void
@@ -70,6 +72,8 @@ export function OutflowsModal({
             createdAt: e.created_at || s.opened_at,
             amount: Number(e.amount || 0),
             identification: e.identification || '(Sem descrição)',
+            // Paga no Pix (acerto do motoboy, 15/10/2026): saiu do caixa, mas não da gaveta
+            noPix: saidaNoPix(e),
             category,
             sectorId: e.sector_id,
             employeeId: e.employee_id,
@@ -389,6 +393,14 @@ export function OutflowsModal({
                         </td>
                         <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
                           {item.identification}
+                          {item.noPix && (
+                            <span
+                              className="ml-2 rounded bg-teal-100 px-1.5 py-0.5 text-xs font-black text-teal-800 dark:bg-teal-950 dark:text-teal-300"
+                              title="Pago no Pix: não saiu da gaveta"
+                            >
+                              Pix
+                            </span>
+                          )}
                         </td>
                         <td className="p-3 text-right font-mono font-black text-red-500 dark:text-red-400">
                           -R$ {item.amount.toFixed(2)}

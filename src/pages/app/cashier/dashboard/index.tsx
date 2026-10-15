@@ -1,4 +1,5 @@
 import { extrairCaixinhaDeLancamento } from '@/utils/cashier/caixinha'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -589,7 +590,8 @@ export function CashierDashboard() {
       entries.forEach((e: any) => {
         const amt = Number(e.amount || 0)
         if (e.is_withdrawal) {
-          totalSangrias += amt
+          // Saída paga no Pix (acerto do motoboy) não saiu da gaveta
+          if (!saidaNoPix(e)) totalSangrias += amt
         } else {
           faturamentoTotal += amt
           const m = (e.payment_method || '').toLowerCase()
@@ -1016,10 +1018,13 @@ export function CashierDashboard() {
 
                       const totalsByMethod = {}
 
+                      let totalSaidasPix = 0
+
                       for (const e of entries) {
                         const amt = Number(e.amount || 0)
                         if (e.is_withdrawal) {
                           totalSangrias += amt
+                          if (saidaNoPix(e)) totalSaidasPix += amt
                         } else if (e.is_addition) {
                           totalSuprimentos += amt
                         } else {
@@ -1056,11 +1061,12 @@ export function CashierDashboard() {
                         totalEntradasSemSaida +
                         totalSuprimentos -
                         totalSangrias
+                      // A saída paga no Pix (acerto do motoboy) não saiu da gaveta
                       const saldoGaveta =
                         valorAbertura +
                         totalDinheiro +
                         totalSuprimentos -
-                        totalSangrias
+                        (totalSangrias - totalSaidasPix)
 
                       const activeMethods = Object.entries(totalsByMethod)
                         .filter(([_, val]) => val > 0)
@@ -1248,11 +1254,14 @@ export function CashierDashboard() {
                       let totalPix = 0
 
                       const totalsByMethod = {}
+                      let totalSaidasPix = 0
 
                       for (const e of entries) {
                         const amt = Number(e.amount || 0)
-                        if (e.is_withdrawal) totalSangrias += amt
-                        else if (e.is_addition) totalSuprimentos += amt
+                        if (e.is_withdrawal) {
+                          totalSangrias += amt
+                          if (saidaNoPix(e)) totalSaidasPix += amt
+                        } else if (e.is_addition) totalSuprimentos += amt
                         else totalEntradasSemSaida += amt
 
                         const { valorCaixinha: vClist, temCaixinha: hasTlist } = extrairCaixinhaDeLancamento(e)
@@ -1285,11 +1294,12 @@ export function CashierDashboard() {
                         totalEntradasSemSaida +
                         totalSuprimentos -
                         totalSangrias
+                      // A saída paga no Pix (acerto do motoboy) não saiu da gaveta
                       const saldoGaveta =
                         valorAbertura +
                         totalDinheiro +
                         totalSuprimentos -
-                        totalSangrias
+                        (totalSangrias - totalSaidasPix)
 
                       const activeMethods = Object.entries(totalsByMethod)
                         .filter(([_, val]) => val > 0)

@@ -1,5 +1,6 @@
 import { calcularTotalCaixinhaLote } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
+import { saiuDaGaveta } from '@/utils/cashier/saida-pix'
 export function exportarGeralCSV(lotes: any[]) {
   if (lotes.length === 0) return
 
@@ -76,7 +77,11 @@ export function exportarGeralCSV(lotes: any[]) {
       .filter((i: any) => !i.isSaida)
       .reduce((acc: number, i: any) => acc + i.valor, 0)
 
-    const saldoDinheiro = abertura + entDin - sai
+    // A saída paga no Pix (acerto do motoboy, 15/10/2026) não saiu da gaveta
+    const saiDaGaveta = lanc
+      .filter((i: any) => saiuDaGaveta(i))
+      .reduce((acc: number, i: any) => acc + i.valor, 0)
+    const saldoDinheiro = abertura + entDin - saiDaGaveta
     const saldoTotal = totalVendas + abertura - sai
 
     totAbertura += abertura

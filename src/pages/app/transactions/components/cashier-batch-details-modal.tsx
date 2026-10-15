@@ -43,6 +43,8 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
+import { CAMINHO_LIQUIDAR_PLATAFORMAS } from '@/utils/plataformas'
 
 interface CashierBatchDetailsModalProps {
   open: boolean
@@ -98,8 +100,25 @@ export function CashierBatchDetailsModal({
       queryClient.invalidateQueries({ queryKey: ['cashier-sessions'] })
       onOpenChange(false)
     },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.message || 'Erro ao reverter conferência.'),
+    onError: (err: any) => {
+      // 409 REPASSE_LIQUIDADO (15/10/2026): o repasse da plataforma deste caixa já foi liquidado; desfazer lá antes
+      if (err?.response?.data?.code === 'REPASSE_LIQUIDADO') {
+        toast.error(
+          err?.response?.data?.message ||
+            'O repasse da plataforma deste caixa já foi liquidado. Desfaça a liquidação antes.',
+          {
+            action: {
+              label: 'Abrir Liquidações',
+              onClick: () => {
+                window.location.href = CAMINHO_LIQUIDAR_PLATAFORMAS
+              },
+            },
+          },
+        )
+        return
+      }
+      toast.error(err?.response?.data?.message || 'Erro ao reverter conferência.')
+    },
   })
 
   async function handleToggleConfirm() {
@@ -134,7 +153,9 @@ export function CashierBatchDetailsModal({
         totalDespesas: 0,
         totalVales: 0,
         totalRecolhimento: 0,
+        // "Saídas Gaveta": sem as pagas no Pix (acerto do motoboy, 15/10/2026), que ficam em totalPix
         totalGeral: 0,
+        totalPix: 0,
         list: [] as any[],
       },
       TOTAL: 0,
@@ -198,7 +219,8 @@ export function CashierBatchDetailsModal({
           categoriaSaida = 'DESPESA'
           res.SAIDAS.totalDespesas += amount
         }
-        res.SAIDAS.totalGeral += amount
+        if (saidaNoPix(entry)) res.SAIDAS.totalPix += amount
+        else res.SAIDAS.totalGeral += amount
 
         res.SAIDAS.list.push({
           ...entry,

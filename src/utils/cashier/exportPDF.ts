@@ -2,6 +2,7 @@ import { extrairCaixinhaDeLancamento } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
 
 const fmt = (valor: number) =>
   (Number(valor) || 0).toLocaleString('pt-BR', {
@@ -38,7 +39,9 @@ export function computeResumoFromLote(lote: any) {
     CAIXA: {
       saldoAbertura: abertura,
       entradasDinheiro: 0,
+      // Só as saídas da gaveta; a paga no Pix (acerto do motoboy, 15/10/2026) fica em saidasPix
       totalSaidas: 0,
+      saidasPix: 0,
     },
     CASA: {
       total: 0,
@@ -54,7 +57,8 @@ export function computeResumoFromLote(lote: any) {
     const banco = (l.banco || l.bank || '').toUpperCase().trim()
 
     if (isSaida) {
-      res.CAIXA.totalSaidas += val
+      if (saidaNoPix(l)) res.CAIXA.saidasPix += val
+      else res.CAIXA.totalSaidas += val
       continue
     }
 
@@ -107,7 +111,8 @@ export function computeResumoFromLote(lote: any) {
 
 
 
-  res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
+  res.GERAL.saldo =
+    res.GERAL.entradas - res.CAIXA.totalSaidas - (res.CAIXA.saidasPix || 0)
   return res
 }
 

@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { cn } from '@/lib/utils'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
 
 interface BlindAuditPanelProps {
   loteAtivo: any
@@ -72,7 +73,8 @@ export function BlindAuditPanel({
       const forma = (l.formaPagamento || '').toLowerCase()
 
       if (l.isSaida) {
-        sangrias += val
+        // Saída paga no Pix (acerto do motoboy, 15/10/2026) não saiu da gaveta
+        if (!saidaNoPix(l)) sangrias += val
       } else if (l.isSuprimento) {
         suprimentos += val
       } else {

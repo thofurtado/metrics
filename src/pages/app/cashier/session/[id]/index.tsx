@@ -1,7 +1,8 @@
 import { extrairCaixinhaDeLancamento, REGEX_CAIXINHA } from '@/utils/cashier/caixinha'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import {
@@ -15,7 +16,17 @@ import {
   updateSessionBalance,
 } from '@/api/cashier/cashier'
 import { getProfile } from '@/api/get-profile'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { getPOSMachines } from '@/api/pos-machines'
+import { saidaNoPix } from '@/utils/cashier/saida-pix'
 
 import { DetalheLote } from '../../components/DetalheLote'
 
@@ -40,10 +51,17 @@ export function CashierSessionDetails() {
     queryFn: getPOSMachines,
   })
 
+  // Avisos que a conferência devolve (plataforma sem cadastro etc.), 15/10/2026: ficam na tela até a pessoa fechar
+  const [avisosDaConferencia, setAvisosDaConferencia] = useState<string[]>([])
+
   const { mutateAsync: audit } = useMutation({
     mutationFn: auditSession,
-    onSuccess: () => {
+    onSuccess: (resposta) => {
       queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+      const avisos = Array.isArray(resposta?.avisos)
+        ? resposta.avisos.filter((a) => typeof a === 'string' && a.trim())
+        : []
+      if (avisos.length > 0) setAvisosDaConferencia(avisos)
     },
   })
 
@@ -243,7 +261,9 @@ export function CashierSessionDetails() {
       CAIXA: {
         saldoAbertura: sessionObj.initial_balance || 0,
         entradasDinheiro: 0,
+        // Só as saídas que tiraram dinheiro da gaveta; as pagas no Pix ficam em saidasPix (mesma regra da conferência da nuvem)
         totalSaidas: 0,
+        saidasPix: 0,
       },
       CASA: {
         total: 0,
@@ -275,6 +295,11 @@ export function CashierSessionDetails() {
         : 0
 
       if (entry.is_withdrawal) {
+        // Saída paga no Pix (acerto do motoboy, 15/10/2026): não saiu da gaveta
+        if (saidaNoPix(entry)) {
+          res.CAIXA.saidasPix += amount
+          continue
+        }
         res.CAIXA.totalSaidas += amount
         if (entry.type === 'SANGRIA_DESTINO') {
           const destBank = bank || 'CAIXA CENTRAL'
@@ -394,7 +419,8 @@ export function CashierSessionDetails() {
 
 
 
-    res.GERAL.saldo = res.GERAL.entradas - res.CAIXA.totalSaidas
+    res.GERAL.saldo =
+      res.GERAL.entradas - res.CAIXA.totalSaidas - res.CAIXA.saidasPix
     return res
   }
 
@@ -530,8 +556,53 @@ export function CashierSessionDetails() {
   const podeEditarAbertura =
     statusAbertura === 'ABERTO' || (statusAbertura === 'PENDENTE' && isAdmin)
 
+  const avisoDePlataforma = avisosDaConferencia.some((a) =>
+    a.toLowerCase().includes('plataforma'),
+  )
+
   return (
     <div className="relative">
+      <AlertDialog
+        open={avisosDaConferencia.length > 0}
+        onOpenChange={(open) => !open && setAvisosDaConferencia([])}
+      >
+        <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Caixa conferido, com{' '}
+              {avisosDaConferencia.length === 1
+                ? '1 aviso'
+                : `${avisosDaConferencia.length} avisos`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O caixa foi conferido. Veja o que precisa de atenção:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ul className="space-y-2">
+            {avisosDaConferencia.map((aviso, i) => (
+              <li
+                key={i}
+                className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+              >
+                {aviso}
+              </li>
+            ))}
+          </ul>
+          <AlertDialogFooter className="gap-2">
+            {avisoDePlataforma && isAdmin && (
+              <Link
+                to="/settings/delivery-platforms"
+                className="inline-flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold hover:bg-muted"
+              >
+                Abrir Plataformas
+              </Link>
+            )}
+            <AlertDialogAction className="min-h-11">Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DetalheLote
         loteAtivo={loteAtivo}
         resumoLote={resumoLote}

@@ -38,6 +38,8 @@ export function SummaryCards({
   const abertura = safeGet(resumo, 'CAIXA.saldoAbertura')
   const entradasDinheiro = safeGet(resumo, 'CAIXA.entradasDinheiro')
   const saidasDinheiro = safeGet(resumo, 'CAIXA.totalSaidas')
+  // Saídas pagas no Pix (acerto do motoboy, 15/10/2026): não saíram da gaveta, mas saíram do caixa do turno
+  const saidasPix = safeGet(resumo, 'CAIXA.saidasPix')
 
   const bancosDinamicos = useMemo(() => {
     if (!resumo) return []
@@ -133,6 +135,7 @@ export function SummaryCards({
             totalAPrazo -
             totalJuros -
             saidasDinheiro -
+            saidasPix -
             totalCaixinha
 
           return (
@@ -240,6 +243,16 @@ export function SummaryCards({
                     </span>
                   </div>
                 )}
+                {saidasPix > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1 font-medium text-red-500">
+                      <Minus size={8} /> Saídas no Pix
+                    </span>
+                    <span className="font-mono font-bold text-red-500">
+                      {saidasPix.toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 {totalCaixinha > 0 && (
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="flex items-center gap-1 font-medium text-pink-500">
@@ -343,6 +356,17 @@ export function SummaryCards({
                 </span>
                 <span className="font-mono font-bold text-red-600">
                   -{saidasDinheiro.toFixed(2)}
+                </span>
+              </div>
+            )}
+            {saidasPix > 0 && (
+              <div
+                className="flex justify-between text-slate-500"
+                title="Pago no Pix: não saiu da gaveta"
+              >
+                <span>Pago no Pix (fora da gaveta)</span>
+                <span className="font-mono font-bold">
+                  {saidasPix.toFixed(2)}
                 </span>
               </div>
             )}

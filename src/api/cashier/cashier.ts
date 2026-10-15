@@ -154,10 +154,23 @@ export async function getSessionDetails(id: string) {
   return response.data
 }
 
+export interface AuditSessionResponse {
+  message: string
+  session?: CashierSession
+  /**
+   * Avisos da conferência (15/10/2026): plataforma sem cadastro ("Cadastre a plataforma 99Food em Plataformas..."), venda
+   * paga no app sem dizer a plataforma... A tela mostra depois de conferir.
+   */
+  avisos?: string[]
+}
+
 export async function auditSession(id: string) {
-  const response = await api.post('/api/cashier/session/audit', {
-    session_id: id,
-  })
+  const response = await api.post<AuditSessionResponse>(
+    '/api/cashier/session/audit',
+    {
+      session_id: id,
+    },
+  )
   return response.data
 }
 

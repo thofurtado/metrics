@@ -2,6 +2,7 @@ import { calcularTotalCaixinhaLote } from './caixinha'
 import { getTenantDisplayName } from './tenantHelper'
 import jsPDF from 'jspdf'
 import autoTable, { RowInput } from 'jspdf-autotable'
+import { saiuDaGaveta } from '@/utils/cashier/saida-pix'
 
 const formatarData = (dStr: string) => {
   if (!dStr) return '--/--/----'
@@ -121,7 +122,14 @@ export const exportarRelatorioGeralPDF = (lotes: any[]) => {
         0,
       )
 
-    const saldoGaveta = abertura + entDin - sai
+    // A saída paga no Pix (acerto do motoboy, 15/10/2026) não saiu da gaveta
+    const saiDaGaveta = lanc
+      .filter((i: any) => saiuDaGaveta(i))
+      .reduce(
+        (acc: number, i: any) => acc + Number(i.valor ?? i.amount ?? 0),
+        0,
+      )
+    const saldoGaveta = abertura + entDin - saiDaGaveta
 
     const pixVal = getSum('PIX')
     const debVal = getSum('Débito')
