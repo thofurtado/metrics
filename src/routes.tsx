@@ -16,6 +16,7 @@ import { ClientsEquipments } from './pages/app/clients-equipments'
 import { Dashboard } from './pages/app/dashboard/dashboard'
 import { Items } from './pages/app/items'
 import { Accounts } from './pages/app/settings/accounts'
+import { Sectors } from './pages/app/settings/sectors'
 import { CreditCards } from './pages/app/settings/credit-cards'
 import { MenuSettings } from './pages/app/settings/menu-settings'
 import { IntegrationsSettings } from './pages/app/settings/integrations-settings'
@@ -232,6 +233,8 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="modules" replace /> }, // Default to modules or accounts? Modules seems appropriate for admin.
               { path: 'accounts', element: <Accounts /> },
+              // Fase 4 do Mergulho (17:U9): renomear e excluir setores
+              { path: 'sectors', element: <Sectors /> },
               { path: 'credit-cards', element: <CreditCards /> },
               { path: 'payments', element: <Payments /> },
               { path: 'pos-machines', element: <POSMachinesSettings /> },

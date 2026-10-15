@@ -2,6 +2,7 @@ import {
   Blocks,
   Cpu,
   CreditCard,
+  FolderTree,
   Plug,
   Shield,
   Store,
@@ -156,6 +157,20 @@ export function SettingsLayout() {
             >
               <CreditCard className="h-4 w-4" />
               Formas de Pagamento
+            </NavLink>
+            <NavLink
+              to="/settings/sectors"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'border-l-4 border-l-primary bg-muted text-primary'
+                    : 'border-l-4 border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )
+              }
+            >
+              <FolderTree className="h-4 w-4" />
+              Setores (categorias)
             </NavLink>
           </nav>
         </aside>
