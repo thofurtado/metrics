@@ -26,10 +26,8 @@ export function DeleteItemDialog({
   const queryClient = useQueryClient()
 
   const { mutateAsync: deleteItemFn, isPending } = useMutation({
-    mutationFn: async () => {
-      await deleteItem(id)
-    },
-    onSuccess: async () => {
+    mutationFn: async () => deleteItem(id),
+    onSuccess: async (resultado) => {
       // Invalidate all related queries to ensure cache consistency
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['items'] }),
@@ -38,7 +36,15 @@ export function DeleteItemDialog({
         queryClient.invalidateQueries({ queryKey: ['supplies'] }),
       ])
 
-      toast.success('Item removido com sucesso!')
+      // Mergulho 15:E8: desativado não é "removido": a pessoa precisa saber que o item continua no histórico
+      if (resultado?.inactivated) {
+        toast.info(
+          resultado.message ||
+            'O item tem histórico e foi desativado (não apagado).',
+        )
+      } else {
+        toast.success('Item removido com sucesso!')
+      }
       onSuccess?.()
     },
     onError: (err: any) => {
@@ -55,8 +61,8 @@ export function DeleteItemDialog({
       <AlertDialogHeader>
         <AlertDialogTitle>Deseja excluir "{name}"?</AlertDialogTitle>
         <AlertDialogDescription>
-          Esta ação não pode ser desfeita. Isso excluirá permanentemente o item
-          e suas referências de estoque.
+          Item sem vendas nem movimentações é excluído de vez. Item com
+          histórico é desativado: sai das listas e continua nos relatórios.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
