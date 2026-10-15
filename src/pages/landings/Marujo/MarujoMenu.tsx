@@ -18,7 +18,7 @@ import {
   UtensilsCrossed,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   Dialog,
@@ -30,6 +30,7 @@ import {
 import { api } from '@/lib/axios'
 import { formatCurrency, resolveImageUrl, toWhatsAppNumber } from '@/lib/utils'
 import { valorCobradoDoGrupo } from '@/lib/complementos-gratis'
+import { novoUuidDoPedido, taxaDoBairro } from '../pedido-online'
 
 // -------------------------------------------------------------
 // Tipos
@@ -237,10 +238,11 @@ function checkIsOpen(profile: any) {
     return { isOpen: false, reason: 'Pausa manual ativada' }
   }
 
-  const now = new Date()
-  const currentDayOfWeek = now.getDay()
-  const currentHours = String(now.getHours()).padStart(2, '0')
-  const currentMinutes = String(now.getMinutes()).padStart(2, '0')
+  // Horário de Brasília, o mesmo que a nuvem confere (Mergulho 06:C4), e não o fuso do celular do cliente
+  const now = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const currentDayOfWeek = now.getUTCDay()
+  const currentHours = String(now.getUTCHours()).padStart(2, '0')
+  const currentMinutes = String(now.getUTCMinutes()).padStart(2, '0')
   const currentTime = `${currentHours}:${currentMinutes}`
 
   const businessHours: any[] = profile.businessHours || []
@@ -318,6 +320,10 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
   const [complement, setComplement] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CARD_DELIVERY' | 'CARD_ONLINE' | 'CASH' | 'VR'>('PIX')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
+  // Mergulho (06:C8): o mesmo pedido reenviado leva o mesmo código, e a nuvem não grava em dobro
+  const pedidoUuidRef = useRef<string | null>(null)
+  // Mergulho (06:C6): taxa que a nuvem conferiu para o bairro, quando ela devolveu outro valor
+  const [taxaConferida, setTaxaConferida] = useState<{ bairro: string; taxa: number } | null>(null)
   const [pixCopied, setPixCopied] = useState(false)
   const [pixTimer, setPixTimer] = useState(900) // 15 minutos
 
@@ -394,7 +400,12 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
   const cartItems = useMemo(() => Object.values(cart), [cart])
   const cartCount = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems])
   const cartSubtotal = useMemo(() => cartItems.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0), [cartItems])
-  const deliveryFee = fulfillmentType === 'DELIVERY' ? 5.0 : 0.0
+  // Mergulho (06:C6): a taxa é a do cadastro da loja (setor do bairro ou taxa padrão), a mesma que a nuvem confere
+  const deliveryFee = useMemo(() => {
+    if (fulfillmentType !== 'DELIVERY') return 0
+    if (taxaConferida && taxaConferida.bairro === neighborhood) return taxaConferida.taxa
+    return taxaDoBairro(profile, neighborhood)
+  }, [fulfillmentType, profile, neighborhood, taxaConferida])
   const cartTotal = cartSubtotal + deliveryFee
 
   // Chave Pix
@@ -527,7 +538,15 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
       return
     }
 
+    // Mergulho (06:C2): a loja precisa do WhatsApp com DDD para falar com o cliente
+    const digitosDoTelefone = customerPhone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
+    if (!customerName.trim() || digitosDoTelefone.length < 10 || digitosDoTelefone.length > 11) {
+      alert('Informe o seu nome e o WhatsApp com DDD.')
+      return
+    }
+
     setIsSubmittingOrder(true)
+    if (!pedidoUuidRef.current) pedidoUuidRef.current = novoUuidDoPedido()
     try {
       const isTakeout = fulfillmentType === 'TAKEOUT'
       const resolvedPaymentMethod =
@@ -542,6 +561,7 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
 
       try {
         const res = await api.post('/public/orders', {
+          uuid: pedidoUuidRef.current,
           client_name: customerName,
           client_phone: customerPhone,
           origin: isTakeout ? 'Balcão' : 'Delivery',
@@ -562,10 +582,15 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
             quantity: item.quantity,
             unit_price: item.unitPrice,
             notes: item.observation || undefined,
+            // Meia porção (65% do preço): a nuvem confere o preço com a mesma regra (Mergulho 06:C6)
+            meia_porcao: (item.fractions || []).includes('1/2 Porção') || undefined,
+            // Antes ia `o.name` (que não existe: o nome fica em optionName) e quantidade 1 sempre
             complements: (item.selectedOptions || []).map((o) => ({
-              name: o.name,
+              option_id: o.optionId,
+              group_id: o.groupId,
+              name: o.optionName,
               price: o.price,
-              quantity: 1,
+              quantity: o.quantity,
             })),
           })),
         })
@@ -575,10 +600,38 @@ export default function MarujoMenu({ tenantName, profile }: MarujoMenuProps) {
         if (orderData?.display_id) displayId = orderData.display_id
       } catch (err: any) {
         console.error('Erro ao enviar pedido para o caixa:', err)
-        const errorMsg = err?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
-        alert(`Não foi possível registrar o pedido no caixa: ${errorMsg}`)
+        const resposta = err?.response
+        const dados = resposta?.data
+        // A nuvem respondeu e recusou: nada foi gravado, o próximo envio é um pedido novo (queda de rede mantém o código)
+        if (resposta && resposta.status < 500) pedidoUuidRef.current = null
+        if (resposta?.status === 409 && dados?.code === 'PRECO_DIVERGENTE') {
+          // Mergulho (06:C6): a nuvem refez a conta com o cadastro; o carrinho passa a mostrar os valores dela
+          const novosPrecos = new Map<number, number>(
+            (dados.itens || []).map((i: any) => [Number(i.index), Number(i.unit_price)] as [number, number]),
+          )
+          setCart((prev) => {
+            const next = { ...prev }
+            cartItems.forEach((item, idx) => {
+              const preco = novosPrecos.get(idx)
+              if (next[item.id] && typeof preco === 'number' && Number.isFinite(preco)) {
+                next[item.id] = { ...next[item.id], unitPrice: preco }
+              }
+            })
+            return next
+          })
+          if (fulfillmentType === 'DELIVERY' && typeof dados.delivery_fee === 'number') {
+            setTaxaConferida({ bairro: neighborhood, taxa: dados.delivery_fee })
+          }
+          alert(
+            `Os preços de alguns itens ou a taxa de entrega mudaram desde que você abriu o cardápio. Já atualizamos o seu pedido: o total agora é R$ ${(Number(dados.total_amount) || 0).toFixed(2).replace('.', ',')}. Confira e confirme de novo.`,
+          )
+          return
+        }
+        const errorMsg = dados?.message || 'Erro ao registrar pedido no caixa.'
+        alert(resposta?.status === 409 ? errorMsg : `Não foi possível registrar o pedido no caixa: ${errorMsg}`)
         return
       }
+      pedidoUuidRef.current = null
 
       setCreatedOrderId(orderId)
       setCreatedDisplayId(displayId)

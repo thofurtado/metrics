@@ -77,6 +77,14 @@ import { Label } from '@/components/ui/label'
 import { api } from '@/lib/axios'
 import { cn, resolveImageUrl, toWhatsAppNumber } from '@/lib/utils'
 import { ItemCustomizerDialog, ProductItem, CustomizedItemResult } from './components/ItemCustomizerDialog'
+import {
+  apagarAcompanhamento,
+  intervaloDoAcompanhamento,
+  lerAcompanhamento,
+  novoUuidDoPedido,
+  salvarAcompanhamento,
+  statusFinal,
+} from './pedido-online'
 import { applyMenuTheme, resolveMenuTheme } from './menu-themes'
 import { CheckoutAddressMap } from '@/components/maps/CheckoutAddressMap'
 
@@ -209,6 +217,8 @@ interface CartItem {
   quantity: number
   observation?: string
   fractions?: string[]
+  /** Ids dos sabores, alinhados com `fractions` (a nuvem confere o preço pelo id: Mergulho 06:C6) */
+  fractionIds?: string[]
   selectedOptions?: {
     groupId: string
     groupName: string
@@ -218,6 +228,8 @@ interface CartItem {
     quantity: number
   }[]
 }
+
+const CEP_AVISO = 'Não conseguimos buscar este CEP agora. Preencha a rua e o bairro abaixo.'
 
 // Níveis de tamanho do texto do cardápio (multiplicam a escala fluida definida em index.css)
 const MENU_TEXT_SCALES = [1, 1.15, 1.3]
@@ -381,10 +393,11 @@ function checkIsOpen(profile: any) {
     return { isOpen: false, reason: 'Pausa manual ativada' }
   }
 
-  const now = new Date()
-  const currentDayOfWeek = now.getDay() // 0 = Dom, 1 = Seg...
-  const currentHours = String(now.getHours()).padStart(2, '0')
-  const currentMinutes = String(now.getMinutes()).padStart(2, '0')
+  // Horário de Brasília, o mesmo que a nuvem confere (Mergulho 06:C4), e não o fuso do celular do cliente
+  const now = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const currentDayOfWeek = now.getUTCDay() // 0 = Dom, 1 = Seg...
+  const currentHours = String(now.getUTCHours()).padStart(2, '0')
+  const currentMinutes = String(now.getUTCMinutes()).padStart(2, '0')
   const currentTime = `${currentHours}:${currentMinutes}`
 
   const businessHours: any[] = profile.businessHours || []
@@ -581,6 +594,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   const [createdDisplayId, setCreatedDisplayId] = useState<number | null>(null)
   const [liveOrderStatus, setLiveOrderStatus] = useState<string>('pending')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
+  // Mergulho (06:C8): o mesmo pedido reenviado leva o mesmo código, e a nuvem não grava em dobro
+  const pedidoUuidRef = useRef<string | null>(null)
+  // Mergulho (06:C6): taxa que a nuvem conferiu para o bairro, quando ela devolveu outro valor
+  const [taxaConferida, setTaxaConferida] = useState<{ bairro: string; taxa: number } | null>(null)
+  // Mergulho (06:C3): hora do pedido, para espaçar as consultas do acompanhamento
+  const pedidoCriadoEmRef = useRef<number>(Date.now())
   const [pushNotificationEnabled, setPushNotificationEnabled] = useState(false)
   const [fulfillmentType, setFulfillmentType] = useState<
     'DELIVERY' | 'TAKEOUT'
@@ -757,6 +776,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const [changeAmount, setChangeAmount] = useState('')
   const [isSearchingCEPCheckout, setIsSearchingCEPCheckout] = useState(false)
+  const [cepAviso, setCepAviso] = useState<string | null>(null)
   const [isCopiedPix, setIsCopiedPix] = useState(false)
   const [pixQrDataUrl, setPixQrDataUrl] = useState('')
   const [isManualAddressMode, setIsManualAddressMode] = useState(false)
@@ -1119,6 +1139,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
     setIsSearchingCEPCheckout(true)
     setUnservedNeighborhood(null)
+    setCepAviso(null)
     try {
       type CepResult = {
         street: string
@@ -1196,9 +1217,13 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
         setTimeout(() => {
           document.getElementById('checkout-number-input')?.focus()
         }, 100)
+      } else {
+        // Mergulho (06:C1): as duas buscas de CEP falharam ou não acharam; antes não aparecia nada
+        setCepAviso(CEP_AVISO)
       }
     } catch (err) {
       console.error('Erro ao consultar CEP:', err)
+      setCepAviso(CEP_AVISO)
     } finally {
       setIsSearchingCEPCheckout(false)
     }
@@ -1224,7 +1249,14 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     staleTime: 1000 * 60 * 5,
   })
 
-  const storeStatus = useMemo(() => checkIsOpen(profile), [profile])
+  // Reavalia a cada minuto: quem deixou o cardápio aberto vê a loja fechar (antes valia a hora em que abriu a página)
+  const [relogioLoja, setRelogioLoja] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setRelogioLoja(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const storeStatus = useMemo(() => checkIsOpen(profile), [profile, relogioLoja])
 
   const normalizeText = (text: string) => {
     return (text || '')
@@ -1252,9 +1284,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     return sectors.find((sector: any) =>
       Array.isArray(sector?.neighborhoods) && sector.neighborhoods.some((name: string) => {
         const normalizedName = normalizeText(name)
-        return normalizedName === normalizedValue ||
+        // Nome vazio na lista casaria com qualquer bairro (a nuvem também ignora): Mergulho 06:C6
+        return !!normalizedName && (normalizedName === normalizedValue ||
           normalizedName.includes(normalizedValue) ||
-          normalizedValue.includes(normalizedName)
+          normalizedValue.includes(normalizedName))
       }),
     ) || null
   }
@@ -1483,6 +1516,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           quantity: result.quantity,
           observation: result.observation,
           fractions: result.fractions,
+          fractionIds: result.fractionIds,
           selectedOptions: result.selectedOptions,
         },
       }
@@ -1563,10 +1597,12 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
 
   const resolvedDeliveryFee = useMemo(() => {
     if (fulfillmentType !== 'DELIVERY') return 0
+    if (taxaConferida && normalizeText(taxaConferida.bairro) === normalizeText(neighborhood)) return taxaConferida.taxa
     return matchedSector?.fee !== undefined
       ? parseDeliveryFee(matchedSector.fee)
       : parseDeliveryFee(profile?.deliveryFee)
-  }, [fulfillmentType, matchedSector, profile])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fulfillmentType, matchedSector, profile, taxaConferida, neighborhood])
   const cartItems = Object.values(cart)
   const cartSubtotal = cartItems.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
@@ -1682,6 +1718,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Por favor, preencha seu nome e WhatsApp.')
       setCheckoutWizardStep(2)
+      setIsSubmittingOrder(false)
       return
     }
 
@@ -1689,6 +1726,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       if (!street.trim() || !number.trim() || !neighborhood.trim()) {
         alert('Por favor, preencha o endereço completo de entrega.')
         setCheckoutWizardStep(3)
+        setIsSubmittingOrder(false)
         return
       }
       if (isStrictNeighborhoods && deliverySectorInfo.hasSectors) {
@@ -1699,6 +1737,7 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
           setUnservedNeighborhood(neighborhood)
           setNeighborhood('')
           setCheckoutWizardStep(3)
+          setIsSubmittingOrder(false)
           return
         }
       }
@@ -1711,8 +1750,10 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       let orderApiRes: any = null
       const isTakeout = fulfillmentType === 'TAKEOUT'
       // 2. Envia pedido para fila de sincronização do PDV
+      if (!pedidoUuidRef.current) pedidoUuidRef.current = novoUuidDoPedido()
       try {
         orderApiRes = await api.post('/public/orders', {
+          uuid: pedidoUuidRef.current,
           client_name: customerName,
           client_phone: customerPhone,
           origin: isTakeout ? 'Balcão' : 'Delivery',
@@ -1748,12 +1789,15 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             unit_price: item.unitPrice,
             notes: item.observation || undefined,
             complements: (item.selectedOptions || []).map((c) => ({
+              option_id: c.optionId,
+              group_id: c.groupId,
               name: c.optionName,
               price: c.price,
               quantity: c.quantity,
             })),
-            fractions: (item.fractions || []).map((f) => ({
+            fractions: (item.fractions || []).map((f, i) => ({
               product_id: item.product.id,
+              flavor_id: item.fractionIds?.[i],
               name: f,
               fraction: 1 / Math.max(1, (item.fractions || []).length),
             })),
@@ -1762,6 +1806,37 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       } catch (orderApiErr: any) {
         console.error('Erro ao enviar pedido para o caixa (PDV):', orderApiErr)
         setIsSubmittingOrder(false)
+        const resposta = orderApiErr?.response
+        const dados = resposta?.data
+        // A nuvem respondeu e recusou: nada foi gravado, o próximo envio é um pedido novo (queda de rede mantém o código)
+        if (resposta && resposta.status < 500) pedidoUuidRef.current = null
+        if (resposta?.status === 409 && dados?.code === 'PRECO_DIVERGENTE') {
+          // Mergulho (06:C6): a nuvem refez a conta com o cadastro; o carrinho passa a mostrar os valores dela
+          const novosPrecos = new Map<number, number>(
+            (dados.itens || []).map((i: any) => [Number(i.index), Number(i.unit_price)] as [number, number]),
+          )
+          setCart((prev) => {
+            const next = { ...prev }
+            cartItems.forEach((item, idx) => {
+              const preco = novosPrecos.get(idx)
+              if (next[item.id] && typeof preco === 'number' && Number.isFinite(preco)) {
+                next[item.id] = { ...next[item.id], unitPrice: preco }
+              }
+            })
+            return next
+          })
+          if (!isTakeout && typeof dados.delivery_fee === 'number') {
+            setTaxaConferida({ bairro: neighborhood, taxa: dados.delivery_fee })
+          }
+          alert(
+            `Os preços de alguns itens ou a taxa de entrega mudaram desde que você abriu o cardápio. Já atualizamos o seu pedido: o total agora é ${formatCurrency(Number(dados.total_amount) || 0)}. Confira e toque em enviar de novo.`,
+          )
+          return
+        }
+        if (resposta?.status === 409 && (dados?.code === 'LOJA_FECHADA' || dados?.code === 'ITEM_INDISPONIVEL')) {
+          alert(dados.message)
+          return
+        }
         const errorMsg = orderApiErr?.response?.data?.message || 'Erro ao registrar pedido no caixa.'
         if (errorMsg.toLowerCase().includes('área de entrega') || errorMsg.toLowerCase().includes('bairro')) {
           setUnservedNeighborhood(neighborhood)
@@ -1905,10 +1980,35 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
       const newOrderId = orderData?.id || orderData?.order_id || null;
       const newDisplayId = orderData?.display_id || null;
 
+      pedidoUuidRef.current = null
+      setTaxaConferida(null)
       if (newOrderId) {
         setCreatedOrderId(newOrderId);
         if (newDisplayId) setCreatedDisplayId(newDisplayId);
         setLiveOrderStatus('pending');
+        pedidoCriadoEmRef.current = Date.now()
+        // Mergulho (06:C7): fechar a aba ou recarregar não perde o acompanhamento ao vivo
+        salvarAcompanhamento({
+          id: newOrderId,
+          displayId: newDisplayId,
+          fulfillmentType,
+          paymentMethod: String(paymentMethod || ''),
+          total: cartTotal,
+          itemsCount: cartItems.reduce((sum, item) => sum + item.quantity, 0) || 1,
+          itemsSummary: cartItems.map((item) => `${item.quantity}x ${item.displayName || item.product.name}`).join(' + '),
+          text,
+          items: cartItems.map((item) => ({
+            id: item.id,
+            product: { id: item.product.id, name: item.product.name },
+            displayName: item.displayName,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            observation: item.observation,
+            fractions: item.fractions,
+            selectedOptions: item.selectedOptions,
+          })),
+          savedAt: Date.now(),
+        })
 
         // Inscreve no FCM Push somente se a permissão foi concedida
         if (pushGranted) {
@@ -2010,7 +2110,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
   useEffect(() => {
     if (!createdOrderId || checkoutWizardStep !== 6) return;
 
-    const interval = setInterval(async () => {
+    // Mergulho (06:C3): antes consultava a cada 2,5 s para sempre; agora espaça com o tempo, fica mais lento com a
+    // aba escondida e para quando o pedido termina (entregue ou cancelado)
+    let ativo = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const consultar = async () => {
       try {
         const res = await api.get(`/public/orders/${createdOrderId}/status`);
         const statusVal = res.data?.status || res.data?.order?.status || res.data?.data?.status;
@@ -2076,16 +2180,66 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
             }
             return newStatus;
           });
+          if (statusFinal(String(statusVal))) {
+            ativo = false;
+            apagarAcompanhamento();
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Erro ao verificar status do pedido:', err);
+        // Pedido que não existe mais na nuvem: para de consultar e esquece o acompanhamento guardado
+        if (err?.response?.status === 404) {
+          ativo = false;
+          apagarAcompanhamento();
+        }
       }
-    }, 2500);
+    };
+    const agendar = () => {
+      if (!ativo) return;
+      const minutos = (Date.now() - pedidoCriadoEmRef.current) / 60000;
+      timer = setTimeout(async () => {
+        await consultar();
+        agendar();
+      }, intervaloDoAcompanhamento(minutos, document.visibilityState === 'hidden'));
+    };
+    const aoVoltarParaAba = () => {
+      if (document.visibilityState !== 'visible' || !ativo) return;
+      if (timer) clearTimeout(timer);
+      consultar().finally(agendar);
+    };
+    agendar();
+    document.addEventListener('visibilitychange', aoVoltarParaAba);
 
-    return () => clearInterval(interval);
+    return () => {
+      ativo = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', aoVoltarParaAba);
+    };
   }, [createdOrderId, checkoutWizardStep, createdDisplayId, fulfillmentType, profile]);
 
+  // Mergulho (06:C7): reabriu a página com um pedido em andamento -> volta direto para o acompanhamento ao vivo
+  useEffect(() => {
+    const salvo = lerAcompanhamento()
+    if (!salvo) return
+    setCreatedOrderId(salvo.id)
+    setCreatedDisplayId(salvo.displayId)
+    setFulfillmentType(salvo.fulfillmentType === 'TAKEOUT' ? 'TAKEOUT' : 'DELIVERY')
+    if (salvo.paymentMethod) setPaymentMethod(salvo.paymentMethod)
+    setLastOrderTotal(salvo.total)
+    setLastOrderItemsCount(salvo.itemsCount || 1)
+    setLastOrderItemsSummary(salvo.itemsSummary || 'Pedido')
+    setLastOrderItems(salvo.items as unknown as CartItem[])
+    setLastOrderText(salvo.text || '')
+    setLiveOrderStatus('pending')
+    pedidoCriadoEmRef.current = salvo.savedAt
+    setCheckoutWizardStep(6)
+    setIsCheckoutStepOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleFinishAndReset = () => {
+    apagarAcompanhamento()
+    pedidoUuidRef.current = null
     setCart({})
     setIsCheckoutStepOpen(false)
     setIsCartModalOpen(false)
@@ -3288,6 +3442,11 @@ export default function GenericMenu({ tenantName, profile }: GenericMenuProps) {
                         ) : null}
                       </div>
                     </div>
+                    {cepAviso && !isSearchingCEPCheckout && (
+                      <p role="status" className="pt-1.5 text-sm font-semibold text-amber-800">
+                        {cepAviso}
+                      </p>
+                    )}
                   </div>
 
                   {showAddressFields && (
