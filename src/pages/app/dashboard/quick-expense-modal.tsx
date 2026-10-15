@@ -102,6 +102,8 @@ export function QuickExpenseModal({
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['balance-projection'] })
       queryClient.invalidateQueries({ queryKey: ['expenses-by-sector'] })
+      // Fase 4 do Mergulho (16:A4): as chaves acima não existem no painel; os cartões usam ['metrics', ...].
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
       toast.success('Despesa lançada com sucesso!')
       reset()
       onOpenChange(false)

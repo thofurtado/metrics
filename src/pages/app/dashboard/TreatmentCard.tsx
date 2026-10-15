@@ -12,11 +12,15 @@ interface MonthTreatmentAmountCardProps extends ComponentProps<'div'> {
   year: number
 }
 
-// Função para formatar o TMA (em minutos e segundos)
-const formatTime = (seconds: number) => {
-  const min = Math.floor(seconds / 60)
-  const sec = seconds % 60
-  return `${min}m ${sec.toString().padStart(2, '0')}s`
+// Formata o TMA, que vem da nuvem em minutos (Fase 4 do Mergulho, 16:A6): "45m", "3h 20m", "2d 4h".
+const formatTime = (totalMinutes: number) => {
+  const minutes = Math.max(0, Math.round(totalMinutes))
+  const days = Math.floor(minutes / 1440)
+  const hours = Math.floor((minutes % 1440) / 60)
+  const min = minutes % 60
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${min.toString().padStart(2, '0')}m`
+  return `${min}m`
 }
 
 export function MonthTreatmentAmountCard({
@@ -33,7 +37,7 @@ export function MonthTreatmentAmountCard({
   // Mapeamento direto dos dados da API
   const totalMes = serviceData?.totalMes ?? 0
   const concluidos = serviceData?.concluidos ?? 0
-  const tmaSegundos = serviceData?.tmaSegundos ?? 0
+  const tmaMinutos = serviceData?.tmaMinutos ?? 0
   const naBancada = serviceData?.naBancada ?? 0
   const externos = serviceData?.externos ?? 0
   const ativosTotais = serviceData?.ativosTotais ?? 0
@@ -102,7 +106,7 @@ export function MonthTreatmentAmountCard({
               <div className="h-10 w-24 animate-pulse rounded-lg bg-slate-200"></div>
             ) : (
               <span className="block font-manrope text-2xl font-black uppercase tabular-nums tracking-tight text-slate-900 dark:text-slate-50">
-                {formatTime(tmaSegundos)}
+                {formatTime(tmaMinutos)}
               </span>
             )}
             <p className="text-[10px] font-medium text-slate-400">
