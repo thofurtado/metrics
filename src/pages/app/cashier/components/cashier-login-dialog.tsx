@@ -108,9 +108,6 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
                         <span className="block text-sm font-bold text-slate-800 group-hover:text-blue-600 dark:text-slate-100">
                           {user.name}
                         </span>
-                        <span className="block text-[10px] font-medium text-slate-400">
-                          {user.email}
-                        </span>
                       </div>
                     </div>
 
@@ -140,9 +137,6 @@ export function CashierLoginDialog({ onSuccess }: { onSuccess?: () => void }) {
                 <div>
                   <span className="block text-xs font-black text-slate-800 dark:text-slate-100">
                     {selectedUser.name}
-                  </span>
-                  <span className="block text-[9px] font-medium text-slate-500">
-                    {selectedUser.email}
                   </span>
                 </div>
               </div>
