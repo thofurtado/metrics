@@ -1,4 +1,3 @@
-import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -19,8 +18,13 @@ import { createAccount } from '@/api/create-account'
 import { getAccountHistory } from '@/api/get-account-history'
 import { getAccounts } from '@/api/get-accounts'
 import { getGeneralBalance } from '@/api/get-general-balance'
-import { recalculateAccountBalance } from '@/api/recalculate-account-balance'
+import {
+  previewRecalculateAccountBalance,
+  recalculateAccountBalance,
+} from '@/api/recalculate-account-balance'
+import { CreateAccountDialog } from '@/components/create-account-dialog'
 import { Button } from '@/components/ui/button'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import {
   Dialog,
   DialogContent,
@@ -36,11 +40,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { CurrencyInput } from '@/components/ui/currency-input'
-import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 import { cn } from '@/lib/utils'
 import { exportAccountHistoryPDF } from '@/utils/export-account-history-pdf'
 
@@ -168,7 +171,10 @@ export function Accounts() {
     try {
       await adjustBalance({
         id: selectedAccountId,
-        newBalance: typeof data.newBalance === 'number' ? data.newBalance : parseCurrencyToFloat(data.newBalance),
+        newBalance:
+          typeof data.newBalance === 'number'
+            ? data.newBalance
+            : parseCurrencyToFloat(data.newBalance),
       })
     } catch {
       // handled in onError
@@ -342,10 +348,30 @@ export function Accounts() {
                           Visualizar Histórico
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => {
+                          onClick={async () => {
+                            // Mostra o antes e o depois ANTES de gravar (Fase 1 do Mergulho, 13:D1): o recálculo
+                            // soma as receitas e despesas pagas desde o início e não conhece o saldo com que a conta
+                            // começou nem os acertos feitos direto no banco.
+                            let previa
+                            try {
+                              previa = await previewRecalculateAccountBalance({
+                                id: account.id,
+                              })
+                            } catch {
+                              toast.error(
+                                'Não foi possível calcular a prévia do recálculo. Nada foi alterado.',
+                              )
+                              return
+                            }
+                            const reais = (v: number) =>
+                              v.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })
                             if (
                               confirm(
-                                'Isso irá sobrescrever o saldo atual com a soma de todas as transações confirmadas. Deseja continuar?',
+                                `O saldo de "${account.name}" vai de ${reais(previa.saldo_atual)} para ${reais(previa.saldo_novo)}.\n\n` +
+                                  'O recálculo soma todas as receitas e despesas pagas desta conta desde o início. Ele não conhece o saldo com que a conta começou nem acertos feitos por fora: se o valor novo parecer errado, cancele.\n\nGravar o saldo novo?',
                               )
                             ) {
                               recalculateBalance({ id: account.id })

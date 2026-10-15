@@ -10,3 +10,18 @@ export async function recalculateAccountBalance({
   const response = await api.patch(`/account/${id}/recalculate`)
   return response.data
 }
+
+export interface PreviaDoRecalculo {
+  saldo_atual: number
+  saldo_novo: number
+}
+
+// Mostra o que o recálculo gravaria, sem gravar (Fase 1 do Mergulho, 13:D1).
+export async function previewRecalculateAccountBalance({
+  id,
+}: RecalculateAccountBalanceBody) {
+  const response = await api.get<PreviaDoRecalculo>(
+    `/account/${id}/recalculate-preview`,
+  )
+  return response.data
+}
