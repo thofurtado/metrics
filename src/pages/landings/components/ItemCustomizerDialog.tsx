@@ -61,6 +61,8 @@ export interface CustomizedItemResult {
   quantity: number
   observation: string
   fractions: string[]
+  /** Ids dos sabores, na mesma ordem de `fractions` (a nuvem confere o preço pelo id: Mergulho 06:C6) */
+  fractionIds: string[]
   selectedOptions: SelectedOptionPayload[]
 }
 
@@ -344,7 +346,8 @@ export function ItemCustomizerDialog({
     }
 
     let displayName = product.name
-    const flavorNames = selectedFlavors.filter((f): f is ProductItem => f !== null).map((f) => f.name)
+    const chosenFlavors = selectedFlavors.filter((f): f is ProductItem => f !== null)
+    const flavorNames = chosenFlavors.map((f) => f.name)
     if (acceptsFractions && fractionCount > 1 && flavorNames.length > 1) {
       displayName = `1/${fractionCount} ${flavorNames.join(` + 1/${fractionCount} `)}`
     }
@@ -370,7 +373,8 @@ export function ItemCustomizerDialog({
       .map((o) => `${o.optionId}x${o.quantity}`)
       .sort()
       .join(',')
-    const flavorsKeyPart = flavorNames.sort().join('|')
+    // Cópia antes de ordenar: `fractions` e `fractionIds` ficam na ordem escolhida e alinhados
+    const flavorsKeyPart = [...flavorNames].sort().join('|')
     const customKey = `${product.id}_flavors:[${flavorsKeyPart}]_opts:[${optionsKeyPart}]_obs:[${observation.trim()}]`
 
     const obsList: string[] = []
@@ -384,6 +388,7 @@ export function ItemCustomizerDialog({
       quantity: itemQuantity,
       observation: obsList.join(' | '),
       fractions: flavorNames,
+      fractionIds: chosenFlavors.map((f) => f.id),
       selectedOptions: selectedOptionsPayload,
     })
 
