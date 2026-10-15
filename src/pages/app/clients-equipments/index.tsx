@@ -62,6 +62,7 @@ import { NiimbotLabelModal } from '../treatments/components/niimbot-label-modal'
 import { CreateEquipmentModal } from './components/create-equipment-modal'
 import { EditEquipmentModal } from './components/edit-equipment-modal'
 import { ClientCard } from './components/client-card'
+import { EditClientDialog, EditableClient } from './components/edit-client-dialog'
 import { formatEquipmentTypeLabel, getEquipmentDisplayName } from './equipment-types'
 
 export function checkIsOnline(equipment: any, maxInactiveMinutes = 15): boolean {
@@ -94,6 +95,7 @@ export function ClientsEquipments() {
   const [editingEquipment, setEditingEquipment] = useState<any | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingEquipment, setDeletingEquipment] = useState<any | null>(null)
+  const [editingClient, setEditingClient] = useState<EditableClient | null>(null)
 
   // Queries
   const { data: clients, isLoading: isLoadingClients } = useQuery({
@@ -417,6 +419,7 @@ export function ClientsEquipments() {
                     onDeleteEquipment={handleOpenDelete}
                     onOpenDetails={handleOpenDetails}
                     onPrintLabel={handlePrintLabel}
+                    onEditClient={setEditingClient}
                   />
                 ))}
               </div>
@@ -783,6 +786,12 @@ export function ClientsEquipments() {
               orphans?.find((eq: any) => eq.id === selectedEquipmentId)
             : null
         }
+      />
+
+      {/* Modal: Editar Cliente (Fase 4 do Mergulho, 16:A7) */}
+      <EditClientDialog
+        client={editingClient}
+        onClose={() => setEditingClient(null)}
       />
 
       {/* Modal: Novo Cliente */}
