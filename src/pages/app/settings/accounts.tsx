@@ -147,8 +147,8 @@ export function Accounts() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       toast.success('Saldo recalculado com sucesso!')
     },
-    onError: () => {
-      toast.error('Erro ao recalcular saldo.')
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Erro ao recalcular saldo.')
     },
   })
 
@@ -368,6 +368,13 @@ export function Accounts() {
                                 style: 'currency',
                                 currency: 'BRL',
                               })
+                            // Mergulho 13:D1: conta com acerto manual (ou zeragem) não é recalculada; a nuvem diz por quê
+                            if (previa.bloqueado) {
+                              alert(
+                                `O saldo de "${account.name}" não pode ser recalculado.\n\n${previa.bloqueado}\n\nO recálculo daria ${reais(previa.saldo_novo)} (hoje: ${reais(previa.saldo_atual)}). Nada foi alterado.`,
+                              )
+                              return
+                            }
                             if (
                               confirm(
                                 `O saldo de "${account.name}" vai de ${reais(previa.saldo_atual)} para ${reais(previa.saldo_novo)}.\n\n` +
