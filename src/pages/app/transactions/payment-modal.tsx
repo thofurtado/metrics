@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
@@ -45,6 +46,10 @@ import {
 } from '@/components/ui/select'
 import { SimpleCalendar } from '@/components/ui/simple-calendar'
 import { cn } from '@/lib/utils'
+import {
+  CAMINHO_LIQUIDAR_PLATAFORMAS,
+  ehLancamentoDePlataforma,
+} from '@/utils/plataformas'
 
 // --- SCHEMA E INTERFACES ---
 
@@ -84,6 +89,10 @@ interface Transaction {
   suggestedInterest?: number
   suggestedFine?: number
   suggestedDiscount?: number
+  // Repasse/comissão de plataforma (15/10/2026): não se paga aqui, só em Liquidações > Plataformas
+  platform_id?: string | null
+  platform_settlement_id?: string | null
+  payment_method?: string | null
 }
 
 interface PaymentModalProps {
@@ -275,6 +284,37 @@ export function PaymentModal({
         }
       }
     }
+  }
+
+  // O par repasse + comissão da plataforma (iFood/99) só se baixa junto: pagar um sozinho aqui quebra o par (15/10/2026)
+  if (ehLancamentoDePlataforma(transaction)) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Liquide em Liquidações
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Este lançamento é do repasse de uma plataforma (iFood, 99Food). O
+            repasse e as comissões se baixam juntos, em Liquidações &gt;
+            Plataformas, digitando o que caiu no banco.
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => onOpenChange(false)}
+            >
+              Fechar
+            </Button>
+            <Button asChild className="min-h-11">
+              <Link to={CAMINHO_LIQUIDAR_PLATAFORMAS}>Abrir Liquidações</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (

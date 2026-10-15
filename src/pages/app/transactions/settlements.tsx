@@ -14,12 +14,14 @@ import {
   RefreshCw,
   Rocket,
   Search,
+  ShoppingBag,
   Undo2,
   UserCheck,
   Users,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { getAccounts } from '@/api/get-accounts'
@@ -70,6 +72,7 @@ import { api } from '@/lib/axios'
 
 import { ClientSettleModal } from './components/client-settle-modal'
 import { EmployeeTermPdfModal } from './components/employee-term-pdf-modal'
+import { PlatformPayoutsTab } from './components/platform-payouts-tab'
 import { TermReportModal } from './components/term-report-modal'
 
 export function Settlements() {
@@ -80,7 +83,11 @@ export function Settlements() {
   const selectedMonth = selectedMonthDate.getMonth() + 1
   const selectedYear = selectedMonthDate.getFullYear()
 
-  const [activeTab, setActiveTab] = useState<string>('automatic')
+  // ?aba=plataformas abre direto nos repasses das plataformas (link da tela de Transações e da conferência do caixa)
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    searchParams.get('aba') === 'plataformas' ? 'platforms' : 'automatic',
+  )
 
   // Pagination per tab
   const [pendingCardPageIndex] = useState(0)
@@ -571,6 +578,7 @@ export function Settlements() {
                 queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms'] })
                 queryClient.invalidateQueries({ queryKey: ['pending-settlements-terms-all'] })
                 queryClient.invalidateQueries({ queryKey: ['settlements-terms'] })
+                queryClient.invalidateQueries({ queryKey: ['platform-settlements'] })
                 toast.success('Dados atualizados com sucesso!')
               }}
             >
@@ -682,7 +690,7 @@ export function Settlements() {
           onValueChange={setActiveTab}
           className="w-full space-y-4"
         >
-          <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl border border-slate-200/80 bg-slate-100 p-1.5 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl border border-slate-200/80 bg-slate-100 p-1.5 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-3 2xl:grid-cols-5">
             <TabsTrigger
               value="automatic"
               className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-blue-400"
@@ -725,6 +733,15 @@ export function Settlements() {
               <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-black text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 {groupedEmployees.length} colaboradores
               </span>
+            </TabsTrigger>
+
+            {/* Repasses do iFood/99Food (15/10/2026): o repasse e as comissões se baixam juntos */}
+            <TabsTrigger
+              value="platforms"
+              className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-black uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-violet-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-violet-400"
+            >
+              <ShoppingBag size={15} />
+              <span>Plataformas</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1607,6 +1624,17 @@ export function Settlements() {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* ABA 5: REPASSES DAS PLATAFORMAS (iFood / 99Food) */}
+          <TabsContent value="platforms" className="space-y-4">
+            {activeTab === 'platforms' && (
+              <PlatformPayoutsTab
+                month={selectedMonth}
+                year={selectedYear}
+                monthName={monthNames[selectedMonth - 1]}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>

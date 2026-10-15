@@ -55,6 +55,7 @@ import {
 import { api } from '@/lib/axios'
 import { cn } from '@/lib/utils'
 import { OverdueTransactionsModal } from '@/pages/app/dashboard/overdue-transactions-modal'
+import { ehLancamentoDePlataforma } from '@/utils/plataformas'
 
 import { CashierBatchDetailsModal } from './components/cashier-batch-details-modal'
 import { LinkReceiptModal } from './components/link-receipt-modal'
@@ -197,9 +198,22 @@ export function Transactions() {
   function handleBulkPay() {
     // Mergulho 13:D5: a linha da fatura do cartão é virtual (paga pelo "Pagar fatura"); com ela no lote a nuvem
     // recusava o lote inteiro. Fica de fora do pagamento em lote.
-    const transactionIds = selectedIds.filter((id) => !id.startsWith('virtual-'))
+    // Repasse/comissão de plataforma (iFood/99, 15/10/2026): pagar um sozinho quebra o par; se baixa em Liquidações
+    const lista: any[] = transactionsResult?.data?.transactions?.transactions || []
+    const daPlataforma = new Set(
+      lista.filter((t) => ehLancamentoDePlataforma(t)).map((t) => t.id),
+    )
+    const transactionIds = selectedIds.filter(
+      (id) => !id.startsWith('virtual-') && !daPlataforma.has(id),
+    )
+    if (selectedIds.some((id) => daPlataforma.has(id))) {
+      toast.info(
+        'Repasse e comissão de plataforma ficaram de fora: liquide em Liquidações > Plataformas.',
+      )
+    }
     if (transactionIds.length === 0) {
-      toast.info('Fatura de cartão se paga pelo botão "Pagar fatura".')
+      if (!selectedIds.some((id) => daPlataforma.has(id)))
+        toast.info('Fatura de cartão se paga pelo botão "Pagar fatura".')
       return
     }
     bulkPay({ transactionIds }).catch((error) => {

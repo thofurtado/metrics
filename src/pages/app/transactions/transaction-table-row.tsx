@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import {
   CheckCircle2,
   Eye,
+  Landmark,
   Loader2,
   MoreHorizontal,
   Paperclip,
@@ -12,6 +13,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import {
@@ -44,6 +46,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import {
+  CAMINHO_LIQUIDAR_PLATAFORMAS,
+  ehLancamentoDePlataforma,
+} from '@/utils/plataformas'
 
 import { TreatmentDetails } from '../treatments/treatment-details'
 import { AttachmentModal } from './components/attachment-modal'
@@ -76,6 +82,10 @@ interface Transaction {
   credit_card_id?: string
   treatment_id?: string | null
   supplier?: { name: string; id: string } | null
+  // Repasse/comissão de plataforma (15/10/2026): só se baixa e desfaz em Liquidações > Plataformas
+  platform_id?: string | null
+  platform_settlement_id?: string | null
+  payment_method?: string
 }
 
 // Interface que o PaymentModal realmente espera (com IDs em nível raiz)
@@ -117,6 +127,13 @@ export function TransactionMobileCard({
     sectorId: transactions.sectors?.id || null,
     accountId: transactions.accounts?.id || '',
   }
+
+  // Repasse, comissão ou ajuste de plataforma (iFood/99): pagar ou reverter um sozinho quebra o par; vai para Liquidações
+  const navigate = useNavigate()
+  const daPlataforma =
+    !transactions.isVirtual &&
+    !transactions.isCashierGroup &&
+    ehLancamentoDePlataforma(transactions)
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
   const { mutateAsync: switchTransactionStatus } = useMutation({
@@ -329,6 +346,20 @@ export function TransactionMobileCard({
             >
               {transactions.isVirtual ? 'Ver Fatura' : 'Ver Caixa'}
             </Button>
+          ) : daPlataforma ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-h-11 flex-1 rounded-lg border-violet-200 bg-violet-50 text-xs font-black uppercase tracking-widest text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300"
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate(CAMINHO_LIQUIDAR_PLATAFORMAS)
+              }}
+              title="O repasse e as comissões da plataforma se baixam juntos, em Liquidações > Plataformas"
+            >
+              <Landmark className="mr-1 h-3 w-3" />
+              {transactions.confirmed ? 'Desfazer em Liquidações' : 'Liquide em Liquidações'}
+            </Button>
           ) : transactions.confirmed ? (
             <Button
               size="sm"
@@ -370,7 +401,7 @@ export function TransactionMobileCard({
               {transactions.operation === 'income' ? 'Receber' : 'Pagar'}
             </Button>
           )}
-          {!transactions.cashier_session_id && (
+          {!transactions.cashier_session_id && !daPlataforma && (
             <Button
               variant="outline"
               size="sm"
@@ -495,6 +526,13 @@ export function TransactionTableRow({
     sectorId: transactions.sectors?.id || null,
     accountId: transactions.accounts?.id || '',
   }
+
+  // Repasse, comissão ou ajuste de plataforma (iFood/99): pagar ou reverter um sozinho quebra o par; vai para Liquidações
+  const navigate = useNavigate()
+  const daPlataforma =
+    !transactions.isVirtual &&
+    !transactions.isCashierGroup &&
+    ehLancamentoDePlataforma(transactions)
 
   // Mutação para alterar o status (e criar o remanescente no Back-end)
   const { mutateAsync: switchTransactionStatus } = useMutation({
@@ -731,14 +769,18 @@ export function TransactionTableRow({
               ? 'Ver Fatura'
               : transactions.isCashierGroup
                 ? 'Ver Caixa'
-                : transactions.confirmed
+                : daPlataforma
+                  ? 'Liquide em Liquidações > Plataformas'
+                  : transactions.confirmed
                   ? 'Reverter Pagamento'
                   : 'Registrar pagamento'
           }
           className={`mx-auto inline-flex w-[110px] items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-widest shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
             transactions.isVirtual || transactions.isCashierGroup
               ? 'border-transparent bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-600'
-              : transactions.confirmed
+              : daPlataforma
+                ? 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 focus:ring-violet-500/50 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300'
+                : transactions.confirmed
                 ? 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:ring-slate-500/50' // Reverter
                 : transactions.operation === 'income'
                   ? 'border-transparent bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-600' // Receber
@@ -749,6 +791,8 @@ export function TransactionTableRow({
               setOpenCreditCardDialog(true)
             } else if (transactions.isCashierGroup) {
               setOpenCashierDetailsModal(true)
+            } else if (daPlataforma) {
+              navigate(CAMINHO_LIQUIDAR_PLATAFORMAS)
             } else if (transactions.confirmed) {
               setOpenRevertAlert(true)
             } else {
@@ -772,6 +816,14 @@ export function TransactionTableRow({
               <Eye className="h-3 w-3" />
               Ver Caixa
             </>
+          ) : daPlataforma ? (
+            <span
+              className="inline-flex items-center gap-1.5"
+              title="O repasse e as comissões da plataforma se baixam juntos, em Liquidações > Plataformas"
+            >
+              <Landmark className="h-3 w-3" />
+              Liquidações
+            </span>
           ) : transactions.confirmed ? (
             <>
               <Undo2 className="h-3 w-3" />
@@ -974,7 +1026,7 @@ export function TransactionTableRow({
                 <Eye className="mr-2 h-4 w-4" />
                 Visualizar
               </DropdownMenuItem>
-              {!transactions.cashier_session_id && (
+              {!transactions.cashier_session_id && !daPlataforma && (
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault()
@@ -997,7 +1049,7 @@ export function TransactionTableRow({
                   Gerenciar Parcelamento
                 </DropdownMenuItem>
               )}
-              {!transactions.cashier_session_id && (
+              {!transactions.cashier_session_id && !daPlataforma && (
                 <DropdownMenuItem
                   onClick={() => setOpenDeleteAlert(true)}
                   className="text-red-600 focus:text-red-600"
