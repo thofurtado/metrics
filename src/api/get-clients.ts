@@ -5,7 +5,7 @@ export interface GetClientsResponse {
     id: string
     name: string
     identification: string | null
-      last_telemetry: any
+    last_telemetry: any
     phone: string | null
     email: string | null
     contract: boolean
@@ -30,9 +30,8 @@ export async function createQuickClient(data: {
   name: string
   identification?: string
   phone?: string
+  allowDuplicatePhone?: boolean
 }) {
   const response = await api.post('/client', data)
   return response.data
 }
-
-

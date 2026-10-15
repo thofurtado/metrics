@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { createClient } from '@/api/create-client'
+import { duplicatePhoneMessage } from '@/api/update-client'
 import { Button } from '@/components/ui/button'
 import {
   DialogContent,
@@ -218,11 +219,6 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
         navigate(window.location.pathname)
       }, 1000)
     },
-    onError: () => {
-      toast.error('Erro ao cadastrar cliente', {
-        position: 'top-center',
-      })
-    },
   })
 
   const form = useForm<FormSchemaType>({
@@ -243,22 +239,43 @@ export function TreatmentClient({ onClose }: TreatmentClientProps) {
   const isEnterpriseValue = form.watch('isEnterprise')
   const errors = form.formState.errors
 
-  async function onSubmit(data: FormSchemaType) {
+  async function send(data: FormSchemaType, allowDuplicatePhone: boolean) {
     const identificationClean = cleanNumber(data.identification)
     const phoneClean = cleanNumber(data.phone)
 
     const isEnterprise = data.isEnterprise || false
     const finalContact = isEnterprise ? data.contact : data.name
 
-    await client({
-      name: data.name,
-      identification: identificationClean || null,
-      phone: phoneClean || null,
-      email: data.email || null,
-      contract: data.contract ? data.contract : false,
-      isEnterprise,
-      contact: finalContact || undefined,
-    })
+    try {
+      await client({
+        name: data.name,
+        identification: identificationClean || null,
+        phone: phoneClean || null,
+        email: data.email || null,
+        contract: data.contract ? data.contract : false,
+        isEnterprise,
+        contact: finalContact || undefined,
+        allowDuplicatePhone,
+      })
+    } catch (err) {
+      // Fase 4 do Mergulho (16:A8): telefone já usado por outro cliente pede confirmação antes do segundo cadastro
+      const duplicated = duplicatePhoneMessage(err)
+      if (duplicated && !allowDuplicatePhone) {
+        if (window.confirm(`${duplicated} Cadastrar mesmo assim?`)) {
+          await send(data, true)
+        }
+        return
+      }
+      const message = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message
+      toast.error(message || 'Erro ao cadastrar cliente', {
+        position: 'top-center',
+      })
+    }
+  }
+
+  async function onSubmit(data: FormSchemaType) {
+    await send(data, false)
   }
 
   const getErrorClass = (fieldName: keyof FormSchemaType) => {

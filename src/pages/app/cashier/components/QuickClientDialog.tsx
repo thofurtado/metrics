@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { createQuickClient } from '@/api/get-clients'
+import { duplicatePhoneMessage } from '@/api/update-client'
 
 interface QuickClientDialogProps {
   isOpen: boolean
@@ -34,11 +35,6 @@ export function QuickClientDialog({
       }
       onClose()
     },
-    onError: () => {
-      toast.error(
-        'Erro ao cadastrar cliente. Verifique se o CPF/CNPJ já existe.',
-      )
-    },
   })
 
   if (!isOpen) return null
@@ -49,11 +45,30 @@ export function QuickClientDialog({
       toast.error('Informe o nome do cliente.')
       return
     }
-    await saveClient({
-      name: name.trim(),
-      identification: identification.trim() || undefined,
-      phone: phone.trim() || undefined,
-    })
+    await send(false)
+  }
+
+  async function send(allowDuplicatePhone: boolean) {
+    try {
+      await saveClient({
+        name: name.trim(),
+        identification: identification.trim() || undefined,
+        phone: phone.trim() || undefined,
+        allowDuplicatePhone,
+      })
+    } catch (err) {
+      // Fase 4 do Mergulho (16:A8): telefone já usado por outro cliente pede confirmação antes do segundo cadastro
+      const duplicated = duplicatePhoneMessage(err)
+      if (duplicated && !allowDuplicatePhone) {
+        if (window.confirm(`${duplicated} Cadastrar mesmo assim?`)) {
+          await send(true)
+        }
+        return
+      }
+      toast.error(
+        'Erro ao cadastrar cliente. Verifique se o CPF/CNPJ já existe.',
+      )
+    }
   }
 
   return (

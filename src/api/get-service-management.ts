@@ -1,10 +1,11 @@
-// ARQUIVO: src/api/get-service-metrics.ts
 import { api } from '@/lib/axios'
 
 export interface GetServiceMetricsResponse {
   totalMes: number
   concluidos: number
-  tmaSegundos: number
+  // Fase 4 do Mergulho (16:A6): a nuvem manda o tempo médio em MINUTOS (averageTreatmentTime =
+  // média de (fim - abertura) / 60000); antes a web lia como segundos e 45 min viravam "0m 45s".
+  tmaMinutos: number
   naBancada: number
   externos: number
   ativosTotais: number
@@ -29,7 +30,7 @@ export async function getServiceMetrics({
   return {
     totalMes: apiData.totalTreatments || 0,
     concluidos: apiData.completedTreatments || 0,
-    tmaSegundos: apiData.averageTreatmentTime || 0,
+    tmaMinutos: apiData.averageTreatmentTime || 0,
     naBancada: apiData.inWorkbench || 0,
     externos: apiData.externalOpen || 0,
     ativosTotais: (apiData.inWorkbench || 0) + (apiData.externalOpen || 0),

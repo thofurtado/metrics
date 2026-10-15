@@ -101,6 +101,9 @@ export function OverdueTransactionsModal({
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
       queryClient.invalidateQueries({ queryKey: ['finance-metrics-overdue'] })
+      // Fase 4 do Mergulho (16:A4): os cartões do painel usam chaves que começam com 'metrics' (FinanceCard:
+      // ['metrics', 'finance-metrics', mês, ano]); 'summary' não existe, e o vencido ficava velho até recarregar a página.
+      queryClient.invalidateQueries({ queryKey: ['metrics'] })
     },
     onError: () => {
       toast.error('Ocorreu um erro ao processar o pagamento.')

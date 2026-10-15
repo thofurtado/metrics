@@ -10,6 +10,8 @@ const clientForm = z.object({
   contract: z.boolean().nullish(),
   contact: z.string().nullish(),
   isEnterprise: z.boolean().nullish(),
+  // Fase 4 do Mergulho (16:A8): confirma o cadastro quando o telefone já é de outro cliente
+  allowDuplicatePhone: z.boolean().nullish(),
 })
 
 type ClientForm = z.infer<typeof clientForm>
@@ -22,6 +24,7 @@ export async function createClient({
   contract,
   contact,
   isEnterprise,
+  allowDuplicatePhone,
 }: ClientForm) {
   const response = await api.post(`/client`, {
     name,
@@ -31,6 +34,7 @@ export async function createClient({
     contract,
     contact,
     isEnterprise,
+    allowDuplicatePhone,
   })
   return response
 }
