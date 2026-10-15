@@ -16,18 +16,27 @@ import { InventoryCard } from './InventoryCard'
 import { MonthTreatmentAmountCard } from './TreatmentCard' // Card de Serviços
 
 export function Dashboard() {
-  const { isCardVisible, modules } = useModules()
+  const { isCardVisible, hasAccess, modules } = useModules()
   const [date, setDate] = useState<Date>(new Date())
 
   const month = date.getMonth() + 1
   const year = date.getFullYear()
 
-  const showTreatment = isCardVisible('treatments', 'treatment_summary')
-  const showInventory = isCardVisible('merchandise', 'inventory_summary')
-  const showFinanceSummary = isCardVisible('financial', 'financial_summary')
-  const showPaymentAgenda = isCardVisible('financial', 'payment_agenda')
-  const showExpensesBySector = isCardVisible('financial', 'expenses_by_sector')
-  const showBalanceProjection = isCardVisible('financial', 'balance_projection')
+  // Fase 0 do Mergulho (17:U1): o cartão também depende do módulo do USUÁRIO (a nuvem agora recusa os números do
+  // Financeiro e do Atendimento a quem não tem o módulo; antes o cartão aparecia e daria "sem permissão").
+  const canFinance = hasAccess('finance')
+  const showTreatment =
+    isCardVisible('treatments', 'treatment_summary') && hasAccess('service')
+  const showInventory =
+    isCardVisible('merchandise', 'inventory_summary') && hasAccess('items')
+  const showFinanceSummary =
+    isCardVisible('financial', 'financial_summary') && canFinance
+  const showPaymentAgenda =
+    isCardVisible('financial', 'payment_agenda') && canFinance
+  const showExpensesBySector =
+    isCardVisible('financial', 'expenses_by_sector') && canFinance
+  const showBalanceProjection =
+    isCardVisible('financial', 'balance_projection') && canFinance
 
   // Lógica de agrupamento dos 3 cards financeiros (se alinham de 4 em 4 ou de 6 em 6)
   const financeGroupCount = [
