@@ -525,6 +525,11 @@ export function CashierSessionDetails() {
     }
   }
 
+  // Mergulho 14:X1: mesma regra da nuvem para o fundo de troco (saldo inicial)
+  const statusAbertura = mapStatus(session.status)
+  const podeEditarAbertura =
+    statusAbertura === 'ABERTO' || (statusAbertura === 'PENDENTE' && isAdmin)
+
   return (
     <div className="relative">
       <DetalheLote
@@ -534,14 +539,19 @@ export function CashierSessionDetails() {
         onAdicionarLancamento={handleAdicionarLancamento}
         onRemoverLancamento={handleRemoverLancamento}
         onEditarLancamento={handleEditarLancamento}
-        onEditarAbertura={async (novoValor) => {
-          if (!id) return
-          try {
-            await editBalance({ session_id: id, initial_balance: novoValor })
-          } catch (err) {
-            console.error('Erro ao editar saldo:', err)
-          }
-        }}
+        // Mergulho 14:X1: a nuvem só deixa mudar o fundo de caixa aberto; em conferência, só o ADMIN; conferido, ninguém
+        onEditarAbertura={
+          podeEditarAbertura
+            ? async (novoValor) => {
+                if (!id) return
+                try {
+                  await editBalance({ session_id: id, initial_balance: novoValor })
+                } catch (err) {
+                  console.error('Erro ao editar saldo:', err)
+                }
+              }
+            : undefined
+        }
         onAlterarStatus={handleAlterarStatus}
         onConferirECaixaConferido={
           isAdmin ? handleConferirECaixaConferido : undefined

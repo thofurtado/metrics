@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+// Faltava este import: salvar a abertura dava erro de execução (achado na correção do Mergulho 14:X1)
+import { parseCurrencyToFloat } from '@/lib/currency-utils'
 
 import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 
@@ -35,7 +37,8 @@ interface DetalheLoteProps {
   onAdicionarLancamento: (l: any) => void
   onRemoverLancamento: (id: string) => void
   onEditarLancamento: (id: string, dadosAtualizados: any) => void
-  onEditarAbertura: (novoValor: number) => void
+  // Mergulho 14:X1: sem esta função (caixa conferido, ou em conferência para quem não é ADMIN) a abertura não é editável
+  onEditarAbertura?: (novoValor: number) => void
   onAlterarStatus: (novoStatus: any) => void
   onConferirECaixaConferido?: () => void
   onEnviarParaConferencia?: () => void
@@ -306,12 +309,13 @@ export function DetalheLote({
   }
 
   const iniciarEdicaoAbertura = () => {
+    if (!onEditarAbertura) return
     setEditandoAbertura(true)
     setValorAberturaTemp(loteAtivo.valorAbertura.toString())
   }
 
   const salvarEdicaoAbertura = () => {
-    onEditarAbertura(parseCurrencyToFloat(valorAberturaTemp))
+    onEditarAbertura?.(parseCurrencyToFloat(valorAberturaTemp))
     setEditandoAbertura(false)
   }
 
@@ -373,16 +377,18 @@ export function DetalheLote({
                 </div>
               ) : (
                 <div
-                  className="group flex cursor-pointer items-center gap-1"
+                  className={`group flex items-center gap-1 ${onEditarAbertura ? 'cursor-pointer' : ''}`}
                   onClick={iniciarEdicaoAbertura}
                 >
                   <span className="text-[9px] font-bold text-zinc-400">
                     Abertura: R$ {Number(loteAtivo.valorAbertura).toFixed(2)}
                   </span>
-                  <Edit2
-                    size={10}
-                    className="text-zinc-300 transition-colors group-hover:text-green-600"
-                  />
+                  {onEditarAbertura && (
+                    <Edit2
+                      size={10}
+                      className="text-zinc-300 transition-colors group-hover:text-green-600"
+                    />
+                  )}
                 </div>
               )}
             </div>
