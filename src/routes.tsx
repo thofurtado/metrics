@@ -32,7 +32,6 @@ import { Treatment } from './pages/app/treatments/treatment'
 import { Treatments } from './pages/app/treatments/treatments'
 import { CashierSignIn } from './pages/auth/cashier-sign-in'
 import { SignIn } from './pages/auth/sign-in'
-import { SignUp } from './pages/auth/sign-up'
 import { DownloadsPage } from './pages/downloads'
 import { HRDashboard } from './pages/hr/dashboard'
 import { PayrollHistory } from './pages/hr/payroll/history'
@@ -269,7 +268,6 @@ export const router = createBrowserRouter([
         element: <AuthLayout />,
         children: [
           { path: 'sign-in', element: <SignIn /> },
-          { path: 'sign-up', element: <SignUp /> },
           { path: 'cashier/sign-in', element: <CashierSignIn /> },
         ],
       },

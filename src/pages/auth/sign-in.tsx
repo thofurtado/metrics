@@ -183,15 +183,7 @@ export function SignIn() {
     <>
       <Helmet title="Login" />
       <div className="flex flex-col justify-center gap-6">
-        <div className="text-right">
-          <Link
-            to="/sign-up"
-            className="text-sm font-medium text-minsk-500 transition-colors hover:text-minsk-700"
-          >
-            Criar uma conta
-          </Link>
-        </div>
-
+        {/* Cadastro público removido (Fase 0 do Mergulho, 17:U10): as contas são criadas pelo administrador da loja. */}
         <div className="flex flex-col gap-2 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-minsk-800">
             Acessar Metrics
