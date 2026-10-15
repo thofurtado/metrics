@@ -60,7 +60,8 @@ import { DivergenceModal } from './components/divergence-modal'
 import { OutflowsModal } from './components/outflows-modal'
 import { LiveTablesView } from '../components/LiveTablesView'
 import { CancellationsAuditView } from '../components/CancellationsAuditView'
-import { UtensilsCrossed } from 'lucide-react'
+import { CouriersReportView } from '../components/CouriersReportView'
+import { Bike, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { diaOperacional } from '@/lib/dia-operacional'
 
@@ -94,7 +95,10 @@ export function CashierDashboard() {
   const [modalAuditOpen, setModalAuditOpen] = useState(false)
   const [isOutflowsModalOpen, setIsOutflowsModalOpen] = useState(false)
   const [isCreateSessionModalOpen, setIsCreateSessionModalOpen] = useState(false)
-  const [activeCashierTab, setActiveCashierTab] = useState<'sessions' | 'live_tables' | 'cancellations'>('sessions')
+  // 'couriers' (15/10/2026): relatório dos motoboys (entregas, diárias, pago em dinheiro/Pix e pendente)
+  const [activeCashierTab, setActiveCashierTab] = useState<
+    'sessions' | 'live_tables' | 'cancellations' | 'couriers'
+  >('sessions')
 
   const token = localStorage.getItem('token')
 
@@ -694,10 +698,24 @@ export function CashierDashboard() {
           <Trash2 className="h-4 w-4" />
           <span>Cancelamentos & Desperdício</span>
         </button>
+
+        <button
+          onClick={() => setActiveCashierTab('couriers')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all',
+            activeCashierTab === 'couriers'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+          )}
+        >
+          <Bike className="h-4 w-4" />
+          <span>Motoboys</span>
+        </button>
       </div>
 
       {activeCashierTab === 'live_tables' && <LiveTablesView />}
       {activeCashierTab === 'cancellations' && <CancellationsAuditView />}
+      {activeCashierTab === 'couriers' && <CouriersReportView />}
 
       {activeCashierTab === 'sessions' && (
         <>
