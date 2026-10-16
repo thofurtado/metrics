@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { getPOSMachines } from '@/api/pos-machines'
-import { saidaNoPix } from '@/utils/cashier/saida-pix'
+import { computeResumoSessao } from '@/utils/cashier/resumo-sessao'
 
 import { DetalheLote } from '../../components/DetalheLote'
 
@@ -247,187 +247,11 @@ export function CashierSessionDetails() {
     lancamentos: mappedLancamentos,
   }
 
-  const computeResumo = (
-    sessionObj: any,
-    entriesList: any[],
-    machines: any[],
-  ) => {
-    const res: any = {
-      GERAL: {
-        entradas: 0,
-        totalCaixinha: 0,
-        saldo: 0,
-      },
-      CAIXA: {
-        saldoAbertura: sessionObj.initial_balance || 0,
-        entradasDinheiro: 0,
-        // Só as saídas que tiraram dinheiro da gaveta; as pagas no Pix ficam em saidasPix (mesma regra da conferência da nuvem)
-        totalSaidas: 0,
-        saidasPix: 0,
-      },
-      CASA: {
-        total: 0,
-      },
-    }
-
-    const padraoCasa = [
-      'funcionário',
-      'funcionario',
-      'pró-labore',
-      'pro-labore',
-      'cortesia',
-      'permuta',
-      'a prazo',
-      'correntista',
-      'fiado',
-      'convenio',
-    ]
-    const regexCaixinha = /\[(?:Gorjeta|Caixinha):\s*R\$\s*([\d.,]+)\s*\|\s*([^\]]+)\]/i
-
-    for (const entry of entriesList || []) {
-      const amount = Number(entry.amount || 0)
-      const method = (entry.payment_method || '').trim()
-      const bank = (entry.bank || '').toUpperCase().trim()
-
-      const match = (entry.identification || '').match(regexCaixinha)
-      const valorCaixinhaLinked = match
-        ? parseFloat(match[1].replace(',', '.'))
-        : 0
-
-      if (entry.is_withdrawal) {
-        // Saída paga no Pix (acerto do motoboy, 15/10/2026): não saiu da gaveta
-        if (saidaNoPix(entry)) {
-          res.CAIXA.saidasPix += amount
-          continue
-        }
-        res.CAIXA.totalSaidas += amount
-        if (entry.type === 'SANGRIA_DESTINO') {
-          const destBank = bank || 'CAIXA CENTRAL'
-          if (!res[destBank]) {
-            res[destBank] = {
-              PIX: 0,
-              Débito: 0,
-              Crédito: 0,
-              Voucher: 0,
-              caixinha: 0,
-              total: 0,
-              juros: 0,
-              recebimentoCaixa: 0,
-            }
-          }
-          res[destBank].recebimentoCaixa =
-            (res[destBank].recebimentoCaixa || 0) + amount
-        }
-        continue
-      }
-
-      const { valorCaixinha: vCaixa, temCaixinha: hasTip } = extrairCaixinhaDeLancamento(entry)
-      if (hasTip) {
-        res.GERAL.totalCaixinha += vCaixa
-      }
-
-      res.GERAL.entradas += amount
-
-      // Se for Dinheiro ou banco CAIXA
-      if (method.toLowerCase() === 'dinheiro' || bank === 'CAIXA') {
-        res.CAIXA.entradasDinheiro += amount
-      }
-      // Se for Consumo Interno / Conta Casa / Identificador
-      else if (
-        bank === 'CONTA DA CASA' ||
-        padraoCasa.some((p) => method.toLowerCase().includes(p))
-      ) {
-        if (res.CASA[method] === undefined) {
-          res.CASA[method] = 0
-        }
-        res.CASA[method] += amount
-        res.CASA.total += amount
-      }
-      // Se for Maquininha / Banco digital (SAFRA, STONE, NUBANK, PAGBANK, CIELO, IFOOD, etc.)
-      else if (bank) {
-        if (!res[bank]) {
-          res[bank] = {
-            PIX: 0,
-            Débito: 0,
-            Crédito: 0,
-            Voucher: 0,
-            caixinha: 0,
-            total: 0,
-            juros: 0,
-          }
-        }
-
-        let formaKey = method
-        let categoryNorm = ''
-        if (method.toUpperCase() === 'PIX') {
-          formaKey = 'PIX'
-          categoryNorm = 'PIX'
-        } else if (
-          method.toLowerCase().includes('débito') ||
-          method.toLowerCase().includes('debito')
-        ) {
-          formaKey = 'Débito'
-          categoryNorm = 'DEBITO'
-        } else if (
-          method.toLowerCase().includes('crédito') ||
-          method.toLowerCase().includes('credito')
-        ) {
-          formaKey = 'Crédito'
-          categoryNorm = 'CREDITO'
-        } else if (method.toLowerCase().includes('voucher')) {
-          formaKey = 'Voucher'
-          categoryNorm = 'VOUCHER'
-        }
-
-        if (res[bank][formaKey] !== undefined) {
-          res[bank][formaKey] += amount
-        } else {
-          res[bank][formaKey] = amount
-        }
-
-        if (hasTip) {
-          res[bank].caixinha += vCaixa
-        }
-        res[bank].total += amount
-
-        // Calcular Juros Aproximados
-        let taxa = 0
-        if (categoryNorm && machines && machines.length > 0) {
-          const machine = machines.find(
-            (m: any) => m.name.trim().toUpperCase() === bank.toUpperCase(),
-          )
-          if (machine && machine.rates && machine.rates.length > 0) {
-            const normalizeStr = (str: string) =>
-              str
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase()
-            const target = normalizeStr(categoryNorm)
-            const rate = machine.rates.find((r: any) =>
-              normalizeStr(r.payment_category).includes(target),
-            )
-            if (rate && rate.tax_percentage) {
-              taxa = (amount * rate.tax_percentage) / 100
-            }
-          }
-        }
-        res[bank].juros = (res[bank].juros || 0) + taxa
-      }
-    }
-
-
-
-
-
-    res.GERAL.saldo =
-      res.GERAL.entradas - res.CAIXA.totalSaidas - res.CAIXA.saidasPix
-    return res
-  }
-
+  // Cálculo do resumo em utils/cashier/resumo-sessao.ts (16/10/2026): agora com o quadro SEM MAQUININHA (lançamentos sem banco)
   const resumoLote =
     summary && Object.keys(summary).length > 0 && summary.GERAL
       ? summary
-      : computeResumo(session, entries, dbMachines || [])
+      : computeResumoSessao(session, entries, dbMachines || [])
 
   const handleAlterarStatus = async (novoStatus: string) => {
     if (!isAdmin) return

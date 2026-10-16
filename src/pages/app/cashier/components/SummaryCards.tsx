@@ -18,6 +18,10 @@ import {
 import { useMemo, useState } from 'react'
 // Faltava este import: salvar a abertura dava erro de execução (achado na correção do Mergulho 14:X1)
 import { parseCurrencyToFloat } from '@/lib/currency-utils'
+import {
+  CHAVES_FIXAS_DO_BANCO,
+  SEM_MAQUININHA,
+} from '@/utils/cashier/resumo-sessao'
 
 export function SummaryCards({
   resumo,
@@ -85,9 +89,18 @@ export function SummaryCards({
     setIsEditing(false)
   }
 
-  const bancosComValor = bancosDinamicos.filter(
-    (b) => safeGet(resumo, `${b}.total`) > 0,
-  )
+  // O quadro "Sem maquininha" (lançamentos sem banco, 16/10/2026) vem por último, depois dos bancos
+  const bancosComValor = bancosDinamicos
+    .filter((b) => safeGet(resumo, `${b}.total`) > 0)
+    .sort((a, b) => Number(a === SEM_MAQUININHA) - Number(b === SEM_MAQUININHA))
+
+  // Formas que não são PIX/Débito/Crédito/Voucher (ex.: "Online" num banco, qualquer forma sem maquininha): linha própria
+  const outrasFormasDoBanco = (banco: string) =>
+    Object.keys(resumo?.[banco] || {}).filter(
+      (k) =>
+        !CHAVES_FIXAS_DO_BANCO.includes(k) &&
+        safeGet(resumo, `${banco}.${k}`) > 0,
+    )
   const temConsumoInterno = safeGet(resumo, 'CASA.total') > 0
 
   // Totais consolidados de maquininhas
@@ -520,9 +533,13 @@ export function SummaryCards({
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
             >
               <div className="mb-3 flex items-center gap-1.5">
-                <Landmark size={12} className="text-blue-500" />
+                {banco === SEM_MAQUININHA ? (
+                  <Smartphone size={12} className="text-slate-400" />
+                ) : (
+                  <Landmark size={12} className="text-blue-500" />
+                )}
                 <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  {banco}
+                  {banco === SEM_MAQUININHA ? 'Sem maquininha' : banco}
                 </h2>
               </div>
               <div className="space-y-1.5 text-[11px]">
@@ -567,6 +584,17 @@ export function SummaryCards({
                     </span>
                   </div>
                 )}
+                {outrasFormasDoBanco(banco).map((forma) => (
+                  <div
+                    key={forma}
+                    className="flex justify-between text-slate-500"
+                  >
+                    <span className="truncate pr-2">{forma}</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                      {safeGet(resumo, `${banco}.${forma}`).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
                 {safeGet(resumo, `${banco}.caixinha`) > 0 && (
                   <div className="flex justify-between text-pink-500">
                     <span className="flex items-center gap-1">
