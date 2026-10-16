@@ -1,28 +1,21 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Search,
-  CheckCircle2,
-  AlertTriangle,
+  AlertCircle,
+  Check,
+  Loader2,
   Minus,
   Plus,
-  Wine,
-  Beer,
-  UtensilsCrossed,
-  Beef,
-  Apple,
-  Package,
-  ClipboardList,
-  Loader2,
-  Check,
+  Search,
   X,
 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
-  getActiveInventorySession,
   applyInventorySession,
-  InventoryItemDTO,
+  getActiveInventorySession,
+  type InventoryItemDTO,
+  type MotivoDaContagem,
 } from '@/api/stock'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,527 +28,392 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
-function getItemIcon(name: string, category: string) {
-  const n = (name || '').toLowerCase()
-  const cat = (category || '').toLowerCase()
+import {
+  formatarDataHora,
+  formatarQuantidade,
+  mensagemDoErro,
+} from '../components/formatos-do-estoque'
 
-  if (n.includes('gin') || n.includes('whisky') || n.includes('vodka') || n.includes('destilad')) {
-    return <Wine className="h-5 w-5 text-indigo-500" />
-  }
-  if (n.includes('cerveja') || n.includes('corona') || n.includes('heineken') || n.includes('chopp')) {
-    return <Beer className="h-5 w-5 text-amber-500" />
-  }
-  if (n.includes('red bull') || n.includes('tônica') || n.includes('refrigerante') || n.includes('lata')) {
-    return <Wine className="h-5 w-5 text-sky-500" />
-  }
-  if (n.includes('xarope') || n.includes('monin')) {
-    return <Wine className="h-5 w-5 text-rose-500" />
-  }
-  if (cat.includes('carne') || n.includes('picanha') || n.includes('carne')) {
-    return <Beef className="h-5 w-5 text-rose-500" />
-  }
-  if (cat.includes('horti') || n.includes('tomate')) {
-    return <Apple className="h-5 w-5 text-emerald-500" />
-  }
-  return <Package className="h-5 w-5 text-slate-500" />
+const MOTIVOS_DA_FALTA: { value: MotivoDaContagem; label: string }[] = [
+  { value: 'AJUSTE_NEGATIVO', label: 'Falta na contagem' },
+  { value: 'QUEBRA', label: 'Quebra / avaria' },
+  { value: 'PERDA', label: 'Perda / validade' },
+  { value: 'CONSUMO_INTERNO', label: 'Consumo interno' },
+]
+
+const POR_VEZ = 100
+
+interface TabStockInventoryProps {
+  onFinished?: () => void
 }
 
-export function TabStockInventory() {
+/**
+ * Contagem de estoque (etapa 4, 16/10/2026): só itens de verdade. Antes, sem contagem aberta, a tela mostrava gin, cerveja e
+ * Red Bull de exemplo, dizia "Estoque atualizado" mesmo quando a nuvem recusava e não mandava o motivo escolhido. Agora cada
+ * diferença vai com o motivo e entra no histórico com quem contou.
+ */
+export function TabStockInventory({ onFinished }: TabStockInventoryProps) {
   const queryClient = useQueryClient()
+  const [texto, setTexto] = useState('')
+  const [categoria, setCategoria] = useState('Todas')
+  const [soDiferencas, setSoDiferencas] = useState(false)
+  const [mostrar, setMostrar] = useState(POR_VEZ)
+  const [contagens, setContagens] = useState<Record<string, string>>({})
+  const [motivos, setMotivos] = useState<Record<string, MotivoDaContagem>>({})
 
-  // Filtros
-  const [search, setSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('Todos')
-  const [onlyDivergent, setOnlyDivergent] = useState(false)
-
-  // Estado local das contagens editáveis [itemId -> countedQuantity]
-  const [counts, setCounts] = useState<Record<string, number>>({})
-  const [reasons, setReasons] = useState<Record<string, string>>({})
-
-  // Busca sessão ativa de inventário
-  const { data: sessionData, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['active-inventory-session'],
     queryFn: getActiveInventorySession,
   })
+  const itens: InventoryItemDTO[] = useMemo(() => data?.items ?? [], [data])
 
-  // Itens padrão de demonstração se banco estiver vazio
-  const demoItems: InventoryItemDTO[] = useMemo(
-    () => [
-      {
-        id: 'inv-1',
-        name: 'Gin Tanqueray London Dry 750ml',
-        category: 'Bebidas & Bar • SKU: DST-0941',
-        unit: 'garrafas',
-        systemQuantity: 12,
-        countedQuantity: 10,
-        difference: -2,
-        unitCost: 110.0,
-        totalDiffCost: -220.0,
-        reason: 'Quebra / Avaria (Garrafa quebrou)',
-      },
-      {
-        id: 'inv-2',
-        name: 'Cerveja Corona Extra 330ml',
-        category: 'Cervejas • Prateleira Gelada 01',
-        unit: 'unidades',
-        systemQuantity: 48,
-        countedQuantity: 50,
-        difference: 2,
-        unitCost: 8.5,
-        totalDiffCost: 17.0,
-        reason: 'Apenas ajuste / Sobra física',
-      },
-      {
-        id: 'inv-3',
-        name: 'Red Bull Energy Drink 250ml',
-        category: 'Energéticos • Estoque Seco A2',
-        unit: 'latas',
-        systemQuantity: 36,
-        countedQuantity: 33,
-        difference: -3,
-        unitCost: 9.0,
-        totalDiffCost: -27.0,
-        reason: 'Consumo interno',
-      },
-      {
-        id: 'inv-4',
-        name: 'Whisky Johnnie Walker Red Label 1L',
-        category: 'Destilados • Prateleira Trancada 03',
-        unit: 'garrafas',
-        systemQuantity: 8,
-        countedQuantity: 8,
-        difference: 0,
-        unitCost: 95.0,
-        totalDiffCost: 0,
-      },
-      {
-        id: 'inv-5',
-        name: 'Xarope Monin Grenadine 700ml',
-        category: 'Xaropes & Insumos • Bancada Bar',
-        unit: 'garrafas',
-        systemQuantity: 3,
-        countedQuantity: 3,
-        difference: 0,
-        unitCost: 65.0,
-        totalDiffCost: 0,
-      },
-      {
-        id: 'inv-6',
-        name: 'Água Tônica Antarctica 350ml',
-        category: 'Refrigerantes • Geladeira Subsolo',
-        unit: 'latas',
-        systemQuantity: 72,
-        countedQuantity: 72,
-        difference: 0,
-        unitCost: 4.2,
-        totalDiffCost: 0,
-      },
-      {
-        id: 'inv-7',
-        name: 'Cerveja Heineken Long Neck 330ml',
-        category: 'Cervejas • Câmara Fria 02',
-        unit: 'unidades',
-        systemQuantity: 180,
-        countedQuantity: 180,
-        difference: 0,
-        unitCost: 7.2,
-        totalDiffCost: 0,
-      },
-    ],
-    [],
-  )
-
-  const itemsList: InventoryItemDTO[] = useMemo(() => {
-    if (sessionData?.items && sessionData.items.length > 0) {
-      return sessionData.items
-    }
-    return demoItems
-  }, [sessionData?.items, demoItems])
-
-  // Inicializa o estado local das contagens
   useEffect(() => {
-    if (itemsList.length > 0) {
-      const initialCounts: Record<string, number> = {}
-      const initialReasons: Record<string, string> = {}
-      itemsList.forEach((it) => {
-        initialCounts[it.id] = it.countedQuantity
-        if (it.reason) {
-          initialReasons[it.id] = it.reason
-        } else if (it.difference !== 0) {
-          initialReasons[it.id] =
-            it.difference > 0 ? 'Apenas ajuste / Sobra física' : 'Quebra / Avaria (Garrafa quebrou)'
-        }
-      })
-      setCounts(initialCounts)
-      setReasons(initialReasons)
-    }
-  }, [itemsList])
+    setContagens({})
+    setMotivos({})
+  }, [data?.sessionId])
 
-  // Mutation de Aplicação do Inventário
-  const { mutateAsync: applyInventoryMutation, isPending: isApplying } = useMutation({
+  const lerNumero = (v: string) => Number(v.replace(',', '.'))
+  const contado = (item: InventoryItemDTO) => {
+    const v = contagens[item.id]
+    if (v === undefined) return item.countedQuantity
+    const n = lerNumero(v)
+    return Number.isFinite(n) && n >= 0 ? n : item.countedQuantity
+  }
+  const diferenca = (item: InventoryItemDTO) =>
+    Number((contado(item) - item.systemQuantity).toFixed(6))
+
+  const categorias = useMemo(
+    () =>
+      [...new Set(itens.map((i) => i.category))].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR'),
+      ),
+    [itens],
+  )
+  const comDiferenca = itens.filter((i) => diferenca(i) !== 0)
+
+  const filtrados = itens.filter((i) => {
+    const t = texto.trim().toLowerCase()
+    if (t && !i.name.toLowerCase().includes(t)) return false
+    if (categoria !== 'Todas' && i.category !== categoria) return false
+    if (soDiferencas && diferenca(i) === 0) return false
+    return true
+  })
+
+  const aplicar = useMutation({
     mutationFn: () => {
-      const payloadCounts = itemsList.map((item) => ({
-        itemId: item.id,
-        countedQuantity: counts[item.id] ?? item.systemQuantity,
-      }))
-      const sessionId = sessionData?.sessionId || 'demo-session'
-      return applyInventorySession(sessionId, payloadCounts)
+      if (!data?.sessionId) throw new Error('sem contagem')
+      const mudados = itens.filter(
+        (i) => contagens[i.id] !== undefined || diferenca(i) !== 0,
+      )
+      return applyInventorySession(
+        data.sessionId,
+        mudados.map((i) => ({
+          itemId: i.id,
+          countedQuantity: contado(i),
+          reason:
+            diferenca(i) < 0
+              ? motivos[i.id] ?? 'AJUSTE_NEGATIVO'
+              : diferenca(i) > 0
+                ? 'AJUSTE_POSITIVO'
+                : null,
+        })),
+      )
     },
     onSuccess: (res) => {
-      toast.success(res.message || 'Estoque atualizado com sucesso com base na contagem física!')
+      toast.success(res.message)
       queryClient.invalidateQueries({ queryKey: ['active-inventory-session'] })
       queryClient.invalidateQueries({ queryKey: ['stock-overview'] })
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+      queryClient.invalidateQueries({ queryKey: ['stock-history'] })
+      onFinished?.()
     },
-    onError: () => {
-      // Fallback gracioso se estiver com sessão demo
-      toast.success('Estoque atualizado com sucesso com base na contagem física!')
-      queryClient.invalidateQueries({ queryKey: ['active-inventory-session'] })
-      queryClient.invalidateQueries({ queryKey: ['stock-overview'] })
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+    onError: (err: unknown) => {
+      toast.error(
+        mensagemDoErro(
+          err,
+          'Não foi possível aplicar a contagem. Nada mudou; tente de novo.',
+        ),
+      )
     },
   })
 
-  // Stepper handlers
-  const handleStepCount = (itemId: string, delta: number) => {
-    setCounts((prev) => {
-      const current = prev[itemId] ?? 0
-      const next = Math.max(0, current + delta)
-      return { ...prev, [itemId]: next }
-    })
+  const passo = (item: InventoryItemDTO, delta: number) => {
+    const n = Math.max(0, Number((contado(item) + delta).toFixed(3)))
+    setContagens((c) => ({ ...c, [item.id]: String(n).replace('.', ',') }))
   }
 
-  const handleDirectInputCount = (itemId: string, value: string) => {
-    const num = parseFloat(value)
-    setCounts((prev) => ({
-      ...prev,
-      [itemId]: isNaN(num) ? 0 : Math.max(0, num),
-    }))
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> Abrindo a
+        contagem...
+      </div>
+    )
   }
-
-  // Filtragem
-  const filteredItems = useMemo(() => {
-    return itemsList.filter((item) => {
-      const matchSearch =
-        !search ||
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.category.toLowerCase().includes(search.toLowerCase())
-
-      const matchCategory =
-        selectedCategory === 'Todos' ||
-        item.category.toLowerCase().includes(selectedCategory.toLowerCase())
-
-      const currentCount = counts[item.id] ?? item.countedQuantity
-      const diff = currentCount - item.systemQuantity
-      const isDivergent = diff !== 0
-
-      const matchDivergent = !onlyDivergent || isDivergent
-
-      return matchSearch && matchCategory && matchDivergent
-    })
-  }, [itemsList, search, selectedCategory, onlyDivergent, counts])
-
-  // Contagem de divergências globais
-  const totalDivergencesCount = useMemo(() => {
-    return itemsList.filter((item) => {
-      const c = counts[item.id] ?? item.countedQuantity
-      return c !== item.systemQuantity
-    }).length
-  }, [itemsList, counts])
-
-  const categories = [
-    { label: `Todos (${itemsList.length})`, value: 'Todos' },
-    { label: 'Bar & Bebidas (18)', value: 'Bebidas' },
-    { label: 'Cozinha & Secos (14)', value: 'Secos' },
-  ]
+  if (isError) {
+    return (
+      <div className="flex flex-col items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+        <span className="flex items-center gap-2 font-semibold">
+          <AlertCircle className="h-4 w-4" aria-hidden /> Não foi possível abrir
+          a contagem.
+        </span>
+        <Button variant="outline" className="h-11" onClick={() => refetch()}>
+          Tentar de novo
+        </Button>
+      </div>
+    )
+  }
+  if (!data?.sessionId || itens.length === 0) {
+    return (
+      <div className="rounded-xl border p-8 text-center">
+        <p className="text-base font-semibold">
+          Nenhum produto ou insumo para contar.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cadastre produtos ou insumos em Mercadorias.
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* ─── HEADER DA ABA ─── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50">
-              Contagem de Estoque (Balanço Físico)
-            </h2>
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Sessão de Balanço em Andamento
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Confira as quantidades reais na prateleira para sincronizar com o sistema.
-          </p>
-        </div>
-
-        {/* STATS DE TOPO */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <ClipboardList className="h-4 w-4 text-slate-400" />
-            <span className="text-slate-400">Itens para conferir:</span>
-            <strong className="font-bold text-slate-900 dark:text-white">
-              {itemsList.length}
-            </strong>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50/50 px-3.5 py-2 text-xs shadow-xs dark:border-amber-900/50 dark:bg-amber-950/30">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <span className="text-amber-700 dark:text-amber-400 font-bold">
-              Divergências encontradas:
-            </span>
-            <strong className="font-black text-amber-900 dark:text-amber-200">
-              {totalDivergencesCount} itens
-            </strong>
-          </div>
-        </div>
+    <div className="space-y-5 pb-28">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Contagem de estoque
+        </h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Aberta em{' '}
+          {data.openedAt
+            ? `${formatarDataHora(data.openedAt).data} às ${formatarDataHora(data.openedAt).hora}`
+            : '—'}{' '}
+          · {itens.length.toLocaleString('pt-BR')} itens · digite o que tem na
+          prateleira; o que não mudar fica como está.
+        </p>
       </div>
 
-      {/* ─── FILTROS & BUSCA ─── */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1 max-w-lg">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Buscar insumo na contagem (ex: Gin, Corona, Chopp)..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 rounded-xl pl-10 text-sm"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Chips de Categoria */}
-        <div className="flex flex-wrap items-center gap-2">
-          {categories.map((cat) => {
-            const isSel = selectedCategory === cat.value
-            return (
-              <button
-                key={cat.label}
-                onClick={() => setSelectedCategory(cat.value)}
-                className={cn(
-                  'rounded-xl px-3.5 py-2 text-xs font-bold transition-all',
-                  isSel
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800',
-                )}
-              >
-                {cat.label}
-              </button>
-            )
-          })}
-
-          <button
-            onClick={() => setOnlyDivergent(!onlyDivergent)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all',
-              onlyDivergent
-                ? 'border-rose-500 bg-rose-500 text-white shadow-xs'
-                : 'border-rose-200/80 bg-rose-50/60 text-rose-600 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400',
-            )}
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto] md:items-end">
+        <div className="min-w-0">
+          <label
+            htmlFor="contagem-busca"
+            className="mb-1 block text-sm font-semibold"
           >
-            <span>Apenas com Diferença ({totalDivergencesCount})</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ─── TABELA DE CONTAGEM FÍSICA ─── */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900/70">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-400">
-                <th className="px-6 py-4">Insumo / Mercadoria</th>
-                <th className="px-6 py-4 text-center">No Sistema (Teórico)</th>
-                <th className="px-6 py-4 text-center">Quantidade Real Contada</th>
-                <th className="px-6 py-4 text-center">Diferença</th>
-                <th className="px-6 py-4">Motivo (Opcional)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredItems.map((item) => {
-                const currentCount = counts[item.id] ?? item.systemQuantity
-                const diff = currentCount - item.systemQuantity
-                const isDivergent = diff !== 0
-                const isNegative = diff < 0
-
-                return (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-slate-50/60 transition-colors dark:hover:bg-slate-800/40"
-                  >
-                    {/* INSUMO */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3.5">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/80 shadow-xs">
-                          {getItemIcon(item.name, item.category)}
-                        </div>
-                        <div>
-                          <span className="font-bold text-slate-900 dark:text-white block">
-                            {item.name}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {item.category}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* NO SISTEMA (TEÓRICO) */}
-                    <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">
-                      {item.systemQuantity} {item.unit}
-                    </td>
-
-                    {/* QUANTIDADE REAL CONTADA (STEPPER) */}
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex flex-col items-center">
-                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 dark:border-slate-700 dark:bg-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => handleStepCount(item.id, -1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-slate-600 shadow-xs hover:bg-slate-100 active:scale-95 transition-all dark:bg-slate-700 dark:text-slate-200"
-                          >
-                            <Minus className="h-3.5 w-3.5 stroke-[3]" />
-                          </button>
-
-                          <input
-                            type="number"
-                            step="any"
-                            value={currentCount}
-                            onChange={(e) => handleDirectInputCount(item.id, e.target.value)}
-                            className="w-14 bg-transparent text-center font-black text-base text-slate-900 focus:outline-none dark:text-white"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => handleStepCount(item.id, 1)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-slate-600 shadow-xs hover:bg-slate-100 active:scale-95 transition-all dark:bg-slate-700 dark:text-slate-200"
-                          >
-                            <Plus className="h-3.5 w-3.5 stroke-[3]" />
-                          </button>
-                        </div>
-                        <span className="text-[10px] font-semibold text-slate-400 mt-1">
-                          {item.unit}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* DIFERENÇA */}
-                    <td className="px-6 py-4 text-center">
-                      {diff === 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                          <Check className="h-3.5 w-3.5 text-slate-500" />
-                          Correto
-                        </span>
-                      ) : isNegative ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-600 dark:bg-rose-950/40 dark:border-rose-900/50">
-                          ↓ {diff} {item.unit}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900/50">
-                          ↑ +{diff} {item.unit}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* MOTIVO (OPCIONAL) */}
-                    <td className="px-6 py-4">
-                      {isDivergent ? (
-                        <Select
-                          value={reasons[item.id] || (isNegative ? 'Quebra / Avaria (Garrafa quebrou)' : 'Apenas ajuste / Sobra física')}
-                          onValueChange={(val) =>
-                            setReasons((prev) => ({ ...prev, [item.id]: val }))
-                          }
-                        >
-                          <SelectTrigger className="h-10 w-full max-w-[260px] rounded-xl text-xs font-medium">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Quebra / Avaria (Garrafa quebrou)">
-                              Quebra / Avaria (Garrafa quebrou)
-                            </SelectItem>
-                            <SelectItem value="Apenas ajuste / Sobra física">
-                              Apenas ajuste / Sobra física
-                            </SelectItem>
-                            <SelectItem value="Consumo interno">
-                              Consumo interno
-                            </SelectItem>
-                            <SelectItem value="Validade vencida">
-                              Validade vencida
-                            </SelectItem>
-                            <SelectItem value="Descarte Cozinha">
-                              Descarte Cozinha
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">
-                          — Sem divergência —
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ─── STICKY BOTTOM BAR ─── */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 px-6 py-4 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 lg:pl-[280px]">
-        <div className="mx-auto flex max-w-[1700px] flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
-              Mostrando <strong className="text-slate-900 dark:text-white">{filteredItems.length}</strong> de{' '}
-              <strong className="text-slate-900 dark:text-white">{itemsList.length}</strong> itens
-            </span>
-            {totalDivergencesCount > 0 && (
-              <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600 border border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300">
-                <span className="h-2 w-2 rounded-full bg-rose-500" />
-                {totalDivergencesCount} divergências prontas para ajuste
-              </span>
+            Procurar
+          </label>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              id="contagem-busca"
+              value={texto}
+              onChange={(e) => {
+                setTexto(e.target.value)
+                setMostrar(POR_VEZ)
+              }}
+              className="h-11 pl-9 pr-10 text-base"
+              placeholder="Nome do item"
+            />
+            {texto && (
+              <button
+                type="button"
+                onClick={() => setTexto('')}
+                className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                aria-label="Limpar a procura"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
             )}
           </div>
+        </div>
+        <div>
+          <label
+            htmlFor="contagem-categoria"
+            className="mb-1 block text-sm font-semibold"
+          >
+            Categoria
+          </label>
+          <Select
+            value={categoria}
+            onValueChange={(v) => {
+              setCategoria(v)
+              setMostrar(POR_VEZ)
+            }}
+          >
+            <SelectTrigger id="contagem-categoria" className="h-11 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todas">Todas</SelectItem>
+              {categorias.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <button
+          type="button"
+          aria-pressed={soDiferencas}
+          onClick={() => setSoDiferencas(!soDiferencas)}
+          className={cn(
+            'min-h-11 rounded-lg border px-4 text-sm font-semibold transition-colors',
+            soDiferencas
+              ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
+              : 'bg-background hover:bg-muted',
+          )}
+        >
+          Só com diferença ({comDiferenca.length})
+        </button>
+      </div>
 
-          <div className="flex items-center gap-3">
+      <ul className="divide-y rounded-xl border">
+        {filtrados.slice(0, mostrar).map((item) => {
+          const d = diferenca(item)
+          return (
+            <li
+              key={item.id}
+              className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_9rem_13rem_10rem_13rem] md:items-center"
+            >
+              <div className="min-w-0">
+                <p className="break-words font-semibold">{item.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.type === 'SUPPLY' ? 'Insumo' : 'Produto'} ·{' '}
+                  {item.category}
+                </p>
+              </div>
+              <div className="text-sm md:text-right">
+                <span className="text-muted-foreground">No sistema </span>
+                <strong>
+                  {formatarQuantidade(item.systemQuantity, item.unit)}
+                </strong>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-11 shrink-0 p-0"
+                  onClick={() => passo(item, -1)}
+                  aria-label={`Menos 1 ${item.unit}`}
+                >
+                  <Minus className="h-4 w-4" aria-hidden />
+                </Button>
+                <Input
+                  inputMode="decimal"
+                  aria-label={`Contado de ${item.name}`}
+                  value={
+                    contagens[item.id] ??
+                    String(item.countedQuantity).replace('.', ',')
+                  }
+                  onChange={(e) =>
+                    setContagens((c) => ({ ...c, [item.id]: e.target.value }))
+                  }
+                  className="h-11 min-w-0 text-center text-base font-bold"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-11 shrink-0 p-0"
+                  onClick={() => passo(item, 1)}
+                  aria-label={`Mais 1 ${item.unit}`}
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                </Button>
+              </div>
+              <div className="text-sm font-semibold md:text-right">
+                {d === 0 ? (
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <Check className="h-4 w-4" aria-hidden /> Confere
+                  </span>
+                ) : d < 0 ? (
+                  <span className="text-rose-700 dark:text-rose-400">
+                    Falta {formatarQuantidade(Math.abs(d), item.unit)}
+                  </span>
+                ) : (
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    Sobra {formatarQuantidade(d, item.unit)}
+                  </span>
+                )}
+              </div>
+              <div>
+                {d < 0 && (
+                  <Select
+                    value={motivos[item.id] ?? 'AJUSTE_NEGATIVO'}
+                    onValueChange={(v) =>
+                      setMotivos((m) => ({
+                        ...m,
+                        [item.id]: v as MotivoDaContagem,
+                      }))
+                    }
+                  >
+                    <SelectTrigger
+                      className="h-11"
+                      aria-label={`Motivo da falta de ${item.name}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOTIVOS_DA_FALTA.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </li>
+          )
+        })}
+        {filtrados.length === 0 && (
+          <li className="p-6 text-center text-sm text-muted-foreground">
+            Nenhum item com este filtro.
+          </li>
+        )}
+      </ul>
+      {filtrados.length > mostrar && (
+        <Button
+          variant="outline"
+          className="h-11 w-full"
+          onClick={() => setMostrar((m) => m + POR_VEZ)}
+        >
+          Mostrar mais {Math.min(POR_VEZ, filtrados.length - mostrar)} de{' '}
+          {filtrados.length - mostrar}
+        </Button>
+      )}
+
+      {/* Barra fixa: uma ação principal */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xl backdrop-blur lg:pl-[280px]">
+        <div className="mx-auto flex max-w-[1700px] flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm font-semibold">
+            {comDiferenca.length === 0
+              ? 'Nenhuma diferença ainda.'
+              : `${comDiferenca.length} item(ns) com diferença`}
+          </span>
+          <div className="flex gap-2">
             <Button
               variant="outline"
+              className="h-11"
               onClick={() => {
-                // Reseta as contagens para o teórico do sistema
-                const resetCounts: Record<string, number> = {}
-                itemsList.forEach((it) => {
-                  resetCounts[it.id] = it.systemQuantity
-                })
-                setCounts(resetCounts)
-                toast.info('Contagem resetada para os saldos teóricos.')
+                setContagens({})
+                setMotivos({})
               }}
-              className="h-11 rounded-xl font-bold px-5"
+              disabled={aplicar.isPending}
             >
-              Cancelar
+              Desfazer o digitado
             </Button>
-
             <Button
-              onClick={() => applyInventoryMutation()}
-              disabled={isApplying}
-              className="h-11 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 shadow-md shadow-emerald-600/20"
+              className="h-11 flex-1 bg-emerald-600 font-bold text-white hover:bg-emerald-700 sm:flex-none"
+              onClick={() => aplicar.mutate()}
+              disabled={aplicar.isPending}
             >
-              {isApplying ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Atualizando Estoque...</span>
-                </>
+              {aplicar.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
-                <>
-                  <Check className="h-4 w-4 stroke-[3]" />
-                  <span>Atualizar Estoque com Esta Contagem</span>
-                </>
+                <Check className="h-4 w-4" aria-hidden />
               )}
+              {aplicar.isPending ? 'Aplicando...' : 'Aplicar a contagem'}
             </Button>
           </div>
         </div>

@@ -1,13 +1,12 @@
-import React from 'react'
+import {
+  ClipboardList,
+  FileText,
+  History,
+  LineChart,
+  Package,
+} from 'lucide-react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
-import {
-  Package,
-  FileText,
-  LineChart,
-  ClipboardList,
-  History,
-} from 'lucide-react'
 
 import { PageHeader } from '@/components/page-header'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/custom-tabs'
@@ -36,13 +35,21 @@ export function StockDashboard() {
     setSearchParams({ tab })
   }
 
+  // Histórico de um produto ou insumo (botão "Histórico" da Posição de Estoque): /stock?tab=history&item=<id>
+  const itemDoHistorico = searchParams.get('item')
+  const abrirHistorico = (itemId: string | null) => {
+    setSearchParams(
+      itemId ? { tab: 'history', item: itemId } : { tab: 'history' },
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3.5">
       <Helmet title="Controle de Estoque" />
 
       <PageHeader
         title="Controle de Estoque"
-        description="Gerencie posições de estoque, entradas de NF-e, fichas técnicas, inventário e histórico de movimentações."
+        description="Saldo de cada produto e insumo, entradas por NF-e, fichas técnicas, contagem e o histórico de cada movimento."
       />
 
       <Tabs
@@ -50,26 +57,45 @@ export function StockDashboard() {
         onValueChange={(val) => setTab(val as StockTabId)}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-2 gap-1 rounded-xl p-1 h-auto sm:h-10 sm:grid-cols-5 bg-slate-100 dark:bg-slate-800/80">
-          <TabsTrigger value="position" className="rounded-xl font-bold">
-            <Package className="mr-2 h-4 w-4 text-emerald-500" />
-            1. Posição de Estoque
+        {/* Nomes curtos que cabem no celular de 320 px (antes "Posição de Estoque" e "Entrada de Mercadorias" se sobrepunham) */}
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
+          <TabsTrigger
+            value="position"
+            className="min-h-11 flex-1 rounded-xl font-bold"
+          >
+            <Package className="mr-2 h-4 w-4 text-emerald-500" aria-hidden />
+            Posição
           </TabsTrigger>
-          <TabsTrigger value="intake" className="rounded-xl font-bold">
-            <FileText className="mr-2 h-4 w-4 text-blue-500" />
-            2. Entrada de Mercadorias
+          <TabsTrigger
+            value="intake"
+            className="min-h-11 flex-1 rounded-xl font-bold"
+          >
+            <FileText className="mr-2 h-4 w-4 text-blue-500" aria-hidden />
+            Entrada de NF-e
           </TabsTrigger>
-          <TabsTrigger value="recipe" className="rounded-xl font-bold">
-            <LineChart className="mr-2 h-4 w-4 text-purple-500" />
-            3. Ficha Técnica
+          <TabsTrigger
+            value="recipe"
+            className="min-h-11 flex-1 rounded-xl font-bold"
+          >
+            <LineChart className="mr-2 h-4 w-4 text-purple-500" aria-hidden />
+            Ficha técnica
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="rounded-xl font-bold">
-            <ClipboardList className="mr-2 h-4 w-4 text-amber-500" />
-            4. Inventário
+          <TabsTrigger
+            value="inventory"
+            className="min-h-11 flex-1 rounded-xl font-bold"
+          >
+            <ClipboardList
+              className="mr-2 h-4 w-4 text-amber-500"
+              aria-hidden
+            />
+            Inventário
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl font-bold">
-            <History className="mr-2 h-4 w-4 text-slate-500" />
-            5. Histórico / Extrato
+          <TabsTrigger
+            value="history"
+            className="min-h-11 flex-1 rounded-xl font-bold"
+          >
+            <History className="mr-2 h-4 w-4 text-slate-500" aria-hidden />
+            Histórico
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -78,8 +104,7 @@ export function StockDashboard() {
       <div className="pt-1">
         {currentTab === 'position' && (
           <TabStockPosition
-            onNavigateToIntake={() => setTab('intake')}
-            onNavigateToRecipe={() => setTab('recipe')}
+            onOpenHistory={(itemId) => abrirHistorico(itemId)}
           />
         )}
         {currentTab === 'intake' && <TabStockIntake />}
@@ -87,8 +112,11 @@ export function StockDashboard() {
         {currentTab === 'inventory' && (
           <TabStockInventory onFinished={() => setTab('history')} />
         )}
-        {(currentTab === 'history' || currentTab === 'movements') && (
-          <TabStockMovements />
+        {currentTab === 'history' && (
+          <TabStockMovements
+            itemId={itemDoHistorico}
+            onItemChange={abrirHistorico}
+          />
         )}
       </div>
     </div>

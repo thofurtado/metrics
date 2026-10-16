@@ -1,40 +1,41 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Search,
-  Plus,
-  SlidersHorizontal,
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
+import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Beef,
-  Beer,
-  Apple,
-  Package,
-  Wine,
-  UtensilsCrossed,
-  CheckCircle2,
+  History,
   Loader2,
+  Plus,
+  Search,
+  SlidersHorizontal,
   X,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
-  getStockOverview,
   adjustStockBalance,
+  type AdjustStockPayload,
   createStockSupply,
-  StockOverviewItem,
+  getStockOverview,
+  type StockOverviewItem,
 } from '@/api/stock'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -42,635 +43,610 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
-// Helper de ícone por categoria
-function getCategoryIcon(category: string, name: string) {
-  const cat = (category || '').toLowerCase()
-  const n = (name || '').toLowerCase()
+import {
+  formatarDataHora,
+  formatarQuantidade,
+  mensagemDoErro,
+} from '../components/formatos-do-estoque'
 
-  if (cat.includes('carne') || cat.includes('açougue') || n.includes('picanha') || n.includes('carne') || n.includes('burger')) {
-    return <Beef className="h-5 w-5 text-rose-500" />
-  }
-  if (cat.includes('bebida') || cat.includes('cerveja') || n.includes('heineken') || n.includes('corona') || n.includes('chopp')) {
-    return <Beer className="h-5 w-5 text-amber-500" />
-  }
-  if (cat.includes('destilado') || cat.includes('bar') || n.includes('gin') || n.includes('whisky') || n.includes('vodka')) {
-    return <Wine className="h-5 w-5 text-indigo-500" />
-  }
-  if (cat.includes('horti') || cat.includes('frut') || n.includes('tomate') || n.includes('cebola') || n.includes('limão')) {
-    return <Apple className="h-5 w-5 text-emerald-500" />
-  }
-  if (cat.includes('embalag') || cat.includes('descart') || n.includes('caixa') || n.includes('copo')) {
-    return <Package className="h-5 w-5 text-sky-500" />
-  }
-  return <UtensilsCrossed className="h-5 w-5 text-slate-500" />
+const SITUACAO: Record<
+  StockOverviewItem['situation'],
+  { rotulo: string; classe: string }
+> = {
+  CRITICAL: {
+    rotulo: 'Zerado ou negativo',
+    classe:
+      'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200',
+  },
+  WARNING: {
+    rotulo: 'Abaixo do mínimo',
+    classe:
+      'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200',
+  },
+  NORMAL: {
+    rotulo: 'Normal',
+    classe:
+      'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
+  },
 }
 
-export function TabStockPosition() {
+const MOTIVOS = [
+  {
+    value: 'AJUSTE_POSITIVO',
+    label: 'Ajuste (contei e o saldo estava errado)',
+  },
+  { value: 'QUEBRA', label: 'Quebra / avaria (só diminui)' },
+  { value: 'PERDA', label: 'Perda / descarte (só diminui)' },
+  { value: 'CONSUMO_INTERNO', label: 'Consumo interno (só diminui)' },
+] as const
+
+interface TabStockPositionProps {
+  onOpenHistory?: (itemId: string) => void
+}
+
+/**
+ * Posição de Estoque (etapa 4, 16/10/2026): o saldo de cada produto (sem ficha técnica) e de cada insumo. Antes o estoque mínimo
+ * era inventado pela unidade e as categorias eram uma lista fixa de exemplo; agora o mínimo é o do cadastro do produto e as
+ * categorias são as que existem. Produto com ficha técnica não aparece: quem baixa nele são os insumos (D8).
+ */
+export function TabStockPosition({ onOpenHistory }: TabStockPositionProps) {
   const queryClient = useQueryClient()
 
-  // Filtros
-  const [search, setSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('Todos')
-  const [onlyLowStock, setOnlyLowStock] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [texto, setTexto] = useState('')
+  const [busca, setBusca] = useState('')
+  const [categoria, setCategoria] = useState('Todas')
+  const [soAvisos, setSoAvisos] = useState(false)
+  const [pagina, setPagina] = useState(1)
+  const POR_PAGINA = 50
 
-  // Modals
-  const [adjustModalItem, setAdjustModalItem] = useState<StockOverviewItem | null>(null)
-  const [newStockValue, setNewStockValue] = useState('')
-  const [adjustReason, setAdjustReason] = useState('AJUSTE_POSITIVO')
-  const [adjustNotes, setAdjustNotes] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBusca(texto.trim())
+      setPagina(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [texto])
 
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newCategory, setNewCategory] = useState('Bebidas')
-  const [newUnit, setNewUnit] = useState('UN')
-  const [newCost, setNewCost] = useState('')
-  const [newInitialStock, setNewInitialStock] = useState('')
+  // Ajuste
+  const [itemDoAjuste, setItemDoAjuste] = useState<StockOverviewItem | null>(
+    null,
+  )
+  const [novoSaldo, setNovoSaldo] = useState('')
+  const [motivo, setMotivo] = useState<string>('AJUSTE_POSITIVO')
+  const [observacao, setObservacao] = useState('')
 
-  // Query Principal
-  const { data, isLoading } = useQuery({
-    queryKey: ['stock-overview', search, selectedCategory, onlyLowStock],
+  // Novo insumo
+  const [criando, setCriando] = useState(false)
+  const [nome, setNome] = useState('')
+  const [categoriaNova, setCategoriaNova] = useState('Geral')
+  const [unidade, setUnidade] = useState('UN')
+  const [custo, setCusto] = useState('')
+  const [saldoInicial, setSaldoInicial] = useState('')
+
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ['stock-overview', busca, categoria, soAvisos, pagina],
     queryFn: () =>
       getStockOverview({
-        query: search,
-        category: selectedCategory === 'Todos' ? undefined : selectedCategory,
-        onlyLowStock,
+        query: busca || undefined,
+        category: categoria === 'Todas' ? undefined : categoria,
+        onlyLowStock: soAvisos,
+        page: pagina,
+        perPage: POR_PAGINA,
       }),
-    refetchInterval: 30000,
+    placeholderData: keepPreviousData,
+    refetchInterval: 60000,
   })
 
-  // Mutation de Ajuste de Saldo
-  const { mutateAsync: adjustBalanceMutation, isPending: isAdjusting } = useMutation({
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: ['stock-overview'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-history'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-recipe-consumption'] })
+  }
+
+  const ajuste = useMutation({
     mutationFn: adjustStockBalance,
     onSuccess: (res) => {
-      toast.success(res.message || 'Saldo atualizado com sucesso!')
-      queryClient.invalidateQueries({ queryKey: ['stock-overview'] })
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
-      queryClient.invalidateQueries({ queryKey: ['stock-recipe-consumption'] })
-      setAdjustModalItem(null)
-      setNewStockValue('')
-      setAdjustNotes('')
+      toast.success(res.message || 'Saldo ajustado.')
+      invalidar()
+      setItemDoAjuste(null)
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Erro ao ajustar saldo de estoque.')
+    onError: (err: unknown) => {
+      toast.error(
+        mensagemDoErro(err, 'Não foi possível ajustar o saldo. Tente de novo.'),
+      )
     },
   })
 
-  // Mutation de Criação de Insumo
-  const { mutateAsync: createSupplyMutation, isPending: isCreating } = useMutation({
+  const criacao = useMutation({
     mutationFn: createStockSupply,
     onSuccess: () => {
-      toast.success('Novo insumo cadastrado com sucesso!')
-      queryClient.invalidateQueries({ queryKey: ['stock-overview'] })
-      setCreateModalOpen(false)
-      setNewName('')
-      setNewCost('')
-      setNewInitialStock('')
+      toast.success('Insumo cadastrado.')
+      invalidar()
+      setCriando(false)
+      setNome('')
+      setCusto('')
+      setSaldoInicial('')
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Erro ao cadastrar insumo.')
+    onError: (err: unknown) => {
+      toast.error(
+        mensagemDoErro(
+          err,
+          'Não foi possível cadastrar o insumo. Tente de novo.',
+        ),
+      )
     },
   })
 
-  // Handlers
-  const handleOpenAdjust = (item: StockOverviewItem) => {
-    setAdjustModalItem(item)
-    setNewStockValue(item.currentStock.toString())
-    setAdjustReason(item.situation !== 'NORMAL' ? 'AJUSTE_POSITIVO' : 'QUEBRA')
-    setAdjustNotes('')
+  const lerNumero = (v: string) => Number(v.replace(',', '.'))
+
+  const abrirAjuste = (item: StockOverviewItem) => {
+    setItemDoAjuste(item)
+    setNovoSaldo(String(item.currentStock).replace('.', ','))
+    setMotivo('AJUSTE_POSITIVO')
+    setObservacao('')
   }
 
-  const handleConfirmAdjust = async () => {
-    if (!adjustModalItem) return
-    const num = parseFloat(newStockValue)
-    if (isNaN(num) || num < 0) {
-      toast.error('Informe uma quantidade válida.')
+  const confirmarAjuste = () => {
+    if (!itemDoAjuste) return
+    const n = lerNumero(novoSaldo)
+    if (!Number.isFinite(n) || n < 0) {
+      toast.error('Digite o saldo contado (zero ou mais).')
       return
     }
-
-    await adjustBalanceMutation({
-      targetId: adjustModalItem.id,
-      targetType: adjustModalItem.type,
-      newStock: num,
-      reason: adjustReason as any,
-      notes: adjustNotes,
+    ajuste.mutate({
+      targetId: itemDoAjuste.id,
+      targetType: itemDoAjuste.type,
+      newStock: n,
+      reason: motivo as AdjustStockPayload['reason'],
+      notes: observacao.trim() || undefined,
     })
   }
 
-  const handleConfirmCreate = async () => {
-    if (!newName.trim()) {
-      toast.error('Nome do insumo é obrigatório.')
+  const confirmarCriacao = () => {
+    if (nome.trim().length < 2) {
+      toast.error('Digite o nome do insumo.')
       return
     }
-    await createSupplyMutation({
-      name: newName.trim(),
-      category: newCategory,
-      unit: newUnit,
-      cost: parseFloat(newCost) || 0,
-      initialStock: parseFloat(newInitialStock) || 0,
+    criacao.mutate({
+      name: nome.trim(),
+      category: categoriaNova,
+      unit: unidade,
+      cost: lerNumero(custo) || 0,
+      initialStock: lerNumero(saldoInicial) || 0,
     })
   }
 
-  const items = data?.items || []
-  const summary = data?.summary || { totalCount: 0, lowStockCount: 0, normalCount: 0 }
-
-  // Paginação local
-  const totalPages = Math.ceil(items.length / itemsPerPage) || 1
-  const paginatedItems = items.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  )
-
-  const categories = [
-    'Todos',
-    'Bebidas',
-    'Carnes',
-    'Hortifrúti',
-    'Secos & Laticínios',
-  ]
+  const itens = data?.items ?? []
+  const resumo = data?.summary
+  const categorias = data?.categories ?? []
 
   return (
-    <div className="space-y-6">
-      {/* ─── HEADER DA ABA ─── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50">
-              Estoque Atual
-            </h2>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-slate-100 px-3 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                Total: {summary.totalCount} insumos
-              </span>
-              {summary.lowStockCount > 0 && (
-                <span className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-0.5 text-xs font-bold text-rose-600 border border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/50">
-                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                  {summary.lowStockCount} itens acabando
-                </span>
-              )}
-            </div>
-          </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Acompanhe seus insumos em tempo real e identifique prontamente o que precisa de reposição antes do próximo turno.
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold tracking-tight">Estoque atual</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {resumo
+              ? `${resumo.totalCount.toLocaleString('pt-BR')} itens com saldo próprio · ${resumo.lowStockCount.toLocaleString('pt-BR')} zerados ou abaixo do mínimo`
+              : 'Saldo de cada produto e insumo.'}
           </p>
         </div>
-
         <Button
-          onClick={() => setCreateModalOpen(true)}
-          className="h-11 gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all self-start sm:self-auto"
+          className="h-11 gap-2 self-start bg-emerald-600 font-bold text-white hover:bg-emerald-700 sm:self-auto"
+          onClick={() => setCriando(true)}
         >
-          <Plus className="h-4 w-4 stroke-[3]" />
-          <span>Novo Insumo</span>
+          <Plus className="h-4 w-4" aria-hidden />
+          Novo insumo
         </Button>
       </div>
 
-      {/* ─── BARRA DE BUSCA E CHIPS DE FILTRO ─── */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1 max-w-lg">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Buscar insumo por nome, SKU ou código de barras..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="h-11 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-xs focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20 dark:border-slate-800 dark:bg-slate-900/80"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          {categories.map((cat) => {
-            const isSelected = selectedCategory === cat
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(cat)
-                  setCurrentPage(1)
-                }}
-                className={cn(
-                  'rounded-xl px-3.5 py-2 text-xs font-bold transition-all',
-                  isSelected
-                    ? 'bg-slate-900 text-white shadow-xs dark:bg-white dark:text-slate-900'
-                    : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800',
-                )}
-              >
-                {cat}
-              </button>
-            )
-          })}
-
-          <button
-            type="button"
-            onClick={() => {
-              setOnlyLowStock(!onlyLowStock)
-              setCurrentPage(1)
-            }}
-            className={cn(
-              'flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all',
-              onlyLowStock
-                ? 'border-rose-500 bg-rose-500 text-white shadow-xs'
-                : 'border-rose-200/80 bg-rose-50/50 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400',
-            )}
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto] md:items-end">
+        <div className="min-w-0">
+          <label
+            htmlFor="posicao-busca"
+            className="mb-1 block text-sm font-semibold"
           >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Apenas Acabando</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ─── TABELA DE ESTOQUE ATUAL ─── */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900/70">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-400">
-                <th className="px-6 py-4">Insumo</th>
-                <th className="px-6 py-4 text-center">Estoque Atual</th>
-                <th className="px-6 py-4 text-center">Estoque Mínimo</th>
-                <th className="px-6 py-4 text-center">Situação</th>
-                <th className="px-6 py-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-emerald-500" />
-                    <span className="mt-2 block text-xs font-medium">Carregando saldo de estoque...</span>
-                  </td>
-                </tr>
-              ) : paginatedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
-                    Nenhum insumo encontrado para os filtros selecionados.
-                  </td>
-                </tr>
-              ) : (
-                paginatedItems.map((item) => {
-                  const isLow = item.situation !== 'NORMAL'
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className="group transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
-                    >
-                      {/* INSUMO */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3.5">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/80 shadow-xs">
-                            {getCategoryIcon(item.category, item.name)}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
-                              <span>{item.category}</span>
-                              <span>•</span>
-                              <span>
-                                {item.batchNumber ? `Lote #${item.batchNumber}` : 'Estoque Geral'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* ESTOQUE ATUAL */}
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={cn(
-                            'text-lg font-black tracking-tight',
-                            isLow
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-slate-900 dark:text-slate-100',
-                          )}
-                        >
-                          {item.currentStock.toLocaleString('pt-BR', {
-                            minimumFractionDigits: item.unit.toLowerCase() === 'kg' ? 1 : 0,
-                            maximumFractionDigits: 2,
-                          })}{' '}
-                          <span className="text-xs font-semibold lowercase tracking-normal">
-                            {item.unit}
-                          </span>
-                        </span>
-                      </td>
-
-                      {/* ESTOQUE MÍNIMO */}
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                          Mín: {item.minStock} {item.unit}
-                        </span>
-                      </td>
-
-                      {/* SITUAÇÃO */}
-                      <td className="px-6 py-4 text-center">
-                        {isLow ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/80 px-3 py-1 text-xs font-bold text-rose-700 dark:bg-rose-950/40 dark:border-rose-900/50 dark:text-rose-300">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                            Acabando
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Normal
-                          </span>
-                        )}
-                      </td>
-
-                      {/* AÇÕES */}
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenAdjust(item)}
-                          className="h-9 gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                        >
-                          <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
-                          <span>Ajustar Saldo</span>
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ─── RODAPÉ COM PAGINAÇÃO ─── */}
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 sm:flex-row dark:border-slate-800">
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Mostrando <strong className="text-slate-900 dark:text-white">{paginatedItems.length}</strong> de{' '}
-            <strong className="text-slate-900 dark:text-white">{items.length}</strong> insumos
-          </span>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="h-8 gap-1 text-xs rounded-lg font-bold"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span>Anterior</span>
-            </Button>
-
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 px-2">
-              Página {currentPage} de {totalPages}
-            </span>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="h-8 gap-1 text-xs rounded-lg font-bold"
-            >
-              <span>Próxima</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+            Procurar
+          </label>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              id="posicao-busca"
+              placeholder="Nome, código ou código de barras"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              className="h-11 pl-9 pr-10 text-base"
+            />
+            {texto && (
+              <button
+                type="button"
+                onClick={() => setTexto('')}
+                className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                aria-label="Limpar a procura"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            )}
           </div>
         </div>
+        <div>
+          <label
+            htmlFor="posicao-categoria"
+            className="mb-1 block text-sm font-semibold"
+          >
+            Categoria
+          </label>
+          <Select
+            value={categoria}
+            onValueChange={(v) => {
+              setCategoria(v)
+              setPagina(1)
+            }}
+          >
+            <SelectTrigger id="posicao-categoria" className="h-11 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todas">Todas</SelectItem>
+              {categorias.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <button
+          type="button"
+          aria-pressed={soAvisos}
+          onClick={() => {
+            setSoAvisos(!soAvisos)
+            setPagina(1)
+          }}
+          className={cn(
+            'flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors',
+            soAvisos
+              ? 'border-rose-600 bg-rose-600 text-white'
+              : 'bg-background hover:bg-muted',
+          )}
+        >
+          <AlertTriangle className="h-4 w-4" aria-hidden />
+          Só zerados ou abaixo do mínimo
+        </button>
       </div>
 
-      {/* ─── MODAL DE AJUSTE RÁPIDO DE SALDO ─── */}
-      <Dialog open={!!adjustModalItem} onOpenChange={(open) => !open && setAdjustModalItem(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 dark:text-white">
-              Ajustar Saldo em Estoque
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Atualize a quantidade física real deste item e registre a justificativa para auditoria.
+      {isLoading ? (
+        <div className="flex items-center gap-2 rounded-xl border p-8 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> Carregando o
+          saldo...
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+          <span className="font-semibold">
+            Não foi possível carregar o estoque.
+          </span>
+          <Button variant="outline" className="h-11" onClick={() => refetch()}>
+            Tentar de novo
+          </Button>
+        </div>
+      ) : itens.length === 0 ? (
+        <div className="rounded-xl border p-8 text-center">
+          <p className="text-base font-semibold">
+            {busca || categoria !== 'Todas' || soAvisos
+              ? 'Nenhum item com este filtro.'
+              : 'Nenhum produto ou insumo com saldo próprio.'}
+          </p>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'overflow-hidden rounded-xl border',
+            isFetching && 'opacity-70',
+          )}
+        >
+          <ul className="divide-y">
+            {itens.map((item) => {
+              const s = SITUACAO[item.situation]
+              return (
+                <li
+                  key={`${item.type}-${item.id}`}
+                  className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_9rem_8rem_11rem_auto] md:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.type === 'SUPPLY'
+                        ? 'Insumo'
+                        : `Produto${item.code !== null ? ` · código ${item.code}` : ''}`}{' '}
+                      · {item.category}
+                      {item.lastMovement
+                        ? ` · último movimento ${formatarDataHora(item.lastMovement).data}`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="md:text-right">
+                    <span className="text-sm text-muted-foreground md:hidden">
+                      Saldo:{' '}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-lg font-black',
+                        item.situation === 'CRITICAL' &&
+                          'text-rose-700 dark:text-rose-400',
+                      )}
+                    >
+                      {formatarQuantidade(item.currentStock, item.unit)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted-foreground md:text-right">
+                    Mínimo{' '}
+                    {item.minStock !== null
+                      ? formatarQuantidade(item.minStock, item.unit)
+                      : '—'}
+                  </div>
+                  <div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full border px-2.5 py-1 text-sm font-semibold',
+                        s.classe,
+                      )}
+                    >
+                      {s.rotulo}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    {onOpenHistory && (
+                      <Button
+                        variant="outline"
+                        className="h-11 gap-1.5"
+                        onClick={() => onOpenHistory(item.id)}
+                      >
+                        <History className="h-4 w-4" aria-hidden />
+                        Histórico
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="h-11 gap-1.5"
+                      onClick={() => abrirAjuste(item)}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                      Ajustar
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          {resumo && (
+            <div className="flex flex-col items-center justify-between gap-3 border-t px-4 py-3 sm:flex-row">
+              <span className="text-sm text-muted-foreground">
+                {resumo.filteredCount.toLocaleString('pt-BR')} itens · página{' '}
+                {resumo.page} de {resumo.totalPages}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={pagina <= 1}
+                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden /> Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={pagina >= resumo.totalPages}
+                  onClick={() => setPagina((p) => p + 1)}
+                >
+                  Próxima <ChevronRight className="h-4 w-4" aria-hidden />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ajuste de saldo */}
+      <Dialog
+        open={!!itemDoAjuste}
+        onOpenChange={(aberto) => !aberto && setItemDoAjuste(null)}
+      >
+        <DialogContent className="md:max-w-md">
+          <DialogHeader className="px-5 pt-5 md:px-6">
+            <DialogTitle>Ajustar saldo</DialogTitle>
+            <DialogDescription>
+              O ajuste entra no histórico com o seu nome e o motivo.
             </DialogDescription>
           </DialogHeader>
-
-          {adjustModalItem && (
-            <div className="space-y-4 py-2">
-              <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200/80 dark:bg-slate-900/60 dark:border-slate-800">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Item Selecionado</span>
-                <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                  {adjustModalItem.name}
-                </p>
-                <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                  <span>Saldo Teórico Atual:</span>
-                  <strong className="text-slate-800 dark:text-slate-200">
-                    {adjustModalItem.currentStock} {adjustModalItem.unit}
+          {itemDoAjuste && (
+            <div className="space-y-4 px-5 py-4 md:px-6">
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <p className="break-words font-semibold">{itemDoAjuste.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Saldo no sistema:{' '}
+                  <strong className="text-foreground">
+                    {formatarQuantidade(
+                      itemDoAjuste.currentStock,
+                      itemDoAjuste.unit,
+                    )}
                   </strong>
-                </div>
+                </p>
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Novo Saldo Real ({adjustModalItem.unit})
+                <Label htmlFor="ajuste-saldo" className="text-sm font-semibold">
+                  Saldo contado ({itemDoAjuste.unit})
                 </Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newStockValue}
-                    onChange={(e) => setNewStockValue(e.target.value)}
-                    className="h-12 text-lg font-black rounded-xl pr-14"
-                    autoFocus
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                    {adjustModalItem.unit}
-                  </span>
-                </div>
+                <Input
+                  id="ajuste-saldo"
+                  inputMode="decimal"
+                  value={novoSaldo}
+                  onChange={(e) => setNovoSaldo(e.target.value)}
+                  className="h-11 text-lg font-bold"
+                  autoFocus
+                />
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Motivo do Ajuste
+                <Label
+                  htmlFor="ajuste-motivo"
+                  className="text-sm font-semibold"
+                >
+                  Motivo
                 </Label>
-                <Select value={adjustReason} onValueChange={setAdjustReason}>
-                  <SelectTrigger className="h-11 rounded-xl">
+                <Select value={motivo} onValueChange={setMotivo}>
+                  <SelectTrigger id="ajuste-motivo" className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="AJUSTE_POSITIVO">Ajuste de Inventário / Sobra física (+)</SelectItem>
-                    <SelectItem value="AJUSTE_NEGATIVO">Ajuste de Inventário / Falta física (-)</SelectItem>
-                    <SelectItem value="QUEBRA">Quebra / Avaria de mercadoria</SelectItem>
-                    <SelectItem value="PERDA">Perda / Descarte de Cozinha</SelectItem>
-                    <SelectItem value="CONSUMO_INTERNO">Consumo Interno da Equipe</SelectItem>
+                    {MOTIVOS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Observação / Justificativa (opcional)
+                <Label htmlFor="ajuste-obs" className="text-sm font-semibold">
+                  Observação (opcional)
                 </Label>
                 <Input
-                  placeholder="Ex: Garrafa quebrou na reposição do bar..."
-                  value={adjustNotes}
-                  onChange={(e) => setAdjustNotes(e.target.value)}
-                  className="h-11 rounded-xl"
+                  id="ajuste-obs"
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                  className="h-11"
+                  maxLength={250}
                 />
               </div>
             </div>
           )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 px-5 pb-5 md:px-6">
             <Button
               variant="outline"
-              onClick={() => setAdjustModalItem(null)}
-              className="rounded-xl font-bold"
+              className="h-11"
+              onClick={() => setItemDoAjuste(null)}
             >
               Cancelar
             </Button>
             <Button
-              onClick={handleConfirmAdjust}
-              disabled={isAdjusting}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              className="h-11 bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+              onClick={confirmarAjuste}
+              disabled={ajuste.isPending}
             >
-              {isAdjusting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar Ajuste'
-              )}
+              {ajuste.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : null}
+              Salvar ajuste
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ─── MODAL DE NOVO INSUMO ─── */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 dark:text-white">
-              Cadastrar Novo Insumo
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Adicione uma nova matéria-prima para controle de estoque e receitas.
+      {/* Novo insumo */}
+      <Dialog open={criando} onOpenChange={setCriando}>
+        <DialogContent className="md:max-w-md">
+          <DialogHeader className="px-5 pt-5 md:px-6">
+            <DialogTitle>Novo insumo</DialogTitle>
+            <DialogDescription>
+              Matéria-prima que entra nas fichas técnicas e nos complementos.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 px-5 py-4 md:px-6">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                Nome do Insumo
+              <Label htmlFor="insumo-nome" className="text-sm font-semibold">
+                Nome
               </Label>
               <Input
-                placeholder="Ex: Picanha Bovina Resfriada"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="h-11 rounded-xl"
+                id="insumo-nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="h-11"
                 autoFocus
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                <Label
+                  htmlFor="insumo-categoria"
+                  className="text-sm font-semibold"
+                >
                   Categoria
                 </Label>
-                <Select value={newCategory} onValueChange={setNewCategory}>
-                  <SelectTrigger className="h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Carnes & Açougue">Carnes & Açougue</SelectItem>
-                    <SelectItem value="Bebidas">Bebidas & Bar</SelectItem>
-                    <SelectItem value="Hortifrúti">Hortifrúti</SelectItem>
-                    <SelectItem value="Secos & Laticínios">Secos & Laticínios</SelectItem>
-                    <SelectItem value="Embalagens">Embalagens & Descartáveis</SelectItem>
-                    <SelectItem value="Geral">Geral</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="insumo-categoria"
+                  value={categoriaNova}
+                  onChange={(e) => setCategoriaNova(e.target.value)}
+                  className="h-11"
+                />
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Unidade de Medida
+                <Label
+                  htmlFor="insumo-unidade"
+                  className="text-sm font-semibold"
+                >
+                  Unidade
                 </Label>
-                <Select value={newUnit} onValueChange={setNewUnit}>
-                  <SelectTrigger className="h-11 rounded-xl">
+                <Select value={unidade} onValueChange={setUnidade}>
+                  <SelectTrigger id="insumo-unidade" className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="KG">Quilograma (KG)</SelectItem>
+                    <SelectItem value="KG">Quilo (KG)</SelectItem>
                     <SelectItem value="UN">Unidade (UN)</SelectItem>
                     <SelectItem value="L">Litro (L)</SelectItem>
-                    <SelectItem value="GAR">Garrafa (GAR)</SelectItem>
-                    <SelectItem value="LATA">Lata (LATA)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Custo Unitário (R$)
+                <Label htmlFor="insumo-custo" className="text-sm font-semibold">
+                  Custo por unidade (R$)
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={newCost}
-                  onChange={(e) => setNewCost(e.target.value)}
-                  className="h-11 rounded-xl"
+                  id="insumo-custo"
+                  inputMode="decimal"
+                  value={custo}
+                  onChange={(e) => setCusto(e.target.value)}
+                  className="h-11"
                 />
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Estoque Inicial
+                <Label htmlFor="insumo-saldo" className="text-sm font-semibold">
+                  Saldo inicial
                 </Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  value={newInitialStock}
-                  onChange={(e) => setNewInitialStock(e.target.value)}
-                  className="h-11 rounded-xl"
+                  id="insumo-saldo"
+                  inputMode="decimal"
+                  value={saldoInicial}
+                  onChange={(e) => setSaldoInicial(e.target.value)}
+                  className="h-11"
                 />
               </div>
             </div>
           </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 px-5 pb-5 md:px-6">
             <Button
               variant="outline"
-              onClick={() => setCreateModalOpen(false)}
-              className="rounded-xl font-bold"
+              className="h-11"
+              onClick={() => setCriando(false)}
             >
               Cancelar
             </Button>
             <Button
-              onClick={handleConfirmCreate}
-              disabled={isCreating}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              className="h-11 bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+              onClick={confirmarCriacao}
+              disabled={criacao.isPending}
             >
-              {isCreating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cadastrando...
-                </>
-              ) : (
-                'Cadastrar Insumo'
-              )}
+              {criacao.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : null}
+              Cadastrar insumo
             </Button>
           </DialogFooter>
         </DialogContent>

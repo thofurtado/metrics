@@ -6,6 +6,7 @@ import {
   Camera,
   ChefHat,
   HelpCircle,
+  History,
   Image as ImageIcon,
   Layers,
   Plus,
@@ -74,6 +75,7 @@ import { API_BASE_URL } from '@/lib/axios'
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { compressImage } from '@/lib/image-compression'
 
+import { HistoricoDoEstoque } from '../../stock/components/historico-do-estoque'
 import { SeloSoNoSalao } from '../observacao-rapida-campo'
 
 const productSchema = z.object({
@@ -491,7 +493,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           subcategory_id: data.subcategory_id || null,
           cost: finalCost,
           price: data.price || 0,
-          stock: data.stock,
+          // O saldo não vai no editar: ele só muda por movimento, com quem fez no histórico (16/10/2026)
           min_stock: data.min_stock,
           barcode: data.barcode || null,
           display_id: data.display_id,
@@ -605,7 +607,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           >
             {/* ── BARRA DE ABAS REFINADA ────────────────────────── */}
             <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-2 dark:border-slate-800 dark:bg-slate-900/30 sm:px-8">
-              <TabsList className="grid h-10 w-full max-w-[560px] grid-cols-3 rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80">
+              <TabsList
+                className={cn(
+                  'grid h-auto min-h-10 w-full rounded-xl bg-slate-200/70 p-1 dark:bg-slate-800/80',
+                  isEdit
+                    ? 'max-w-[720px] grid-cols-2 sm:grid-cols-4'
+                    : 'max-w-[560px] grid-cols-3',
+                )}
+              >
                 <TabsTrigger
                   value="general"
                   className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
@@ -629,6 +638,16 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                   <ChefHat className="h-4 w-4" />
                   <span>Complementos & Ficha</span>
                 </TabsTrigger>
+
+                {isEdit && (
+                  <TabsTrigger
+                    value="history"
+                    className="flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-950 dark:data-[state=active]:text-white"
+                  >
+                    <History className="h-4 w-4" />
+                    <span>Histórico</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
@@ -961,14 +980,25 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                           {!isEdit ? 'Estoque Inicial' : 'Estoque Atual'}
                         </FormLabel>
                         <span className="text-[10px] text-muted-foreground">
-                          Saldo abertura
+                          {isEdit
+                            ? 'Muda pelo Ajustar saldo'
+                            : 'Saldo abertura'}
                         </span>
                       </div>
                       <FormControl>
                         <Input
                           type="number"
                           {...field}
-                          className="h-10 rounded-xl font-mono text-xs font-bold"
+                          disabled={isEdit}
+                          title={
+                            isEdit
+                              ? 'O saldo muda pelas vendas, pelas compras e pelo Ajustar saldo; veja a aba Histórico.'
+                              : undefined
+                          }
+                          className={cn(
+                            'h-10 rounded-xl font-mono text-xs font-bold',
+                            isEdit && 'bg-muted/50',
+                          )}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1996,6 +2026,21 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 )}
               </div>
             </TabsContent>
+
+            {/* ── ABA 4: HISTÓRICO DO ESTOQUE (D6: o mesmo do Controle de Estoque › Histórico) ── */}
+            {isEdit && (initialData?.product?.id || initialData?.id) && (
+              <TabsContent
+                value="history"
+                className="mt-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 sm:px-8 sm:py-5"
+              >
+                <HistoricoDoEstoque
+                  itemId={
+                    (initialData?.product?.id || initialData?.id) as string
+                  }
+                  via="items"
+                />
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* ── FOOTER FIXO (CANCELAR & SALVAR PRODUTO) ────────────────────────── */}

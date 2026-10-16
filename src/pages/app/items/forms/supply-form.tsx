@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Layers, Package, Plus, X } from 'lucide-react'
+import { History, Layers, Package, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+
+import { HistoricoDoEstoque } from '../../stock/components/historico-do-estoque'
 
 const DEFAULT_SUPPLY_CATEGORIES = [
   'Laticínios & Frios',
@@ -78,6 +80,7 @@ interface SupplyFormProps {
 export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
   const queryClient = useQueryClient()
   const isEdit = !!initialData
+  const [verHistorico, setVerHistorico] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
 
@@ -158,10 +161,12 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
           })
         }
 
+        // O saldo não vai no editar: só muda por movimento, com quem fez no histórico (16/10/2026)
+        const semSaldo = { ...data, stock: undefined }
         await updateItemFn({
           id: initialData.id,
           type: 'SUPPLY',
-          ...data,
+          ...semSaldo,
         } as any)
 
         if (!isMounted.current) return
@@ -465,6 +470,29 @@ export function SupplyForm({ initialData, onSuccess }: SupplyFormProps) {
             )}
           />
         </div>
+
+        {/* Histórico do estoque do insumo (D6): o mesmo do Controle de Estoque › Histórico */}
+        {isEdit && initialData?.id && (
+          <div className="border-t px-6 py-4 sm:px-8">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 gap-2"
+              onClick={() => setVerHistorico((v) => !v)}
+              aria-expanded={verHistorico}
+            >
+              <History className="h-4 w-4" aria-hidden />
+              {verHistorico
+                ? 'Esconder o histórico do estoque'
+                : 'Ver o histórico do estoque'}
+            </Button>
+            {verHistorico && (
+              <div className="mt-4">
+                <HistoricoDoEstoque itemId={initialData.id} via="items" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* FOOTER */}
         <ResponsiveDialogFooter className="border-t bg-muted/20 px-6 py-4 sm:px-8">
