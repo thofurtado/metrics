@@ -7,9 +7,9 @@ import {
   Menu,
   PiggyBank,
   Pyramid,
+  Receipt,
   Settings,
   Users,
-  Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -69,9 +69,11 @@ export function Sidebar() {
       access: hasAccess('finance') || isModuleActive('financial'),
     },
     {
-      name: 'Conferência Caixa',
+      // Módulo "Vendas" (D1 do Thomás, 16/10/2026): a antiga "Conferência Caixa", com as vendas na 1ª aba e a
+      // conferência de caixa na 2ª. Mesmo endereço e mesma permissão de antes.
+      name: 'Vendas',
       path: '/cashier',
-      icon: Wallet,
+      icon: Receipt,
       access: hasAccess('cashier') || isModuleActive('cashier'),
     },
     {

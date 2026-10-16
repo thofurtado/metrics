@@ -26,9 +26,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { getPOSMachines } from '@/api/pos-machines'
+import { getContaDasVendas } from '@/api/vendas'
 import { computeResumoSessao } from '@/utils/cashier/resumo-sessao'
 
 import { DetalheLote } from '../../components/DetalheLote'
+import { LinhaDaConta } from '../../components/LinhaDaConta'
 
 export function CashierSessionDetails() {
   const { id } = useParams()
@@ -51,6 +53,16 @@ export function CashierSessionDetails() {
     queryFn: getPOSMachines,
   })
 
+  // A conta única do caixa (D11, 16/10/2026): Total vendido × Total recebido e a linha da diferença, a mesma da aba Vendas
+  // e do fechamento do PDV (formas contadas × a prazo e aplicativos, que ficam sem contagem física)
+  const contaDoCaixa = useQuery({
+    queryKey: ['vendas', 'conta', '', '', id],
+    queryFn: () => getContaDasVendas({ caixa: id! }),
+    enabled: !!id,
+  })
+  // Lançamento novo, apagado ou editado muda a conta
+  const atualizarConta = () => queryClient.invalidateQueries({ queryKey: ['vendas', 'conta'] })
+
   // Avisos que a conferência devolve (plataforma sem cadastro etc.), 15/10/2026: ficam na tela até a pessoa fechar
   const [avisosDaConferencia, setAvisosDaConferencia] = useState<string[]>([])
 
@@ -69,6 +81,7 @@ export function CashierSessionDetails() {
     mutationFn: createEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+      atualizarConta()
     },
   })
 
@@ -76,6 +89,7 @@ export function CashierSessionDetails() {
     mutationFn: deleteEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+      atualizarConta()
     },
   })
 
@@ -83,6 +97,7 @@ export function CashierSessionDetails() {
     mutationFn: updateEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cashier-session', id] })
+      atualizarConta()
     },
   })
 
@@ -144,7 +159,8 @@ export function CashierSessionDetails() {
 
   const isAdmin = profile?.role === 'ADMIN'
 
-  const handleVoltar = () => navigate('/cashier')
+  // Volta para a aba Conferência de caixa do módulo Vendas (16/10/2026)
+  const handleVoltar = () => navigate('/cashier?aba=conferencia')
 
   const getPeriodo = (dateString: string) => {
     try {
@@ -430,6 +446,14 @@ export function CashierSessionDetails() {
       <DetalheLote
         loteAtivo={loteAtivo}
         resumoLote={resumoLote}
+        contaDoCaixa={
+          <LinhaDaConta
+            conta={contaDoCaixa.data?.conta}
+            carregando={contaDoCaixa.isLoading}
+            erro={contaDoCaixa.isError}
+            titulo="Vendido e recebido neste caixa"
+          />
+        }
         onVoltar={handleVoltar}
         onAdicionarLancamento={handleAdicionarLancamento}
         onRemoverLancamento={handleRemoverLancamento}

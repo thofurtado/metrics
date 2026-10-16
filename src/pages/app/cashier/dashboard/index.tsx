@@ -59,13 +59,19 @@ import { exportarLotePDF } from '@/utils/cashier/exportPDF'
 import { DivergenceModal } from './components/divergence-modal'
 import { OutflowsModal } from './components/outflows-modal'
 import { LiveTablesView } from '../components/LiveTablesView'
-import { CancellationsAuditView } from '../components/CancellationsAuditView'
+import { LinhaDaConta } from '../components/LinhaDaConta'
+import { getContaDasVendas } from '@/api/vendas'
+import { moeda, periodoDoMes } from '@/utils/vendas/formatos'
 import { CouriersReportView } from '../components/CouriersReportView'
 import { Bike, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { diaOperacional } from '@/lib/dia-operacional'
 
-export function CashierDashboard() {
+/**
+ * Conferência de caixa. Desde o módulo Vendas (16/10/2026) é a 2ª aba de "Vendas" (embutido = sem o título da página).
+ * Os cartões do topo usam a conta única da nuvem (D11): os mesmos números da Conferência e da aba Vendas.
+ */
+export function CashierDashboard({ embutido = false }: { embutido?: boolean } = {}) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const dataAtual = new Date()
@@ -96,8 +102,9 @@ export function CashierDashboard() {
   const [isOutflowsModalOpen, setIsOutflowsModalOpen] = useState(false)
   const [isCreateSessionModalOpen, setIsCreateSessionModalOpen] = useState(false)
   // 'couriers' (15/10/2026): relatório dos motoboys (entregas, diárias, pago em dinheiro/Pix e pendente)
+  // Os cancelamentos saíram daqui (16/10/2026): viraram a aba "Cancelamentos" do módulo Vendas, com os dados de verdade
   const [activeCashierTab, setActiveCashierTab] = useState<
-    'sessions' | 'live_tables' | 'cancellations' | 'couriers'
+    'sessions' | 'live_tables' | 'couriers'
   >('sessions')
 
   const token = localStorage.getItem('token')
@@ -122,6 +129,15 @@ export function CashierDashboard() {
     queryFn: () => getMonthlyCashAudit(mesVisualizacao, anoVisualizacao),
     enabled: !!profile && isAdmin,
   })
+
+  // A conta única do mês (D11): Total vendido × Total recebido, a mesma da Conferência e da aba Vendas
+  const periodoDoPainel = periodoDoMes(anoVisualizacao, mesVisualizacao)
+  const contaDoMes = useQuery({
+    queryKey: ['vendas', 'conta', periodoDoPainel.de, periodoDoPainel.ate, ''],
+    queryFn: () => getContaDasVendas(periodoDoPainel),
+    enabled: !!profile,
+  })
+  const conta = contaDoMes.data?.conta
 
   const { data: usersData } = useQuery({
     queryKey: ['cashier-users'],
@@ -629,14 +645,20 @@ export function CashierDashboard() {
     <div className="mx-auto max-w-7xl space-y-4 pb-8 text-slate-900 dark:text-slate-100">
       {/* Topo com Ações Rápidas (Padrão "Don't Make Me Think") */}
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-            Conferência de Caixa
-          </h1>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Gerencie a abertura, fechamento e auditoria mensal dos lotes de caixa.
-          </p>
-        </div>
+        {embutido ? (
+          <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">
+            Conferência de caixa
+          </h2>
+        ) : (
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+              Conferência de Caixa
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Gerencie a abertura, fechamento e auditoria mensal dos lotes de caixa.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
@@ -686,18 +708,6 @@ export function CashierDashboard() {
           <span>Salão & Mesas Ao Vivo</span>
         </button>
 
-        <button
-          onClick={() => setActiveCashierTab('cancellations')}
-          className={cn(
-            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all',
-            activeCashierTab === 'cancellations'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
-          )}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span>Cancelamentos & Desperdício</span>
-        </button>
 
         <button
           onClick={() => setActiveCashierTab('couriers')}
@@ -714,7 +724,6 @@ export function CashierDashboard() {
       </div>
 
       {activeCashierTab === 'live_tables' && <LiveTablesView />}
-      {activeCashierTab === 'cancellations' && <CancellationsAuditView />}
       {activeCashierTab === 'couriers' && <CouriersReportView />}
 
       {activeCashierTab === 'sessions' && (
@@ -725,19 +734,27 @@ export function CashierDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              1. Faturamento Total ({nomesMeses[mesVisualizacao]})
+              1. Total vendido ({nomesMeses[mesVisualizacao]})
             </span>
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
               <Wallet size={15} />
             </div>
           </div>
           <p className="mt-2 font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-            R$ {kpisMes.faturamentoTotal.toFixed(2)}
+            {conta ? moeda(conta.vendido.total) : `R$ ${kpisMes.faturamentoTotal.toFixed(2)}`}
           </p>
           <div className="mt-1 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-1 dark:border-slate-800">
-            <span>⚡ {kpisMes.pctEletronico}% Digital</span>
-            <span>•</span>
-            <span>💵 {kpisMes.pctDinheiro}% Dinheiro</span>
+            {conta ? (
+              <span>
+                {conta.vendido.quantidade} vendas · recebido {moeda(conta.recebido.total)}
+              </span>
+            ) : (
+              <>
+                <span>⚡ {kpisMes.pctEletronico}% Digital</span>
+                <span>•</span>
+                <span>💵 {kpisMes.pctDinheiro}% Dinheiro</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -745,14 +762,14 @@ export function CashierDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              2. Vendas Digitais (Bancos)
+              2. Recebido em Pix, cartões e vale
             </span>
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
               <Zap size={15} />
             </div>
           </div>
           <p className="mt-2 font-mono text-2xl font-black tracking-tight text-teal-600 dark:text-teal-400">
-            R$ {kpisMes.totalEletronico.toFixed(2)}
+            {conta ? moeda(conta.recebido.eletronico) : `R$ ${kpisMes.totalEletronico.toFixed(2)}`}
           </p>
           <span className="mt-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-1 dark:border-slate-800">
             PIX, Débito, Crédito e Vouchers
@@ -763,14 +780,14 @@ export function CashierDashboard() {
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              3. Vendas em Dinheiro Vivo
+              3. Recebido em dinheiro
             </span>
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
               <Banknote size={15} />
             </div>
           </div>
           <p className="mt-2 font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">
-            R$ {kpisMes.totalDinheiro.toFixed(2)}
+            {conta ? moeda(conta.recebido.dinheiro) : `R$ ${kpisMes.totalDinheiro.toFixed(2)}`}
           </p>
           <button
             type="button"
@@ -807,6 +824,11 @@ export function CashierDashboard() {
           </span>
         </div>
       </div>
+
+      {/* A linha que explica a diferença entre o vendido e o recebido do mês (D11) */}
+      {(conta || contaDoMes.isLoading) && (
+        <LinhaDaConta variante="linha" conta={conta} carregando={contaDoMes.isLoading} />
+      )}
 
       {/* MODAL / DIALOG LIMPO PARA ABRIR NOVO CAIXA */}
       {isCreateSessionModalOpen && (

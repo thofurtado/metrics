@@ -17,7 +17,7 @@ import {
   Wallet2,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 // Faltava este import: salvar a abertura dava erro de execução (achado na correção do Mergulho 14:X1)
 import { parseCurrencyToFloat } from '@/lib/currency-utils'
@@ -45,6 +45,8 @@ interface DetalheLoteProps {
   onEnviarParaConferencia?: () => void
   isAdmin?: boolean
   onOrderCompleted?: () => void
+  // A conta única do caixa (Total vendido × Total recebido, 16/10/2026), mostrada acima do painel de conferência
+  contaDoCaixa?: ReactNode
 }
 
 export function DetalheLote({
@@ -60,6 +62,7 @@ export function DetalheLote({
   onEnviarParaConferencia,
   isAdmin = true,
   onOrderCompleted,
+  contaDoCaixa,
 }: DetalheLoteProps) {
   const [filtro, setFiltro] = useState({ mesa: '', banco: '', forma: '' })
   const [sortConfig] = useState<{
@@ -483,6 +486,8 @@ export function DetalheLote({
             isAdmin={isAdmin}
           />
         )}
+
+        {contaDoCaixa}
 
         <button
           onClick={() => setExibirSumario(!exibirSumario)}

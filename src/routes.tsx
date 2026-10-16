@@ -10,7 +10,7 @@ import { AppLayout } from './pages/_layouts/app'
 import { AuthLayout } from './pages/_layouts/auth'
 import { NotFound } from './pages/404'
 import { PaymentConfig } from './pages/app/admin-cashier/payment-config'
-import { CashierDashboard } from './pages/app/cashier/dashboard'
+import { VendasPage } from './pages/app/cashier/vendas/vendas-page'
 import { CashierSessionDetails } from './pages/app/cashier/session/[id]'
 import { ClientsEquipments } from './pages/app/clients-equipments'
 import { Dashboard } from './pages/app/dashboard/dashboard'
@@ -183,7 +183,7 @@ export const router = createBrowserRouter([
             path: 'cashier',
             element: (
               <ModuleGuard module="cashier">
-                <CashierDashboard />
+                <VendasPage />
               </ModuleGuard>
             ),
           },
