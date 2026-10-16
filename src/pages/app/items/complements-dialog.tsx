@@ -36,6 +36,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 
+import { ObservacaoRapidaCampo, SeloSoNoSalao } from './observacao-rapida-campo'
+
 export function ComplementsDialog() {
   const queryClient = useQueryClient()
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
@@ -46,6 +48,8 @@ export function ComplementsDialog() {
   const [minQty, setMinQty] = useState(0)
   const [maxQty, setMaxQty] = useState(1)
   const [freeQty, setFreeQty] = useState(0)
+  // Observação rápida (só no salão): sem preço nas opções, fora do cardápio online e do iFood/99
+  const [quickNote, setQuickNote] = useState(false)
   const [options, setOptions] = useState<ComplementOption[]>([])
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(null)
 
@@ -65,6 +69,7 @@ export function ComplementsDialog() {
     setMinQty(group.min_quantity)
     setMaxQty(group.max_quantity)
     setFreeQty(group.free_quantity)
+    setQuickNote(group.quick_note === true)
     setOptions(group.options || [])
   }
 
@@ -75,6 +80,7 @@ export function ComplementsDialog() {
     setMinQty(0)
     setMaxQty(1)
     setFreeQty(0)
+    setQuickNote(false)
     setOptions([])
   }
 
@@ -145,12 +151,14 @@ export function ComplementsDialog() {
       min_quantity: Number(minQty),
       max_quantity: Math.max(1, Number(maxQty)),
       free_quantity: Number(freeQty),
+      quick_note: quickNote,
       options: options
         .filter((opt) => opt.name.trim() !== '')
         .map((opt) => ({
           id: opt.id,
           name: opt.name.trim(),
-          price: Number(opt.price || 0),
+          // Observação rápida não tem preço (a nuvem também grava zero)
+          price: quickNote ? 0 : Number(opt.price || 0),
           linked_supply_id: opt.linked_supply_id || null,
           supply_quantity: opt.supply_quantity ? Number(opt.supply_quantity) : null,
           active: opt.active !== false,
@@ -222,12 +230,15 @@ export function ComplementsDialog() {
                     <span className="font-bold text-slate-900 dark:text-slate-100">
                       {group.name}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className="border-slate-200 text-[10px] dark:border-slate-800"
-                    >
-                      {group.options?.length || 0} opções
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {group.quick_note && <SeloSoNoSalao />}
+                      <Badge
+                        variant="outline"
+                        className="border-slate-200 text-[10px] dark:border-slate-800"
+                      >
+                        {group.options?.length || 0} opções
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                     <span>
@@ -268,6 +279,12 @@ export function ComplementsDialog() {
                   className="h-11 rounded-xl border-slate-200 bg-white font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
+
+              <ObservacaoRapidaCampo
+                id="observacao-rapida-janela"
+                checked={quickNote}
+                onChange={setQuickNote}
+              />
 
               {/* Regras de Quantidade (Estilo iFood) */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -346,24 +363,35 @@ export function ComplementsDialog() {
                     >
                       <div className="flex items-center gap-2">
                         <Input
-                          placeholder="Nome da opção (ex: Bacon Extra)"
+                          placeholder={
+                            quickNote
+                              ? 'Nome da observação (ex: Sem gelo)'
+                              : 'Nome da opção (ex: Bacon Extra)'
+                          }
                           value={opt.name}
                           onChange={(e) =>
                             handleUpdateOption(idx, 'name', e.target.value)
                           }
                           className="h-9 flex-1 rounded-lg border-slate-200 bg-white text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                         />
-                        <div className="relative w-32">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
-                            R$
+                        {/* A observação rápida não tem preço */}
+                        {quickNote ? (
+                          <span className="flex h-9 w-32 items-center justify-center rounded-lg border border-dashed border-slate-200 text-xs font-bold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                            Sem preço
                           </span>
-                          <CurrencyInput
-                            placeholder="0,00"
-                            value={opt.price}
-                            onValueChange={(val) => handleUpdateOption(idx, 'price', val)}
-                            className="h-9 rounded-lg border-slate-200 bg-white pl-8 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                          />
-                        </div>
+                        ) : (
+                          <div className="relative w-32">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400">
+                              R$
+                            </span>
+                            <CurrencyInput
+                              placeholder="0,00"
+                              value={opt.price}
+                              onValueChange={(val) => handleUpdateOption(idx, 'price', val)}
+                              className="h-9 rounded-lg border-slate-200 bg-white pl-8 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                            />
+                          </div>
+                        )}
                         <Button
                           type="button"
                           variant="outline"

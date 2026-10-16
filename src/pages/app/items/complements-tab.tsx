@@ -32,6 +32,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
+import { ObservacaoRapidaCampo, SeloSoNoSalao } from './observacao-rapida-campo'
+
 /** Número do consumo em pt-BR, sem zeros sobrando (0.03 → "0,03"). */
 function formatarConsumo(valor: number): string {
   return valor.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
@@ -57,6 +59,8 @@ export function ComplementsTab() {
   const [minQty, setMinQty] = useState(0)
   const [maxQty, setMaxQty] = useState(1)
   const [freeQty, setFreeQty] = useState(0)
+  // Observação rápida (só no salão): sem preço nas opções, fora do cardápio online e do iFood/99
+  const [quickNote, setQuickNote] = useState(false)
   const [options, setOptions] = useState<ComplementOption[]>([])
   const [linkedProductIds, setLinkedProductIds] = useState<string[]>([])
 
@@ -107,6 +111,7 @@ export function ComplementsTab() {
     setMinQty(group.min_quantity)
     setMaxQty(group.max_quantity)
     setFreeQty(group.free_quantity)
+    setQuickNote(group.quick_note === true)
     setOptions(group.options || [])
     setLinkedProductIds(group.products?.map((p) => p.product_id) || [])
     setProductSearch('')
@@ -119,6 +124,7 @@ export function ComplementsTab() {
     setMinQty(0)
     setMaxQty(1)
     setFreeQty(0)
+    setQuickNote(false)
     setOptions([])
     setLinkedProductIds([])
     setProductSearch('')
@@ -206,12 +212,14 @@ export function ComplementsTab() {
       min_quantity: Number(minQty),
       max_quantity: Math.max(1, Number(maxQty)),
       free_quantity: Number(freeQty),
+      quick_note: quickNote,
       options: options
         .filter((opt) => opt.name.trim() !== '')
         .map((opt) => ({
           id: opt.id,
           name: opt.name.trim(),
-          price: Number(opt.price || 0),
+          // Observação rápida não tem preço (a nuvem também grava zero)
+          price: quickNote ? 0 : Number(opt.price || 0),
           linked_supply_id: opt.linked_supply_id || null,
           supply_quantity: opt.linked_supply_id ? Number(opt.supply_quantity) : null,
           // Esta aba não edita o produto ligado: devolve o que veio, para não apagar
@@ -282,6 +290,7 @@ export function ComplementsTab() {
                     {group.name}
                   </span>
                   <div className="flex items-center gap-1.5">
+                    {group.quick_note && <SeloSoNoSalao />}
                     {productCount > 0 && (
                       <Badge
                         variant="secondary"
@@ -356,6 +365,12 @@ export function ComplementsTab() {
                 className="h-11 rounded-xl border-slate-200 bg-white font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               />
             </div>
+
+            <ObservacaoRapidaCampo
+              id="observacao-rapida-aba"
+              checked={quickNote}
+              onChange={setQuickNote}
+            />
 
             {/* Regras de Quantidade */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -446,7 +461,11 @@ export function ComplementsTab() {
                     {/* Nome da Opção */}
                     <div className="flex-1">
                       <Input
-                        placeholder="Nome da opção (ex: Bacon Extra, Catupiry, Mal Passada)"
+                        placeholder={
+                          quickNote
+                            ? 'Nome da observação (ex: Sem gelo, Com limão, Sem cebola)'
+                            : 'Nome da opção (ex: Bacon Extra, Catupiry, Mal Passada)'
+                        }
                         value={opt.name}
                         onChange={(e) =>
                           handleUpdateOption(idx, 'name', e.target.value)
@@ -455,7 +474,12 @@ export function ComplementsTab() {
                       />
                     </div>
 
-                    {/* Preço Adicional */}
+                    {/* Preço Adicional (a observação rápida não tem preço) */}
+                    {quickNote ? (
+                      <span className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-slate-200 px-3 text-xs font-bold text-slate-500 sm:w-32 dark:border-slate-800 dark:text-slate-400">
+                        Sem preço
+                      </span>
+                    ) : (
                     <div className="relative w-full sm:w-32">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400 font-bold">
                         R$
@@ -471,6 +495,7 @@ export function ComplementsTab() {
                         className="h-10 rounded-xl border-slate-200 bg-white pl-9 font-mono text-xs font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </div>
+                    )}
 
                     {/* Insumo Vinculado para Baixa de Estoque */}
                     <div className="w-full sm:w-56">
@@ -558,7 +583,9 @@ export function ComplementsTab() {
                     <UtensilsCrossed className="h-4 w-4 text-orange-600" /> Produtos Vinculados a este Grupo ({linkedProductIds.length})
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    Selecione quais produtos terão estas opções disponíveis no PDV e Cardápio.
+                    {quickNote
+                      ? 'Selecione quais produtos terão estas observações no PDV e no app do garçom (não aparecem no cardápio online).'
+                      : 'Selecione quais produtos terão estas opções disponíveis no PDV e Cardápio.'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">

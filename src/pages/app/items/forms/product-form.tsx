@@ -74,6 +74,8 @@ import { API_BASE_URL } from '@/lib/axios'
 import { cn, resolveImageUrl } from '@/lib/utils'
 import { compressImage } from '@/lib/image-compression'
 
+import { SeloSoNoSalao } from '../observacao-rapida-campo'
+
 const productSchema = z.object({
   name: z.string().min(1, 'Nome do produto é obrigatório'),
   description: z.string().optional(),
@@ -1780,6 +1782,7 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                               />
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              {group.quick_note && <SeloSoNoSalao />}
                               <span>{group.options?.length || 0} opções</span>
                               <span>•</span>
                               <span>{group.min_quantity > 0 ? 'Obrigatório' : 'Opcional'}</span>

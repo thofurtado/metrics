@@ -17,6 +17,8 @@ export interface ComplementGroup {
   max_quantity: number
   free_quantity: number
   active: boolean
+  /** Observação rápida (só no salão): opções sem preço, fora do cardápio online e do iFood/99 (nuvem 2.6.126.0). */
+  quick_note?: boolean
   options: ComplementOption[]
   products?: { product_id: string }[]
   _count?: {
@@ -29,6 +31,7 @@ export interface CreateComplementGroupBody {
   min_quantity?: number
   max_quantity?: number
   free_quantity?: number
+  quick_note?: boolean
   options?: ComplementOption[]
   product_ids?: string[]
 }
@@ -39,6 +42,7 @@ export interface UpdateComplementGroupBody {
   max_quantity?: number
   free_quantity?: number
   active?: boolean
+  quick_note?: boolean
   options?: ComplementOption[]
   product_ids?: string[]
 }
