@@ -381,7 +381,7 @@ function Conteudo({ venda }: { venda: Detalhe }) {
                   </div>
                   {podeAbrirEstoque && produtoId && (
                     <Link
-                      to={`/stock?tab=history&${b.ehInsumo ? 'insumo' : 'produto'}=${produtoId}`}
+                      to={`/stock?tab=history&item=${produtoId}`}
                       className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
                     >
                       Extrato <ArrowUpRight className="h-4 w-4" />
