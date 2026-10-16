@@ -1,25 +1,51 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { Box, Moon, Sun, X } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  X,
-  RotateCcw,
-  Sparkles,
-  ArrowRight,
-  Sun,
-  Moon,
-  Box,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { api } from '@/lib/axios'
+
 import { useTheme } from '@/components/theme/theme-provider'
-import { useStockIntakeDraft, StockIntakeDraft, StockIntakeItem } from './use-stock-intake-draft'
+import { Button } from '@/components/ui/button'
+import { api } from '@/lib/axios'
+
+import { mensagemDoErro } from './components/formatos-do-estoque'
 import { Step1Origin } from './components/step-1-origin'
 import { Step2Supplier } from './components/step-2-supplier'
 import { Step3ItemFocus } from './components/step-3-item-focus'
 import { Step4Conclusion } from './components/step-4-conclusion'
+import {
+  PortioningConfig,
+  StockIntakeDraft,
+  StockIntakeItem,
+  useStockIntakeDraft,
+} from './use-stock-intake-draft'
+
+/** O que a nuvem devolve ao ler o XML (POST /api/stock/nfe/parse). */
+interface ItemDaNotaLida {
+  codigo?: string
+  nome?: string
+  unidade?: string
+  quantidade?: number
+  valorUnitario?: number
+  valorTotal?: number
+}
+interface ItemLido {
+  itemNota?: ItemDaNotaLida
+  isAlreadyMapped?: boolean
+  matchedType?: 'SUPPLY' | 'PRODUCT' | null
+  matchedId?: string | null
+  matchedName?: string | null
+  conversionFactor?: number
+}
+interface NotaLida {
+  header?: {
+    chaveNfe?: string
+    numeroNota?: string
+    dataEmissao?: string
+    fornecedor?: { cnpj?: string; razaoSocial?: string; nomeFantasia?: string }
+    total?: { valorNota?: number }
+  }
+  items?: ItemLido[]
+}
 
 export const StockIntakePage: React.FC = () => {
   const navigate = useNavigate()
@@ -64,7 +90,12 @@ export const StockIntakePage: React.FC = () => {
 
   // Auto-save do rascunho sempre que os dados mudarem
   const persistCurrentState = useCallback(
-    (newStep = step, newIndex = currentIndex, newItems = items, newHeader = header) => {
+    (
+      newStep = step,
+      newIndex = currentIndex,
+      newItems = items,
+      newHeader = header,
+    ) => {
       saveDraft({
         step: newStep,
         originMode,
@@ -73,16 +104,18 @@ export const StockIntakePage: React.FC = () => {
         currentItemIndex: newIndex,
       })
     },
-    [step, currentIndex, items, header, originMode, saveDraft]
+    [step, currentIndex, items, header, originMode, saveDraft],
   )
 
-  // Ação de Sair / ESC
+  // Ação de Sair / ESC: o rascunho fica guardado neste navegador e a tela volta para a Posição de Estoque
   const handleExit = () => {
     if (items.length > 0) {
       persistCurrentState()
-      toast.success('Rascunho salvo automaticamente.')
+      toast.success(
+        'Rascunho guardado. Para continuar, abra Entrada de Mercadorias de novo.',
+      )
     }
-    navigate('/items')
+    navigate('/stock')
   }
 
   // Passo 1: Seleção de Origem
@@ -93,70 +126,98 @@ export const StockIntakePage: React.FC = () => {
       setIsParsingXml(true)
       try {
         const text = await file.text()
-        
-        let parseResult: any = null
+
+        // Só a leitura da nuvem vale (antes, se ela falhasse, a tela inventava uma nota de exemplo da "Distribuidora Ambev")
+        let parseResult: NotaLida
         try {
           const res = await api.post('/api/stock/nfe/parse', { xml: text })
           parseResult = res.data
         } catch (apiErr) {
-          console.warn('API de parse NFe remota não respondeu ou em mock, usando parser embutido.', apiErr)
-          // Fallback de contingência caso o endpoint local precise de mock rápido
-          parseResult = mockParseXml(text, file.name)
+          toast.error(
+            mensagemDoErro(
+              apiErr,
+              'Não foi possível ler esta nota. Confira se o arquivo é o XML da NF-e de compra e tente de novo.',
+            ),
+          )
+          return
         }
 
+        const h: NonNullable<NotaLida['header']> = parseResult.header || {}
+        const emissao = h.dataEmissao ? new Date(h.dataEmissao) : null
+        const parsedItems: ItemLido[] = parseResult.items || []
         const newHeader = {
-          numeroNfe: parseResult.header?.numeroNfe || '004.892',
-          chaveNfe: parseResult.header?.chaveNfe || '',
-          dataEmissao: parseResult.header?.dataEmissao || 'Hoje, 14:15',
+          numeroNfe: h.numeroNota || '',
+          chaveNfe: h.chaveNfe || '',
+          dataEmissao:
+            emissao && !Number.isNaN(emissao.getTime())
+              ? emissao.toLocaleString('pt-BR', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })
+              : '',
           fornecedor: {
-            cnpj: parseResult.header?.fornecedor?.cnpj || '02.449.992/0001-64',
-            razaoSocial: parseResult.header?.fornecedor?.razaoSocial || 'Distribuidora Ambev S/A',
-            nomeFantasia: parseResult.header?.fornecedor?.nomeFantasia,
+            cnpj: h.fornecedor?.cnpj || '',
+            razaoSocial: h.fornecedor?.razaoSocial || '',
+            nomeFantasia: h.fornecedor?.nomeFantasia,
           },
-          valorTotal: parseResult.header?.valorTotal || 2480.0,
+          valorTotal:
+            Number(h.total?.valorNota) ||
+            parsedItems.reduce(
+              (t: number, m: ItemLido) =>
+                t + (Number(m.itemNota?.valorTotal) || 0),
+              0,
+            ),
         }
 
-        const newItems: StockIntakeItem[] = (parseResult.mappedResults || parseResult.items || []).map(
-          (m: any, idx: number) => {
-            const raw = m.itemNota || m
+        const newItems: StockIntakeItem[] = parsedItems.map(
+          (m: ItemLido, idx: number) => {
+            const raw: ItemDaNotaLida = m.itemNota || {}
             const factor = m.conversionFactor || 1
-            const targetQty = (raw.quantidade || 1) * factor
+            const targetQty = (Number(raw.quantidade) || 0) * factor
 
             return {
               id: crypto.randomUUID(),
               codigoNota: raw.codigo || `ITEM-${idx + 1}`,
-              nomeNota: raw.nome || `Produto ${idx + 1}`,
+              nomeNota: raw.nome || `Item ${idx + 1} da nota`,
               unidadeNota: raw.unidade || 'UN',
-              quantidadeNota: Number(raw.quantidade) || 1,
+              quantidadeNota: Number(raw.quantidade) || 0,
               valorUnitarioNota: Number(raw.valorUnitario) || 0,
               valorTotalNota: Number(raw.valorTotal) || 0,
               targetType: m.matchedType || 'SUPPLY',
-              targetId: m.matchedId,
-              targetName: m.matchedName || raw.nome,
+              // Sem vínculo, sem destino: quem dá entrada escolhe o produto ou insumo na conferência
+              targetId: m.matchedId || undefined,
+              targetName: m.matchedName || undefined,
               isNewItem: !m.isAlreadyMapped,
               conversionFactor: factor,
               conferido: false,
               divergencia: false,
               quantidadeReal: targetQty,
-              unidadeEstoque: m.unidadeEstoque || raw.unidade || 'un',
+              unidadeEstoque: raw.unidade || 'un',
               naoEntregue: false,
             }
-          }
+          },
         )
+        if (newItems.length === 0) {
+          toast.error('Esta nota não tem itens para dar entrada.')
+          return
+        }
 
         setHeader(newHeader)
         setItems(newItems)
         setStep(2)
         persistCurrentState(2, 0, newItems, newHeader)
-      } catch (err: any) {
-        toast.error('Erro ao ler arquivo XML da nota fiscal: ' + (err.message || 'Arquivo inválido.'))
+      } catch (err) {
+        toast.error(
+          'Erro ao ler arquivo XML da nota fiscal: ' +
+            ((err as Error)?.message || 'Arquivo inválido.'),
+        )
       } finally {
         setIsParsingXml(false)
       }
     } else {
       // Modo Manual
       const defaultHeader = {
-        numeroNfe: 'Manual',
+        numeroNfe: '',
         dataEmissao: new Date().toLocaleDateString('pt-BR'),
         fornecedor: {
           cnpj: '00.000.000/0000-00',
@@ -169,13 +230,12 @@ export const StockIntakePage: React.FC = () => {
         {
           id: crypto.randomUUID(),
           codigoNota: 'MAN-01',
-          nomeNota: 'Novo Item para Conferência',
+          nomeNota: 'Item da entrada manual',
           unidadeNota: 'UN',
           quantidadeNota: 1,
           valorUnitarioNota: 0,
           valorTotalNota: 0,
           targetType: 'SUPPLY',
-          targetName: '',
           isNewItem: true,
           conversionFactor: 1,
           conferido: false,
@@ -183,7 +243,7 @@ export const StockIntakePage: React.FC = () => {
           quantidadeReal: 1,
           unidadeEstoque: 'UN',
           naoEntregue: false,
-        }
+        },
       ])
       setStep(2)
       persistCurrentState(2, 0, [], defaultHeader)
@@ -191,11 +251,14 @@ export const StockIntakePage: React.FC = () => {
   }
 
   // Passo 2: Confirmação do Fornecedor
-  const handleConfirmSupplier = (supp: { cnpj: string; razaoSocial: string }) => {
+  const handleConfirmSupplier = (supp: {
+    cnpj: string
+    razaoSocial: string
+  }) => {
     const updatedHeader = {
       ...(header || {
-        numeroNfe: '004.892',
-        dataEmissao: 'Hoje, 14:15',
+        numeroNfe: '',
+        dataEmissao: '',
         valorTotal: 0,
       }),
       fornecedor: {
@@ -209,7 +272,10 @@ export const StockIntakePage: React.FC = () => {
   }
 
   // Passo 3: Validação de Cada Item
-  const handleValidateItem = (updatedItem: Partial<StockIntakeItem>, advance = true) => {
+  const handleValidateItem = (
+    updatedItem: Partial<StockIntakeItem>,
+    advance = true,
+  ) => {
     const updatedList = [...items]
     updatedList[currentIndex] = {
       ...updatedList[currentIndex],
@@ -233,59 +299,95 @@ export const StockIntakePage: React.FC = () => {
   }
 
   // Passo 4: Salvar e Concluir no Estoque
-  const handleConfirmAndSave = async (portioningMap?: Record<string, any>) => {
+  const handleConfirmAndSave = async (
+    portioningMap?: Record<string, PortioningConfig>,
+  ) => {
+    const recebidos = items.filter(
+      (i) => !i.naoEntregue && i.quantidadeReal > 0,
+    )
+    const semDestino = recebidos.filter((i) => !i.targetId)
+    if (semDestino.length > 0) {
+      toast.error(
+        `Escolha o produto ou insumo de: ${semDestino.map((i) => i.nomeNota).join(', ')}.`,
+      )
+      setCurrentIndex(items.indexOf(semDestino[0]))
+      setStep(3)
+      return
+    }
+    if (recebidos.length === 0) {
+      toast.error('Nenhum item foi recebido nesta nota.')
+      return
+    }
     setIsSaving(true)
     try {
       const payload = {
-        header,
-        items: items.map((i) => ({
-          supplierProductCode: i.codigoNota,
-          supplierProductName: i.nomeNota,
-          supplierUnit: i.unidadeNota,
-          supplierQuantity: i.quantidadeReal,
-          supplierUnitPrice: i.valorUnitarioNota,
-          targetType: i.targetType,
-          targetId: i.targetId || crypto.randomUUID(),
-          conversionFactor: i.conversionFactor || 1,
-          saveMapping: true,
-          batchNumber: i.lote || null,
-          expirationDate: i.validade || null,
-          portioning: portioningMap?.[i.id] || null,
-        })),
+        header: {
+          chaveNfe: header?.chaveNfe || '',
+          numeroNota: header?.numeroNfe || '',
+          fornecedor: {
+            cnpj: header?.fornecedor.cnpj || '',
+            razaoSocial: header?.fornecedor.razaoSocial || '',
+          },
+        },
+        items: recebidos.map((i) => {
+          const fator = i.conversionFactor || 1
+          return {
+            supplierProductCode: i.codigoNota,
+            supplierProductName: i.nomeNota,
+            supplierUnit: i.unidadeNota,
+            // A quantidade conferida já está na unidade do estoque (a nuvem não converte de novo)
+            supplierQuantity: i.quantidadeReal / fator,
+            stockQuantity: i.quantidadeReal,
+            supplierUnitPrice: i.valorUnitarioNota,
+            targetType: i.targetType,
+            targetId: i.targetId,
+            conversionFactor: fator,
+            saveMapping: true,
+            batchNumber: i.lote || null,
+            expirationDate: i.validade || null,
+            portioning: portioningMap?.[i.id]?.enabled
+              ? portioningMap[i.id]
+              : null,
+          }
+        }),
       }
 
       await api.post('/api/stock/nfe/confirm', payload)
       clearDraft()
-      toast.success('Entrada de estoque realizada com sucesso!')
-      navigate('/items')
-    } catch (err: any) {
-      console.warn('Erro na chamada de confirmação:', err)
-      // Se a rota remota falhar no ambiente local de mock, garante que a UX finalize
-      toast.success('Entrada de estoque validada e creditada!')
-      clearDraft()
-      navigate('/items')
+      toast.success(
+        'Entrada feita: os itens já estão no estoque e no histórico.',
+      )
+      navigate('/stock?tab=history')
+    } catch (err) {
+      // Nada foi somado: a nuvem faz tudo ou nada. O rascunho continua para corrigir e tentar de novo.
+      toast.error(
+        mensagemDoErro(
+          err,
+          'Não foi possível dar entrada. Nada foi somado; tente de novo.',
+        ),
+      )
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-white selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+    <div className="flex min-h-screen flex-col justify-between bg-slate-50 text-slate-900 transition-colors duration-200 selection:bg-emerald-500 selection:text-white dark:bg-[#0B0F17] dark:text-white">
       {/* Top Header */}
-      <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 px-4 sm:px-8 flex items-center justify-between bg-white/70 dark:bg-[#0B0F17]/80 backdrop-blur-md sticky top-0 z-30">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/70 px-4 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#0B0F17]/80 sm:px-8">
         {/* Logo e Módulo */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 font-black tracking-tight text-lg">
+          <div className="flex items-center gap-2 text-lg font-black tracking-tight">
             <span className="text-slate-900 dark:text-white">Metrics</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           </div>
-          <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <span className="rounded border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
             ENTRADA DE ESTOQUE
           </span>
         </div>
 
         {/* Indicador de 4 Passos Central */}
-        <nav className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+        <nav className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100/80 px-3 py-1 text-xs font-semibold dark:border-slate-800 dark:bg-slate-900/80 md:flex">
           {[
             { num: 1, label: 'Origem' },
             { num: 2, label: 'Fornecedor' },
@@ -299,18 +401,23 @@ export const StockIntakePage: React.FC = () => {
               <button
                 key={s.num}
                 type="button"
-                onClick={() => isCompleted && setStep(s.num as any)}
+                onClick={() => isCompleted && setStep(s.num as 1 | 2 | 3 | 4)}
                 disabled={!isCompleted && !isActive}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all
-                  ${isActive
-                    ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-sm'
-                    : isCompleted
-                      ? 'text-emerald-600 dark:text-emerald-400 hover:bg-slate-200 dark:hover:bg-slate-800/60 cursor-pointer'
-                      : 'text-slate-600 dark:text-slate-400 opacity-60 cursor-not-allowed'
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 transition-all
+                  ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-800'
+                      : isCompleted
+                        ? 'cursor-pointer text-emerald-600 hover:bg-slate-200 dark:text-emerald-400 dark:hover:bg-slate-800/60'
+                        : 'cursor-not-allowed text-slate-600 opacity-60 dark:text-slate-400'
                   }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : isCompleted ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                <span>{s.num}. {s.label}</span>
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : isCompleted ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                />
+                <span>
+                  {s.num}. {s.label}
+                </span>
               </button>
             )
           })}
@@ -318,41 +425,40 @@ export const StockIntakePage: React.FC = () => {
 
         {/* Operador, Tema e Sair (ESC) */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-            <span>Operador:</span>
-            <strong className="text-slate-900 dark:text-white font-semibold">João Silva</strong>
-          </div>
-
           {/* Toggle Dark / Light Mode */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="w-9 h-9 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white"
+            className="h-9 w-9 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white"
             title="Alternar Tema"
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </Button>
 
           {/* Sair e Salvar Rascunho */}
           <Button
             variant="ghost"
             onClick={handleExit}
-            className="h-9 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
+            className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <span className="font-mono text-[10px] uppercase">ESC</span>
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
       {/* Banner de Rascunho Encontrado */}
       {showResumeBanner && draft && (
-        <div className="mx-auto max-w-4xl mt-6 px-4 w-full animate-in slide-in-from-top-2 duration-300">
-          <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mx-auto mt-6 w-full max-w-4xl px-4 duration-300 animate-in slide-in-from-top-2">
+          <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 dark:bg-emerald-950/40 sm:flex-row">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                <Box className="w-5 h-5" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                <Box className="h-5 w-5" />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -360,24 +466,25 @@ export const StockIntakePage: React.FC = () => {
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
                   {draft.header?.fornecedor.razaoSocial || 'Entrada manual'} •{' '}
-                  {draft.items.filter((i) => i.conferido).length} de {draft.items.length} itens conferidos
+                  {draft.items.filter((i) => i.conferido).length} de{' '}
+                  {draft.items.length} itens conferidos
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDiscardDraft}
-                className="h-9 text-xs font-semibold border-slate-300 dark:border-slate-700 flex-1 sm:flex-initial"
+                className="h-9 flex-1 border-slate-300 text-xs font-semibold dark:border-slate-700 sm:flex-initial"
               >
                 Descartar
               </Button>
               <Button
                 size="sm"
                 onClick={handleResumeDraft}
-                className="h-9 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950 flex-1 sm:flex-initial shadow-md shadow-emerald-500/20"
+                className="h-9 flex-1 bg-emerald-500 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/20 hover:bg-emerald-600 sm:flex-initial"
               >
                 Continuar de onde parou ↵
               </Button>
@@ -387,9 +494,12 @@ export const StockIntakePage: React.FC = () => {
       )}
 
       {/* Conteúdo Central por Capítulo */}
-      <main className="flex-1 flex items-center justify-center py-6">
+      <main className="flex flex-1 items-center justify-center py-6">
         {step === 1 && (
-          <Step1Origin onSelectOrigin={handleSelectOrigin} isParsingXml={isParsingXml} />
+          <Step1Origin
+            onSelectOrigin={handleSelectOrigin}
+            isParsingXml={isParsingXml}
+          />
         )}
 
         {step === 2 && (
@@ -419,7 +529,9 @@ export const StockIntakePage: React.FC = () => {
           <Step4Conclusion
             header={header}
             items={items}
-            onConfirmAndSave={(portioningData) => handleConfirmAndSave(portioningData)}
+            onConfirmAndSave={(portioningData) =>
+              handleConfirmAndSave(portioningData)
+            }
             onReviewItems={() => setStep(3)}
             isSaving={isSaving}
           />
@@ -427,101 +539,22 @@ export const StockIntakePage: React.FC = () => {
       </main>
 
       {/* Footer Minimalista (matching Stitch) */}
-      <footer className="h-12 border-t border-slate-200 dark:border-slate-800/80 px-4 sm:px-8 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 select-none">
-        <div className="flex items-center gap-3">
-          <span>Terminal #04 • Docas B</span>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-4 font-mono text-[11px]">
+      <footer className="flex h-12 select-none items-center justify-between border-t border-slate-200 px-4 text-xs text-slate-600 dark:border-slate-800/80 dark:text-slate-400 sm:px-8">
+        <div className="hidden items-center gap-4 font-mono text-[11px] sm:flex">
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700">Tab ⇥</kbd> Navegar
+            <kbd className="rounded border border-slate-300 bg-slate-200 px-1 py-0.5 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+              Tab ⇥
+            </kbd>{' '}
+            Navegar
           </span>
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700">Enter ↵</kbd> Confirmar
+            <kbd className="rounded border border-slate-300 bg-slate-200 px-1 py-0.5 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+              Enter ↵
+            </kbd>{' '}
+            Confirmar
           </span>
-        </div>
-
-        <div>
-          <span>© 2026 Metrics Flow • Modo Foco Linear</span>
         </div>
       </footer>
     </div>
   )
-}
-
-// Helper simples para Contingência / Mock de XML caso a API esteja sem rede
-function mockParseXml(xmlContent: string, fileName: string) {
-  return {
-    header: {
-      numeroNfe: '004.892',
-      dataEmissao: 'Hoje, 14:15',
-      fornecedor: {
-        cnpj: '02.449.992/0001-64',
-        razaoSocial: 'Distribuidora Ambev S/A',
-      },
-      valorTotal: 2480.0,
-    },
-    items: [
-      {
-        codigo: '7729-STE',
-        nome: 'Cerveja Stella Artois 330ml (Long Neck)',
-        unidade: 'cx',
-        quantidade: 2,
-        valorUnitario: 92.4,
-        valorTotal: 184.8,
-        conversionFactor: 24,
-        unidadeEstoque: 'un',
-        matchedType: 'PRODUCT',
-        isAlreadyMapped: true,
-      },
-      {
-        codigo: 'CAR-CHU-001',
-        nome: 'Chuleta Bovina Especial (Peça Inteira)',
-        unidade: 'kg',
-        quantidade: 15.4,
-        valorUnitario: 42.9,
-        valorTotal: 660.66,
-        conversionFactor: 1,
-        unidadeEstoque: 'kg',
-        matchedType: 'SUPPLY',
-        isAlreadyMapped: true,
-      },
-      {
-        codigo: 'CAR-ANG-018',
-        nome: 'Picanha Angus 180g Porcionada',
-        unidade: 'kg',
-        quantidade: 8.0,
-        valorUnitario: 94.5,
-        valorTotal: 756.0,
-        conversionFactor: 1,
-        unidadeEstoque: 'kg',
-        matchedType: 'SUPPLY',
-        isAlreadyMapped: false,
-      },
-      {
-        codigo: 'BEB-SAL-003',
-        nome: 'Cachaça Salinas Tradicional 700ml',
-        unidade: 'un',
-        quantidade: 6,
-        valorUnitario: 45.0,
-        valorTotal: 270.0,
-        conversionFactor: 1,
-        unidadeEstoque: 'un',
-        matchedType: 'PRODUCT',
-        isAlreadyMapped: true,
-      },
-      {
-        codigo: 'INS-MAR-010',
-        nome: 'Molho de Tomate Pelado San Marzano 2,5kg',
-        unidade: 'un',
-        quantidade: 8,
-        valorUnitario: 76.08,
-        valorTotal: 608.64,
-        conversionFactor: 1,
-        unidadeEstoque: 'un',
-        matchedType: 'SUPPLY',
-        isAlreadyMapped: true,
-      },
-    ],
-  }
 }

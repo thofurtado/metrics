@@ -1,25 +1,30 @@
-import React, { useState, useEffect } from 'react'
 import {
-  CheckCircle2,
-  ArrowLeft,
-  PackageCheck,
-  Loader2,
-  CornerDownLeft,
   AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  CornerDownLeft,
+  Loader2,
+  PackageCheck,
   UtensilsCrossed,
-  Layers,
-  Sparkles,
-  Scale
 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { StockIntakeDraft, StockIntakeItem, PortioningConfig } from '../use-stock-intake-draft'
+
+import {
+  PortioningConfig,
+  StockIntakeDraft,
+  StockIntakeItem,
+} from '../use-stock-intake-draft'
 
 interface Step4ConclusionProps {
   header?: StockIntakeDraft['header']
   items: StockIntakeItem[]
-  onConfirmAndSave: (portioningMap: Record<string, PortioningConfig>) => Promise<void>
+  onConfirmAndSave: (
+    portioningMap: Record<string, PortioningConfig>,
+  ) => Promise<void>
   onReviewItems: () => void
   isSaving: boolean
 }
@@ -32,8 +37,11 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
   isSaving,
 }) => {
   const deliveredItems = items.filter((i) => !i.naoEntregue)
+  const semDestino = deliveredItems.filter((i) => !i.targetId)
   const divergentItems = items.filter((i) => i.divergencia || i.naoEntregue)
-  const totalValue = header?.valorTotal || items.reduce((acc, i) => acc + (i.valorTotalNota || 0), 0)
+  const totalValue =
+    header?.valorTotal ||
+    items.reduce((acc, i) => acc + (i.valorTotalNota || 0), 0)
 
   // Identifica itens elegíveis para porcionamento (carnes, peixes, insumos em kg/peça)
   const portionableCandidates = deliveredItems.filter((it) => {
@@ -56,25 +64,30 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
   })
 
   // Estado do porcionamento por item
-  const [portioningMap, setPortioningMap] = useState<Record<string, PortioningConfig>>(() => {
+  const [portioningMap, setPortioningMap] = useState<
+    Record<string, PortioningConfig>
+  >(() => {
     const initial: Record<string, PortioningConfig> = {}
     portionableCandidates.forEach((it) => {
       // Sugestão padrão inteligente: 180g para picanha/filé, 700g para chuleta, 200g para outros
       const name = (it.targetName || it.nomeNota || '').toLowerCase()
       let defaultGrams = 200
       if (name.includes('picanha') || name.includes('angus')) defaultGrams = 180
-      else if (name.includes('chuleta') || name.includes('t-bone')) defaultGrams = 700
-      else if (name.includes('salmão') || name.includes('peixe')) defaultGrams = 150
+      else if (name.includes('chuleta') || name.includes('t-bone'))
+        defaultGrams = 700
+      else if (name.includes('salmão') || name.includes('peixe'))
+        defaultGrams = 150
 
       const totalKg = it.quantidadeReal || it.quantidadeNota
       const totalGrams = totalKg * 1000
       const count = Math.floor(totalGrams / defaultGrams)
       const trim = Math.round(totalGrams - count * defaultGrams)
       const costPerKg = it.valorUnitarioNota || 0
-      const costPerPortion = count > 0 ? ((totalKg * costPerKg) / count) : 0
+      const costPerPortion = count > 0 ? (totalKg * costPerKg) / count : 0
 
       initial[it.id] = {
-        enabled: true,
+        // Opcional: como medir os insumos (quilo, unidade, porção) ainda está para decidir; a peça entra inteira
+        enabled: false,
         portionSizeGrams: defaultGrams,
         portionCount: count,
         trimGrams: trim,
@@ -86,14 +99,20 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
   })
 
   // Atualiza cálculos quando o operador altera o peso da porção
-  const handlePortionSizeChange = (itemId: string, gramsStr: string, totalKg: number, unitCost: number, itemName: string) => {
+  const handlePortionSizeChange = (
+    itemId: string,
+    gramsStr: string,
+    totalKg: number,
+    unitCost: number,
+    itemName: string,
+  ) => {
     const grams = parseFloat(gramsStr) || 0
     if (grams <= 0) return
 
     const totalGrams = totalKg * 1000
     const count = Math.floor(totalGrams / grams)
     const trim = Math.round(totalGrams - count * grams)
-    const costPerPortion = count > 0 ? ((totalKg * unitCost) / count) : 0
+    const costPerPortion = count > 0 ? (totalKg * unitCost) / count : 0
 
     setPortioningMap((prev) => ({
       ...prev,
@@ -114,7 +133,7 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
       ...prev,
       [itemId]: {
         ...prev[itemId],
-        enabled: !prev[itemId]?.enabled,
+        enabled: !(prev[itemId]?.enabled ?? false),
       },
     }))
   }
@@ -122,90 +141,99 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
   // Atalho Enter para concluir
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return
-      if (e.key === 'Enter' && !isSaving) {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName))
+        return
+      if (e.key === 'Enter' && !isSaving && semDestino.length === 0) {
         e.preventDefault()
         onConfirmAndSave(portioningMap)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isSaving, onConfirmAndSave, portioningMap])
+  }, [isSaving, onConfirmAndSave, portioningMap, semDestino.length])
 
   return (
-    <div className="flex flex-col items-center justify-center max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-300">
+    <div className="mx-auto flex max-w-4xl flex-col items-center justify-center px-4 py-8 duration-300 animate-in fade-in">
       {/* Subheader Badge */}
-      <div className="w-full max-w-2xl flex items-center justify-between text-xs font-semibold mb-4">
-        <span className="text-slate-600 dark:text-slate-400 uppercase tracking-wider font-mono">
+      <div className="mb-4 flex w-full max-w-2xl items-center justify-between text-xs font-semibold">
+        <span className="font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400">
           CAPÍTULO 4 DE 4: CONCLUSÃO
         </span>
-        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+        <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-emerald-600 dark:text-emerald-400">
           100% Concluído
         </span>
       </div>
 
       {/* Pill de Sucesso */}
-      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 mb-4">
-        <CheckCircle2 className="w-4 h-4" /> Conferência concluída com sucesso!
+      <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+        <CheckCircle2 className="h-4 w-4" /> Conferência concluída com sucesso!
       </div>
 
       {/* Título Principal */}
-      <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-center text-slate-900 dark:text-white mb-8">
+      <h1 className="mb-8 text-center text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
         Tudo pronto para atualizar o estoque
       </h1>
 
       {/* Card de Resumo Executivo */}
-      <div className="w-full max-w-2xl bg-white dark:bg-[#131B2A] rounded-2xl border-2 border-slate-200 dark:border-slate-800/80 p-6 sm:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/40 mb-8">
+      <div className="mb-8 w-full max-w-2xl rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800/80 dark:bg-[#131B2A] dark:shadow-2xl dark:shadow-black/40 sm:p-8">
         {/* Grid de 4 Métricas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60 sm:grid-cols-4">
           <div>
-            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block mb-1">
+            <span className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-400">
               Itens Recebidos
             </span>
             <p className="text-lg font-black text-slate-900 dark:text-white">
-              {deliveredItems.length} <span className="text-xs font-normal text-slate-600 dark:text-slate-400">conferidos</span>
+              {deliveredItems.length}{' '}
+              <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
+                conferidos
+              </span>
             </p>
           </div>
 
           <div>
-            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block mb-1">
+            <span className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-400">
               Valor da Carga
             </span>
             <p className="text-lg font-black text-slate-900 dark:text-white">
-              R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              R${' '}
+              {totalValue.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </p>
           </div>
 
           <div>
-            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block mb-1">
+            <span className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-400">
               Fornecedor
             </span>
-            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+            <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
               {header?.fornecedor.razaoSocial || 'Fornecedor Avulso'}
             </p>
           </div>
 
           <div>
-            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block mb-1">
+            <span className="mb-1 block text-[11px] font-medium text-slate-600 dark:text-slate-400">
               Documento Fiscal
             </span>
             <p className="text-sm font-bold text-slate-900 dark:text-white">
-              NF-e #{header?.numeroNfe || 'Manual'}
+              {header?.numeroNfe ? `NF-e ${header.numeroNfe}` : 'Sem número'}
             </p>
           </div>
         </div>
 
         {/* Linhas Validadas em Docas */}
         <div className="mb-6">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+          <div className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             <span>LINHAS VALIDADAS EM DOCAS</span>
             {divergentItems.length === 0 ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold normal-case">
+              <span className="font-semibold normal-case text-emerald-600 dark:text-emerald-400">
                 ✓ Sem divergências
               </span>
             ) : (
-              <span className="text-amber-600 dark:text-amber-400 font-semibold normal-case flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> {divergentItems.length} divergência(s)
+              <span className="flex items-center gap-1 font-semibold normal-case text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5" />{' '}
+                {divergentItems.length} divergência(s)
               </span>
             )}
           </div>
@@ -218,17 +246,20 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
               return (
                 <div
                   key={it.id || idx}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border
-                    ${isMissing
-                      ? 'bg-red-500/10 text-red-500 border-red-500/30'
-                      : hasDiv
-                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
-                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold
+                    ${
+                      isMissing
+                        ? 'border-red-500/30 bg-red-500/10 text-red-500'
+                        : hasDiv
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+                          : 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300'
                     }`}
                 >
-                  <CheckCircle2 className={`w-3.5 h-3.5 ${isMissing ? 'text-red-500' : hasDiv ? 'text-amber-500' : 'text-emerald-500'}`} />
+                  <CheckCircle2
+                    className={`h-3.5 w-3.5 ${isMissing ? 'text-red-500' : hasDiv ? 'text-amber-500' : 'text-emerald-500'}`}
+                  />
                   <span>{it.targetName || it.nomeNota}</span>
-                  <span className="font-mono text-slate-600 dark:text-slate-400 font-normal">
+                  <span className="font-mono font-normal text-slate-600 dark:text-slate-400">
                     {it.quantidadeReal} {it.unidadeEstoque || 'un'}
                   </span>
                 </div>
@@ -239,48 +270,45 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
 
         {/* PAINEL DE PORCIONAMENTO DA CARGA (SEMPRE NO FINAL DO FLUXO) */}
         {portionableCandidates.length > 0 && (
-          <div className="p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border-2 border-emerald-500/30 mb-8">
-            <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="mb-8 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/5 p-5 dark:bg-emerald-950/20">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <UtensilsCrossed className="w-4 h-4" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <UtensilsCrossed className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    Porcionamento & Rendimento para Cozinha
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase">
-                      Recomendado
-                    </span>
+                  <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
+                    Porcionar para a cozinha (opcional)
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Transforme insumos brutos recebidos em porções padrão para baixa automática nas vendas do PDV.
+                    Desligado, a peça entra inteira no insumo escolhido.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Lista de Itens para Porcionar */}
-            <div className="flex flex-col gap-3 mt-4">
+            <div className="mt-4 flex flex-col gap-3">
               {portionableCandidates.map((it) => {
                 const conf = portioningMap[it.id]
-                const isEnabled = conf?.enabled ?? true
+                const isEnabled = conf?.enabled ?? false
                 const totalKg = it.quantidadeReal || it.quantidadeNota
                 const unitCost = it.valorUnitarioNota || 0
 
                 return (
                   <div
                     key={it.id}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className={`rounded-xl border p-4 transition-all ${
                       isEnabled
-                        ? 'bg-white dark:bg-slate-900 border-emerald-500/40 shadow-sm'
-                        : 'bg-slate-100/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-70'
+                        ? 'border-emerald-500/40 bg-white shadow-sm dark:bg-slate-900'
+                        : 'border-slate-200 bg-slate-100/60 opacity-70 dark:border-slate-800 dark:bg-slate-900/40'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-4 mb-3">
+                    <div className="mb-3 flex items-center justify-between gap-4">
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <h4 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
                           {it.targetName || it.nomeNota}
-                          <span className="text-xs font-mono font-normal text-slate-600 dark:text-slate-400">
+                          <span className="font-mono text-xs font-normal text-slate-600 dark:text-slate-400">
                             ({totalKg} kg recebidos)
                           </span>
                         </h4>
@@ -289,7 +317,7 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex shrink-0 items-center gap-2">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                           {isEnabled ? 'Porcionar' : 'Peça inteira'}
                         </span>
@@ -301,9 +329,9 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
                     </div>
 
                     {isEnabled && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 dark:border-slate-800 sm:grid-cols-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                             Peso por porção (g)
                           </label>
                           <div className="flex items-center gap-1.5">
@@ -318,23 +346,25 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
                                   e.target.value,
                                   totalKg,
                                   unitCost,
-                                  it.targetName || it.nomeNota
+                                  it.targetName || it.nomeNota,
                                 )
                               }
-                              className="h-9 text-sm font-bold font-mono"
+                              className="h-9 font-mono text-sm font-bold"
                             />
-                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">g</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                              g
+                            </span>
                           </div>
                         </div>
 
                         <div>
-                          <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          <span className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                             Rendimento Calculado
                           </span>
-                          <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 pt-1.5">
+                          <p className="pt-1.5 text-sm font-black text-emerald-600 dark:text-emerald-400">
                             {conf?.portionCount || 0} porções
                             {conf?.trimGrams ? (
-                              <span className="text-[11px] font-normal text-slate-600 dark:text-slate-400 block">
+                              <span className="block text-[11px] font-normal text-slate-600 dark:text-slate-400">
                                 (+ {conf.trimGrams}g aparas)
                               </span>
                             ) : null}
@@ -342,10 +372,10 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
                         </div>
 
                         <div>
-                          <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                          <span className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                             Custo por Porção (CMV)
                           </span>
-                          <p className="text-sm font-black text-slate-900 dark:text-white pt-1.5">
+                          <p className="pt-1.5 text-sm font-black text-slate-900 dark:text-white">
                             R$ {(conf?.costPerPortion || 0).toFixed(2)} / un
                           </p>
                         </div>
@@ -358,43 +388,59 @@ export const Step4Conclusion: React.FC<Step4ConclusionProps> = ({
           </div>
         )}
 
+        {semDestino.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
+            <p className="font-bold">Falta escolher o produto ou insumo de:</p>
+            <p className="mt-1 break-words">
+              {semDestino.map((i) => i.nomeNota).join(', ')}
+            </p>
+            <button
+              type="button"
+              onClick={onReviewItems}
+              className="mt-2 min-h-11 font-bold underline underline-offset-4"
+            >
+              Voltar à conferência
+            </button>
+          </div>
+        )}
+
         {/* Botão de Conclusão Hero */}
         <Button
-          disabled={isSaving}
+          disabled={isSaving || semDestino.length > 0}
           onClick={() => onConfirmAndSave(portioningMap)}
-          className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold text-base rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 text-base font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] hover:bg-emerald-600 active:bg-emerald-700"
         >
           {isSaving ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
               <span>Creditando estoque e gerando porcionamento...</span>
             </>
           ) : (
             <>
-              <PackageCheck className="w-5 h-5" />
+              <PackageCheck className="h-5 w-5" />
               <span>Concluir Entrada no Estoque</span>
-              <kbd className="px-2 py-0.5 rounded bg-emerald-600/30 text-slate-950 font-mono text-xs flex items-center gap-1 border border-emerald-600/40">
-                Enter <CornerDownLeft className="w-3 h-3" />
+              <kbd className="flex items-center gap-1 rounded border border-emerald-600/40 bg-emerald-600/30 px-2 py-0.5 font-mono text-xs text-slate-950">
+                Enter <CornerDownLeft className="h-3 w-3" />
               </kbd>
             </>
           )}
         </Button>
 
         {/* Link de Revisão */}
-        <div className="text-center mt-4">
+        <div className="mt-4 text-center">
           <button
             type="button"
             disabled={isSaving}
             onClick={onReviewItems}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Revisar itens conferidos
+            <ArrowLeft className="h-3.5 w-3.5" /> Revisar itens conferidos
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-slate-600 dark:text-slate-400 text-center max-w-md">
-        Os saldos físicos e as porções serão creditados imediatamente nos seus respectivos estoques e auditados nas fichas técnicas.
+      <p className="max-w-md text-center text-xs text-slate-600 dark:text-slate-400">
+        Cada item entra no estoque e no histórico com o seu nome.
       </p>
     </div>
   )
